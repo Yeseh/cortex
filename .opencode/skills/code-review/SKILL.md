@@ -12,4 +12,4 @@ npx eslint src/**/*.ts
 ```
 This command will analyze all TypeScript files in the `src` directory and its subdirectories, checking for code quality and style issues based on the defined eslint rules. 
 
-You can also input specific files or directories to lint by replacing `src/**/*.ts` with your desired path.
+You can also input specific files or directories to lint by replacing `src/**/*.ts` with your desired pathe
