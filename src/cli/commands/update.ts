@@ -305,7 +305,9 @@ const persistUpdatedMemory = async (
       cause: serialized.error,
     });
   }
-  const writeResult = await adapter.writeMemoryFile(slugPath, serialized.value);
+  const writeResult = await adapter.writeMemoryFile(slugPath, serialized.value, {
+    allowIndexUpdate: false,
+  });
   if (!writeResult.ok) {
     return err({
       code: "WRITE_FAILED",

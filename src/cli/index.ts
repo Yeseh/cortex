@@ -182,7 +182,7 @@ const runCommandWithStore = async (
     }
     return {
       exitCode: 0,
-      output: `Add memory ${addResult.value.path} (${addResult.value.source}).`,
+      output: addResult.value.message,
     };
   }
   const updateResult = await runUpdateCommand({

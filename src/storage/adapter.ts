@@ -27,7 +27,15 @@ export interface StorageAdapter {
   ): Promise<Result<string | null, StorageAdapterError>>;
   writeMemoryFile(
     slugPath: MemorySlugPath,
-    contents: string
+    contents: string,
+    options?: { allowIndexCreate?: boolean; allowIndexUpdate?: boolean }
+  ): Promise<Result<void, StorageAdapterError>>;
+  removeMemoryFile(
+    slugPath: MemorySlugPath
+  ): Promise<Result<void, StorageAdapterError>>;
+  moveMemoryFile(
+    sourceSlugPath: MemorySlugPath,
+    destinationSlugPath: MemorySlugPath
   ): Promise<Result<void, StorageAdapterError>>;
   /**
    * Returns ok(null) when the index file is missing.

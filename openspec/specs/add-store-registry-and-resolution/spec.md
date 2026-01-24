@@ -1,4 +1,8 @@
-## MODIFIED Requirements
+# add-store-registry-and-resolution Specification
+
+## Purpose
+TBD - created by archiving change add-store-registry-and-resolution. Update Purpose after archive.
+## Requirements
 ### Requirement: Store registry format
 The system SHALL store named store definitions in a YAML registry file that maps store names to path values.
 
@@ -48,3 +52,4 @@ The system SHALL resolve stores by checking a local .cortex directory first and 
 #### Scenario: Global store missing
 - **WHEN** strict_local is false, the local registry does not define the store, and the global registry lacks the store name
 - **THEN** the system returns a resolution error
+

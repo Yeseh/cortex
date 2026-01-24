@@ -2,7 +2,7 @@
  * Filesystem storage adapter implementation
  */
 
-import { mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { MemorySlugPath, Result } from "../core/types.ts";
 import { defaultTokenizer } from "../core/tokens.ts";
@@ -98,13 +98,21 @@ export class FilesystemStorageAdapter implements StorageAdapter {
   }
 
   private async readCategoryIndex(
-    name: StorageIndexName
+    name: StorageIndexName,
+    options: { createWhenMissing?: boolean } = {}
   ): Promise<Result<CategoryIndex, StorageAdapterError>> {
     const contents = await this.readIndexFile(name);
     if (!contents.ok) {
       return contents;
     }
     if (!contents.value) {
+      if (!options.createWhenMissing) {
+        return err({
+          code: "INDEX_UPDATE_FAILED",
+          message: `Category index not found at ${name}.`,
+          path: name,
+        });
+      }
       return ok({ memories: [], subcategories: [] });
     }
     const parsed = parseCategoryIndex(contents.value);
@@ -137,9 +145,10 @@ export class FilesystemStorageAdapter implements StorageAdapter {
 
   private async upsertMemoryEntry(
     indexName: StorageIndexName,
-    entry: IndexMemoryEntry
+    entry: IndexMemoryEntry,
+    options: { createWhenMissing?: boolean } = {}
   ): Promise<Result<void, StorageAdapterError>> {
-    const current = await this.readCategoryIndex(indexName);
+    const current = await this.readCategoryIndex(indexName, options);
     if (!current.ok) {
       return current;
     }
@@ -158,9 +167,10 @@ export class FilesystemStorageAdapter implements StorageAdapter {
   private async upsertSubcategoryEntry(
     indexName: StorageIndexName,
     entryPath: string,
-    memoryCount: number
+    memoryCount: number,
+    options: { createWhenMissing?: boolean } = {}
   ): Promise<Result<void, StorageAdapterError>> {
-    const current = await this.readCategoryIndex(indexName);
+    const current = await this.readCategoryIndex(indexName, options);
     if (!current.ok) {
       return current;
     }
@@ -178,7 +188,8 @@ export class FilesystemStorageAdapter implements StorageAdapter {
 
   private async updateCategoryIndexes(
     slugPath: MemorySlugPath,
-    contents: string
+    contents: string,
+    options: { createWhenMissing?: boolean } = {}
   ): Promise<Result<void, StorageAdapterError>> {
     const identity = validateMemorySlugPath(slugPath);
     if (!identity.ok) {
@@ -202,10 +213,14 @@ export class FilesystemStorageAdapter implements StorageAdapter {
       });
     }
 
-    const upsertMemory = await this.upsertMemoryEntry(categoryIndexName, {
-      path: slugPath,
-      tokenEstimate: tokenEstimateResult.value,
-    });
+    const upsertMemory = await this.upsertMemoryEntry(
+      categoryIndexName,
+      {
+        path: slugPath,
+        tokenEstimate: tokenEstimateResult.value,
+      },
+      options
+    );
     if (!upsertMemory.ok) {
       return upsertMemory;
     }
@@ -213,14 +228,15 @@ export class FilesystemStorageAdapter implements StorageAdapter {
     for (let index = 1; index <= categories.length - 1; index += 1) {
       const parentIndexName = categories.slice(0, index).join("/");
       const subcategoryPath = categories.slice(0, index + 1).join("/");
-      const subcategoryIndex = await this.readCategoryIndex(subcategoryPath);
+      const subcategoryIndex = await this.readCategoryIndex(subcategoryPath, options);
       if (!subcategoryIndex.ok) {
         return subcategoryIndex;
       }
       const upsertSubcategory = await this.upsertSubcategoryEntry(
         parentIndexName,
         subcategoryPath,
-        subcategoryIndex.value.memories.length
+        subcategoryIndex.value.memories.length,
+        options
       );
       if (!upsertSubcategory.ok) {
         return upsertSubcategory;
@@ -509,9 +525,109 @@ export class FilesystemStorageAdapter implements StorageAdapter {
     }
   }
 
+  async removeMemoryFile(
+    slugPath: MemorySlugPath
+  ): Promise<Result<void, StorageAdapterError>> {
+    const identity = validateMemorySlugPath(slugPath);
+    if (!identity.ok) {
+      return err({
+        code: "WRITE_FAILED",
+        message: "Invalid memory slug path.",
+        path: slugPath,
+        cause: identity.error,
+      });
+    }
+    const filePathResult = resolveStoragePath(
+      this.memoryRoot,
+      `${slugPath}${this.memoryExtension}`,
+      "WRITE_FAILED"
+    );
+    if (!filePathResult.ok) {
+      return filePathResult;
+    }
+    const filePath = filePathResult.value;
+    try {
+      await rm(filePath);
+      return ok(undefined);
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        return ok(undefined);
+      }
+      return err({
+        code: "WRITE_FAILED",
+        message: `Failed to remove memory file at ${filePath}.`,
+        path: filePath,
+        cause: error,
+      });
+    }
+  }
+
+  async moveMemoryFile(
+    sourceSlugPath: MemorySlugPath,
+    destinationSlugPath: MemorySlugPath
+  ): Promise<Result<void, StorageAdapterError>> {
+    const sourceIdentity = validateMemorySlugPath(sourceSlugPath);
+    if (!sourceIdentity.ok) {
+      return err({
+        code: "WRITE_FAILED",
+        message: "Invalid source memory slug path.",
+        path: sourceSlugPath,
+        cause: sourceIdentity.error,
+      });
+    }
+    const destinationIdentity = validateMemorySlugPath(destinationSlugPath);
+    if (!destinationIdentity.ok) {
+      return err({
+        code: "WRITE_FAILED",
+        message: "Invalid destination memory slug path.",
+        path: destinationSlugPath,
+        cause: destinationIdentity.error,
+      });
+    }
+    const sourcePathResult = resolveStoragePath(
+      this.memoryRoot,
+      `${sourceSlugPath}${this.memoryExtension}`,
+      "WRITE_FAILED"
+    );
+    if (!sourcePathResult.ok) {
+      return sourcePathResult;
+    }
+    const destinationPathResult = resolveStoragePath(
+      this.memoryRoot,
+      `${destinationSlugPath}${this.memoryExtension}`,
+      "WRITE_FAILED"
+    );
+    if (!destinationPathResult.ok) {
+      return destinationPathResult;
+    }
+    const destinationDirectory = dirname(destinationPathResult.value);
+    try {
+      await access(destinationDirectory);
+    } catch (error) {
+      return err({
+        code: "WRITE_FAILED",
+        message: `Destination category does not exist for ${destinationSlugPath}.`,
+        path: destinationDirectory,
+        cause: error,
+      });
+    }
+    try {
+      await rename(sourcePathResult.value, destinationPathResult.value);
+      return ok(undefined);
+    } catch (error) {
+      return err({
+        code: "WRITE_FAILED",
+        message: `Failed to move memory from ${sourceSlugPath} to ${destinationSlugPath}.`,
+        path: destinationPathResult.value,
+        cause: error,
+      });
+    }
+  }
+
   async writeMemoryFile(
     slugPath: MemorySlugPath,
-    contents: string
+    contents: string,
+    options: { allowIndexCreate?: boolean; allowIndexUpdate?: boolean } = {}
   ): Promise<Result<void, StorageAdapterError>> {
     const identity = validateMemorySlugPath(slugPath);
     if (!identity.ok) {
@@ -534,9 +650,13 @@ export class FilesystemStorageAdapter implements StorageAdapter {
     try {
       await mkdir(dirname(filePath), { recursive: true });
       await writeFile(filePath, contents, "utf8");
-      const indexUpdate = await this.updateCategoryIndexes(slugPath, contents);
-      if (!indexUpdate.ok) {
-        return indexUpdate;
+      if (options.allowIndexUpdate !== false) {
+        const indexUpdate = await this.updateCategoryIndexes(slugPath, contents, {
+          createWhenMissing: options.allowIndexCreate,
+        });
+        if (!indexUpdate.ok) {
+          return indexUpdate;
+        }
       }
       return ok(undefined);
     } catch (error) {
