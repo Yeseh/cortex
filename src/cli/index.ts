@@ -8,6 +8,8 @@ import { resolveStore } from "../store/store.ts";
 import { runReindexCommand } from "./commands/reindex.ts";
 import { runAddCommand } from "./commands/add.ts";
 import { runUpdateCommand } from "./commands/update.ts";
+import { runListCommand } from "./commands/list.ts";
+import { runPruneCommand } from "./commands/prune.ts";
 
 export interface CliRunResult {
   exitCode: number;
@@ -28,7 +30,9 @@ export interface CliRunError {
     | "STORE_RESOLUTION_FAILED"
     | "REINDEX_FAILED"
     | "ADD_FAILED"
-    | "UPDATE_FAILED";
+    | "UPDATE_FAILED"
+    | "LIST_FAILED"
+    | "PRUNE_FAILED";
   message: string;
   cause?: unknown;
 }
@@ -147,44 +151,43 @@ const resolveStoreRoot = async (
   return ok({ root: storeResolution.value.root, remainingArgs: parsedStore.remaining });
 };
 
-const runCommandWithStore = async (
-  args: string[],
-  cwd: string,
-  globalStorePath: string,
-  command: "reindex" | "add" | "update"
+type StoreCommand = "reindex" | "add" | "update" | "list" | "prune";
+
+const executeReindexCommand = async (
+  root: string,
+  remainingArgs: string[]
 ): Promise<CliRunResult> => {
-  const storeRootResult = await resolveStoreRoot(args, cwd, globalStorePath);
-  if (!storeRootResult.ok) {
-    return formatError(storeRootResult.error);
+  const reindexResult = await runReindexCommand({
+    storeRoot: root,
+    args: remainingArgs,
+  });
+  if (!reindexResult.ok) {
+    return formatError(
+      toCliError("REINDEX_FAILED", reindexResult.error.message, reindexResult.error)
+    );
   }
-  const root = storeRootResult.value.root;
-  const remainingArgs = storeRootResult.value.remainingArgs;
-  if (command === "reindex") {
-    const reindexResult = await runReindexCommand({
-      storeRoot: root,
-      args: remainingArgs,
-    });
-    if (!reindexResult.ok) {
-      return formatError(
-        toCliError("REINDEX_FAILED", reindexResult.error.message, reindexResult.error)
-      );
-    }
-    return { exitCode: 0, output: reindexResult.value.message };
+  return { exitCode: 0, output: reindexResult.value.message };
+};
+
+const executeAddCommand = async (
+  root: string,
+  remainingArgs: string[]
+): Promise<CliRunResult> => {
+  const addResult = await runAddCommand({
+    storeRoot: root,
+    args: remainingArgs,
+    stdin: process.stdin,
+  });
+  if (!addResult.ok) {
+    return formatError(toCliError("ADD_FAILED", addResult.error.message, addResult.error));
   }
-  if (command === "add") {
-    const addResult = await runAddCommand({
-      storeRoot: root,
-      args: remainingArgs,
-      stdin: process.stdin,
-    });
-    if (!addResult.ok) {
-      return formatError(toCliError("ADD_FAILED", addResult.error.message, addResult.error));
-    }
-    return {
-      exitCode: 0,
-      output: addResult.value.message,
-    };
-  }
+  return { exitCode: 0, output: addResult.value.message };
+};
+
+const executeUpdateCommand = async (
+  root: string,
+  remainingArgs: string[]
+): Promise<CliRunResult> => {
   const updateResult = await runUpdateCommand({
     storeRoot: root,
     args: remainingArgs,
@@ -196,6 +199,58 @@ const runCommandWithStore = async (
     );
   }
   return { exitCode: 0, output: updateResult.value.message };
+};
+
+const executeListCommand = async (
+  root: string,
+  remainingArgs: string[]
+): Promise<CliRunResult> => {
+  const listResult = await runListCommand({
+    storeRoot: root,
+    args: remainingArgs,
+  });
+  if (!listResult.ok) {
+    return formatError(toCliError("LIST_FAILED", listResult.error.message, listResult.error));
+  }
+  return { exitCode: 0, output: listResult.value.message };
+};
+
+const executePruneCommand = async (
+  root: string,
+  remainingArgs: string[]
+): Promise<CliRunResult> => {
+  const pruneResult = await runPruneCommand({
+    storeRoot: root,
+    args: remainingArgs,
+  });
+  if (!pruneResult.ok) {
+    return formatError(toCliError("PRUNE_FAILED", pruneResult.error.message, pruneResult.error));
+  }
+  return { exitCode: 0, output: pruneResult.value.message };
+};
+
+const runCommandWithStore = async (
+  args: string[],
+  cwd: string,
+  globalStorePath: string,
+  command: StoreCommand
+): Promise<CliRunResult> => {
+  const storeRootResult = await resolveStoreRoot(args, cwd, globalStorePath);
+  if (!storeRootResult.ok) {
+    return formatError(storeRootResult.error);
+  }
+  const root = storeRootResult.value.root;
+  const remainingArgs = storeRootResult.value.remainingArgs;
+
+  const handlers: Record<StoreCommand, (root: string, args: string[]) => Promise<CliRunResult>> = {
+    reindex: executeReindexCommand,
+    add: executeAddCommand,
+    update: executeUpdateCommand,
+    list: executeListCommand,
+    prune: executePruneCommand,
+  };
+
+  return handlers[command](root, remainingArgs);
 };
 
 export const runCli = async (options: CliRunOptions = {}): Promise<CliRunResult> => {
@@ -217,9 +272,9 @@ export const runCli = async (options: CliRunOptions = {}): Promise<CliRunResult>
       toCliError("INVALID_COMMAND", "No command provided.")
     );
   }
-  const storeCommands = new Set(["reindex", "add", "update"]);
-  if (storeCommands.has(command)) {
-    return runCommandWithStore(rest, cwd, globalStorePath, command as "reindex" | "add" | "update");
+  const storeCommands = new Set<StoreCommand>(["reindex", "add", "update", "list", "prune"]);
+  if (storeCommands.has(command as StoreCommand)) {
+    return runCommandWithStore(rest, cwd, globalStorePath, command as StoreCommand);
   }
 
   return formatError(
