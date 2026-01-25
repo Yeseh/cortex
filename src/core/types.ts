@@ -3,9 +3,7 @@
  */
 
 /** Result type for non-throwing operations */
-export type Result<T, E> =
-  | { ok: true; value: T }
-  | { ok: false; error: E };
+export type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
 
 /** Slug segment used for memory categories and identity */
 export type MemorySlug = string;
@@ -18,21 +16,21 @@ export type MemorySlugPath = string;
 
 /** Parsed memory identity from a slug path */
 export interface MemoryIdentity {
-  slugPath: MemorySlugPath;
-  categories: MemoryCategoryPath;
-  slug: MemorySlug;
+    slugPath: MemorySlugPath;
+    categories: MemoryCategoryPath;
+    slug: MemorySlug;
 }
 
 /**
  * Metadata attached to memory entries
  */
 export interface MemoryMetadata {
-  /** Source of the memory (e.g., "user", "system", "tool") */
-  source?: string;
-  /** Tags for categorization */
-  tags?: string[];
-  /** Optional expiry for the memory */
-  expiresAt?: Date;
-  /** Custom key-value pairs */
-  [key: string]: unknown;
+    /** Source of the memory (e.g., "user", "system", "tool") */
+    source?: string;
+    /** Tags for categorization */
+    tags?: string[];
+    /** Optional expiry for the memory */
+    expiresAt?: Date;
+    /** Custom key-value pairs */
+    [key: string]: unknown;
 }

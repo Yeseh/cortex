@@ -4,392 +4,562 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { storeNameSchema, listStores, createStore } from './tools.ts';
 
-describe('storeNameSchema', () => {
-    describe('valid names', () => {
-        it('should accept "default"', () => {
-            const result = storeNameSchema.safeParse('default');
-            expect(result.success).toBe(true);
-        });
-
-        it('should accept "my-store"', () => {
-            const result = storeNameSchema.safeParse('my-store');
-            expect(result.success).toBe(true);
-        });
-
-        it('should accept "store_1"', () => {
-            const result = storeNameSchema.safeParse('store_1');
-            expect(result.success).toBe(true);
-        });
-
-        it('should accept "A123"', () => {
-            const result = storeNameSchema.safeParse('A123');
-            expect(result.success).toBe(true);
-        });
-
-        it('should accept single alphanumeric character', () => {
-            const result = storeNameSchema.safeParse('a');
-            expect(result.success).toBe(true);
-        });
-
-        it('should accept numeric start character', () => {
-            const result = storeNameSchema.safeParse('1store');
-            expect(result.success).toBe(true);
-        });
-
-        it('should accept mixed case with hyphens and underscores', () => {
-            const result = storeNameSchema.safeParse('My-Store_V2');
-            expect(result.success).toBe(true);
-        });
-    });
-
-    describe('invalid names', () => {
-        it('should reject empty string', () => {
-            const result = storeNameSchema.safeParse('');
-            expect(result.success).toBe(false);
-            if (!result.success) {
-                // Empty string fails both min length and regex checks
-                expect(result.error.issues.length).toBeGreaterThanOrEqual(1);
-                // The first issue should be the min length error
-                expect(result.error.issues[0]?.message).toBe('Store name must not be empty');
-            }
-        });
-
-        it('should reject names starting with hyphen', () => {
-            const result = storeNameSchema.safeParse('-store');
-            expect(result.success).toBe(false);
-            if (!result.success) {
-                expect(result.error.issues).toHaveLength(1);
-                expect(result.error.issues[0]?.message).toContain(
-                    'Store name must start with alphanumeric'
+describe(
+    'storeNameSchema', () => {
+        describe(
+            'valid names', () => {
+                it(
+                    'should accept "default"', () => {
+                        const result = storeNameSchema.safeParse('default');
+                        expect(result.success).toBe(true);
+                    },
                 );
-            }
-        });
 
-        it('should reject names starting with underscore', () => {
-            const result = storeNameSchema.safeParse('_store');
-            expect(result.success).toBe(false);
-            if (!result.success) {
-                expect(result.error.issues).toHaveLength(1);
-                expect(result.error.issues[0]?.message).toContain(
-                    'Store name must start with alphanumeric'
+                it(
+                    'should accept "my-store"', () => {
+                        const result = storeNameSchema.safeParse('my-store');
+                        expect(result.success).toBe(true);
+                    },
                 );
-            }
-        });
 
-        it('should reject names with spaces', () => {
-            const result = storeNameSchema.safeParse('my store');
-            expect(result.success).toBe(false);
-            if (!result.success) {
-                expect(result.error.issues).toHaveLength(1);
-                expect(result.error.issues[0]?.message).toContain(
-                    'Store name must start with alphanumeric'
+                it(
+                    'should accept "store_1"', () => {
+                        const result = storeNameSchema.safeParse('store_1');
+                        expect(result.success).toBe(true);
+                    },
                 );
-            }
-        });
 
-        it('should reject names with @ symbol', () => {
-            const result = storeNameSchema.safeParse('store@1');
-            expect(result.success).toBe(false);
-            if (!result.success) {
-                expect(result.error.issues).toHaveLength(1);
-                expect(result.error.issues[0]?.message).toContain(
-                    'Store name must start with alphanumeric'
+                it(
+                    'should accept "A123"', () => {
+                        const result = storeNameSchema.safeParse('A123');
+                        expect(result.success).toBe(true);
+                    },
                 );
-            }
-        });
 
-        it('should reject names with dots', () => {
-            const result = storeNameSchema.safeParse('store.name');
-            expect(result.success).toBe(false);
-            if (!result.success) {
-                expect(result.error.issues).toHaveLength(1);
-                expect(result.error.issues[0]?.message).toContain(
-                    'Store name must start with alphanumeric'
+                it(
+                    'should accept single alphanumeric character', () => {
+                        const result = storeNameSchema.safeParse('a');
+                        expect(result.success).toBe(true);
+                    },
                 );
-            }
+
+                it(
+                    'should accept numeric start character', () => {
+                        const result = storeNameSchema.safeParse('1store');
+                        expect(result.success).toBe(true);
+                    },
+                );
+
+                it(
+                    'should accept mixed case with hyphens and underscores', () => {
+                        const result = storeNameSchema.safeParse('My-Store_V2');
+                        expect(result.success).toBe(true);
+                    },
+                );
+            },
+        );
+
+        describe(
+            'invalid names', () => {
+                it(
+                    'should reject empty string', () => {
+                        const result = storeNameSchema.safeParse('');
+                        expect(result.success).toBe(false);
+                        if (!result.success) {
+                            // Empty string fails both min length and regex checks
+                            expect(result.error.issues.length).toBeGreaterThanOrEqual(1);
+                            // The first issue should be the min length error
+                            expect(result.error.issues[ 0 ]?.message).toBe('Store name must not be empty');
+                        }
+                    },
+                );
+
+                it(
+                    'should reject names starting with hyphen', () => {
+                        const result = storeNameSchema.safeParse('-store');
+                        expect(result.success).toBe(false);
+                        if (!result.success) {
+                            expect(result.error.issues).toHaveLength(1);
+                            expect(result.error.issues[ 0 ]?.message).toContain('Store name must start with alphanumeric');
+                        }
+                    },
+                );
+
+                it(
+                    'should reject names starting with underscore', () => {
+                        const result = storeNameSchema.safeParse('_store');
+                        expect(result.success).toBe(false);
+                        if (!result.success) {
+                            expect(result.error.issues).toHaveLength(1);
+                            expect(result.error.issues[ 0 ]?.message).toContain('Store name must start with alphanumeric');
+                        }
+                    },
+                );
+
+                it(
+                    'should reject names with spaces', () => {
+                        const result = storeNameSchema.safeParse('my store');
+                        expect(result.success).toBe(false);
+                        if (!result.success) {
+                            expect(result.error.issues).toHaveLength(1);
+                            expect(result.error.issues[ 0 ]?.message).toContain('Store name must start with alphanumeric');
+                        }
+                    },
+                );
+
+                it(
+                    'should reject names with @ symbol', () => {
+                        const result = storeNameSchema.safeParse('store@1');
+                        expect(result.success).toBe(false);
+                        if (!result.success) {
+                            expect(result.error.issues).toHaveLength(1);
+                            expect(result.error.issues[ 0 ]?.message).toContain('Store name must start with alphanumeric');
+                        }
+                    },
+                );
+
+                it(
+                    'should reject names with dots', () => {
+                        const result = storeNameSchema.safeParse('store.name');
+                        expect(result.success).toBe(false);
+                        if (!result.success) {
+                            expect(result.error.issues).toHaveLength(1);
+                            expect(result.error.issues[ 0 ]?.message).toContain('Store name must start with alphanumeric');
+                        }
+                    },
+                );
+
+                it(
+                    'should reject names with slashes', () => {
+                        const result = storeNameSchema.safeParse('store/name');
+                        expect(result.success).toBe(false);
+                    },
+                );
+
+                it(
+                    'should reject names with backslashes', () => {
+                        const result = storeNameSchema.safeParse('store\\name');
+                        expect(result.success).toBe(false);
+                    },
+                );
+            },
+        );
+    },
+);
+
+describe(
+    'listStores', () => {
+        let testDir: string;
+
+        beforeEach(async () => {
+            testDir = await fs.mkdtemp(path.join(
+                os.tmpdir(), 'cortex-test-',
+            )); 
         });
 
-        it('should reject names with slashes', () => {
-            const result = storeNameSchema.safeParse('store/name');
-            expect(result.success).toBe(false);
+        afterEach(async () => {
+            await fs.rm(
+                testDir, { recursive: true, force: true },
+            ); 
         });
 
-        it('should reject names with backslashes', () => {
-            const result = storeNameSchema.safeParse('store\\name');
-            expect(result.success).toBe(false);
-        });
-    });
-});
+        it(
+            'should return empty array when data path does not exist', async () => {
+                const nonExistentPath = path.join(
+                    testDir, 'non-existent',
+                );
+                const result = await listStores(nonExistentPath);
 
-describe('listStores', () => {
-    let testDir: string;
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value).toEqual([]); 
+                }
+            },
+        );
 
-    beforeEach(async () => {
-        testDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cortex-test-'));
-    });
+        it(
+            'should return empty array when data path is empty', async () => {
+                const result = await listStores(testDir);
 
-    afterEach(async () => {
-        await fs.rm(testDir, { recursive: true, force: true });
-    });
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value).toEqual([]); 
+                }
+            },
+        );
 
-    it('should return empty array when data path does not exist', async () => {
-        const nonExistentPath = path.join(testDir, 'non-existent');
-        const result = await listStores(nonExistentPath);
+        it(
+            'should return store names from directory', async () => {
+                // Create some store directories
+                await fs.mkdir(path.join(
+                    testDir, 'store-a',
+                ));
+                await fs.mkdir(path.join(
+                    testDir, 'store-b',
+                ));
+                await fs.mkdir(path.join(
+                    testDir, 'default',
+                ));
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
-            expect(result.value).toEqual([]);
-        }
-    });
+                const result = await listStores(testDir);
 
-    it('should return empty array when data path is empty', async () => {
-        const result = await listStores(testDir);
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value).toHaveLength(3);
+                    expect(result.value).toContain('store-a');
+                    expect(result.value).toContain('store-b');
+                    expect(result.value).toContain('default');
+                }
+            },
+        );
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
-            expect(result.value).toEqual([]);
-        }
-    });
+        it(
+            'should only return directories, not files', async () => {
+                // Create a mix of files and directories
+                await fs.mkdir(path.join(
+                    testDir, 'real-store',
+                ));
+                await fs.writeFile(
+                    path.join(
+                        testDir, 'not-a-store.txt',
+                    ), 'content',
+                );
+                await fs.writeFile(
+                    path.join(
+                        testDir, 'another-file',
+                    ), 'content',
+                );
 
-    it('should return store names from directory', async () => {
-        // Create some store directories
-        await fs.mkdir(path.join(testDir, 'store-a'));
-        await fs.mkdir(path.join(testDir, 'store-b'));
-        await fs.mkdir(path.join(testDir, 'default'));
+                const result = await listStores(testDir);
 
-        const result = await listStores(testDir);
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value).toEqual(['real-store']); 
+                }
+            },
+        );
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
-            expect(result.value).toHaveLength(3);
-            expect(result.value).toContain('store-a');
-            expect(result.value).toContain('store-b');
-            expect(result.value).toContain('default');
-        }
-    });
+        it(
+            'should return STORE_LIST_FAILED error when path is a file, not a directory', async () => {
+                const filePath = path.join(
+                    testDir, 'not-a-directory',
+                );
+                await fs.writeFile(
+                    filePath, 'content',
+                );
 
-    it('should only return directories, not files', async () => {
-        // Create a mix of files and directories
-        await fs.mkdir(path.join(testDir, 'real-store'));
-        await fs.writeFile(path.join(testDir, 'not-a-store.txt'), 'content');
-        await fs.writeFile(path.join(testDir, 'another-file'), 'content');
+                const result = await listStores(filePath);
 
-        const result = await listStores(testDir);
+                expect(result.ok).toBe(false);
+                if (!result.ok) {
+                    expect(result.error.code).toBe('STORE_LIST_FAILED');
+                    expect(result.error.message).toContain('Failed to list stores');
+                }
+            },
+        );
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
-            expect(result.value).toEqual(['real-store']);
-        }
-    });
+        it(
+            'should handle multiple stores with different naming conventions', async () => {
+                await fs.mkdir(path.join(
+                    testDir, 'project-alpha',
+                ));
+                await fs.mkdir(path.join(
+                    testDir, 'project_beta',
+                ));
+                await fs.mkdir(path.join(
+                    testDir, 'Project123',
+                ));
 
-    it('should return STORE_LIST_FAILED error when path is a file, not a directory', async () => {
-        const filePath = path.join(testDir, 'not-a-directory');
-        await fs.writeFile(filePath, 'content');
+                const result = await listStores(testDir);
 
-        const result = await listStores(filePath);
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value).toHaveLength(3);
+                    expect(result.value).toContain('project-alpha');
+                    expect(result.value).toContain('project_beta');
+                    expect(result.value).toContain('Project123');
+                }
+            },
+        );
+    },
+);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
-            expect(result.error.code).toBe('STORE_LIST_FAILED');
-            expect(result.error.message).toContain('Failed to list stores');
-        }
-    });
+describe(
+    'createStore', () => {
+        let testDir: string;
 
-    it('should handle multiple stores with different naming conventions', async () => {
-        await fs.mkdir(path.join(testDir, 'project-alpha'));
-        await fs.mkdir(path.join(testDir, 'project_beta'));
-        await fs.mkdir(path.join(testDir, 'Project123'));
-
-        const result = await listStores(testDir);
-
-        expect(result.ok).toBe(true);
-        if (result.ok) {
-            expect(result.value).toHaveLength(3);
-            expect(result.value).toContain('project-alpha');
-            expect(result.value).toContain('project_beta');
-            expect(result.value).toContain('Project123');
-        }
-    });
-});
-
-describe('createStore', () => {
-    let testDir: string;
-
-    beforeEach(async () => {
-        testDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cortex-test-'));
-    });
-
-    afterEach(async () => {
-        await fs.rm(testDir, { recursive: true, force: true });
-    });
-
-    describe('successful creation', () => {
-        it('should create store directory successfully', async () => {
-            const result = await createStore(testDir, 'my-store');
-
-            expect(result.ok).toBe(true);
-            if (result.ok) {
-                expect(result.value).toBeUndefined();
-            }
-
-            // Verify directory was created
-            const stat = await fs.stat(path.join(testDir, 'my-store'));
-            expect(stat.isDirectory()).toBe(true);
-        });
-
-        it('should create parent directories if needed (recursive)', async () => {
-            const nestedPath = path.join(testDir, 'nested', 'data', 'path');
-            const result = await createStore(nestedPath, 'deep-store');
-
-            expect(result.ok).toBe(true);
-
-            // Verify directory was created
-            const stat = await fs.stat(path.join(nestedPath, 'deep-store'));
-            expect(stat.isDirectory()).toBe(true);
+        beforeEach(async () => {
+            testDir = await fs.mkdtemp(path.join(
+                os.tmpdir(), 'cortex-test-',
+            )); 
         });
 
-        it('should create store with numeric start character', async () => {
-            const result = await createStore(testDir, '123store');
-
-            expect(result.ok).toBe(true);
-
-            // Verify directory was created
-            const stat = await fs.stat(path.join(testDir, '123store'));
-            expect(stat.isDirectory()).toBe(true);
+        afterEach(async () => {
+            await fs.rm(
+                testDir, { recursive: true, force: true },
+            ); 
         });
 
-        it('should create store with mixed naming conventions', async () => {
-            const result = await createStore(testDir, 'My-Store_V2');
+        describe(
+            'successful creation', () => {
+                it(
+                    'should create store directory successfully', async () => {
+                        const result = await createStore(
+                            testDir, 'my-store',
+                        );
 
-            expect(result.ok).toBe(true);
+                        expect(result.ok).toBe(true);
+                        if (result.ok) {
+                            expect(result.value).toBeUndefined(); 
+                        }
 
-            // Verify directory was created
-            const stat = await fs.stat(path.join(testDir, 'My-Store_V2'));
-            expect(stat.isDirectory()).toBe(true);
-        });
-    });
+                        // Verify directory was created
+                        const stat = await fs.stat(path.join(
+                            testDir, 'my-store',
+                        ));
+                        expect(stat.isDirectory()).toBe(true);
+                    },
+                );
 
-    describe('store already exists', () => {
-        it('should return STORE_ALREADY_EXISTS if store exists', async () => {
-            // Create the store first
-            await fs.mkdir(path.join(testDir, 'existing-store'));
+                it(
+                    'should create parent directories if needed (recursive)', async () => {
+                        const nestedPath = path.join(
+                            testDir, 'nested', 'data', 'path',
+                        );
+                        const result = await createStore(
+                            nestedPath, 'deep-store',
+                        );
 
-            const result = await createStore(testDir, 'existing-store');
+                        expect(result.ok).toBe(true);
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
-                expect(result.error.code).toBe('STORE_ALREADY_EXISTS');
-                expect(result.error.message).toBe("Store 'existing-store' already exists");
-            }
-        });
+                        // Verify directory was created
+                        const stat = await fs.stat(path.join(
+                            nestedPath, 'deep-store',
+                        ));
+                        expect(stat.isDirectory()).toBe(true);
+                    },
+                );
 
-        it('should return STORE_ALREADY_EXISTS even if created by previous createStore call', async () => {
-            // Create store via createStore
-            const first = await createStore(testDir, 'new-store');
-            expect(first.ok).toBe(true);
+                it(
+                    'should create store with numeric start character', async () => {
+                        const result = await createStore(
+                            testDir, '123store',
+                        );
 
-            // Try to create again
-            const second = await createStore(testDir, 'new-store');
+                        expect(result.ok).toBe(true);
 
-            expect(second.ok).toBe(false);
-            if (!second.ok) {
-                expect(second.error.code).toBe('STORE_ALREADY_EXISTS');
-            }
-        });
-    });
+                        // Verify directory was created
+                        const stat = await fs.stat(path.join(
+                            testDir, '123store',
+                        ));
+                        expect(stat.isDirectory()).toBe(true);
+                    },
+                );
 
-    describe('invalid store names', () => {
-        it('should return INVALID_STORE_NAME for empty name', async () => {
-            const result = await createStore(testDir, '');
+                it(
+                    'should create store with mixed naming conventions', async () => {
+                        const result = await createStore(
+                            testDir, 'My-Store_V2',
+                        );
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
-                expect(result.error.code).toBe('INVALID_STORE_NAME');
-                expect(result.error.message).toContain('Store name must not be empty');
-            }
-        });
+                        expect(result.ok).toBe(true);
 
-        it('should return INVALID_STORE_NAME for name starting with hyphen', async () => {
-            const result = await createStore(testDir, '-invalid');
+                        // Verify directory was created
+                        const stat = await fs.stat(path.join(
+                            testDir, 'My-Store_V2',
+                        ));
+                        expect(stat.isDirectory()).toBe(true);
+                    },
+                );
+            },
+        );
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
-                expect(result.error.code).toBe('INVALID_STORE_NAME');
-                expect(result.error.message).toContain('Store name must start with alphanumeric');
-            }
-        });
+        describe(
+            'store already exists', () => {
+                it(
+                    'should return STORE_ALREADY_EXISTS if store exists', async () => {
+                        // Create the store first
+                        await fs.mkdir(path.join(
+                            testDir, 'existing-store',
+                        ));
 
-        it('should return INVALID_STORE_NAME for name starting with underscore', async () => {
-            const result = await createStore(testDir, '_invalid');
+                        const result = await createStore(
+                            testDir, 'existing-store',
+                        );
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
-                expect(result.error.code).toBe('INVALID_STORE_NAME');
-                expect(result.error.message).toContain('Store name must start with alphanumeric');
-            }
-        });
+                        expect(result.ok).toBe(false);
+                        if (!result.ok) {
+                            expect(result.error.code).toBe('STORE_ALREADY_EXISTS');
+                            expect(result.error.message).toBe("Store 'existing-store' already exists");
+                        }
+                    },
+                );
 
-        it('should return INVALID_STORE_NAME for name with spaces', async () => {
-            const result = await createStore(testDir, 'my store');
+                it(
+                    'should return STORE_ALREADY_EXISTS even if created by previous createStore call', async () => {
+                        // Create store via createStore
+                        const first = await createStore(
+                            testDir, 'new-store',
+                        );
+                        expect(first.ok).toBe(true);
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
-                expect(result.error.code).toBe('INVALID_STORE_NAME');
-            }
-        });
+                        // Try to create again
+                        const second = await createStore(
+                            testDir, 'new-store',
+                        );
 
-        it('should return INVALID_STORE_NAME for name with special characters', async () => {
-            const result = await createStore(testDir, 'store@name');
+                        expect(second.ok).toBe(false);
+                        if (!second.ok) {
+                            expect(second.error.code).toBe('STORE_ALREADY_EXISTS'); 
+                        }
+                    },
+                );
+            },
+        );
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
-                expect(result.error.code).toBe('INVALID_STORE_NAME');
-            }
-        });
+        describe(
+            'invalid store names', () => {
+                it(
+                    'should return INVALID_STORE_NAME for empty name', async () => {
+                        const result = await createStore(
+                            testDir, '',
+                        );
 
-        it('should return INVALID_STORE_NAME for name with dots', async () => {
-            const result = await createStore(testDir, 'store.name');
+                        expect(result.ok).toBe(false);
+                        if (!result.ok) {
+                            expect(result.error.code).toBe('INVALID_STORE_NAME');
+                            expect(result.error.message).toContain('Store name must not be empty');
+                        }
+                    },
+                );
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
-                expect(result.error.code).toBe('INVALID_STORE_NAME');
-            }
-        });
+                it(
+                    'should return INVALID_STORE_NAME for name starting with hyphen', async () => {
+                        const result = await createStore(
+                            testDir, '-invalid',
+                        );
 
-        it('should not create directory when name is invalid', async () => {
-            await createStore(testDir, '-invalid');
+                        expect(result.ok).toBe(false);
+                        if (!result.ok) {
+                            expect(result.error.code).toBe('INVALID_STORE_NAME');
+                            expect(result.error.message).toContain('Store name must start with alphanumeric');
+                        }
+                    },
+                );
 
-            // Verify no directory was created
-            const entries = await fs.readdir(testDir);
-            expect(entries).toHaveLength(0);
-        });
-    });
+                it(
+                    'should return INVALID_STORE_NAME for name starting with underscore', async () => {
+                        const result = await createStore(
+                            testDir, '_invalid',
+                        );
 
-    describe('result type structure', () => {
-        it('should return ok: true with undefined value on success', async () => {
-            const result = await createStore(testDir, 'test-store');
+                        expect(result.ok).toBe(false);
+                        if (!result.ok) {
+                            expect(result.error.code).toBe('INVALID_STORE_NAME');
+                            expect(result.error.message).toContain('Store name must start with alphanumeric');
+                        }
+                    },
+                );
 
-            expect(result).toHaveProperty('ok', true);
-            expect(result).toHaveProperty('value', undefined);
-            expect(result).not.toHaveProperty('error');
-        });
+                it(
+                    'should return INVALID_STORE_NAME for name with spaces', async () => {
+                        const result = await createStore(
+                            testDir, 'my store',
+                        );
 
-        it('should return ok: false with error on failure', async () => {
-            const result = await createStore(testDir, '-invalid');
+                        expect(result.ok).toBe(false);
+                        if (!result.ok) {
+                            expect(result.error.code).toBe('INVALID_STORE_NAME'); 
+                        }
+                    },
+                );
 
-            expect(result).toHaveProperty('ok', false);
-            expect(result).toHaveProperty('error');
-            expect(result).not.toHaveProperty('value');
-        });
+                it(
+                    'should return INVALID_STORE_NAME for name with special characters', async () => {
+                        const result = await createStore(
+                            testDir, 'store@name',
+                        );
 
-        it('should have error with code and message properties', async () => {
-            const result = await createStore(testDir, '-invalid');
+                        expect(result.ok).toBe(false);
+                        if (!result.ok) {
+                            expect(result.error.code).toBe('INVALID_STORE_NAME'); 
+                        }
+                    },
+                );
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
-                expect(result.error).toHaveProperty('code');
-                expect(result.error).toHaveProperty('message');
-            }
-        });
-    });
-});
+                it(
+                    'should return INVALID_STORE_NAME for name with dots', async () => {
+                        const result = await createStore(
+                            testDir, 'store.name',
+                        );
+
+                        expect(result.ok).toBe(false);
+                        if (!result.ok) {
+                            expect(result.error.code).toBe('INVALID_STORE_NAME'); 
+                        }
+                    },
+                );
+
+                it(
+                    'should not create directory when name is invalid', async () => {
+                        await createStore(
+                            testDir, '-invalid',
+                        );
+
+                        // Verify no directory was created
+                        const entries = await fs.readdir(testDir);
+                        expect(entries).toHaveLength(0);
+                    },
+                );
+            },
+        );
+
+        describe(
+            'result type structure', () => {
+                it(
+                    'should return ok: true with undefined value on success', async () => {
+                        const result = await createStore(
+                            testDir, 'test-store',
+                        );
+
+                        expect(result).toHaveProperty(
+                            'ok', true,
+                        );
+                        expect(result).toHaveProperty(
+                            'value', undefined,
+                        );
+                        expect(result).not.toHaveProperty('error');
+                    },
+                );
+
+                it(
+                    'should return ok: false with error on failure', async () => {
+                        const result = await createStore(
+                            testDir, '-invalid',
+                        );
+
+                        expect(result).toHaveProperty(
+                            'ok', false,
+                        );
+                        expect(result).toHaveProperty('error');
+                        expect(result).not.toHaveProperty('value');
+                    },
+                );
+
+                it(
+                    'should have error with code and message properties', async () => {
+                        const result = await createStore(
+                            testDir, '-invalid',
+                        );
+
+                        expect(result.ok).toBe(false);
+                        if (!result.ok) {
+                            expect(result.error).toHaveProperty('code');
+                            expect(result.error).toHaveProperty('message');
+                        }
+                    },
+                );
+            },
+        );
+    },
+);

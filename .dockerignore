@@ -1,0 +1,61 @@
+# Docker build context exclusions
+# Reduces build context size and improves build speed
+
+# Dependencies - reinstalled in container
+node_modules
+
+# Build outputs
+out
+dist
+*.tgz
+
+# Test artifacts
+coverage
+*.lcov
+**/cortex-integration-test-*
+**/cortex-test-*
+**/cortex-debug-*
+tests/integration/*.tmp
+
+# Development files
+.env
+.env.*
+.env.local
+
+# IDE and editor files
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation and specs (not needed at runtime)
+openspec
+*.md
+!README.md
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker files (prevent recursive copy)
+Dockerfile
+docker-compose*.yaml
+.dockerignore
+
+# Logs
+logs
+*.log
+
+# Caches
+.eslintcache
+.cache
+*.tsbuildinfo
+
+# OpenCode configuration
+.opencode

@@ -49,10 +49,12 @@ export interface StoreToolError {
  */
 export const storeNameSchema = z
     .string()
-    .min(1, 'Store name must not be empty')
+    .min(
+        1, 'Store name must not be empty',
+    )
     .regex(
         /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/,
-        'Store name must start with alphanumeric and contain only alphanumeric, hyphens, or underscores'
+        'Store name must start with alphanumeric and contain only alphanumeric, hyphens, or underscores',
     );
 
 /**
@@ -83,15 +85,19 @@ export type CreateStoreInput = z.infer<typeof createStoreInputSchema>;
  * }
  * ```
  */
-export const listStores = async (dataPath: string): Promise<Result<string[], StoreToolError>> => {
+export const listStores = async (dataPath: string)
+: Promise<Result<string[], StoreToolError>> => {
     try {
-        const entries = await fs.readdir(dataPath, { withFileTypes: true });
+        const entries = await fs.readdir(
+            dataPath, { withFileTypes: true },
+        );
         const stores = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
         return { ok: true, value: stores };
-    } catch (error) {
-        // Handle ENOENT (data path doesn't exist yet) by returning empty array
+    }
+    catch (error) {
+    // Handle ENOENT (data path doesn't exist yet) by returning empty array
         if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-            return { ok: true, value: [] };
+            return { ok: true, value: [] }; 
         }
         return {
             ok: false,
@@ -101,7 +107,7 @@ export const listStores = async (dataPath: string): Promise<Result<string[], Sto
                 cause: error,
             },
         };
-    }
+    } 
 };
 
 /**
@@ -126,7 +132,7 @@ export const listStores = async (dataPath: string): Promise<Result<string[], Sto
  */
 export const createStore = async (
     dataPath: string,
-    name: string
+    name: string,
 ): Promise<Result<void, StoreToolError>> => {
     // Validate store name format
     const nameValidation = storeNameSchema.safeParse(name);
@@ -137,10 +143,12 @@ export const createStore = async (
                 code: 'INVALID_STORE_NAME',
                 message: nameValidation.error.issues.map((i) => i.message).join('; '),
             },
-        };
+        }; 
     }
 
-    const storePath = path.join(dataPath, name);
+    const storePath = path.join(
+        dataPath, name,
+    );
 
     // Check if store already exists
     try {
@@ -152,9 +160,10 @@ export const createStore = async (
                     code: 'STORE_ALREADY_EXISTS',
                     message: `Store '${name}' already exists`,
                 },
-            };
+            }; 
         }
-    } catch (error) {
+    }
+    catch (error) {
         // ENOENT is expected - store doesn't exist yet
         if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) {
             return {
@@ -164,15 +173,18 @@ export const createStore = async (
                     message: `Failed to check store existence: ${error instanceof Error ? error.message : String(error)}`,
                     cause: error,
                 },
-            };
-        }
+            }; 
+        } 
     }
 
     // Create the store directory
     try {
-        await fs.mkdir(storePath, { recursive: true });
+        await fs.mkdir(
+            storePath, { recursive: true },
+        );
         return { ok: true, value: undefined };
-    } catch (error) {
+    }
+    catch (error) {
         return {
             ok: false,
             error: {
@@ -180,6 +192,6 @@ export const createStore = async (
                 message: `Failed to create store '${name}': ${error instanceof Error ? error.message : String(error)}`,
                 cause: error,
             },
-        };
+        }; 
     }
 };

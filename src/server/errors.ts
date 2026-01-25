@@ -49,7 +49,7 @@ import type { z } from 'zod';
  *
  * **Memory validation errors** - Memory identity validation failures:
  * - `INVALID_SLUG` - Slug contains invalid characters (must be kebab-case)
- * - `INVALID_CATEGORY_DEPTH` - Category path exceeds maximum nesting depth
+ * - `INVALID_CATEGORY_DEPTH` - Category path does not meet minimum depth requirement (at least one category)
  * - `INVALID_SLUG_PATH` - Full slug path is malformed
  */
 export type DomainErrorCode =
@@ -147,9 +147,13 @@ const errorCodeMapping: Record<DomainErrorCode, ErrorCode> = {
  * // Returns: McpError with code InvalidParams
  * ```
  */
-export const domainErrorToMcpError = (code: DomainErrorCode, message: string): McpError => {
-    const mcpCode = errorCodeMapping[code] ?? ErrorCode.InternalError;
-    return new McpError(mcpCode, message);
+export const domainErrorToMcpError = (
+    code: DomainErrorCode, message: string,
+): McpError => {
+    const mcpCode = errorCodeMapping[ code ] ?? ErrorCode.InternalError;
+    return new McpError(
+        mcpCode, message,
+    );
 };
 
 /**
@@ -173,7 +177,9 @@ export const domainErrorToMcpError = (code: DomainErrorCode, message: string): M
  */
 export const zodErrorToMcpError = (error: z.ZodError): McpError => {
     const message = error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
-    return new McpError(ErrorCode.InvalidParams, message);
+    return new McpError(
+        ErrorCode.InvalidParams, message,
+    );
 };
 
 /**
@@ -195,10 +201,14 @@ export const zodErrorToMcpError = (error: z.ZodError): McpError => {
  * ```
  */
 export const handleDomainError = <E extends { code: string; message: string }>(
-    error: E
+    error: E,
 ): McpError => {
     if (error.code in errorCodeMapping) {
-        return domainErrorToMcpError(error.code as DomainErrorCode, error.message);
+        return domainErrorToMcpError(
+            error.code as DomainErrorCode, error.message,
+        ); 
     }
-    return new McpError(ErrorCode.InternalError, error.message);
+    return new McpError(
+        ErrorCode.InternalError, error.message,
+    );
 };

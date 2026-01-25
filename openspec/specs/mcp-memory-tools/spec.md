@@ -1,0 +1,137 @@
+# mcp-memory-tools Specification
+
+## Purpose
+TBD - created by archiving change add-mcp-memory-tools. Update Purpose after archive.
+## Requirements
+### Requirement: Add memory tool
+
+The MCP server SHALL provide an `add_memory` tool that creates a new memory with auto-creation of stores and categories.
+
+#### Scenario: Adding a memory
+
+- **WHEN** an agent calls `add_memory` with path and content
+- **THEN** a new memory is created at the specified path
+
+#### Scenario: Auto-create store on first write
+
+- **WHEN** an agent calls `add_memory` targeting a non-existent store
+- **THEN** the store is automatically created before adding the memory
+
+#### Scenario: Auto-create category
+
+- **WHEN** an agent calls `add_memory` with a path in a non-existent category
+- **THEN** the category is automatically created
+
+#### Scenario: Memory with optional parameters
+
+- **WHEN** an agent provides `tags` and `expires_at` parameters
+- **THEN** the memory is created with the specified metadata
+
+### Requirement: Get memory tool
+
+The MCP server SHALL provide a `get_memory` tool that retrieves memory content and metadata.
+
+#### Scenario: Retrieving a memory
+
+- **WHEN** an agent calls `get_memory` with a valid path
+- **THEN** the memory content and metadata are returned
+
+#### Scenario: Memory not found
+
+- **WHEN** an agent calls `get_memory` with a non-existent path
+- **THEN** an appropriate error is returned
+
+#### Scenario: Expired memory handling
+
+- **WHEN** an agent calls `get_memory` with `include_expired: false` (default)
+- **THEN** expired memories are not returned
+
+### Requirement: Update memory tool
+
+The MCP server SHALL provide an `update_memory` tool that modifies memory content or metadata.
+
+#### Scenario: Updating content
+
+- **WHEN** an agent calls `update_memory` with new content
+- **THEN** the memory content is updated and timestamps are refreshed
+
+#### Scenario: Updating metadata only
+
+- **WHEN** an agent calls `update_memory` with only tags or expiry changes
+- **THEN** only the metadata is updated
+
+#### Scenario: Clearing expiry
+
+- **WHEN** an agent calls `update_memory` with `clear_expiry: true`
+- **THEN** the expiry date is removed from the memory
+
+### Requirement: Remove memory tool
+
+The MCP server SHALL provide a `remove_memory` tool that deletes a memory.
+
+#### Scenario: Removing a memory
+
+- **WHEN** an agent calls `remove_memory` with a valid path
+- **THEN** the memory is deleted
+
+#### Scenario: Removing non-existent memory
+
+- **WHEN** an agent calls `remove_memory` with a non-existent path
+- **THEN** an appropriate error is returned
+
+### Requirement: Move memory tool
+
+The MCP server SHALL provide a `move_memory` tool that moves or renames a memory.
+
+#### Scenario: Moving a memory
+
+- **WHEN** an agent calls `move_memory` with source and destination paths
+- **THEN** the memory is moved to the new location
+
+#### Scenario: Moving to existing path
+
+- **WHEN** an agent calls `move_memory` with a destination that already exists
+- **THEN** an appropriate error is returned
+
+### Requirement: List memories tool
+
+The MCP server SHALL provide a `list_memories` tool that lists memories in a category.
+
+#### Scenario: Listing category contents
+
+- **WHEN** an agent calls `list_memories` with a category path
+- **THEN** all memories in that category are returned
+
+#### Scenario: Listing all memories
+
+- **WHEN** an agent calls `list_memories` without a category
+- **THEN** memories at the root level are returned
+
+#### Scenario: Filtering expired
+
+- **WHEN** an agent calls `list_memories` with `include_expired: true`
+- **THEN** expired memories are included in the results
+
+### Requirement: Prune memories tool
+
+The MCP server SHALL provide a `prune_memories` tool that deletes all expired memories.
+
+#### Scenario: Pruning expired memories
+
+- **WHEN** an agent calls `prune_memories`
+- **THEN** all expired memories in the store are deleted
+
+#### Scenario: No expired memories
+
+- **WHEN** an agent calls `prune_memories` and no memories are expired
+- **THEN** the tool returns success with a count of zero
+
+### Requirement: Default store parameter
+
+All memory tools SHALL use `CORTEX_DEFAULT_STORE` when the `store` parameter is omitted.
+
+#### Scenario: Using default store
+
+- **WHEN** an agent calls any memory tool without specifying `store`
+- **THEN** the operation uses the configured default store
+

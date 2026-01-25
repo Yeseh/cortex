@@ -1,0 +1,48 @@
+# Cortex MCP Server - Local Development Overrides
+#
+# Copy this file to docker-compose.override.yaml to customize for local development.
+# Docker Compose automatically merges this with docker-compose.yaml.
+#
+# Usage:
+#   cp docker-compose.override.yaml.example docker-compose.override.yaml
+#   # Edit as needed, then:
+#   docker compose up -d
+#
+# Common customizations:
+#   - Mount local directories for hot-reload development
+#   - Change port mappings to avoid conflicts
+#   - Enable debug logging
+#   - Remove resource constraints for development
+
+services:
+  cortex:
+    # Override for local development
+    # Uncomment options as needed
+
+    # Mount local source for development (enables hot reload)
+    # volumes:
+    #   - ./src:/app/src:ro
+    #   - ./data:/data
+
+    # Use a local data directory instead of named volume
+    # volumes:
+    #   - ./data:/data
+
+    # Custom port mapping (e.g., if 3000 is in use)
+    # ports:
+    #   - "3001:3000"
+
+    # Development environment overrides
+    environment:
+      - CORTEX_LOG_LEVEL=debug
+      # Use local data directory
+      # - CORTEX_DATA_PATH=/data
+
+    # Remove resource constraints for development
+    deploy:
+      resources: {}
+
+# Override volumes for local development
+# Uncomment to disable named volume and use local directory
+# volumes:
+#   cortex-data: !reset null

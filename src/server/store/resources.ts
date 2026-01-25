@@ -26,7 +26,7 @@ import { listStores, storeNameSchema } from './tools.ts';
  */
 const getStringVariable = (value: string | string[] | undefined): string | undefined => {
     if (typeof value === 'string') return value;
-    if (Array.isArray(value) && value.length === 1) return value[0];
+    if (Array.isArray(value) && value.length === 1) return value[ 0 ];
     return undefined;
 };
 
@@ -59,16 +59,21 @@ export interface StoreResourceError {
  */
 export const getStoreCategories = async (
     dataPath: string,
-    storeName: string
+    storeName: string,
 ): Promise<Result<string[], StoreResourceError>> => {
-    const storePath = path.join(dataPath, storeName);
+    const storePath = path.join(
+        dataPath, storeName,
+    );
     try {
-        const entries = await fs.readdir(storePath, { withFileTypes: true });
+        const entries = await fs.readdir(
+            storePath, { withFileTypes: true },
+        );
         const categories = entries
             .filter((entry) => entry.isDirectory())
             .map((entry) => entry.name);
         return { ok: true, value: categories };
-    } catch (error) {
+    }
+    catch (error) {
         if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
             return {
                 ok: false,
@@ -76,7 +81,7 @@ export const getStoreCategories = async (
                     code: 'STORE_NOT_FOUND',
                     message: `Store '${storeName}' not found`,
                 },
-            };
+            }; 
         }
         return {
             ok: false,
@@ -106,7 +111,9 @@ export const getStoreCategories = async (
  * registerStoreResources(server, config);
  * ```
  */
-export const registerStoreResources = (server: McpServer, config: ServerConfig): void => {
+export const registerStoreResources = (
+    server: McpServer, config: ServerConfig,
+): void => {
     // Register cortex://store/ resource for listing all stores
     server.registerResource(
         'store-list',
@@ -116,45 +123,49 @@ export const registerStoreResources = (server: McpServer, config: ServerConfig):
             const result = await listStores(config.dataPath);
             // MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
             if (!result.ok) {
-                throw new McpError(ErrorCode.InternalError, result.error.message);
+                throw new McpError(
+                    ErrorCode.InternalError, result.error.message,
+                ); 
             }
             return {
-                contents: [
-                    {
-                        uri: 'cortex://store/',
-                        mimeType: 'application/json',
-                        text: JSON.stringify({ stores: result.value }),
-                    },
-                ],
+                contents: [{
+                    uri: 'cortex://store/',
+                    mimeType: 'application/json',
+                    text: JSON.stringify({ stores: result.value }),
+                }],
             };
-        }
+        },
     );
 
     // Register cortex://store/{name} resource template for store details
-    const storeDetailTemplate = new ResourceTemplate('cortex://store/{name}', {
-        list: async () => {
+    const storeDetailTemplate = new ResourceTemplate(
+        'cortex://store/{name}', {
+            list: async () => {
             // List all stores as resources for discovery
-            const result = await listStores(config.dataPath);
-            // MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
-            if (!result.ok) {
-                throw new McpError(ErrorCode.InternalError, result.error.message);
-            }
-            return {
-                resources: result.value.map((name) => ({
-                    uri: `cortex://store/${name}`,
-                    name: `Store: ${name}`,
-                    mimeType: 'application/json',
-                })),
-            };
-        },
-        complete: {
-            name: async (): Promise<string[]> => {
                 const result = await listStores(config.dataPath);
-                if (!result.ok) return [];
-                return result.value;
+                // MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
+                if (!result.ok) {
+                    throw new McpError(
+                        ErrorCode.InternalError, result.error.message,
+                    ); 
+                }
+                return {
+                    resources: result.value.map((name) => ({
+                        uri: `cortex://store/${name}`,
+                        name: `Store: ${name}`,
+                        mimeType: 'application/json',
+                    })),
+                };
+            },
+            complete: {
+                name: async (): Promise<string[]> => {
+                    const result = await listStores(config.dataPath);
+                    if (!result.ok) return [];
+                    return result.value;
+                },
             },
         },
-    });
+    );
 
     server.registerResource(
         'store-detail',
@@ -163,45 +174,51 @@ export const registerStoreResources = (server: McpServer, config: ServerConfig):
             description: 'Get store metadata and root category listing',
             mimeType: 'application/json',
         },
-        async (uri: URL, variables: Variables): Promise<ReadResourceResult> => {
+        async (
+            uri: URL, variables: Variables,
+        ): Promise<ReadResourceResult> => {
             const storeName = getStringVariable(variables.name);
 
             // Validate store name is present and valid format
             // MCP SDK callbacks require thrown errors - convert validation failures to exceptions
             if (!storeName) {
-                throw new McpError(ErrorCode.InvalidParams, 'Store name is required');
+                throw new McpError(
+                    ErrorCode.InvalidParams, 'Store name is required',
+                ); 
             }
 
             const nameValidation = storeNameSchema.safeParse(storeName);
             if (!nameValidation.success) {
                 throw new McpError(
                     ErrorCode.InvalidParams,
-                    nameValidation.error.issues.map((i) => i.message).join('; ')
-                );
+                    nameValidation.error.issues.map((i) => i.message).join('; '),
+                ); 
             }
 
             // Get store categories
-            const result = await getStoreCategories(config.dataPath, storeName);
+            const result = await getStoreCategories(
+                config.dataPath, storeName,
+            );
             // MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
             if (!result.ok) {
                 const errorCode =
                     result.error.code === 'STORE_NOT_FOUND'
                         ? ErrorCode.InvalidParams
                         : ErrorCode.InternalError;
-                throw new McpError(errorCode, result.error.message);
+                throw new McpError(
+                    errorCode, result.error.message,
+                );
             }
             return {
-                contents: [
-                    {
-                        uri: uri.href,
-                        mimeType: 'application/json',
-                        text: JSON.stringify({
-                            name: storeName,
-                            categories: result.value,
-                        }),
-                    },
-                ],
+                contents: [{
+                    uri: uri.href,
+                    mimeType: 'application/json',
+                    text: JSON.stringify({
+                        name: storeName,
+                        categories: result.value,
+                    }),
+                }],
             };
-        }
+        },
     );
 };

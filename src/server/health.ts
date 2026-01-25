@@ -21,7 +21,7 @@
 import { Router, type Request, type Response } from 'express';
 import { resolve } from 'node:path';
 import { SERVER_VERSION, type ServerConfig } from './config.ts';
-import { loadStoreRegistry } from '../store/registry.ts';
+import { loadStoreRegistry } from '../core/store/registry.ts';
 
 /**
  * Health check response structure.
@@ -80,23 +80,31 @@ export interface HealthResponse {
 export const createHealthRouter = (config: ServerConfig): Router => {
     const router = Router();
 
-    router.get('/', async (_req: Request, res: Response) => {
+    router.get(
+        '/', async (
+            _req: Request, res: Response,
+        ) => {
         // Try to load store registry and count stores
-        const registryPath = resolve(config.dataPath, 'stores.yaml');
-        const registryResult = await loadStoreRegistry(registryPath, {
-            allowMissing: true,
-        });
-        const storeCount = registryResult.ok ? Object.keys(registryResult.value).length : 0;
+            const registryPath = resolve(
+                config.dataPath, 'stores.yaml',
+            );
+            const registryResult = await loadStoreRegistry(
+                registryPath, {
+                    allowMissing: true,
+                },
+            );
+            const storeCount = registryResult.ok ? Object.keys(registryResult.value).length : 0;
 
-        const response: HealthResponse = {
-            status: 'healthy',
-            version: SERVER_VERSION,
-            dataPath: config.dataPath,
-            storeCount,
-        };
+            const response: HealthResponse = {
+                status: 'healthy',
+                version: SERVER_VERSION,
+                dataPath: config.dataPath,
+                storeCount,
+            };
 
-        res.json(response);
-    });
+            res.json(response);
+        },
+    );
 
     return router;
 };

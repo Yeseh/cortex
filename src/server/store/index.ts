@@ -48,7 +48,9 @@ import { registerStoreResources } from './resources.ts';
  * registerStoreTools(server, config);
  * ```
  */
-export const registerStoreTools = (server: McpServer, config: ServerConfig): void => {
+export const registerStoreTools = (
+    server: McpServer, config: ServerConfig,
+): void => {
     // Register list_stores tool
     server.registerTool(
         'list_stores',
@@ -61,14 +63,14 @@ export const registerStoreTools = (server: McpServer, config: ServerConfig): voi
                 return {
                     content: [{ type: 'text', text: `Error: ${result.error.message}` }],
                     isError: true,
-                };
+                }; 
             }
             return {
-                content: [
-                    { type: 'text', text: JSON.stringify({ stores: result.value }, null, 2) },
-                ],
+                content: [{ type: 'text', text: JSON.stringify(
+                    { stores: result.value }, null, 2,
+                ) }],
             };
-        }
+        },
     );
 
     // Register create_store tool with input schema
@@ -77,27 +79,31 @@ export const registerStoreTools = (server: McpServer, config: ServerConfig): voi
         {
             description: 'Create a new memory store',
             inputSchema: {
-                name: storeNameSchema.describe(
-                    'Name of the store to create (alphanumeric, hyphens, underscores only)'
-                ),
+                name: storeNameSchema.describe('Name of the store to create (alphanumeric, hyphens, underscores only)'),
             },
         },
         async ({ name }) => {
-            const result = await createStore(config.dataPath, name);
+            const result = await createStore(
+                config.dataPath, name,
+            );
             if (!result.ok) {
                 return {
                     content: [{ type: 'text', text: `Error: ${result.error.message}` }],
                     isError: true,
-                };
+                }; 
             }
             return {
-                content: [{ type: 'text', text: JSON.stringify({ created: name }, null, 2) }],
+                content: [{ type: 'text', text: JSON.stringify(
+                    { created: name }, null, 2,
+                ) }],
             };
-        }
+        },
     );
 
     // Register store resources
-    registerStoreResources(server, config);
+    registerStoreResources(
+        server, config,
+    );
 };
 
 // Re-export tools for direct usage
