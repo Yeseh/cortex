@@ -1,0 +1,9 @@
+memories:
+  -
+    path: projects/cortex/architecture
+    token_estimate: 218
+  -
+    path: projects/cortex/conventions
+    token_estimate: 178
+
+subcategories: []

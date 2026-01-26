@@ -1,0 +1,6 @@
+memories: []
+
+subcategories:
+  -
+    path: projects/cortex
+    memory_count: 2
