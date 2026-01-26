@@ -140,6 +140,7 @@ ARGUMENTS
 OPTIONS
   --store <name>        Use a specific named store
   --include-expired     Show memory even if expired
+  --format <fmt>        Output format: yaml (default), json, or toon
 
 EXAMPLES
   cortex show project/tech-stack
@@ -216,7 +217,7 @@ ARGUMENTS
 
 OPTIONS
   --include-expired     Include expired memories in listing
-  --format <fmt>        Output format: yaml (default) or json
+  --format <fmt>        Output format: yaml (default), json, or toon
   --store <name>        Use a specific named store
 
 EXAMPLES
@@ -303,11 +304,11 @@ const parseHelpArgs = (args: string[]): Result<{ command?: string }, HelpCommand
         });
     }
 
-    return ok({ command: positional[ 0 ] });
+    return ok({ command: positional[0] });
 };
 
 export const runHelpCommand = (
-    options: HelpCommandOptions,
+    options: HelpCommandOptions
 ): Result<HelpCommandOutput, HelpCommandError> => {
     const parsed = parseHelpArgs(options.args);
     if (!parsed.ok) {
@@ -319,7 +320,7 @@ export const runHelpCommand = (
         return ok({ message: MAIN_HELP });
     }
 
-    const commandHelp = COMMAND_HELP[ command ];
+    const commandHelp = COMMAND_HELP[command];
     if (!commandHelp) {
         return err({
             code: 'INVALID_ARGUMENTS',

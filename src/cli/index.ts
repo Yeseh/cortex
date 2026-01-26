@@ -66,7 +66,7 @@ const parseStoreFlag = (args: string[]): { store?: string; remaining: string[] }
     let store: string | undefined;
 
     for (let index = 0; index < args.length; index += 1) {
-        const value = args[ index ];
+        const value = args[index];
         if (!value) {
             continue;
         }
@@ -76,7 +76,7 @@ const parseStoreFlag = (args: string[]): { store?: string; remaining: string[] }
             continue;
         }
 
-        const candidate = args[ index + 1 ];
+        const candidate = args[index + 1];
         if (!candidate) {
             store = '';
             continue;
@@ -99,7 +99,7 @@ const parseGlobalStorePath = (args: string[]): GlobalStoreParseResult => {
     let globalStorePath: string | undefined;
 
     for (let index = 0; index < args.length; index += 1) {
-        const value = args[ index ];
+        const value = args[index];
         if (!value) {
             continue;
         }
@@ -109,7 +109,7 @@ const parseGlobalStorePath = (args: string[]): GlobalStoreParseResult => {
             continue;
         }
 
-        const candidate = args[ index + 1 ];
+        const candidate = args[index + 1];
         if (!candidate) {
             globalStorePath = '';
             continue;
@@ -147,7 +147,7 @@ const parseHelpFlag = (args: string[]): HelpFlagParseResult => {
     return { hasHelp, remaining };
 };
 
-const toCliError = (code: CliRunError[ 'code' ], message: string, cause?: unknown): CliRunError => ({
+const toCliError = (code: CliRunError['code'], message: string, cause?: unknown): CliRunError => ({
     code,
     message,
     cause,
@@ -289,7 +289,7 @@ const executePruneCommand = async (
 const executeShowCommand = async (
     root: string,
     remainingArgs: string[],
-    format: OutputFormat,
+    _format: OutputFormat,
 ): Promise<CliRunResult> => {
     const showResult = await runShowCommand({
         storeRoot: root,
@@ -298,7 +298,7 @@ const executeShowCommand = async (
     if (!showResult.ok) {
         return formatError(toCliError('SHOW_FAILED', showResult.error.message, showResult.error));
     }
-    const serialized = serializeOutput(showResult.value.output, format);
+    const serialized = serializeOutput(showResult.value.output, showResult.value.format);
     if (!serialized.ok) {
         return formatError(toCliError('SHOW_FAILED', serialized.error.message, serialized.error));
     }
@@ -366,7 +366,7 @@ const runCommandWithStore = async (
         move: executeMoveCommand,
     };
 
-    return handlers[ command ](root, remainingArgs, outputFormat);
+    return handlers[command](root, remainingArgs, outputFormat);
 };
 
 export const runCli = async (options: CliRunOptions = {}): Promise<CliRunResult> => {
@@ -384,7 +384,7 @@ export const runCli = async (options: CliRunOptions = {}): Promise<CliRunResult>
             return { exitCode: 0, output: MAIN_HELP };
         }
 
-        const commandHelp = COMMAND_HELP[ command ];
+        const commandHelp = COMMAND_HELP[command];
         if (!commandHelp) {
             return formatError(
                 toCliError(
@@ -422,7 +422,9 @@ export const runCli = async (options: CliRunOptions = {}): Promise<CliRunResult>
         options.globalStorePath ??
         resolve(cortexConfigDir, 'memory');
 
-    const [command, ...rest] = remainingArgs;
+    const [
+        command, ...rest
+    ] = remainingArgs;
     if (!command) {
         return formatError(
             toCliError(

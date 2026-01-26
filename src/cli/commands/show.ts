@@ -7,7 +7,7 @@ import { defaultTokenizer } from '../../core/tokens.ts';
 import { parseMemoryFile } from '../../core/memory/file.ts';
 import { validateMemorySlugPath } from '../../core/memory/validation.ts';
 import { FilesystemStorageAdapter } from '../../core/storage/filesystem.ts';
-import type { OutputPayload, OutputMemory } from '../output.ts';
+import type { OutputPayload, OutputMemory, OutputFormat } from '../output.ts';
 
 export interface ShowCommandOptions {
     storeRoot: string;
@@ -16,6 +16,7 @@ export interface ShowCommandOptions {
 
 export interface ShowCommandOutput {
     output: OutputPayload;
+    format: OutputFormat;
 }
 
 export interface ShowCommandError {
@@ -36,13 +37,28 @@ const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 interface ParsedShowArgs {
     slugPath: string;
+    format: OutputFormat;
 }
 
 const parseShowArgs = (args: string[]): Result<ParsedShowArgs, ShowCommandError> => {
     let slugPath = '';
+    let format: OutputFormat = 'yaml';
 
-    for (const arg of args) {
+    for (let index = 0; index < args.length; index += 1) {
+        const arg = args[index];
         if (!arg) {
+            continue;
+        }
+        if (arg === '--format') {
+            const next = args[index + 1];
+            if (!next || (next !== 'yaml' && next !== 'json' && next !== 'toon')) {
+                return err({
+                    code: 'INVALID_ARGUMENTS',
+                    message: "--format requires 'yaml', 'json', or 'toon'.",
+                });
+            }
+            format = next;
+            index += 1;
             continue;
         }
         if (arg.startsWith('-')) {
@@ -68,7 +84,7 @@ const parseShowArgs = (args: string[]): Result<ParsedShowArgs, ShowCommandError>
         });
     }
 
-    return ok({ slugPath });
+    return ok({ slugPath, format });
 };
 
 export const runShowCommand = async (options: ShowCommandOptions): Promise<ShowCommandResult> => {
@@ -130,5 +146,6 @@ export const runShowCommand = async (options: ShowCommandOptions): Promise<ShowC
 
     return ok({
         output: { kind: 'memory', value: outputMemory },
+        format: parsed.value.format,
     });
 };
