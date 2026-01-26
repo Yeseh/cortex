@@ -310,7 +310,7 @@ const serializeCategoryMemoriesJson = (entries: OutputCategoryMemory[]): JsonRec
         const record: Record<string, unknown> = { path: entryPath.value };
         const tokenEstimate = serializeOptionalNumber(
             entry.tokenEstimate,
-            'memories.token_estimate'
+            'memories.token_estimate',
         );
         if (!tokenEstimate.ok) {
             return tokenEstimate;
