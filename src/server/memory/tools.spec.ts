@@ -100,8 +100,8 @@ describe(
                 );
 
                 expect(result.content).toHaveLength(1);
-                expect(result.content[ 0 ]!.text).toContain('Memory created');
-                expect(result.content[ 0 ]!.text).toContain('project/test-memory');
+                expect(result.content[0]!.text).toContain('Memory created');
+                expect(result.content[0]!.text).toContain('project/test-memory');
             },
         );
 
@@ -110,14 +110,16 @@ describe(
                 const input: AddMemoryInput = {
                     path: 'project/tagged-memory',
                     content: 'Content with tags',
-                    tags: [ 'test',
-                        'example' ],
+                    tags: [
+                        'test',
+                        'example', 
+                    ],
                 };
 
                 const result = await addMemoryHandler(
                     { config }, input,
                 );
-                expect(result.content[ 0 ]!.text).toContain('Memory created');
+                expect(result.content[0]!.text).toContain('Memory created');
 
                 // Verify by reading back
                 const getResult = await getMemoryHandler(
@@ -126,9 +128,11 @@ describe(
                         path: 'project/tagged-memory',
                     },
                 );
-                const output = JSON.parse(getResult.content[ 0 ]!.text);
-                expect(output.metadata.tags).toEqual([ 'test',
-                    'example' ]);
+                const output = JSON.parse(getResult.content[0]!.text);
+                expect(output.metadata.tags).toEqual([
+                    'test',
+                    'example', 
+                ]);
             },
         );
 
@@ -144,7 +148,7 @@ describe(
                 const result = await addMemoryHandler(
                     { config }, input,
                 );
-                expect(result.content[ 0 ]!.text).toContain('Memory created');
+                expect(result.content[0]!.text).toContain('Memory created');
 
                 // Verify by reading back
                 const getResult = await getMemoryHandler(
@@ -153,7 +157,7 @@ describe(
                         path: 'project/expiring-memory',
                     },
                 );
-                const output = JSON.parse(getResult.content[ 0 ]!.text);
+                const output = JSON.parse(getResult.content[0]!.text);
                 expect(output.metadata.expires_at).toBeDefined();
             },
         );
@@ -169,7 +173,7 @@ describe(
                 const result = await addMemoryHandler(
                     { config }, input,
                 );
-                expect(result.content[ 0 ]!.text).toContain('Memory created');
+                expect(result.content[0]!.text).toContain('Memory created');
             },
         );
 
@@ -234,7 +238,7 @@ describe(
                     { config }, input,
                 );
 
-                const output = JSON.parse(result.content[ 0 ]!.text);
+                const output = JSON.parse(result.content[0]!.text);
                 expect(output.path).toBe('project/existing-memory');
                 expect(output.content).toBe('Existing content');
                 expect(output.metadata.tags).toEqual(['existing']);
@@ -308,7 +312,7 @@ describe(
                 const result = await getMemoryHandler(
                     { config }, input,
                 );
-                const output = JSON.parse(result.content[ 0 ]!.text);
+                const output = JSON.parse(result.content[0]!.text);
                 expect(output.content).toBe('Expired content');
             },
         );
@@ -360,13 +364,13 @@ describe(
                 const result = await updateMemoryHandler(
                     { config }, input,
                 );
-                expect(result.content[ 0 ]!.text).toContain('Memory updated');
+                expect(result.content[0]!.text).toContain('Memory updated');
 
                 // Verify
                 const getResult = await getMemoryHandler(
                     { config }, { path: 'project/update-target' },
                 );
-                const output = JSON.parse(getResult.content[ 0 ]!.text);
+                const output = JSON.parse(getResult.content[0]!.text);
                 expect(output.content).toBe('Updated content');
             },
         );
@@ -385,7 +389,7 @@ describe(
                 const getResult = await getMemoryHandler(
                     { config }, { path: 'project/update-target' },
                 );
-                const output = JSON.parse(getResult.content[ 0 ]!.text);
+                const output = JSON.parse(getResult.content[0]!.text);
                 expect(output.metadata.tags).toEqual(['new-tag']);
             },
         );
@@ -405,7 +409,7 @@ describe(
                 const getResult = await getMemoryHandler(
                     { config }, { path: 'project/update-target' },
                 );
-                const output = JSON.parse(getResult.content[ 0 ]!.text);
+                const output = JSON.parse(getResult.content[0]!.text);
                 expect(output.metadata.expires_at).toBeDefined();
             },
         );
@@ -441,7 +445,7 @@ describe(
                 const getResult = await getMemoryHandler(
                     { config }, { path: 'project/with-expiry' },
                 );
-                const output = JSON.parse(getResult.content[ 0 ]!.text);
+                const output = JSON.parse(getResult.content[0]!.text);
                 expect(output.metadata.expires_at).toBeUndefined();
             },
         );
@@ -517,7 +521,7 @@ describe(
                 const result = await removeMemoryHandler(
                     { config }, input,
                 );
-                expect(result.content[ 0 ]!.text).toContain('Memory removed');
+                expect(result.content[0]!.text).toContain('Memory removed');
 
                 // Verify it's gone
                 await expect(getMemoryHandler(
@@ -585,7 +589,7 @@ describe(
                 const result = await moveMemoryHandler(
                     { config }, input,
                 );
-                expect(result.content[ 0 ]!.text).toContain('Memory moved');
+                expect(result.content[0]!.text).toContain('Memory moved');
 
                 // Verify source is gone
                 await expect(getMemoryHandler(
@@ -596,7 +600,7 @@ describe(
                 const getResult = await getMemoryHandler(
                     { config }, { path: 'project/move-destination' },
                 );
-                const output = JSON.parse(getResult.content[ 0 ]!.text);
+                const output = JSON.parse(getResult.content[0]!.text);
                 expect(output.content).toBe('Content to move');
             },
         );
@@ -714,7 +718,7 @@ describe(
                 const result = await listMemoriesHandler(
                     { config }, input,
                 );
-                const output = JSON.parse(result.content[ 0 ]!.text);
+                const output = JSON.parse(result.content[0]!.text);
 
                 expect(output.category).toBe('project');
                 expect(output.count).toBe(2);
@@ -729,7 +733,7 @@ describe(
                 const result = await listMemoriesHandler(
                     { config }, input,
                 );
-                const output = JSON.parse(result.content[ 0 ]!.text);
+                const output = JSON.parse(result.content[0]!.text);
 
                 expect(output.category).toBe('all');
                 expect(output.count).toBe(3);
@@ -761,7 +765,7 @@ describe(
                 const result = await listMemoriesHandler(
                     { config }, input,
                 );
-                const output = JSON.parse(result.content[ 0 ]!.text);
+                const output = JSON.parse(result.content[0]!.text);
 
                 // Should not include the expired memory
                 expect(output.count).toBe(2);
@@ -794,7 +798,7 @@ describe(
                 const result = await listMemoriesHandler(
                     { config }, input,
                 );
-                const output = JSON.parse(result.content[ 0 ]!.text);
+                const output = JSON.parse(result.content[0]!.text);
 
                 // Should include the expired memory
                 expect(output.count).toBe(3);
@@ -872,7 +876,7 @@ describe(
                 const result = await pruneMemoriesHandler(
                     { config }, input,
                 );
-                const output = JSON.parse(result.content[ 0 ]!.text);
+                const output = JSON.parse(result.content[0]!.text);
 
                 expect(output.pruned_count).toBe(2);
                 expect(output.pruned).toHaveLength(2);
@@ -881,7 +885,7 @@ describe(
                 const getResult = await getMemoryHandler(
                     { config }, { path: 'project/active' },
                 );
-                expect(getResult.content[ 0 ]!.text).toContain('Active memory');
+                expect(getResult.content[0]!.text).toContain('Active memory');
 
                 // Verify expired memories are gone
                 await expect(getMemoryHandler(
@@ -918,7 +922,7 @@ describe(
                 const result = await pruneMemoriesHandler(
                     { config }, input,
                 );
-                const output = JSON.parse(result.content[ 0 ]!.text);
+                const output = JSON.parse(result.content[0]!.text);
 
                 expect(output.pruned_count).toBe(0);
                 expect(output.pruned).toHaveLength(0);
@@ -965,7 +969,7 @@ describe(
                 const result = await getMemoryHandler(
                     { config }, getInput,
                 );
-                expect(result.content[ 0 ]!.text).toContain('Test');
+                expect(result.content[0]!.text).toContain('Test');
             },
         );
     },

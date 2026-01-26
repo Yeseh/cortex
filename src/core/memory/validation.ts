@@ -50,7 +50,7 @@ export const validateMemorySlugPath = (slugPath: string): IdentityResult => {
         });
     }
 
-    const slug = segments[ segments.length - 1 ];
+    const slug = segments[segments.length - 1];
     if (!slug) {
         return err({
             code: 'INVALID_SLUG_PATH',

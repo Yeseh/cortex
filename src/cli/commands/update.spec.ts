@@ -212,8 +212,10 @@ describe(
 
                         const now = new Date('2024-06-15T12:00:00.000Z');
                         const result = await runUpdateCommand(buildOptions(
-                            [ slugPath,
-                                '--clear-expiry' ], { now },
+                            [
+                                slugPath,
+                                '--clear-expiry', 
+                            ], { now },
                         ));
 
                         expect(result.ok).toBe(true);
@@ -316,8 +318,10 @@ describe(
                     'should replace tags with empty array when empty string provided', async () => {
                         const slugPath = 'project/clear-tags';
                         await createMemoryFile(
-                            slugPath, buildMemoryContent({ tags: [ 'tag1',
-                                'tag2' ] }),
+                            slugPath, buildMemoryContent({ tags: [
+                                'tag1',
+                                'tag2', 
+                            ] }),
                         );
 
                         const now = new Date('2024-06-15T12:00:00.000Z');
@@ -343,8 +347,10 @@ describe(
             'error cases', () => {
                 it(
                     'should return INVALID_ARGS when memory path is missing', async () => {
-                        const result = await runUpdateCommand(buildOptions([ '--content',
-                            'Hello' ]));
+                        const result = await runUpdateCommand(buildOptions([
+                            '--content',
+                            'Hello', 
+                        ]));
 
                         expect(result.ok).toBe(false);
                         if (result.ok) return;
@@ -389,8 +395,10 @@ describe(
 
                 it(
                     'should return INVALID_ARGS when --content flag has no value', async () => {
-                        const result = await runUpdateCommand(buildOptions([ 'project/memory',
-                            '--content' ]));
+                        const result = await runUpdateCommand(buildOptions([
+                            'project/memory',
+                            '--content', 
+                        ]));
 
                         expect(result.ok).toBe(false);
                         if (result.ok) return;
@@ -403,8 +411,10 @@ describe(
 
                 it(
                     'should return INVALID_ARGS when --file flag has no value', async () => {
-                        const result = await runUpdateCommand(buildOptions([ 'project/memory',
-                            '--file' ]));
+                        const result = await runUpdateCommand(buildOptions([
+                            'project/memory',
+                            '--file', 
+                        ]));
 
                         expect(result.ok).toBe(false);
                         if (result.ok) return;
@@ -417,8 +427,10 @@ describe(
 
                 it(
                     'should return INVALID_ARGS when --tags flag has no value', async () => {
-                        const result = await runUpdateCommand(buildOptions([ 'project/memory',
-                            '--tags' ]));
+                        const result = await runUpdateCommand(buildOptions([
+                            'project/memory',
+                            '--tags', 
+                        ]));
 
                         expect(result.ok).toBe(false);
                         if (result.ok) return;
@@ -431,8 +443,10 @@ describe(
 
                 it(
                     'should return INVALID_ARGS when --expires-at flag has no value', async () => {
-                        const result = await runUpdateCommand(buildOptions([ 'project/memory',
-                            '--expires-at' ]));
+                        const result = await runUpdateCommand(buildOptions([
+                            'project/memory',
+                            '--expires-at', 
+                        ]));
 
                         expect(result.ok).toBe(false);
                         if (result.ok) return;

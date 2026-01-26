@@ -71,8 +71,8 @@ describe(
                             registerToolCalls.push(name);
                             return originalRegisterTool(
                                 name,
-                                configArg as Parameters<typeof originalRegisterTool>[ 1 ],
-                                cb as Parameters<typeof originalRegisterTool>[ 2 ],
+                                configArg as Parameters<typeof originalRegisterTool>[1],
+                                cb as Parameters<typeof originalRegisterTool>[2],
                             );
                         });
 
@@ -97,8 +97,8 @@ describe(
                             registerToolCalls.push(name);
                             return originalRegisterTool(
                                 name,
-                                configArg as Parameters<typeof originalRegisterTool>[ 1 ],
-                                cb as Parameters<typeof originalRegisterTool>[ 2 ],
+                                configArg as Parameters<typeof originalRegisterTool>[1],
+                                cb as Parameters<typeof originalRegisterTool>[2],
                             );
                         });
 
@@ -123,8 +123,8 @@ describe(
                             registerToolCalls.push(name);
                             return originalRegisterTool(
                                 name,
-                                configArg as Parameters<typeof originalRegisterTool>[ 1 ],
-                                cb as Parameters<typeof originalRegisterTool>[ 2 ],
+                                configArg as Parameters<typeof originalRegisterTool>[1],
+                                cb as Parameters<typeof originalRegisterTool>[2],
                             );
                         });
 
@@ -152,8 +152,8 @@ describe(
                             }
                             return originalRegisterTool(
                                 name,
-                                configArg as Parameters<typeof originalRegisterTool>[ 1 ],
-                                cb as Parameters<typeof originalRegisterTool>[ 2 ],
+                                configArg as Parameters<typeof originalRegisterTool>[1],
+                                cb as Parameters<typeof originalRegisterTool>[2],
                             );
                         });
 
@@ -184,8 +184,8 @@ describe(
                             }
                             return originalRegisterTool(
                                 name,
-                                configArg as Parameters<typeof originalRegisterTool>[ 1 ],
-                                cb as Parameters<typeof originalRegisterTool>[ 2 ],
+                                configArg as Parameters<typeof originalRegisterTool>[1],
+                                cb as Parameters<typeof originalRegisterTool>[2],
                             );
                         });
 
@@ -209,7 +209,7 @@ describe(
                         );
 
                         const registeredTools = getRegisteredTools(server);
-                        const listStoresTool = registeredTools[ 'list_stores' ];
+                        const listStoresTool = registeredTools['list_stores'];
 
                         expect(listStoresTool).toBeDefined();
 
@@ -219,9 +219,9 @@ describe(
 
                         expect(result).toHaveProperty('content');
                         expect(result.content).toHaveLength(1);
-                        expect(result.content[ 0 ]?.type).toBe('text');
+                        expect(result.content[0]?.type).toBe('text');
 
-                        const parsed = JSON.parse(result.content[ 0 ]!.text);
+                        const parsed = JSON.parse(result.content[0]!.text);
                         expect(parsed).toHaveProperty('stores');
                         expect(parsed.stores).toEqual([]);
                     },
@@ -242,13 +242,13 @@ describe(
                         );
 
                         const registeredTools = getRegisteredTools(server);
-                        const listStoresTool = registeredTools[ 'list_stores' ];
+                        const listStoresTool = registeredTools['list_stores'];
 
                         const result = await listStoresTool!.handler(
                             {}, {},
                         );
 
-                        const parsed = JSON.parse(result.content[ 0 ]!.text);
+                        const parsed = JSON.parse(result.content[0]!.text);
                         expect(parsed.stores).toHaveLength(2);
                         expect(parsed.stores).toContain('store-a');
                         expect(parsed.stores).toContain('store-b');
@@ -262,7 +262,7 @@ describe(
                         );
 
                         const registeredTools = getRegisteredTools(server);
-                        const createStoreTool = registeredTools[ 'create_store' ];
+                        const createStoreTool = registeredTools['create_store'];
 
                         expect(createStoreTool).toBeDefined();
 
@@ -273,7 +273,7 @@ describe(
                         expect(result).toHaveProperty('content');
                         expect(result.isError).toBeUndefined();
 
-                        const parsed = JSON.parse(result.content[ 0 ]!.text);
+                        const parsed = JSON.parse(result.content[0]!.text);
                         expect(parsed).toHaveProperty(
                             'created', 'my-new-store',
                         );
@@ -293,7 +293,7 @@ describe(
                         );
 
                         const registeredTools = getRegisteredTools(server);
-                        const createStoreTool = registeredTools[ 'create_store' ];
+                        const createStoreTool = registeredTools['create_store'];
 
                         const result = await createStoreTool!.handler(
                             { name: '-invalid-name' }, {},
@@ -301,8 +301,8 @@ describe(
 
                         expect(result).toHaveProperty('content');
                         expect(result.isError).toBe(true);
-                        expect(result.content[ 0 ]?.text).toContain('Error:');
-                        expect(result.content[ 0 ]?.text).toContain('Store name must start with alphanumeric');
+                        expect(result.content[0]?.text).toContain('Error:');
+                        expect(result.content[0]?.text).toContain('Store name must start with alphanumeric');
                     },
                 );
 
@@ -313,7 +313,7 @@ describe(
                         );
 
                         const registeredTools = getRegisteredTools(server);
-                        const createStoreTool = registeredTools[ 'create_store' ];
+                        const createStoreTool = registeredTools['create_store'];
 
                         const result = await createStoreTool!.handler(
                             { name: '' }, {},
@@ -321,8 +321,8 @@ describe(
 
                         expect(result).toHaveProperty('content');
                         expect(result.isError).toBe(true);
-                        expect(result.content[ 0 ]?.text).toContain('Error:');
-                        expect(result.content[ 0 ]?.text).toContain('Store name must not be empty');
+                        expect(result.content[0]?.text).toContain('Error:');
+                        expect(result.content[0]?.text).toContain('Store name must not be empty');
                     },
                 );
 
@@ -338,7 +338,7 @@ describe(
                         );
 
                         const registeredTools = getRegisteredTools(server);
-                        const createStoreTool = registeredTools[ 'create_store' ];
+                        const createStoreTool = registeredTools['create_store'];
 
                         const result = await createStoreTool!.handler(
                             { name: 'existing-store' }, {},
@@ -346,8 +346,8 @@ describe(
 
                         expect(result).toHaveProperty('content');
                         expect(result.isError).toBe(true);
-                        expect(result.content[ 0 ]?.text).toContain('Error:');
-                        expect(result.content[ 0 ]?.text).toContain('already exists');
+                        expect(result.content[0]?.text).toContain('Error:');
+                        expect(result.content[0]?.text).toContain('already exists');
                     },
                 );
 
@@ -371,14 +371,14 @@ describe(
                         );
 
                         const registeredTools = getRegisteredTools(server);
-                        const listStoresTool = registeredTools[ 'list_stores' ];
+                        const listStoresTool = registeredTools['list_stores'];
 
                         const result = await listStoresTool!.handler(
                             {}, {},
                         );
 
                         expect(result.isError).toBe(true);
-                        expect(result.content[ 0 ]?.text).toContain('Error:');
+                        expect(result.content[0]?.text).toContain('Error:');
                     },
                 );
             },
@@ -393,14 +393,14 @@ describe(
                         );
 
                         const registeredTools = getRegisteredTools(server);
-                        const listStoresTool = registeredTools[ 'list_stores' ];
+                        const listStoresTool = registeredTools['list_stores'];
 
                         const result = await listStoresTool!.handler(
                             {}, {},
                         );
 
                         // Verify the response is valid JSON
-                        expect(() => JSON.parse(result.content[ 0 ]!.text)).not.toThrow();
+                        expect(() => JSON.parse(result.content[0]!.text)).not.toThrow();
                     },
                 );
 
@@ -411,14 +411,14 @@ describe(
                         );
 
                         const registeredTools = getRegisteredTools(server);
-                        const createStoreTool = registeredTools[ 'create_store' ];
+                        const createStoreTool = registeredTools['create_store'];
 
                         const result = await createStoreTool!.handler(
                             { name: 'test-store' }, {},
                         );
 
                         // Verify the response is valid JSON
-                        expect(() => JSON.parse(result.content[ 0 ]!.text)).not.toThrow();
+                        expect(() => JSON.parse(result.content[0]!.text)).not.toThrow();
                     },
                 );
 
@@ -429,7 +429,7 @@ describe(
                         );
 
                         const registeredTools = getRegisteredTools(server);
-                        const createStoreTool = registeredTools[ 'create_store' ];
+                        const createStoreTool = registeredTools['create_store'];
 
                         const result = await createStoreTool!.handler(
                             { name: 'My-Store_V2' }, {},
@@ -437,7 +437,7 @@ describe(
 
                         expect(result.isError).toBeUndefined();
 
-                        const parsed = JSON.parse(result.content[ 0 ]!.text);
+                        const parsed = JSON.parse(result.content[0]!.text);
                         expect(parsed.created).toBe('My-Store_V2');
 
                         // Verify the store was created
@@ -455,14 +455,14 @@ describe(
                         );
 
                         const registeredTools = getRegisteredTools(server);
-                        const createStoreTool = registeredTools[ 'create_store' ];
+                        const createStoreTool = registeredTools['create_store'];
 
                         const result = await createStoreTool!.handler(
                             { name: 'store@name' }, {},
                         );
 
                         expect(result.isError).toBe(true);
-                        expect(result.content[ 0 ]?.text).toContain('Error:');
+                        expect(result.content[0]?.text).toContain('Error:');
                     },
                 );
             },

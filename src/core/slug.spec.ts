@@ -96,10 +96,14 @@ describe(
             'normalizeSlugSegments', () => {
                 it(
                     'should trim whitespace from segments', () => {
-                        const result = normalizeSlugSegments([ '  working ',
-                            ' memory  ' ]);
-                        expect(result).toEqual([ 'working',
-                            'memory' ]);
+                        const result = normalizeSlugSegments([
+                            '  working ',
+                            ' memory  ', 
+                        ]);
+                        expect(result).toEqual([
+                            'working',
+                            'memory', 
+                        ]);
                     },
                 );
 
@@ -110,8 +114,10 @@ describe(
                             '',
                             'memory',
                         ]);
-                        expect(result).toEqual([ 'working',
-                            'memory' ]);
+                        expect(result).toEqual([
+                            'working',
+                            'memory', 
+                        ]);
                     },
                 );
 
@@ -122,8 +128,10 @@ describe(
                             '   ',
                             'memory',
                         ]);
-                        expect(result).toEqual([ 'working',
-                            'memory' ]);
+                        expect(result).toEqual([
+                            'working',
+                            'memory', 
+                        ]);
                     },
                 );
 
@@ -135,8 +143,10 @@ describe(
                             '',
                             'memory  ',
                         ]);
-                        expect(result).toEqual([ 'working',
-                            'memory' ]);
+                        expect(result).toEqual([
+                            'working',
+                            'memory', 
+                        ]);
                     },
                 );
 
@@ -192,8 +202,10 @@ describe(
 
                 it(
                     'should join multiple categories with slug', () => {
-                        const categories: MemoryCategoryPath = [ 'semantic',
-                            'concepts' ];
+                        const categories: MemoryCategoryPath = [
+                            'semantic',
+                            'concepts', 
+                        ];
                         const slug: MemorySlug = 'priority-cues';
 
                         const result = buildMemorySlugPath(
@@ -256,8 +268,10 @@ describe(
 
                 it(
                     'should build identity with multiple categories', () => {
-                        const categories: MemoryCategoryPath = [ 'semantic',
-                            'concepts' ];
+                        const categories: MemoryCategoryPath = [
+                            'semantic',
+                            'concepts', 
+                        ];
                         const slug: MemorySlug = 'priority-cues';
 
                         const result = buildMemoryIdentity(
@@ -265,8 +279,10 @@ describe(
                         );
 
                         expect(result.slugPath).toBe('semantic/concepts/priority-cues');
-                        expect(result.categories).toEqual([ 'semantic',
-                            'concepts' ]);
+                        expect(result.categories).toEqual([
+                            'semantic',
+                            'concepts', 
+                        ]);
                         expect(result.slug).toBe('priority-cues');
                     },
                 );

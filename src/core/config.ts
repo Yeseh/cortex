@@ -58,10 +58,10 @@ const parseScalarValue = (raw: string): string => {
     }
     const quotedMatch = /^(['"])(.*)\1(\s+#.*)?$/.exec(trimmed);
     if (quotedMatch) {
-        return quotedMatch[ 2 ] ?? ''; 
+        return quotedMatch[2] ?? ''; 
     }
     const commentMatch = /^(.*?)(\s+#.*)?$/.exec(trimmed);
-    return (commentMatch?.[ 1 ] ?? '').trim();
+    return (commentMatch?.[1] ?? '').trim();
 };
 
 const parseOutputFormat = (
@@ -132,7 +132,7 @@ const parseConfigLine = (
             line: lineNumber,
         }); 
     }
-    const key = match[ 1 ]?.trim();
+    const key = match[1]?.trim();
     if (!key) {
         return err({
             code: 'CONFIG_PARSE_FAILED',
@@ -140,7 +140,7 @@ const parseConfigLine = (
             line: lineNumber,
         }); 
     }
-    return ok({ key, value: match[ 2 ] ?? '' });
+    return ok({ key, value: match[2] ?? '' });
 };
 
 const applyConfigValue = (
@@ -260,7 +260,7 @@ export const parseConfig = (raw: string): Result<CortexConfig, ConfigLoadError> 
     const seenKeys = new Set<string>();
 
     for (let index = 0; index < lines.length; index += 1) {
-        const rawLine = lines[ index ];
+        const rawLine = lines[index];
         if (rawLine === undefined) {
             continue; 
         }

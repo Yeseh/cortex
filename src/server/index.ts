@@ -157,7 +157,7 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
                 message: `Configuration error: ${configResult.error.message}`,
                 cause: new Error(configResult.error.message),
             },
-        }; 
+        };
     }
     const config = configResult.value;
 
@@ -170,50 +170,35 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
     const { server, transport } = mcpContext;
 
     // Register MCP tools
-    registerMemoryTools(
-        server, config,
-    );
-    registerStoreTools(
-        server, config,
-    );
+    registerMemoryTools(server, config);
+    registerStoreTools(server, config);
 
     // Connect MCP server to transport
     await server.connect(transport);
 
     // Mount MCP endpoint
-    app.post(
-        '/mcp', async (
-            req, res,
-        ) => {
-            try {
-                await transport.handleRequest(
-                    req, res, req.body,
-                ); 
+    app.post('/mcp', async (req, res) => {
+        try {
+            await transport.handleRequest(req, res, req.body);
+        } catch (error) {
+            if (!res.headersSent) {
+                res.status(500).json({ error: 'Internal server error' });
             }
-            catch (error) {
-                if (!res.headersSent) {
-                    res.status(500).json({ error: 'Internal server error' }); 
-                }
-                console.error(
-                    'MCP request handling error:', error,
-                );
-            } 
-        },
-    );
+            console.error('MCP request handling error:', error);
+        }
+    });
 
     // Mount health endpoint
-    app.use(
-        '/health', createHealthRouter(config),
-    );
+    app.use('/health', createHealthRouter(config));
 
     // Start HTTP server
-    const httpServer = app.listen(
-        config.port, config.host, () => {
-            console.warn(`Cortex MCP server listening on http://${config.host}:${config.port}`);
-            console.warn('  MCP endpoint: POST /mcp');
-            console.warn('  Health check: GET /health');
-        },
-    );
+    const httpServer = app.listen(config.port, config.host, () => {
+        console.warn(`Cortex MCP server listening on http://${config.host}:${config.port}`);
+        console.warn(`  Data path: ${config.dataPath}`);
+        console.warn(`  Default store: ${config.defaultStore}`);
+        console.warn('  MCP endpoint: POST /mcp');
+        console.warn('  Health check: GET /health');
+    });
 
     // Graceful shutdown handler
     const close = async (): Promise<void> => {
@@ -235,23 +220,15 @@ if (import.meta.main) {
     createServer()
         .then((result) => {
             if (!result.ok) {
-                console.error(
-                    'Failed to start server:', result.error.message,
-                );
+                console.error('Failed to start server:', result.error.message);
                 process.exit(1);
             }
             const server = result.value;
-            process.on(
-                'SIGTERM', () => shutdown(server),
-            );
-            process.on(
-                'SIGINT', () => shutdown(server),
-            );
+            process.on('SIGTERM', () => shutdown(server));
+            process.on('SIGINT', () => shutdown(server));
         })
         .catch((error) => {
-            console.error(
-                'Failed to start server:', error,
-            );
+            console.error('Failed to start server:', error);
             process.exit(1);
         });
 }

@@ -2,11 +2,14 @@
  * CLI add command parsing for memory content input.
  */
 
-import type { Result } from '../../core/types.ts';
+import type { Result } from '../../core/result.ts';
+import { ok, err } from '../../core/result.ts';
+
 import { serializeMemoryFile, type MemoryFileContents } from '../../core/memory/file.ts';
 import { validateMemorySlugPath } from '../../core/memory/validation.ts';
 import type { StorageAdapterError } from '../../core/storage/adapter.ts';
 import { FilesystemStorageAdapter } from '../../core/storage/filesystem.ts';
+
 import type { MemoryContentInputError } from '../input.ts';
 import { resolveMemoryContentInput } from '../input.ts';
 
@@ -35,8 +38,6 @@ export interface AddCommandError {
 
 type AddCommandResult = Result<AddCommandOutput, AddCommandError>;
 
-const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
-const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 interface ParsedAddArgs {
     slugPath: string;
@@ -84,9 +85,9 @@ const parseFlagValue = (
     args: string[],
     index: number,
     flag: string,
-    field: AddCommandError[ 'field' ],
+    field: AddCommandError['field'],
 ): Result<{ value: string; nextIndex: number }, AddCommandError> => {
-    const candidate = args[ index + 1 ];
+    const candidate = args[index + 1];
     if (candidate === undefined) {
         return err({
             code: 'INVALID_ARGUMENTS',
@@ -106,7 +107,7 @@ const applyFlagValue = (
     args: string[],
     index: number,
     flag: string,
-    field: AddCommandError[ 'field' ],
+    field: AddCommandError['field'],
     handler: FlagHandler,
 ): Result<AddArgResult, AddCommandError> => {
     const parsed = parseFlagValue(
@@ -188,7 +189,7 @@ const applyAddArg = (
     index: number,
     value: string,
 ): Result<AddArgResult, AddCommandError> => {
-    const handler = addFlagHandlers[ value ];
+    const handler = addFlagHandlers[value];
     if (handler) {
         return handler(
             state, args, index,
@@ -214,7 +215,7 @@ const parseAddArgs = (args: string[]): Result<ParsedAddArgs, AddCommandError> =>
     const state: ParsedAddArgs = { slugPath: '', tags: [] };
 
     for (let index = 0; index < args.length; index += 1) {
-        const value = args[ index ];
+        const value = args[index];
         if (!value) {
             continue;
         }
@@ -293,7 +294,7 @@ export const runAddCommand = async (options: AddCommandOptions): Promise<AddComm
     const persisted = await adapter.writeMemoryFile(
         identity.value.slugPath, serialized.value, {
             allowIndexCreate: true,
-            allowIndexUpdate: false,
+            allowIndexUpdate: true,
         },
     );
     if (!persisted.ok) {

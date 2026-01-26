@@ -181,14 +181,16 @@ describe(
                     expect(estimate.ok).toBe(true);
                     expect(backlogEstimate.ok).toBe(true);
                     if (estimate.ok && backlogEstimate.ok) {
-                        expect(priorityParsed.value.memories).toEqual([{
-                            path: 'semantic/priorities/backlog',
-                            tokenEstimate: backlogEstimate.value,
-                        },
-                        {
-                            path: 'semantic/priorities/urgent',
-                            tokenEstimate: estimate.value,
-                        }]); 
+                        expect(priorityParsed.value.memories).toEqual([
+                            {
+                                path: 'semantic/priorities/backlog',
+                                tokenEstimate: backlogEstimate.value,
+                            },
+                            {
+                                path: 'semantic/priorities/urgent',
+                                tokenEstimate: estimate.value,
+                            },
+                        ]); 
                     }
                 }
 
@@ -230,8 +232,10 @@ describe(
                 const updatedParentParsed = parseCategoryIndex(updatedParentIndexContents.value);
                 expect(updatedParentParsed.ok).toBe(true);
                 if (updatedParentParsed.ok) {
-                    expect(updatedParentParsed.value.subcategories).toEqual([{ path: 'semantic/concepts', memoryCount: 1 },
-                        { path: 'semantic/priorities', memoryCount: 2 }]); 
+                    expect(updatedParentParsed.value.subcategories).toEqual([
+                        { path: 'semantic/concepts', memoryCount: 1 },
+                        { path: 'semantic/priorities', memoryCount: 2 },
+                    ]); 
                 }
 
                 const priorityParentIndexContents = await adapter.readIndexFile('semantic/priorities');
@@ -266,7 +270,7 @@ describe(
                 expect(workingParsed.ok).toBe(true);
                 if (workingParsed.ok) {
                     expect(workingParsed.value.memories).toHaveLength(1);
-                    expect(workingParsed.value.memories[ 0 ]?.path).toBe('working/preferences');
+                    expect(workingParsed.value.memories[0]?.path).toBe('working/preferences');
                 }
 
                 const updatedContent = 'Prefers result-style errors with context.';
@@ -408,14 +412,16 @@ describe(
                         expect(estimate.ok).toBe(true);
                         expect(backlogEstimate.ok).toBe(true);
                         if (estimate.ok && backlogEstimate.ok) {
-                            expect(priorityParsed.value.memories).toEqual([{
-                                path: 'semantic/priorities/backlog',
-                                tokenEstimate: backlogEstimate.value,
-                            },
-                            {
-                                path: 'semantic/priorities/urgent',
-                                tokenEstimate: estimate.value,
-                            }]); 
+                            expect(priorityParsed.value.memories).toEqual([
+                                {
+                                    path: 'semantic/priorities/backlog',
+                                    tokenEstimate: backlogEstimate.value,
+                                },
+                                {
+                                    path: 'semantic/priorities/urgent',
+                                    tokenEstimate: estimate.value,
+                                },
+                            ]); 
                         }
                     }
                 }
@@ -444,8 +450,10 @@ describe(
                     expect(parentParsed.ok).toBe(true);
                     if (parentParsed.ok) {
                         expect(parentParsed.value.memories).toEqual([]);
-                        expect(parentParsed.value.subcategories).toEqual([{ path: 'semantic/concepts', memoryCount: 1 },
-                            { path: 'semantic/priorities', memoryCount: 2 }]);
+                        expect(parentParsed.value.subcategories).toEqual([
+                            { path: 'semantic/concepts', memoryCount: 1 },
+                            { path: 'semantic/priorities', memoryCount: 2 },
+                        ]);
                     }
                 }
 

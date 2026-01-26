@@ -367,7 +367,9 @@ const buildMemoryYamlLines = (
         return tags;
     }
 
-    const lines: string[] = [`# ${memoryPath}`, `created_at: ${created}`];
+    const lines: string[] = [
+        `# ${memoryPath}`, `created_at: ${created}`,
+    ];
     const updated = writeOptionalYamlTimestamp(lines, 'updated_at', metadata.updatedAt);
     if (!updated.ok) {
         return updated;

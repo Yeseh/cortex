@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { loadServerConfig, serverConfigSchema } from './config.ts';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import { loadServerConfig, serverConfigSchema, getDefaultDataPath } from './config.ts';
+
+// Expected default data path based on user's home directory
+const expectedDefaultDataPath = join(homedir(), '.config', 'cortex', 'memory');
 
 describe('server config loading', () => {
     // Store original env
@@ -25,10 +30,10 @@ describe('server config loading', () => {
 
             expect(result.ok).toBe(true);
             if (result.ok) {
-                expect(result.value.dataPath).toBe('./.cortex-data');
+                expect(result.value.dataPath).toBe(expectedDefaultDataPath);
                 expect(result.value.port).toBe(3000);
                 expect(result.value.host).toBe('0.0.0.0');
-                expect(result.value.defaultStore).toBe('default');
+                expect(result.value.defaultStore).toBe('global');
                 expect(result.value.logLevel).toBe('info');
                 expect(result.value.outputFormat).toBe('yaml');
                 expect(result.value.autoSummaryThreshold).toBe(500);
@@ -431,13 +436,34 @@ describe('serverConfigSchema', () => {
 
         expect(result.success).toBe(true);
         if (result.success) {
-            expect(result.data.dataPath).toBe('./.cortex-data');
+            expect(result.data.dataPath).toBe(expectedDefaultDataPath);
             expect(result.data.port).toBe(3000);
             expect(result.data.host).toBe('0.0.0.0');
-            expect(result.data.defaultStore).toBe('default');
+            expect(result.data.defaultStore).toBe('global');
             expect(result.data.logLevel).toBe('info');
             expect(result.data.outputFormat).toBe('yaml');
             expect(result.data.autoSummaryThreshold).toBe(500);
         }
+    });
+});
+
+describe('getDefaultDataPath', () => {
+    it('should return the XDG-compliant global config path', () => {
+        const result = getDefaultDataPath();
+
+        expect(result).toBe(expectedDefaultDataPath);
+    });
+
+    it('should use the user home directory', () => {
+        const result = getDefaultDataPath();
+
+        expect(result).toContain(homedir());
+    });
+
+    it('should include cortex/memory path components', () => {
+        const result = getDefaultDataPath();
+
+        expect(result).toContain('cortex');
+        expect(result).toContain('memory');
     });
 });

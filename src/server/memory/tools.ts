@@ -23,22 +23,19 @@ import { validateMemorySlugPath } from '../../core/memory/validation.ts';
 import { FilesystemStorageAdapter } from '../../core/storage/filesystem.ts';
 import { parseCategoryIndex } from '../../core/index/parser.ts';
 import type { ServerConfig } from '../config.ts';
+import { getMemoryPath } from '../config.ts';
 
 // ---------------------------------------------------------------------------
 // Zod Schemas
 // ---------------------------------------------------------------------------
 
 /** Schema for ISO 8601 date strings */
-const isoDateSchema = z.string().refine(
-    (value) => !Number.isNaN(Date.parse(value)), {
-        message: 'Must be a valid ISO 8601 date string',
-    },
-);
+const isoDateSchema = z.string().refine((value) => !Number.isNaN(Date.parse(value)), {
+    message: 'Must be a valid ISO 8601 date string',
+});
 
 /** Schema for memory path (category/slug format) */
-const memoryPathSchema = z.string().min(
-    1, 'Memory path is required',
-);
+const memoryPathSchema = z.string().min(1, 'Memory path is required');
 
 /** Schema for store name */
 const storeNameSchema = z.string().optional();
@@ -50,9 +47,7 @@ const tagsSchema = z.array(z.string()).optional();
 export const addMemoryInputSchema = z.object({
     store: storeNameSchema.describe('Store name (uses default if omitted)'),
     path: memoryPathSchema.describe('Memory path in category/slug format'),
-    content: z.string().min(
-        1, 'Content is required',
-    ).describe('Memory content'),
+    content: z.string().min(1, 'Content is required').describe('Memory content'),
     tags: tagsSchema.describe('Optional tags for categorization'),
     expires_at: isoDateSchema.optional().describe('Optional expiration date (ISO 8601)'),
 });
@@ -168,12 +163,7 @@ interface McpToolResponse {
 }
 
 /** Root memory categories used for listing and pruning operations. */
-const ROOT_CATEGORIES = [
-    'human',
-    'persona',
-    'project',
-    'domain',
-] as const;
+const ROOT_CATEGORIES = ['human', 'persona', 'project', 'domain'] as const;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -188,23 +178,19 @@ const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 const resolveStoreRoot = async (
     config: ServerConfig,
     storeName: string | undefined,
-    autoCreate: boolean,
+    autoCreate: boolean
 ): Promise<Result<string, McpError>> => {
     const store = storeName ?? config.defaultStore;
-    const storeRoot = resolve(
-        config.dataPath, store,
-    );
+    const memoryPath = getMemoryPath(config);
+    const storeRoot = resolve(memoryPath, store);
 
     if (autoCreate) {
         try {
-            await mkdir(
-                storeRoot, { recursive: true },
+            await mkdir(storeRoot, { recursive: true });
+        } catch {
+            return err(
+                new McpError(ErrorCode.InternalError, `Failed to create store directory: ${store}`)
             );
-        }
-        catch {
-            return err(new McpError(
-                ErrorCode.InternalError, `Failed to create store directory: ${store}`,
-            ));
         }
     }
 
@@ -221,9 +207,7 @@ const createAdapter = (storeRoot: string): FilesystemStorageAdapter => {
 /**
  * Checks if a memory has expired.
  */
-const isExpired = (
-    expiresAt: Date | undefined, now: Date,
-): boolean => {
+const isExpired = (expiresAt: Date | undefined, now: Date): boolean => {
     if (!expiresAt) {
         return false;
     }
@@ -239,9 +223,7 @@ const parseInput = <T>(schema: z.ZodSchema<T>, input: unknown): T => {
         const message = result.error.issues
             .map((i) => `${i.path.join('.')}: ${i.message}`)
             .join('; ');
-        throw new McpError(
-            ErrorCode.InvalidParams, message,
-        );
+        throw new McpError(ErrorCode.InvalidParams, message);
     }
     return result.data;
 };
@@ -255,20 +237,16 @@ const parseInput = <T>(schema: z.ZodSchema<T>, input: unknown): T => {
  */
 export const addMemoryHandler = async (
     ctx: ToolContext,
-    input: AddMemoryInput,
+    input: AddMemoryInput
 ): Promise<McpToolResponse> => {
-    const storeRoot = await resolveStoreRoot(
-        ctx.config, input.store, true,
-    );
+    const storeRoot = await resolveStoreRoot(ctx.config, input.store, true);
     if (!storeRoot.ok) {
         throw storeRoot.error;
     }
 
     const identity = validateMemorySlugPath(input.path);
     if (!identity.ok) {
-        throw new McpError(
-            ErrorCode.InvalidParams, identity.error.message,
-        );
+        throw new McpError(ErrorCode.InvalidParams, identity.error.message);
     }
 
     const now = new Date();
@@ -285,30 +263,26 @@ export const addMemoryHandler = async (
 
     const serialized = serializeMemoryFile(memoryContents);
     if (!serialized.ok) {
-        throw new McpError(
-            ErrorCode.InternalError, serialized.error.message,
-        );
+        throw new McpError(ErrorCode.InternalError, serialized.error.message);
     }
 
     const adapter = createAdapter(storeRoot.value);
-    const result = await adapter.writeMemoryFile(
-        identity.value.slugPath, serialized.value, {
-            allowIndexCreate: true,
-            allowIndexUpdate: true,
-        },
-    );
+    const result = await adapter.writeMemoryFile(identity.value.slugPath, serialized.value, {
+        allowIndexCreate: true,
+        allowIndexUpdate: true,
+    });
 
     if (!result.ok) {
-        throw new McpError(
-            ErrorCode.InternalError, result.error.message,
-        );
+        throw new McpError(ErrorCode.InternalError, result.error.message);
     }
 
     return {
-        content: [{
-            type: 'text',
-            text: `Memory created at ${identity.value.slugPath}`,
-        }],
+        content: [
+            {
+                type: 'text',
+                text: `Memory created at ${identity.value.slugPath}`,
+            },
+        ],
     };
 };
 
@@ -317,51 +291,37 @@ export const addMemoryHandler = async (
  */
 export const getMemoryHandler = async (
     ctx: ToolContext,
-    input: GetMemoryInput,
+    input: GetMemoryInput
 ): Promise<McpToolResponse> => {
-    const storeRoot = await resolveStoreRoot(
-        ctx.config, input.store, false,
-    );
+    const storeRoot = await resolveStoreRoot(ctx.config, input.store, false);
     if (!storeRoot.ok) {
         throw storeRoot.error;
     }
 
     const identity = validateMemorySlugPath(input.path);
     if (!identity.ok) {
-        throw new McpError(
-            ErrorCode.InvalidParams, identity.error.message,
-        );
+        throw new McpError(ErrorCode.InvalidParams, identity.error.message);
     }
 
     const adapter = createAdapter(storeRoot.value);
     const readResult = await adapter.readMemoryFile(identity.value.slugPath);
 
     if (!readResult.ok) {
-        throw new McpError(
-            ErrorCode.InternalError, readResult.error.message,
-        );
+        throw new McpError(ErrorCode.InternalError, readResult.error.message);
     }
 
     if (!readResult.value) {
-        throw new McpError(
-            ErrorCode.InvalidParams, `Memory not found: ${input.path}`,
-        );
+        throw new McpError(ErrorCode.InvalidParams, `Memory not found: ${input.path}`);
     }
 
     const parsed = parseMemoryFile(readResult.value);
     if (!parsed.ok) {
-        throw new McpError(
-            ErrorCode.InternalError, parsed.error.message,
-        );
+        throw new McpError(ErrorCode.InternalError, parsed.error.message);
     }
 
     const now = new Date();
-    if (!input.include_expired && isExpired(
-        parsed.value.frontmatter.expiresAt, now,
-    )) {
-        throw new McpError(
-            ErrorCode.InvalidParams, `Memory expired: ${input.path}`,
-        );
+    if (!input.include_expired && isExpired(parsed.value.frontmatter.expiresAt, now)) {
+        throw new McpError(ErrorCode.InvalidParams, `Memory expired: ${input.path}`);
     }
 
     const output = {
@@ -377,12 +337,12 @@ export const getMemoryHandler = async (
     };
 
     return {
-        content: [{
-            type: 'text',
-            text: JSON.stringify(
-                output, null, 2,
-            ),
-        }],
+        content: [
+            {
+                type: 'text',
+                text: JSON.stringify(output, null, 2),
+            },
+        ],
     };
 };
 
@@ -391,42 +351,32 @@ export const getMemoryHandler = async (
  */
 export const updateMemoryHandler = async (
     ctx: ToolContext,
-    input: UpdateMemoryInput,
+    input: UpdateMemoryInput
 ): Promise<McpToolResponse> => {
-    const storeRoot = await resolveStoreRoot(
-        ctx.config, input.store, false,
-    );
+    const storeRoot = await resolveStoreRoot(ctx.config, input.store, false);
     if (!storeRoot.ok) {
         throw storeRoot.error;
     }
 
     const identity = validateMemorySlugPath(input.path);
     if (!identity.ok) {
-        throw new McpError(
-            ErrorCode.InvalidParams, identity.error.message,
-        );
+        throw new McpError(ErrorCode.InvalidParams, identity.error.message);
     }
 
     const adapter = createAdapter(storeRoot.value);
     const readResult = await adapter.readMemoryFile(identity.value.slugPath);
 
     if (!readResult.ok) {
-        throw new McpError(
-            ErrorCode.InternalError, readResult.error.message,
-        );
+        throw new McpError(ErrorCode.InternalError, readResult.error.message);
     }
 
     if (!readResult.value) {
-        throw new McpError(
-            ErrorCode.InvalidParams, `Memory not found: ${input.path}`,
-        );
+        throw new McpError(ErrorCode.InvalidParams, `Memory not found: ${input.path}`);
     }
 
     const parsed = parseMemoryFile(readResult.value);
     if (!parsed.ok) {
-        throw new McpError(
-            ErrorCode.InternalError, parsed.error.message,
-        );
+        throw new McpError(ErrorCode.InternalError, parsed.error.message);
     }
 
     // Check if any updates were provided
@@ -439,7 +389,7 @@ export const updateMemoryHandler = async (
     if (!hasUpdates) {
         throw new McpError(
             ErrorCode.InvalidParams,
-            'No updates provided. Specify content, tags, expires_at, or clear_expiry.',
+            'No updates provided. Specify content, tags, expires_at, or clear_expiry.'
         );
     }
 
@@ -448,11 +398,9 @@ export const updateMemoryHandler = async (
     let newExpiresAt: Date | undefined;
     if (input.clear_expiry) {
         newExpiresAt = undefined;
-    }
-    else if (input.expires_at) {
+    } else if (input.expires_at) {
         newExpiresAt = new Date(input.expires_at);
-    }
-    else {
+    } else {
         newExpiresAt = parsed.value.frontmatter.expiresAt;
     }
 
@@ -469,28 +417,24 @@ export const updateMemoryHandler = async (
 
     const serialized = serializeMemoryFile(updatedMemory);
     if (!serialized.ok) {
-        throw new McpError(
-            ErrorCode.InternalError, serialized.error.message,
-        );
+        throw new McpError(ErrorCode.InternalError, serialized.error.message);
     }
 
-    const writeResult = await adapter.writeMemoryFile(
-        identity.value.slugPath, serialized.value, {
-            allowIndexUpdate: true,
-        },
-    );
+    const writeResult = await adapter.writeMemoryFile(identity.value.slugPath, serialized.value, {
+        allowIndexUpdate: true,
+    });
 
     if (!writeResult.ok) {
-        throw new McpError(
-            ErrorCode.InternalError, writeResult.error.message,
-        );
+        throw new McpError(ErrorCode.InternalError, writeResult.error.message);
     }
 
     return {
-        content: [{
-            type: 'text',
-            text: `Memory updated at ${identity.value.slugPath}`,
-        }],
+        content: [
+            {
+                type: 'text',
+                text: `Memory updated at ${identity.value.slugPath}`,
+            },
+        ],
     };
 };
 
@@ -499,20 +443,16 @@ export const updateMemoryHandler = async (
  */
 export const removeMemoryHandler = async (
     ctx: ToolContext,
-    input: RemoveMemoryInput,
+    input: RemoveMemoryInput
 ): Promise<McpToolResponse> => {
-    const storeRoot = await resolveStoreRoot(
-        ctx.config, input.store, false,
-    );
+    const storeRoot = await resolveStoreRoot(ctx.config, input.store, false);
     if (!storeRoot.ok) {
         throw storeRoot.error;
     }
 
     const identity = validateMemorySlugPath(input.path);
     if (!identity.ok) {
-        throw new McpError(
-            ErrorCode.InvalidParams, identity.error.message,
-        );
+        throw new McpError(ErrorCode.InvalidParams, identity.error.message);
     }
 
     const adapter = createAdapter(storeRoot.value);
@@ -520,22 +460,16 @@ export const removeMemoryHandler = async (
     // Check if memory exists first
     const readResult = await adapter.readMemoryFile(identity.value.slugPath);
     if (!readResult.ok) {
-        throw new McpError(
-            ErrorCode.InternalError, readResult.error.message,
-        );
+        throw new McpError(ErrorCode.InternalError, readResult.error.message);
     }
     if (!readResult.value) {
-        throw new McpError(
-            ErrorCode.InvalidParams, `Memory not found: ${input.path}`,
-        );
+        throw new McpError(ErrorCode.InvalidParams, `Memory not found: ${input.path}`);
     }
 
     const result = await adapter.removeMemoryFile(identity.value.slugPath);
 
     if (!result.ok) {
-        throw new McpError(
-            ErrorCode.InternalError, result.error.message,
-        );
+        throw new McpError(ErrorCode.InternalError, result.error.message);
     }
 
     // Reindex after removal
@@ -543,15 +477,17 @@ export const removeMemoryHandler = async (
     if (!reindexResult.ok) {
         throw new McpError(
             ErrorCode.InternalError,
-            `Memory removed but reindex failed: ${reindexResult.error.message}`,
+            `Memory removed but reindex failed: ${reindexResult.error.message}`
         );
     }
 
     return {
-        content: [{
-            type: 'text',
-            text: `Memory removed at ${identity.value.slugPath}`,
-        }],
+        content: [
+            {
+                type: 'text',
+                text: `Memory removed at ${identity.value.slugPath}`,
+            },
+        ],
     };
 };
 
@@ -560,11 +496,9 @@ export const removeMemoryHandler = async (
  */
 export const moveMemoryHandler = async (
     ctx: ToolContext,
-    input: MoveMemoryInput,
+    input: MoveMemoryInput
 ): Promise<McpToolResponse> => {
-    const storeRoot = await resolveStoreRoot(
-        ctx.config, input.store, false,
-    );
+    const storeRoot = await resolveStoreRoot(ctx.config, input.store, false);
     if (!storeRoot.ok) {
         throw storeRoot.error;
     }
@@ -573,7 +507,7 @@ export const moveMemoryHandler = async (
     if (!sourceIdentity.ok) {
         throw new McpError(
             ErrorCode.InvalidParams,
-            `Invalid source path: ${sourceIdentity.error.message}`,
+            `Invalid source path: ${sourceIdentity.error.message}`
         );
     }
 
@@ -581,7 +515,7 @@ export const moveMemoryHandler = async (
     if (!destIdentity.ok) {
         throw new McpError(
             ErrorCode.InvalidParams,
-            `Invalid destination path: ${destIdentity.error.message}`,
+            `Invalid destination path: ${destIdentity.error.message}`
         );
     }
 
@@ -590,54 +524,37 @@ export const moveMemoryHandler = async (
     // Check if source exists
     const sourceRead = await adapter.readMemoryFile(sourceIdentity.value.slugPath);
     if (!sourceRead.ok) {
-        throw new McpError(
-            ErrorCode.InternalError, sourceRead.error.message,
-        );
+        throw new McpError(ErrorCode.InternalError, sourceRead.error.message);
     }
     if (!sourceRead.value) {
-        throw new McpError(
-            ErrorCode.InvalidParams, `Source memory not found: ${input.from_path}`,
-        );
+        throw new McpError(ErrorCode.InvalidParams, `Source memory not found: ${input.from_path}`);
     }
 
     // Check if destination already exists
     const destRead = await adapter.readMemoryFile(destIdentity.value.slugPath);
     if (!destRead.ok) {
-        throw new McpError(
-            ErrorCode.InternalError, destRead.error.message,
-        );
+        throw new McpError(ErrorCode.InternalError, destRead.error.message);
     }
     if (destRead.value) {
-        throw new McpError(
-            ErrorCode.InvalidParams, `Destination already exists: ${input.to_path}`,
-        );
+        throw new McpError(ErrorCode.InvalidParams, `Destination already exists: ${input.to_path}`);
     }
 
     // Create destination category directory if needed
     const destCategories = destIdentity.value.categories;
-    const destCategoryPath = join(
-        storeRoot.value, 'memories', ...destCategories,
-    );
+    const destCategoryPath = join(storeRoot.value, 'memories', ...destCategories);
     try {
-        await mkdir(
-            destCategoryPath, { recursive: true },
-        );
-    }
-    catch {
-        throw new McpError(
-            ErrorCode.InternalError, 'Failed to create destination category',
-        );
+        await mkdir(destCategoryPath, { recursive: true });
+    } catch {
+        throw new McpError(ErrorCode.InternalError, 'Failed to create destination category');
     }
 
     const result = await adapter.moveMemoryFile(
         sourceIdentity.value.slugPath,
-        destIdentity.value.slugPath,
+        destIdentity.value.slugPath
     );
 
     if (!result.ok) {
-        throw new McpError(
-            ErrorCode.InternalError, result.error.message,
-        );
+        throw new McpError(ErrorCode.InternalError, result.error.message);
     }
 
     // Reindex after move
@@ -645,15 +562,17 @@ export const moveMemoryHandler = async (
     if (!reindexResult.ok) {
         throw new McpError(
             ErrorCode.InternalError,
-            `Memory moved but reindex failed: ${reindexResult.error.message}`,
+            `Memory moved but reindex failed: ${reindexResult.error.message}`
         );
     }
 
     return {
-        content: [{
-            type: 'text',
-            text: `Memory moved from ${sourceIdentity.value.slugPath} to ${destIdentity.value.slugPath}`,
-        }],
+        content: [
+            {
+                type: 'text',
+                text: `Memory moved from ${sourceIdentity.value.slugPath} to ${destIdentity.value.slugPath}`,
+            },
+        ],
     };
 };
 
@@ -662,11 +581,9 @@ export const moveMemoryHandler = async (
  */
 export const listMemoriesHandler = async (
     ctx: ToolContext,
-    input: ListMemoriesInput,
+    input: ListMemoriesInput
 ): Promise<McpToolResponse> => {
-    const storeRoot = await resolveStoreRoot(
-        ctx.config, input.store, false,
-    );
+    const storeRoot = await resolveStoreRoot(ctx.config, input.store, false);
     if (!storeRoot.ok) {
         throw storeRoot.error;
     }
@@ -688,9 +605,7 @@ export const listMemoriesHandler = async (
 
     const memories: MemoryEntry[] = [];
 
-    const collectMemories = async (
-        catPath: string, visited: Set<string>,
-    ): Promise<void> => {
+    const collectMemories = async (catPath: string, visited: Set<string>): Promise<void> => {
         if (visited.has(catPath)) {
             return;
         }
@@ -718,9 +633,7 @@ export const listMemoriesHandler = async (
                 continue;
             }
 
-            const expired = isExpired(
-                memoryParsed.value.frontmatter.expiresAt, now,
-            );
+            const expired = isExpired(memoryParsed.value.frontmatter.expiresAt, now);
             if (!input.include_expired && expired) {
                 continue;
             }
@@ -736,9 +649,7 @@ export const listMemoriesHandler = async (
 
         // Recurse into subcategories
         for (const subcategory of parsed.value.subcategories) {
-            await collectMemories(
-                subcategory.path, visited,
-            );
+            await collectMemories(subcategory.path, visited);
         }
     };
 
@@ -746,16 +657,11 @@ export const listMemoriesHandler = async (
 
     if (categoryPath) {
         // List specific category
-        await collectMemories(
-            categoryPath, visited,
-        );
-    }
-    else {
+        await collectMemories(categoryPath, visited);
+    } else {
         // List all root categories
         for (const category of ROOT_CATEGORIES) {
-            await collectMemories(
-                category, visited,
-            );
+            await collectMemories(category, visited);
         }
     }
 
@@ -766,12 +672,12 @@ export const listMemoriesHandler = async (
     };
 
     return {
-        content: [{
-            type: 'text',
-            text: JSON.stringify(
-                output, null, 2,
-            ),
-        }],
+        content: [
+            {
+                type: 'text',
+                text: JSON.stringify(output, null, 2),
+            },
+        ],
     };
 };
 
@@ -780,11 +686,9 @@ export const listMemoriesHandler = async (
  */
 export const pruneMemoriesHandler = async (
     ctx: ToolContext,
-    input: PruneMemoriesInput,
+    input: PruneMemoriesInput
 ): Promise<McpToolResponse> => {
-    const storeRoot = await resolveStoreRoot(
-        ctx.config, input.store, false,
-    );
+    const storeRoot = await resolveStoreRoot(ctx.config, input.store, false);
     if (!storeRoot.ok) {
         throw storeRoot.error;
     }
@@ -799,9 +703,7 @@ export const pruneMemoriesHandler = async (
 
     const pruned: PrunedEntry[] = [];
 
-    const collectExpired = async (
-        catPath: string, visited: Set<string>,
-    ): Promise<void> => {
+    const collectExpired = async (catPath: string, visited: Set<string>): Promise<void> => {
         if (visited.has(catPath)) {
             return;
         }
@@ -829,9 +731,7 @@ export const pruneMemoriesHandler = async (
             }
 
             const expiresAt = memoryParsed.value.frontmatter.expiresAt;
-            if (expiresAt && isExpired(
-                expiresAt, now,
-            )) {
+            if (expiresAt && isExpired(expiresAt, now)) {
                 pruned.push({
                     path: memory.path,
                     expires_at: expiresAt.toISOString(),
@@ -840,18 +740,14 @@ export const pruneMemoriesHandler = async (
         }
 
         for (const subcategory of parsed.value.subcategories) {
-            await collectExpired(
-                subcategory.path, visited,
-            );
+            await collectExpired(subcategory.path, visited);
         }
     };
 
     // Collect all expired memories
     const visited = new Set<string>();
     for (const category of ROOT_CATEGORIES) {
-        await collectExpired(
-            category, visited,
-        );
+        await collectExpired(category, visited);
     }
 
     // Delete expired memories
@@ -860,7 +756,7 @@ export const pruneMemoriesHandler = async (
         if (!result.ok) {
             throw new McpError(
                 ErrorCode.InternalError,
-                `Failed to prune memory ${entry.path}: ${result.error.message}`,
+                `Failed to prune memory ${entry.path}: ${result.error.message}`
             );
         }
     }
@@ -871,7 +767,7 @@ export const pruneMemoriesHandler = async (
         if (!reindexResult.ok) {
             throw new McpError(
                 ErrorCode.InternalError,
-                `Memories pruned but reindex failed: ${reindexResult.error.message}`,
+                `Memories pruned but reindex failed: ${reindexResult.error.message}`
             );
         }
     }
@@ -882,12 +778,12 @@ export const pruneMemoriesHandler = async (
     };
 
     return {
-        content: [{
-            type: 'text',
-            text: JSON.stringify(
-                output, null, 2,
-            ),
-        }],
+        content: [
+            {
+                type: 'text',
+                text: JSON.stringify(output, null, 2),
+            },
+        ],
     };
 };
 
@@ -898,9 +794,7 @@ export const pruneMemoriesHandler = async (
 /**
  * Registers all memory tools with the MCP server.
  */
-export const registerMemoryTools = (
-    server: McpServer, config: ServerConfig,
-): void => {
+export const registerMemoryTools = (server: McpServer, config: ServerConfig): void => {
     const ctx: ToolContext = { config };
 
     // add_memory
@@ -909,13 +803,9 @@ export const registerMemoryTools = (
         'Create a new memory with auto-creation of stores and categories',
         addMemoryInputSchema.shape,
         async (input) => {
-            const parsed = parseInput(
-                addMemoryInputSchema, input,
-            );
-            return addMemoryHandler(
-                ctx, parsed,
-            );
-        },
+            const parsed = parseInput(addMemoryInputSchema, input);
+            return addMemoryHandler(ctx, parsed);
+        }
     );
 
     // get_memory
@@ -924,13 +814,9 @@ export const registerMemoryTools = (
         'Retrieve memory content and metadata',
         getMemoryInputSchema.shape,
         async (input) => {
-            const parsed = parseInput(
-                getMemoryInputSchema, input,
-            );
-            return getMemoryHandler(
-                ctx, parsed,
-            );
-        },
+            const parsed = parseInput(getMemoryInputSchema, input);
+            return getMemoryHandler(ctx, parsed);
+        }
     );
 
     // update_memory
@@ -939,13 +825,9 @@ export const registerMemoryTools = (
         'Update memory content or metadata',
         updateMemoryInputSchema.shape,
         async (input) => {
-            const parsed = parseInput(
-                updateMemoryInputSchema, input,
-            );
-            return updateMemoryHandler(
-                ctx, parsed,
-            );
-        },
+            const parsed = parseInput(updateMemoryInputSchema, input);
+            return updateMemoryHandler(ctx, parsed);
+        }
     );
 
     // remove_memory
@@ -954,13 +836,9 @@ export const registerMemoryTools = (
         'Delete a memory',
         removeMemoryInputSchema.shape,
         async (input) => {
-            const parsed = parseInput(
-                removeMemoryInputSchema, input,
-            );
-            return removeMemoryHandler(
-                ctx, parsed,
-            );
-        },
+            const parsed = parseInput(removeMemoryInputSchema, input);
+            return removeMemoryHandler(ctx, parsed);
+        }
     );
 
     // move_memory
@@ -969,13 +847,9 @@ export const registerMemoryTools = (
         'Move or rename a memory',
         moveMemoryInputSchema.shape,
         async (input) => {
-            const parsed = parseInput(
-                moveMemoryInputSchema, input,
-            );
-            return moveMemoryHandler(
-                ctx, parsed,
-            );
-        },
+            const parsed = parseInput(moveMemoryInputSchema, input);
+            return moveMemoryHandler(ctx, parsed);
+        }
     );
 
     // list_memories
@@ -984,13 +858,9 @@ export const registerMemoryTools = (
         'List memories in a category',
         listMemoriesInputSchema.shape,
         async (input) => {
-            const parsed = parseInput(
-                listMemoriesInputSchema, input,
-            );
-            return listMemoriesHandler(
-                ctx, parsed,
-            );
-        },
+            const parsed = parseInput(listMemoriesInputSchema, input);
+            return listMemoriesHandler(ctx, parsed);
+        }
     );
 
     // prune_memories
@@ -999,12 +869,8 @@ export const registerMemoryTools = (
         'Delete all expired memories',
         pruneMemoriesInputSchema.shape,
         async (input) => {
-            const parsed = parseInput(
-                pruneMemoriesInputSchema, input,
-            );
-            return pruneMemoriesHandler(
-                ctx, parsed,
-            );
-        },
+            const parsed = parseInput(pruneMemoriesInputSchema, input);
+            return pruneMemoriesHandler(ctx, parsed);
+        }
     );
 };

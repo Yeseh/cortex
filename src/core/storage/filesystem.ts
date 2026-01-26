@@ -42,7 +42,7 @@ const isNotFoundError = (error: unknown): boolean => {
 const resolveStoragePath = (
     root: string,
     relativePath: string,
-    errorCode: StorageAdapterError[ 'code' ],
+    errorCode: StorageAdapterError['code'],
 ): Result<string, StorageAdapterError> => {
     const resolved = resolve(root, relativePath);
     const rootRelative = relative(root, resolved);
@@ -91,7 +91,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
 
     private validateSlugPath(
         slugPath: string,
-        failure: { code: StorageAdapterError[ 'code' ]; message: string; path: string },
+        failure: { code: StorageAdapterError['code']; message: string; path: string },
     ): Result<MemoryIdentity, StorageAdapterError> {
         const identity = validateMemorySlugPath(slugPath);
         if (!identity.ok) {
@@ -109,14 +109,14 @@ export class FilesystemStorageAdapter implements StorageAdapter {
 
     private resolveMemoryPath(
         slugPath: MemorySlugPath,
-        errorCode: StorageAdapterError[ 'code' ],
+        errorCode: StorageAdapterError['code'],
     ): Result<string, StorageAdapterError> {
         return resolveStoragePath(this.storeRoot, `${slugPath}${this.memoryExtension}`, errorCode);
     }
 
     private resolveIndexPath(
         name: StorageIndexName,
-        errorCode: StorageAdapterError[ 'code' ],
+        errorCode: StorageAdapterError['code'],
     ): Result<string, StorageAdapterError> {
         // Category indexes are at: STORE_ROOT/<categoryPath>/index.yaml
         // For root category (empty string): STORE_ROOT/index.yaml
@@ -273,7 +273,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         }
 
         // Update root index with top-level category
-        const topLevelCategory = categories[ 0 ];
+        const topLevelCategory = categories[0];
         if (topLevelCategory !== undefined) {
             const rootIndexName = '';
             const topLevelCategoryIndex = await this.readCategoryIndex(topLevelCategory, options);
@@ -387,12 +387,14 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         indexes: Map<string, CategoryIndex>,
         parentSubcategories: Map<string, Set<string>>,
     ): void {
-        for (const [parentCategory, subcategories] of parentSubcategories.entries()) {
+        for (const [
+            parentCategory, subcategories,
+        ] of parentSubcategories.entries()) {
             const parentIndex = indexes.get(parentCategory) ?? {
                 memories: [],
                 subcategories: [],
             };
-            const subcategoryEntries: CategoryIndex[ 'subcategories' ] = [];
+            const subcategoryEntries: CategoryIndex['subcategories'] = [];
             for (const subcategoryPath of subcategories.values()) {
                 const memoryCount = indexes.get(subcategoryPath)?.memories.length ?? 0;
                 subcategoryEntries.push({ path: subcategoryPath, memoryCount });
@@ -473,9 +475,11 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         indexes: Map<string, CategoryIndex>,
     ): Promise<Result<void, StorageAdapterError>> {
         const sortedIndexes = Array.from(indexes.entries()).sort((a, b) =>
-            a[ 0 ].localeCompare(b[ 0 ]),
+            a[0].localeCompare(b[0]),
         );
-        for (const [indexName, index] of sortedIndexes) {
+        for (const [
+            indexName, index,
+        ] of sortedIndexes) {
             index.memories.sort((a, b) => a.path.localeCompare(b.path));
             index.subcategories.sort((a, b) => a.path.localeCompare(b.path));
             const serialized = serializeCategoryIndex(index);

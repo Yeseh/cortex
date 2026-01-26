@@ -122,8 +122,8 @@ describe(
                 expect(result.ok).toBe(true);
                 if (result.ok) {
                     expect(result.value.memories).toHaveLength(1);
-                    expect(result.value.memories[ 0 ]?.path).toBe('project/test-memory');
-                    expect(result.value.memories[ 0 ]?.isExpired).toBe(false);
+                    expect(result.value.memories[0]?.path).toBe('project/test-memory');
+                    expect(result.value.memories[0]?.isExpired).toBe(false);
                 }
             },
         );
@@ -140,8 +140,10 @@ describe(
                     'project/active-memory', { expiresAt: futureDate },
                 );
                 await createIndex(
-                    'project', [{ path: 'project/expired-memory', tokenEstimate: 10 },
-                        { path: 'project/active-memory', tokenEstimate: 10 }],
+                    'project', [
+                        { path: 'project/expired-memory', tokenEstimate: 10 },
+                        { path: 'project/active-memory', tokenEstimate: 10 },
+                    ],
                 );
 
                 const result = await runListCommand({
@@ -152,7 +154,7 @@ describe(
                 expect(result.ok).toBe(true);
                 if (result.ok) {
                     expect(result.value.memories).toHaveLength(1);
-                    expect(result.value.memories[ 0 ]?.path).toBe('project/active-memory');
+                    expect(result.value.memories[0]?.path).toBe('project/active-memory');
                 }
             },
         );
@@ -170,15 +172,17 @@ describe(
 
                 const result = await runListCommand({
                     storeRoot: TEST_ROOT,
-                    args: [ 'project',
-                        '--include-expired' ],
+                    args: [
+                        'project',
+                        '--include-expired', 
+                    ],
                 });
 
                 expect(result.ok).toBe(true);
                 if (result.ok) {
                     expect(result.value.memories).toHaveLength(1);
-                    expect(result.value.memories[ 0 ]?.path).toBe('project/expired-memory');
-                    expect(result.value.memories[ 0 ]?.isExpired).toBe(true);
+                    expect(result.value.memories[0]?.path).toBe('project/expired-memory');
+                    expect(result.value.memories[0]?.isExpired).toBe(true);
                 }
             },
         );

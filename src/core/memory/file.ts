@@ -2,7 +2,42 @@
  * Memory file parsing and serialization helpers
  */
 
+import { parseDocument } from 'yaml';
+import { z } from 'zod';
 import type { Result } from '../types.ts';
+
+const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
+const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
+
+const dateSchema = z.union([
+    z.date(),
+    z.string().transform((val, ctx) => {
+        const parsed = new Date(val);
+        if (Number.isNaN(parsed.getTime())) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid timestamp' });
+            return z.NEVER;
+        }
+        return parsed;
+    }),
+]).refine((d) => !Number.isNaN(d.getTime()), { message: 'Invalid timestamp' });
+
+const nonEmptyStringSchema = z.string().trim().min(1);
+
+const tagsSchema = z
+    .union([
+        z.null().transform(() => []),
+        z.undefined().transform(() => []),
+        z.array(nonEmptyStringSchema),
+    ])
+    .pipe(z.array(z.string()));
+
+const FrontmatterSchema = z.object({
+    created_at: dateSchema,
+    updated_at: dateSchema,
+    tags: tagsSchema,
+    source: nonEmptyStringSchema,
+    expires_at: dateSchema.optional(),
+});
 
 export interface MemoryFileFrontmatter {
     createdAt: Date;
@@ -43,265 +78,13 @@ export interface MemoryFileSerializeError {
 type ParseFrontmatterResult = Result<MemoryFileFrontmatter, MemoryFileParseError>;
 type SerializeFileResult = Result<string, MemoryFileSerializeError>;
 
-const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
-const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
-
-const parseTimestamp = (
-    value: string,
-    field: string,
-    line: number,
-): Result<Date, MemoryFileParseError> => {
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) {
-        return err({
-            code: 'INVALID_TIMESTAMP',
-            message: `Invalid timestamp for ${field}.`,
-            field,
-            line,
-        });
-    }
-    return ok(parsed);
-};
-
-const parseInlineTags = (
-    value: string, line: number,
-): Result<string[], MemoryFileParseError> => {
-    const trimmed = value.trim();
-    if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) {
-        return err({
-            code: 'INVALID_TAGS',
-            message: 'Tags must be provided as a YAML list or inline array.',
-            field: 'tags',
-            line,
-        });
-    }
-    const inner = trimmed.slice(
-        1, -1,
-    ).trim();
-    if (!inner) {
-        return ok([]);
-    }
-    const entries = inner.split(',');
-    const tags: string[] = [];
-    for (const entry of entries) {
-        const tag = entry.trim();
-        if (!tag) {
-            return err({
-                code: 'INVALID_TAGS',
-                message: 'Tags must be non-empty strings.',
-                field: 'tags',
-                line,
-            });
-        }
-        tags.push(tag);
-    }
-
-    return ok(tags);
-};
-
-const parseTagsList = (
-    lines: string[],
-    startIndex: number,
-    lineOffset: number,
-): Result<{ tags: string[]; nextIndex: number }, MemoryFileParseError> => {
-    const tags: string[] = [];
-    let index = startIndex;
-
-    while (index < lines.length) {
-        const line = lines[ index ];
-        if (line === undefined) {
-            break;
-        }
-        const match = /^\s*-\s*(.*)$/.exec(line);
-        if (!match) {
-            break;
-        }
-        const tagValue = match[ 1 ]?.trim() ?? '';
-        if (!tagValue) {
-            return err({
-                code: 'INVALID_TAGS',
-                message: 'Tags list entries must be non-empty.',
-                field: 'tags',
-                line: index + lineOffset,
-            });
-        }
-        tags.push(tagValue);
-        index += 1;
-    }
-
-    return ok({ tags, nextIndex: index });
-};
-
-const parseFrontmatterLine = (
-    rawLine: string,
-    lineNumber: number,
-): Result<{ key: string; value: string }, MemoryFileParseError> => {
-    const match = /^\s*([A-Za-z0-9_]+)\s*:\s*(.*)$/.exec(rawLine);
-    if (!match || !match[ 1 ]) {
-        return err({
-            code: 'INVALID_FRONTMATTER',
-            message: 'Invalid frontmatter entry.',
-            line: lineNumber,
-        });
-    }
-    return ok({ key: match[ 1 ], value: match[ 2 ] ?? '' });
-};
-
-const validateFrontmatterKey = (
-    key: string,
-    seenKeys: Set<string>,
-    lineNumber: number,
-): Result<void, MemoryFileParseError> => {
-    if (seenKeys.has(key)) {
-        return err({
-            code: 'INVALID_FRONTMATTER',
-            message: 'Duplicate frontmatter key.',
-            line: lineNumber,
-        });
-    }
-    return ok(undefined);
-};
-
-const parseFrontmatterValue = (
-    key: string,
-    value: string,
-    lineNumber: number,
-    frontmatterLines: string[],
-    index: number,
-): Result<
-    {
-        nextIndex: number;
-        createdAt?: Date;
-        updatedAt?: Date;
-        expiresAt?: Date;
-        tags?: string[];
-        source?: string;
-    },
-    MemoryFileParseError
-> => parseFrontmatterValueByKey(
-    key, value, lineNumber, frontmatterLines, index,
-);
-
-const parseTimestampField = (
-    value: string,
-    key: 'created_at' | 'updated_at' | 'expires_at',
-    lineNumber: number,
-    index: number,
-): Result<
-    {
-        nextIndex: number;
-        createdAt?: Date;
-        updatedAt?: Date;
-        expiresAt?: Date;
-    },
-    MemoryFileParseError
-> => {
-    const parsed = parseTimestamp(
-        value.trim(), key, lineNumber,
-    );
-    if (!parsed.ok) {
-        return parsed;
-    }
-    if (key === 'created_at') {
-        return ok({ nextIndex: index + 1, createdAt: parsed.value });
-    }
-    if (key === 'updated_at') {
-        return ok({ nextIndex: index + 1, updatedAt: parsed.value });
-    }
-    return ok({ nextIndex: index + 1, expiresAt: parsed.value });
-};
-
-const parseTagsField = (
-    value: string,
-    lineNumber: number,
-    frontmatterLines: string[],
-    index: number,
-): Result<{ nextIndex: number; tags?: string[] }, MemoryFileParseError> => {
-    if (!value.trim()) {
-        const parsedList = parseTagsList(
-            frontmatterLines, index + 1, 2,
-        );
-        if (!parsedList.ok) {
-            return parsedList;
-        }
-        return ok({ nextIndex: parsedList.value.nextIndex, tags: parsedList.value.tags });
-    }
-    const parsedInline = parseInlineTags(
-        value, lineNumber,
-    );
-    if (!parsedInline.ok) {
-        return parsedInline;
-    }
-    return ok({ nextIndex: index + 1, tags: parsedInline.value });
-};
-
-const parseSourceField = (
-    value: string,
-    lineNumber: number,
-    index: number,
-): Result<{ nextIndex: number; source?: string }, MemoryFileParseError> => {
-    const trimmed = value.trim();
-    if (!trimmed) {
-        return err({
-            code: 'INVALID_SOURCE',
-            message: 'Source must be a non-empty string.',
-            field: 'source',
-            line: lineNumber,
-        });
-    }
-    return ok({ nextIndex: index + 1, source: trimmed });
-};
-
-const parseFrontmatterValueByKey = (
-    key: string,
-    value: string,
-    lineNumber: number,
-    frontmatterLines: string[],
-    index: number,
-): Result<
-    {
-        nextIndex: number;
-        createdAt?: Date;
-        updatedAt?: Date;
-        expiresAt?: Date;
-        tags?: string[];
-        source?: string;
-    },
-    MemoryFileParseError
-> => {
-    switch (key) {
-        case 'created_at':
-            return parseTimestampField(
-                value, 'created_at', lineNumber, index,
-            );
-        case 'updated_at':
-            return parseTimestampField(
-                value, 'updated_at', lineNumber, index,
-            );
-        case 'expires_at':
-            return parseTimestampField(
-                value, 'expires_at', lineNumber, index,
-            );
-        case 'tags':
-            return parseTagsField(
-                value, lineNumber, frontmatterLines, index,
-            );
-        case 'source':
-            return parseSourceField(
-                value, lineNumber, index,
-            );
-        default:
-            return ok({ nextIndex: index + 1 });
-    }
-};
-
 export const parseMemoryFile = (raw: string): Result<MemoryFileContents, MemoryFileParseError> => {
     const normalized = raw.replace(
         /\r\n/g, '\n',
     );
     const lines = normalized.split('\n');
 
-    const firstLine = lines[ 0 ];
+    const firstLine = lines[0];
     if (!firstLine || firstLine.trim() !== '---') {
         return err({
             code: 'MISSING_FRONTMATTER',
@@ -312,7 +95,7 @@ export const parseMemoryFile = (raw: string): Result<MemoryFileContents, MemoryF
 
     let endIndex = -1;
     for (let index = 1; index < lines.length; index += 1) {
-        const line = lines[ index ];
+        const line = lines[index];
         if (line === undefined) {
             break;
         }
@@ -330,291 +113,147 @@ export const parseMemoryFile = (raw: string): Result<MemoryFileContents, MemoryF
         });
     }
 
-    const frontmatterLines = lines.slice(
-        1, endIndex,
-    );
+    const frontmatterLines = lines.slice(1, endIndex);
     const content = lines.slice(endIndex + 1).join('\n');
+
     const parsedFrontmatter = parseFrontmatter(frontmatterLines);
     if (!parsedFrontmatter.ok) {
         return parsedFrontmatter;
     }
 
-    return ok({
-        frontmatter: parsedFrontmatter.value,
-        content,
-    });
+    return ok({ frontmatter: parsedFrontmatter.value, content });
 };
 
 const parseFrontmatter = (frontmatterLines: string[]): ParseFrontmatterResult => {
-    const parsed = parseFrontmatterEntries(frontmatterLines);
-    if (!parsed.ok) {
-        return parsed;
-    }
-    const required = validateFrontmatterRequired(
-        parsed.value.createdAt,
-        parsed.value.updatedAt,
-        parsed.value.tags,
-        parsed.value.source,
-    );
-    if (!required.ok) {
-        return required;
-    }
+    const frontmatterText = frontmatterLines.join('\n');
 
-    return ok({
-        createdAt: required.value.createdAt,
-        updatedAt: required.value.updatedAt,
-        tags: required.value.tags,
-        source: required.value.source,
-        expiresAt: parsed.value.expiresAt,
-    });
-};
+    let data: unknown;
+    try {
+        const doc = parseDocument(frontmatterText, { uniqueKeys: true });
 
-const parseFrontmatterEntries = (frontmatterLines: string[]): Result<
-    {
-        createdAt?: Date;
-        updatedAt?: Date;
-        expiresAt?: Date;
-        tags?: string[];
-        source?: string;
-    },
-    MemoryFileParseError
-> => {
-    return parseFrontmatterEntriesWithIndex(
-        frontmatterLines, 0, new Set(),
-    );
-};
+        const hasDuplicateKeyIssue = [
+            ...doc.errors,
+            ...doc.warnings,
+        ].some((issue) => /duplicate key/i.test(issue.message));
 
-const parseFrontmatterEntriesWithIndex = (
-    frontmatterLines: string[],
-    startIndex: number,
-    seenKeys: Set<string>,
-): Result<
-    {
-        createdAt?: Date;
-        updatedAt?: Date;
-        expiresAt?: Date;
-        tags?: string[];
-        source?: string;
-    },
-    MemoryFileParseError
-> => {
-    let createdAt: Date | undefined;
-    let updatedAt: Date | undefined;
-    let expiresAt: Date | undefined;
-    let tags: string[] | undefined;
-    let source: string | undefined;
-    let index = startIndex;
-
-    while (index < frontmatterLines.length) {
-        const parsed = parseFrontmatterEntry(
-            frontmatterLines, index, seenKeys,
-        );
-        if (!parsed.ok) {
-            return parsed;
+        if (hasDuplicateKeyIssue) {
+            return err({
+                code: 'INVALID_FRONTMATTER',
+                message: 'Duplicate frontmatter key.',
+            });
         }
-        if (!parsed.value) {
-            index += 1;
-            continue;
+
+        if (doc.errors.length > 0) {
+            return err({
+                code: 'INVALID_FRONTMATTER',
+                message: 'Invalid YAML frontmatter.',
+            });
         }
-        createdAt ??= parsed.value.createdAt;
-        updatedAt ??= parsed.value.updatedAt;
-        expiresAt ??= parsed.value.expiresAt;
-        tags ??= parsed.value.tags;
-        source ??= parsed.value.source;
-        index = parsed.value.nextIndex;
-    }
 
-    return ok({ createdAt, updatedAt, expiresAt, tags, source });
-};
-
-const parseFrontmatterEntry = (
-    frontmatterLines: string[],
-    index: number,
-    seenKeys: Set<string>,
-): Result<
-    {
-        createdAt?: Date;
-        updatedAt?: Date;
-        expiresAt?: Date;
-        tags?: string[];
-        source?: string;
-        nextIndex: number;
-    } | null,
-    MemoryFileParseError
-> => {
-    const rawLine = frontmatterLines[ index ];
-    if (rawLine === undefined) {
-        return ok(null);
+        data = doc.toJS();
     }
-    const lineNumber = index + 2;
-    const line = rawLine.trim();
-    if (!line || line.startsWith('#')) {
-        return ok(null);
-    }
-
-    const parsedLine = parseFrontmatterLine(
-        rawLine, lineNumber,
-    );
-    if (!parsedLine.ok) {
-        return parsedLine;
-    }
-    const key = parsedLine.value.key;
-    const validated = validateFrontmatterKey(
-        key, seenKeys, lineNumber,
-    );
-    if (!validated.ok) {
-        return validated;
-    }
-    seenKeys.add(key);
-
-    const parsedValue = parseFrontmatterValue(
-        key,
-        parsedLine.value.value,
-        lineNumber,
-        frontmatterLines,
-        index,
-    );
-    if (!parsedValue.ok) {
-        return parsedValue;
-    }
-    return ok(parsedValue.value);
-};
-
-const validateFrontmatterRequired = (
-    createdAt: Date | undefined,
-    updatedAt: Date | undefined,
-    tags: string[] | undefined,
-    source: string | undefined,
-): Result<
-    { createdAt: Date; updatedAt: Date; tags: string[]; source: string },
-    MemoryFileParseError
-> => {
-    if (!createdAt) {
+    catch {
         return err({
-            code: 'MISSING_FIELD',
-            message: 'Missing created_at field.',
-            field: 'created_at',
-        });
-    }
-    if (!updatedAt) {
-        return err({
-            code: 'MISSING_FIELD',
-            message: 'Missing updated_at field.',
-            field: 'updated_at',
-        });
-    }
-    if (!tags) {
-        return err({
-            code: 'MISSING_FIELD',
-            message: 'Missing tags field.',
-            field: 'tags',
-        });
-    }
-    if (!source) {
-        return err({
-            code: 'MISSING_FIELD',
-            message: 'Missing source field.',
-            field: 'source',
+            code: 'INVALID_FRONTMATTER',
+            message: 'Invalid YAML frontmatter.',
         });
     }
 
-    return ok({ createdAt, updatedAt, tags, source });
-};
-
-const serializeTimestamp = (
-    value: Date,
-    field: string,
-): Result<string, MemoryFileSerializeError> => {
-    if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
         return err({
-            code: 'INVALID_TIMESTAMP',
-            message: `Invalid timestamp for ${field}.`,
+            code: 'INVALID_FRONTMATTER',
+            message: 'Invalid YAML frontmatter.',
+        });
+    }
+
+    const record = data as Record<string, unknown>;
+    const result = FrontmatterSchema.safeParse(data);
+    if (!result.success) {
+        const issue = result.error.issues[0];
+        const field = issue?.path[0]?.toString();
+        const fieldExists = field ? Object.prototype.hasOwnProperty.call(record, field) : false;
+        const code = mapZodErrorCode(field, fieldExists);
+        return err({
+            code,
+            message: issue?.message ?? 'Invalid frontmatter.',
             field,
         });
     }
-    return ok(value.toISOString());
+
+    return ok({
+        createdAt: result.data.created_at,
+        updatedAt: result.data.updated_at,
+        tags: result.data.tags,
+        source: result.data.source,
+        expiresAt: result.data.expires_at,
+    });
 };
 
-const normalizeTags = (tags: string[]): Result<string[], MemoryFileSerializeError> => {
-    if (!Array.isArray(tags)) {
-        return err({
-            code: 'INVALID_TAGS',
-            message: 'Tags must be an array.',
-            field: 'tags',
-        });
+const mapZodErrorCode = (
+    field: string | undefined,
+    fieldExists: boolean,
+): MemoryFileParseErrorCode => {
+    // Missing field: the key doesn't exist in the YAML
+    if (!fieldExists && field) {
+        return 'MISSING_FIELD';
     }
-    const normalized: string[] = [];
-    for (const tag of tags) {
-        if (typeof tag !== 'string') {
-            return err({
-                code: 'INVALID_TAGS',
-                message: 'Tags must be strings.',
-                field: 'tags',
-            });
-        }
-        const trimmed = tag.trim();
-        if (!trimmed) {
-            return err({
-                code: 'INVALID_TAGS',
-                message: 'Tags must be non-empty strings.',
-                field: 'tags',
-            });
-        }
-        normalized.push(trimmed);
+    // Field-specific validation errors
+    if (field === 'tags') {
+        return 'INVALID_TAGS';
     }
-    return ok(normalized);
+    if (field === 'source') {
+        return 'INVALID_SOURCE';
+    }
+    if (field === 'created_at' || field === 'updated_at' || field === 'expires_at') {
+        return 'INVALID_TIMESTAMP';
+    }
+    return 'INVALID_FRONTMATTER';
 };
 
-const validateSource = (source: string | undefined): Result<string, MemoryFileSerializeError> => {
-    const trimmed = source?.trim() ?? '';
-    if (!trimmed) {
-        return err({
-            code: 'INVALID_SOURCE',
-            message: 'Source must be a non-empty string.',
-            field: 'source',
-        });
-    }
-    return ok(trimmed);
+const SerializeFrontmatterSchema = z.object({
+    createdAt: z.date().refine((d) => !Number.isNaN(d.getTime()), { message: 'Invalid timestamp for created_at.' }),
+    updatedAt: z.date().refine((d) => !Number.isNaN(d.getTime()), { message: 'Invalid timestamp for updated_at.' }),
+    tags: z.array(nonEmptyStringSchema),
+    source: nonEmptyStringSchema,
+    expiresAt: z.date().refine((d) => !Number.isNaN(d.getTime()), { message: 'Invalid timestamp for expires_at.' }).optional(),
+});
+
+const mapSerializeErrorCode = (field: string | undefined): MemoryFileSerializeErrorCode => {
+    if (field === 'tags') return 'INVALID_TAGS';
+    if (field === 'source') return 'INVALID_SOURCE';
+    return 'INVALID_TIMESTAMP';
+};
+
+const mapSerializeFieldName = (field: string | undefined): string | undefined => {
+    if (field === 'createdAt') return 'created_at';
+    if (field === 'updatedAt') return 'updated_at';
+    if (field === 'expiresAt') return 'expires_at';
+    return field;
 };
 
 export const serializeMemoryFile = (memory: MemoryFileContents): SerializeFileResult => {
-    const created = serializeTimestamp(
-        memory.frontmatter.createdAt, 'created_at',
-    );
-    if (!created.ok) {
-        return created;
-    }
-    const updated = serializeTimestamp(
-        memory.frontmatter.updatedAt, 'updated_at',
-    );
-    if (!updated.ok) {
-        return updated;
+    const result = SerializeFrontmatterSchema.safeParse(memory.frontmatter);
+    if (!result.success) {
+        const issue = result.error.issues[0];
+        const field = issue?.path[0]?.toString();
+        return err({
+            code: mapSerializeErrorCode(field),
+            message: issue?.message ?? 'Invalid frontmatter.',
+            field: mapSerializeFieldName(field),
+        });
     }
 
-    const normalizedTags = normalizeTags(memory.frontmatter.tags);
-    if (!normalizedTags.ok) {
-        return normalizedTags;
-    }
-    const source = validateSource(memory.frontmatter.source);
-    if (!source.ok) {
-        return source;
-    }
+    const { createdAt, updatedAt, tags, source, expiresAt } = result.data;
 
     const lines: string[] = [
-        `created_at: ${created.value}`,
-        `updated_at: ${updated.value}`,
-        `tags: [${normalizedTags.value.join(', ')}]`,
-        `source: ${source.value}`,
+        `created_at: ${createdAt.toISOString()}`,
+        `updated_at: ${updatedAt.toISOString()}`,
+        `tags: [${tags.join(', ')}]`,
+        `source: ${source}`,
     ];
 
-    if (memory.frontmatter.expiresAt) {
-        const expires = serializeTimestamp(
-            memory.frontmatter.expiresAt, 'expires_at',
-        );
-        if (!expires.ok) {
-            return expires;
-        }
-        lines.push(`expires_at: ${expires.value}`);
+    if (expiresAt) {
+        lines.push(`expires_at: ${expiresAt.toISOString()}`);
     }
 
     const frontmatter = `---\n${lines.join('\n')}\n---`;

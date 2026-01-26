@@ -26,7 +26,7 @@ import { listStores, storeNameSchema } from './tools.ts';
  */
 const getStringVariable = (value: string | string[] | undefined): string | undefined => {
     if (typeof value === 'string') return value;
-    if (Array.isArray(value) && value.length === 1) return value[ 0 ];
+    if (Array.isArray(value) && value.length === 1) return value[0];
     return undefined;
 };
 

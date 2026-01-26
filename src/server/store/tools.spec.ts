@@ -69,7 +69,7 @@ describe(
                             // Empty string fails both min length and regex checks
                             expect(result.error.issues.length).toBeGreaterThanOrEqual(1);
                             // The first issue should be the min length error
-                            expect(result.error.issues[ 0 ]?.message).toBe('Store name must not be empty');
+                            expect(result.error.issues[0]?.message).toBe('Store name must not be empty');
                         }
                     },
                 );
@@ -80,7 +80,7 @@ describe(
                         expect(result.success).toBe(false);
                         if (!result.success) {
                             expect(result.error.issues).toHaveLength(1);
-                            expect(result.error.issues[ 0 ]?.message).toContain('Store name must start with alphanumeric');
+                            expect(result.error.issues[0]?.message).toContain('Store name must start with alphanumeric');
                         }
                     },
                 );
@@ -91,7 +91,7 @@ describe(
                         expect(result.success).toBe(false);
                         if (!result.success) {
                             expect(result.error.issues).toHaveLength(1);
-                            expect(result.error.issues[ 0 ]?.message).toContain('Store name must start with alphanumeric');
+                            expect(result.error.issues[0]?.message).toContain('Store name must start with alphanumeric');
                         }
                     },
                 );
@@ -102,7 +102,7 @@ describe(
                         expect(result.success).toBe(false);
                         if (!result.success) {
                             expect(result.error.issues).toHaveLength(1);
-                            expect(result.error.issues[ 0 ]?.message).toContain('Store name must start with alphanumeric');
+                            expect(result.error.issues[0]?.message).toContain('Store name must start with alphanumeric');
                         }
                     },
                 );
@@ -113,7 +113,7 @@ describe(
                         expect(result.success).toBe(false);
                         if (!result.success) {
                             expect(result.error.issues).toHaveLength(1);
-                            expect(result.error.issues[ 0 ]?.message).toContain('Store name must start with alphanumeric');
+                            expect(result.error.issues[0]?.message).toContain('Store name must start with alphanumeric');
                         }
                     },
                 );
@@ -124,7 +124,7 @@ describe(
                         expect(result.success).toBe(false);
                         if (!result.success) {
                             expect(result.error.issues).toHaveLength(1);
-                            expect(result.error.issues[ 0 ]?.message).toContain('Store name must start with alphanumeric');
+                            expect(result.error.issues[0]?.message).toContain('Store name must start with alphanumeric');
                         }
                     },
                 );

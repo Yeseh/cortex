@@ -210,8 +210,10 @@ describe(
                         await createMemoryFile(
                             'project/tagged-memory',
                             buildMemoryContent({
-                                tags: [ 'important',
-                                    'work' ],
+                                tags: [
+                                    'important',
+                                    'work', 
+                                ],
                                 createdAt: '2024-03-15T10:00:00.000Z',
                                 updatedAt: '2024-03-16T14:30:00.000Z',
                             }),

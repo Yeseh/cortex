@@ -79,8 +79,10 @@ describe(
                 expect(result.value.output).toEqual({
                     kind: 'store-registry',
                     value: {
-                        stores: [{ name: 'alpha', path: 'C:/Stores/Alpha' },
-                            { name: 'zeta', path: 'C:/Stores/Zeta' }],
+                        stores: [
+                            { name: 'alpha', path: 'C:/Stores/Alpha' },
+                            { name: 'zeta', path: 'C:/Stores/Zeta' },
+                        ],
                     },
                 });
             },
@@ -149,8 +151,10 @@ describe(
                 );
                 expect(saved.ok).toBe(true);
 
-                const result = await runStoreCommand(buildOptions([ 'remove',
-                    'primary' ]));
+                const result = await runStoreCommand(buildOptions([
+                    'remove',
+                    'primary', 
+                ]));
 
                 expect(result.ok).toBe(true);
                 if (!result.ok) {
@@ -184,8 +188,10 @@ describe(
                 );
                 expect(saved.ok).toBe(true);
 
-                const result = await runStoreCommand(buildOptions([ 'remove',
-                    'primary' ]));
+                const result = await runStoreCommand(buildOptions([
+                    'remove',
+                    'primary', 
+                ]));
 
                 expect(result.ok).toBe(true);
                 if (!result.ok) {
@@ -232,8 +238,10 @@ describe(
 
         it(
             'should initialize a store at the provided path', async () => {
-                const result = await runStoreCommand(buildOptions([ 'init',
-                    'custom-store' ]));
+                const result = await runStoreCommand(buildOptions([
+                    'init',
+                    'custom-store', 
+                ]));
 
                 expect(result.ok).toBe(true);
                 if (!result.ok) {
@@ -272,8 +280,10 @@ describe(
                     expect(missingCommand.error.code).toBe('INVALID_COMMAND'); 
                 }
 
-                const missingAddArgs = await runStoreCommand(buildOptions([ 'add',
-                    'primary' ]));
+                const missingAddArgs = await runStoreCommand(buildOptions([
+                    'add',
+                    'primary', 
+                ]));
                 expect(missingAddArgs.ok).toBe(false);
                 if (!missingAddArgs.ok) {
                     expect(missingAddArgs.error.code).toBe('INVALID_COMMAND'); 

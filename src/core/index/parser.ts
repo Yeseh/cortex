@@ -58,14 +58,14 @@ const parseEntryLine = (
     lineNumber: number,
 ): Result<{ key: string; value: string }, IndexParseError> => {
     const match = /^\s*([A-Za-z0-9_]+)\s*:\s*(.*)$/.exec(line);
-    if (!match || !match[ 1 ]) {
+    if (!match || !match[1]) {
         return err({
             code: 'INVALID_ENTRY',
             message: 'Invalid index entry.',
             line: lineNumber,
         });
     }
-    return ok({ key: match[ 1 ], value: match[ 2 ] ?? '' });
+    return ok({ key: match[1], value: match[2] ?? '' });
 };
 
 const parsePathValue = (
@@ -106,7 +106,7 @@ const parseMemoryCount = (
 
 const isIndentedEntryLine = (line: string): boolean => {
     const indentMatch = /^(\s*)/.exec(line);
-    const indent = indentMatch?.[ 1 ]?.length ?? 0;
+    const indent = indentMatch?.[1]?.length ?? 0;
     return indent >= 4;
 };
 
@@ -193,7 +193,7 @@ const applyEntryKey = (
     value: string,
     lineNumber: number,
 ): Result<void, IndexParseError> => {
-    const handler = entryHandlers[ key ];
+    const handler = entryHandlers[key];
     if (!handler) {
         return err({
             code: 'INVALID_ENTRY',
@@ -271,7 +271,7 @@ const parseEntry = (
     const entryLine = startIndex + lineOffset - 1;
 
     while (index < lines.length) {
-        const rawLine = lines[ index ];
+        const rawLine = lines[index];
         if (rawLine === undefined) {
             break;
         }
@@ -423,7 +423,7 @@ export const parseCategoryIndex = (raw: string): Result<CategoryIndex, IndexPars
     let index = 0;
 
     while (index < lines.length) {
-        const rawLine = lines[ index ];
+        const rawLine = lines[index];
         if (rawLine === undefined) {
             break;
         }

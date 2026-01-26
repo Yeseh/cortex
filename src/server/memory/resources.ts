@@ -196,7 +196,7 @@ const parseUriVariables = (
     config: ServerConfig,
 ): Result<ParsedUriVariables, McpError> => {
     const store = getVariableString(variables.store) || config.defaultStore;
-    const rawPath = getVariableString(variables[ 'path*' ]);
+    const rawPath = getVariableString(variables['path*']);
 
     // Trailing slash indicates category listing
     const isCategory = rawPath.endsWith('/') || rawPath === '';
@@ -447,7 +447,7 @@ const readRootCategoryListing = async (
     adapter: FilesystemStorageAdapter,
     store: string,
 ): Promise<Result<ReadResourceResult, McpError>> => {
-    const subcategories: CategoryListing[ 'subcategories' ] = [];
+    const subcategories: CategoryListing['subcategories'] = [];
 
     for (const category of ROOT_CATEGORIES) {
         const indexResult = await adapter.readIndexFile(category);
@@ -670,7 +670,7 @@ export const registerMemoryResources = (
                     const categoryPath = parts.slice(
                         0, -1,
                     ).join('/');
-                    const prefix = parts[ parts.length - 1 ] ?? '';
+                    const prefix = parts[parts.length - 1] ?? '';
 
                     // Check root categories if at root level
                     if (categoryPath === '') {

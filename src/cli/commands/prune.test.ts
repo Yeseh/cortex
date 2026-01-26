@@ -147,7 +147,7 @@ describe(
                 expect(result.ok).toBe(true);
                 if (result.ok) {
                     expect(result.value.pruned).toHaveLength(1);
-                    expect(result.value.pruned[ 0 ]?.path).toBe('project/expired-memory');
+                    expect(result.value.pruned[0]?.path).toBe('project/expired-memory');
                 }
 
                 expect(await fileExists(memoryPath)).toBe(false);
@@ -196,8 +196,10 @@ describe(
                     'project/active-memory', { expiresAt: futureDate },
                 );
                 await createIndex(
-                    'project', [{ path: 'project/expired-memory', tokenEstimate: 10 },
-                        { path: 'project/active-memory', tokenEstimate: 10 }],
+                    'project', [
+                        { path: 'project/expired-memory', tokenEstimate: 10 },
+                        { path: 'project/active-memory', tokenEstimate: 10 },
+                    ],
                 );
 
                 const expiredPath = join(

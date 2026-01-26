@@ -150,7 +150,7 @@ const errorCodeMapping: Record<DomainErrorCode, ErrorCode> = {
 export const domainErrorToMcpError = (
     code: DomainErrorCode, message: string,
 ): McpError => {
-    const mcpCode = errorCodeMapping[ code ] ?? ErrorCode.InternalError;
+    const mcpCode = errorCodeMapping[code] ?? ErrorCode.InternalError;
     return new McpError(
         mcpCode, message,
     );

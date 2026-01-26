@@ -23,7 +23,7 @@ export default [
             // Style
             quotes: ['error', 'single', { avoidEscape: true }],
             'quote-props': ['off'],
-            '@stylistic/array-bracket-newline': ['error', { minItems: 3}],
+            '@stylistic/array-bracket-newline': ['error', { minItems: 2}],
             '@stylistic/array-bracket-spacing': ['off', "always", { singleValue: false, objectsInArrays: false, arraysInArrays: false }],
             '@stylistic/array-element-newline': ['error', { minItems: 3, multiline: true, consistent: true }],
             '@stylistic/arrow-parens': ['error', 'always'],
@@ -33,13 +33,12 @@ export default [
             '@stylistic/comma-dangle': ['error', 'always-multiline'],
             '@stylistic/comma-spacing': ['error', { before: false, after: true }],
             '@stylistic/comma-style': ['error', 'last'],
-            '@stylistic/computed-property-spacing': ['error', 'always'],
+            '@stylistic/computed-property-spacing': ['error', 'never'],
             '@stylistic/curly-newline': ['error', { multiline: true, consistent: true}],
             '@stylistic/dot-location': ['error', 'property'],
             '@stylistic/eol-last': ['error', 'always'],
             '@stylistic/function-call-argument-newline': ['error', 'consistent'],
             '@stylistic/function-call-spacing': ['error', 'never'],
-            '@stylistic/function-paren-newline': ['off', {minItems: 2}],
             '@stylistic/indent': ['error', 4, { SwitchCase: 1 }],
 
             '@stylistic/semi': ['error', 'always'],

@@ -25,7 +25,7 @@
 - [x] 4.2 Add unit tests for `serializeCategoryToon()`
 - [x] 4.3 Add unit tests for `serializeStoreToon()` and `serializeStoreRegistryToon()`
 - [x] 4.4 Add unit tests for `serializeStoreInitToon()`
-- [ ] 4.5 Add round-trip tests (encode with TOON library, decode, compare) - N/A: Custom encoder, no decoder
+- [x] 4.5 ~~Add round-trip tests (encode with TOON library, decode, compare)~~ - N/A: Custom encoder, no decoder needed
 - [x] 4.6 Add edge case tests: empty arrays, special characters, missing optional fields
 - [x] 4.7 Update server config tests to allow `toon` as valid format
 - [x] 4.8 Add integration tests for `--format toon` CLI flag

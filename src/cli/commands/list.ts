@@ -54,7 +54,7 @@ const parseListArgs = (args: string[]): Result<ParsedListArgs, ListCommandError>
     let format: OutputFormat = 'yaml';
 
     for (let index = 0; index < args.length; index += 1) {
-        const value = args[ index ];
+        const value = args[index];
         if (!value) {
             continue;
         }
@@ -63,7 +63,7 @@ const parseListArgs = (args: string[]): Result<ParsedListArgs, ListCommandError>
             continue;
         }
         if (value === '--format') {
-            const next = args[ index + 1 ];
+            const next = args[index + 1];
             if (!next || (next !== 'yaml' && next !== 'json' && next !== 'toon')) {
                 return err({
                     code: 'INVALID_ARGUMENTS',

@@ -16,3 +16,8 @@ Use `@/openspec/AGENTS.md` to learn:
 Keep this managed block so 'openspec update' can refresh the instructions.
 
 <!-- OPENSPEC:END -->
+
+
+## Using memory
+
+When interacting with the memory system use `projects/cortex` as the default category path to store and read memories from.

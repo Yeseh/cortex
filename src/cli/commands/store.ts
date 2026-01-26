@@ -52,7 +52,9 @@ const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 const formatRegistry = (registry: Record<string, { path: string }>): OutputStoreRegistry => ({
     stores: Object.entries(registry)
-        .map(([name, definition]) => ({ name, path: definition.path }))
+        .map(([
+            name, definition,
+        ]) => ({ name, path: definition.path }))
         .sort((left, right) => left.name.localeCompare(right.name)),
 });
 
@@ -151,14 +153,14 @@ const runStoreAdd = async (
         return registryResult;
     }
 
-    if (registryResult.value[ name ]) {
+    if (registryResult.value[name]) {
         return err({
             code: 'STORE_ALREADY_EXISTS',
             message: `Store '${name}' is already registered.`,
         });
     }
 
-    registryResult.value[ name ] = { path };
+    registryResult.value[name] = { path };
     const saved = await saveRegistry(options.registryPath, registryResult.value);
     if (!saved.ok) {
         return saved;
@@ -178,14 +180,14 @@ const runStoreRemove = async (options: StoreCommandOptions, name: string): Promi
         return registryResult;
     }
 
-    if (!registryResult.value[ name ]) {
+    if (!registryResult.value[name]) {
         return err({
             code: 'STORE_REGISTRY_FAILED',
             message: `Store '${name}' is not registered.`,
         });
     }
 
-    const { [ name ]: removed, ...rest } = registryResult.value;
+    const { [name]: removed, ...rest } = registryResult.value;
     const remainingEntries = Object.keys(rest).length;
     if (remainingEntries === 0) {
         const removedRegistry = await removeStoreRegistry(options.registryPath);
@@ -253,12 +255,14 @@ const runStoreAction = (
 ): Promise<StoreResult> => {
     const handlers: Record<string, (args: string[]) => Promise<StoreResult>> = {
         list: () => runStoreList(options),
-        add: ([name, path]) => runStoreAddCommand(options, name, path),
+        add: ([
+            name, path,
+        ]) => runStoreAddCommand(options, name, path),
         remove: ([name]) => runStoreRemoveCommand(options, name),
         init: ([path]) => runStoreInit(options, path),
     };
 
-    const handler = handlers[ command ];
+    const handler = handlers[command];
     if (!handler) {
         return Promise.resolve(
             err({
@@ -315,7 +319,9 @@ const runStoreRemoveCommand = (
 };
 
 export const runStoreCommand = async (options: StoreCommandOptions): Promise<StoreResult> => {
-    const [command, ...rest] = options.args;
+    const [
+        command, ...rest
+    ] = options.args;
     if (!command) {
         return err({
             code: 'INVALID_COMMAND',

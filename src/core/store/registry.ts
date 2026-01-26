@@ -46,8 +46,8 @@ const parsePathValue = (raw: string): string => {
     }
     const quotedMatch = /^(['"])(.*)\1(\s+#.*)?$/.exec(trimmed);
     if (quotedMatch) {
-        const rawValue = quotedMatch[ 2 ] ?? '';
-        if (quotedMatch[ 1 ] === '"') {
+        const rawValue = quotedMatch[2] ?? '';
+        if (quotedMatch[1] === '"') {
             try {
                 const parsed = JSON.parse(`"${rawValue}"`);
                 if (typeof parsed === 'string') {
@@ -61,25 +61,25 @@ const parsePathValue = (raw: string): string => {
         return rawValue;
     }
     const commentMatch = /^(.*?)(\s+#.*)?$/.exec(trimmed);
-    return (commentMatch?.[ 1 ] ?? '').trim();
+    return (commentMatch?.[1] ?? '').trim();
 };
 
 const isStoreHeader = (content: string): string | null => {
     const storeMatch = new RegExp(`^(${storeNameSegment})\\s*:\\s*$`).exec(content);
-    return storeMatch?.[ 1 ] ?? null;
+    return storeMatch?.[1] ?? null;
 };
 
 const parseIndent = (line: string): { indent: number; content: string } => {
     const indentMatch = /^(\s*)(.*)$/.exec(line);
     return {
-        indent: indentMatch?.[ 1 ]?.length ?? 0,
-        content: indentMatch?.[ 2 ]?.trim() ?? '',
+        indent: indentMatch?.[1]?.length ?? 0,
+        content: indentMatch?.[2]?.trim() ?? '',
     };
 };
 
 const isPathEntry = (content: string): string | null => {
     const pathMatch = /^path\s*:\s*(.*)$/.exec(content);
-    return pathMatch?.[ 1 ] ?? null;
+    return pathMatch?.[1] ?? null;
 };
 
 interface RegistryState {
@@ -96,7 +96,7 @@ interface RegistryState {
 }
 
 const validateStoreIndent = (
-    mode: RegistryState[ 'mode' ],
+    mode: RegistryState['mode'],
     indent: number,
     storesIndent: number,
     line: number,
@@ -154,7 +154,7 @@ const handleStoreHeader = (
             line,
         });
     }
-    if (state.registry[ storeName ]) {
+    if (state.registry[storeName]) {
         return err({
             code: 'DUPLICATE_STORE_NAME',
             message: `Duplicate store name: ${storeName}.`,
@@ -217,7 +217,7 @@ const handlePathValue = (
     }
     return ok({
         ...state,
-        registry: { ...state.registry, [ state.currentStore.name ]: { path: parsedPath } },
+        registry: { ...state.registry, [state.currentStore.name]: { path: parsedPath } },
         currentStore: { ...state.currentStore, path: parsedPath },
     });
 };
@@ -234,7 +234,7 @@ const handleStoresSection = (
     if (!match) {
         return ok({ handled: false, state });
     }
-    const indent = match[ 1 ]?.length ?? 0;
+    const indent = match[1]?.length ?? 0;
     if (indent !== 0) {
         return err({
             code: 'INVALID_STORES_SECTION',
@@ -308,7 +308,7 @@ export const parseStoreRegistry = (raw: string): Result<StoreRegistry, StoreRegi
     };
 
     for (let index = 0; index < lines.length; index += 1) {
-        const rawLine = lines[ index ];
+        const rawLine = lines[index];
         if (rawLine === undefined) {
             continue;
         }
@@ -399,7 +399,9 @@ export const serializeStoreRegistry = (registry: StoreRegistry): SerializeRegist
     }
 
     const lines: string[] = ['stores:'];
-    for (const [ name, definition ] of entries) {
+    for (const [
+        name, definition, 
+    ] of entries) {
         if (!isValidStoreName(name)) {
             return err({
                 code: 'INVALID_STORE_NAME',

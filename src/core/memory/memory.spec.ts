@@ -26,8 +26,10 @@ describe(
                 expect(result.ok).toBe(true);
                 if (result.ok) {
                     expect(result.value.slugPath).toBe('semantic/concepts/priority-cues');
-                    expect(result.value.categories).toEqual([ 'semantic',
-                        'concepts' ]);
+                    expect(result.value.categories).toEqual([
+                        'semantic',
+                        'concepts', 
+                    ]);
                     expect(result.value.slug).toBe('priority-cues');
                 }
             },
@@ -68,8 +70,10 @@ describe(
                     ' ',
                     'memory  ',
                 ]);
-                expect(normalized).toEqual([ 'working',
-                    'memory' ]);
+                expect(normalized).toEqual([
+                    'working',
+                    'memory', 
+                ]);
 
                 const result = validateMemorySlugPath('working/ /memory');
                 expect(result.ok).toBe(true);
@@ -93,12 +97,16 @@ describe(
                     expect(oneLevel.value).toEqual(['working']); 
                 }
 
-                const twoLevel = validateCategoryPath([ 'semantic',
-                    'concepts' ]);
+                const twoLevel = validateCategoryPath([
+                    'semantic',
+                    'concepts', 
+                ]);
                 expect(twoLevel.ok).toBe(true);
                 if (twoLevel.ok) {
-                    expect(twoLevel.value).toEqual([ 'semantic',
-                        'concepts' ]); 
+                    expect(twoLevel.value).toEqual([
+                        'semantic',
+                        'concepts', 
+                    ]); 
                 }
             },
         );
@@ -135,8 +143,10 @@ describe(
 
         it(
             'should reject non-slug segments', () => {
-                const result = validateCategoryPath([ 'Working',
-                    'notes' ]);
+                const result = validateCategoryPath([
+                    'Working',
+                    'notes', 
+                ]);
 
                 expect(result.ok).toBe(false);
                 if (!result.ok) {
@@ -170,8 +180,10 @@ describe(
                     expect(result.value.frontmatter.createdAt.toISOString()).toBe('2024-01-01T00:00:00.000Z');
                     expect(result.value.frontmatter.updatedAt.toISOString()).toBe('2024-01-02T00:00:00.000Z');
                     expect(result.value.frontmatter.expiresAt?.toISOString()).toBe('2024-02-01T00:00:00.000Z');
-                    expect(result.value.frontmatter.tags).toEqual([ 'personal',
-                        'onboarding' ]);
+                    expect(result.value.frontmatter.tags).toEqual([
+                        'personal',
+                        'onboarding', 
+                    ]);
                     expect(result.value.frontmatter.source).toBe('user');
                     expect(result.value.content).toBe('Remember the onboarding checklist.');
                 }
@@ -279,8 +291,10 @@ describe(
 
                 expect(result.ok).toBe(true);
                 if (result.ok) {
-                    expect(result.value.frontmatter.tags).toEqual([ 'product',
-                        'research' ]);
+                    expect(result.value.frontmatter.tags).toEqual([
+                        'product',
+                        'research', 
+                    ]);
                     expect(result.value.content).toBe('Tags list style.');
                 }
             },
@@ -397,7 +411,7 @@ describe(
         );
 
         it(
-            'should reject empty tags in inline lists', () => {
+            'should normalize trailing commas in inline tags', () => {
                 const raw = [
                     '---',
                     'created_at: 2024-01-01T00:00:00.000Z',
@@ -405,14 +419,14 @@ describe(
                     'tags: [personal,  ]',
                     'source: user',
                     '---',
-                    'Invalid tag entry.',
+                    'Trailing commas are normalized by yaml parser.',
                 ].join('\n');
 
                 const result = parseMemoryFile(raw);
 
-                expect(result.ok).toBe(false);
-                if (!result.ok) {
-                    expect(result.error.code).toBe('INVALID_TAGS'); 
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value.frontmatter.tags).toEqual(['personal']);
                 }
             },
         );
@@ -449,8 +463,10 @@ describe(
                     frontmatter: {
                         createdAt: new Date('2024-03-01T08:30:00.000Z'),
                         updatedAt: new Date('2024-03-02T10:15:00.000Z'),
-                        tags: [ 'alpha',
-                            'beta' ],
+                        tags: [
+                            'alpha',
+                            'beta', 
+                        ],
                         source: 'system',
                         expiresAt: new Date('2024-04-01T00:00:00.000Z'),
                     },
@@ -469,8 +485,10 @@ describe(
                     expect(reparsed.value.frontmatter.createdAt.toISOString()).toBe('2024-03-01T08:30:00.000Z');
                     expect(reparsed.value.frontmatter.updatedAt.toISOString()).toBe('2024-03-02T10:15:00.000Z');
                     expect(reparsed.value.frontmatter.expiresAt?.toISOString()).toBe('2024-04-01T00:00:00.000Z');
-                    expect(reparsed.value.frontmatter.tags).toEqual([ 'alpha',
-                        'beta' ]);
+                    expect(reparsed.value.frontmatter.tags).toEqual([
+                        'alpha',
+                        'beta', 
+                    ]);
                     expect(reparsed.value.frontmatter.source).toBe('system');
                     expect(reparsed.value.content).toBe('Memory payload with multiple lines.\nSecond line.');
                 }
@@ -563,7 +581,7 @@ describe(
                     content: 'Serialized memory.',
                 };
 
-                const result = serializeMemoryFile(memory as unknown as Parameters<typeof serializeMemoryFile>[ 0 ]);
+                const result = serializeMemoryFile(memory as unknown as Parameters<typeof serializeMemoryFile>[0]);
 
                 expect(result.ok).toBe(false);
                 if (!result.ok) {
@@ -579,14 +597,16 @@ describe(
                     frontmatter: {
                         createdAt: new Date('2024-03-01T08:30:00.000Z'),
                         updatedAt: new Date('2024-03-02T10:15:00.000Z'),
-                        tags: [ 'alpha',
-                            42 ],
+                        tags: [
+                            'alpha',
+                            42, 
+                        ],
                         source: 'system',
                     },
                     content: 'Serialized memory.',
                 };
 
-                const result = serializeMemoryFile(memory as unknown as Parameters<typeof serializeMemoryFile>[ 0 ]);
+                const result = serializeMemoryFile(memory as unknown as Parameters<typeof serializeMemoryFile>[0]);
 
                 expect(result.ok).toBe(false);
                 if (!result.ok) {

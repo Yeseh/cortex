@@ -69,8 +69,8 @@ const parseMoveArgs = (args: string[]): Result<ParsedMoveArgs, MoveCommandError>
     }
 
     return ok({
-        sourcePath: positional[ 0 ]!,
-        destinationPath: positional[ 1 ]!,
+        sourcePath: positional[0]!,
+        destinationPath: positional[1]!,
     });
 };
 

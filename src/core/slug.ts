@@ -14,8 +14,10 @@ export const normalizeSlugSegments = (segments: string[]): string[] =>
 export const buildMemorySlugPath = (
     categories: MemoryCategoryPath,
     slug: MemorySlug,
-): MemorySlugPath => [ ...categories,
-    slug ].join('/') as MemorySlugPath;
+): MemorySlugPath => [
+    ...categories,
+    slug, 
+].join('/') as MemorySlugPath;
 
 export const buildMemoryIdentity = (
     categories: MemoryCategoryPath,

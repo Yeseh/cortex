@@ -84,9 +84,9 @@ const parseFlagValue = (
     args: string[],
     index: number,
     flag: string,
-    field: UpdateCommandError[ 'field' ],
+    field: UpdateCommandError['field'],
 ): Result<{ value: string; nextIndex: number }, UpdateCommandError> => {
-    const candidate = args[ index + 1 ];
+    const candidate = args[index + 1];
     if (candidate === undefined) {
         return err({
             code: 'INVALID_ARGS',
@@ -101,7 +101,7 @@ const readUpdateFlag = (
     args: string[],
     index: number,
     flag: string,
-    field: UpdateCommandError[ 'field' ],
+    field: UpdateCommandError['field'],
 ): Result<{ value: string; nextIndex: number }, UpdateCommandError> =>
     parseFlagValue(
         args, index, flag, field,
@@ -141,7 +141,7 @@ const applyFlagValue = (
     args: string[],
     index: number,
     flag: string,
-    field: UpdateCommandError[ 'field' ],
+    field: UpdateCommandError['field'],
     handler: FlagHandler,
 ): Result<UpdateArgResult, UpdateCommandError> => {
     const parsed = readUpdateFlag(
@@ -256,7 +256,7 @@ const applyUpdateArg = (
     index: number,
     value: string,
 ): Result<UpdateArgResult, UpdateCommandError> => {
-    const handler = updateFlagHandlers[ value ];
+    const handler = updateFlagHandlers[value];
     if (handler) {
         return handler(
             state, args, index,
@@ -360,7 +360,7 @@ const parseUpdateArgs = (args: string[]): Result<ParsedUpdateArgs, UpdateCommand
     };
 
     for (let index = 0; index < args.length; index += 1) {
-        const value = args[ index ];
+        const value = args[index];
         if (!value) {
             continue;
         }

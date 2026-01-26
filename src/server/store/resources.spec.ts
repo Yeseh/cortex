@@ -186,7 +186,7 @@ describe(
                         );
 
                         const registeredResources = getRegisteredResources(server);
-                        const storeListResource = registeredResources[ 'cortex://store/' ];
+                        const storeListResource = registeredResources['cortex://store/'];
 
                         expect(storeListResource).toBeDefined();
 
@@ -196,10 +196,10 @@ describe(
 
                         expect(result).toHaveProperty('contents');
                         expect(result.contents).toHaveLength(1);
-                        expect(result.contents[ 0 ]?.uri).toBe('cortex://store/');
-                        expect(result.contents[ 0 ]?.mimeType).toBe('application/json');
+                        expect(result.contents[0]?.uri).toBe('cortex://store/');
+                        expect(result.contents[0]?.mimeType).toBe('application/json');
 
-                        const parsed = JSON.parse(result.contents[ 0 ]!.text);
+                        const parsed = JSON.parse(result.contents[0]!.text);
                         expect(parsed).toHaveProperty('stores');
                         expect(parsed.stores).toHaveLength(3);
                         expect(parsed.stores).toContain('store-a');
@@ -215,7 +215,7 @@ describe(
                         );
 
                         const registeredResources = getRegisteredResources(server);
-                        const storeListResource = registeredResources[ 'cortex://store/' ];
+                        const storeListResource = registeredResources['cortex://store/'];
 
                         const result = await storeListResource!.readCallback(
                             new URL('cortex://store/'), {},
@@ -223,7 +223,7 @@ describe(
 
                         expect(result.contents).toHaveLength(1);
 
-                        const parsed = JSON.parse(result.contents[ 0 ]!.text);
+                        const parsed = JSON.parse(result.contents[0]!.text);
                         expect(parsed).toHaveProperty('stores');
                         expect(parsed.stores).toEqual([]);
                     },
@@ -249,7 +249,7 @@ describe(
                         );
 
                         const registeredResources = getRegisteredResources(server);
-                        const storeListResource = registeredResources[ 'cortex://store/' ];
+                        const storeListResource = registeredResources['cortex://store/'];
 
                         await expect(async () => {
                             await storeListResource!.readCallback(
@@ -266,15 +266,15 @@ describe(
                         );
 
                         const registeredResources = getRegisteredResources(server);
-                        const storeListResource = registeredResources[ 'cortex://store/' ];
+                        const storeListResource = registeredResources['cortex://store/'];
 
                         const result = await storeListResource!.readCallback(
                             new URL('cortex://store/'), {},
                         );
 
-                        expect(result.contents[ 0 ]?.mimeType).toBe('application/json');
+                        expect(result.contents[0]?.mimeType).toBe('application/json');
                         // Verify valid JSON
-                        expect(() => JSON.parse(result.contents[ 0 ]!.text)).not.toThrow();
+                        expect(() => JSON.parse(result.contents[0]!.text)).not.toThrow();
                     },
                 );
 
@@ -295,13 +295,13 @@ describe(
                         );
 
                         const registeredResources = getRegisteredResources(server);
-                        const storeListResource = registeredResources[ 'cortex://store/' ];
+                        const storeListResource = registeredResources['cortex://store/'];
 
                         const result = await storeListResource!.readCallback(
                             new URL('cortex://store/'), {},
                         );
 
-                        const parsed = JSON.parse(result.contents[ 0 ]!.text);
+                        const parsed = JSON.parse(result.contents[0]!.text);
                         expect(parsed.stores).toEqual(['real-store']);
                     },
                 );
@@ -328,7 +328,7 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         expect(storeDetailResource).toBeDefined();
 
@@ -339,9 +339,9 @@ describe(
 
                         expect(result).toHaveProperty('contents');
                         expect(result.contents).toHaveLength(1);
-                        expect(result.contents[ 0 ]?.mimeType).toBe('application/json');
+                        expect(result.contents[0]?.mimeType).toBe('application/json');
 
-                        const parsed = JSON.parse(result.contents[ 0 ]!.text);
+                        const parsed = JSON.parse(result.contents[0]!.text);
                         expect(parsed).toHaveProperty(
                             'name', 'my-store',
                         );
@@ -373,14 +373,14 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         const result = await storeDetailResource!.readCallback(
                             new URL('cortex://store/project-store'),
                             { name: 'project-store' },
                         );
 
-                        const parsed = JSON.parse(result.contents[ 0 ]!.text);
+                        const parsed = JSON.parse(result.contents[0]!.text);
                         expect(parsed.categories).toHaveLength(3);
                         expect(parsed.categories).toContain('docs');
                         expect(parsed.categories).toContain('code');
@@ -400,14 +400,14 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         const result = await storeDetailResource!.readCallback(
                             new URL('cortex://store/empty-store'),
                             { name: 'empty-store' },
                         );
 
-                        const parsed = JSON.parse(result.contents[ 0 ]!.text);
+                        const parsed = JSON.parse(result.contents[0]!.text);
                         expect(parsed.name).toBe('empty-store');
                         expect(parsed.categories).toEqual([]);
                     },
@@ -435,14 +435,14 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         const result = await storeDetailResource!.readCallback(
                             new URL('cortex://store/files-only-store'),
                             { name: 'files-only-store' },
                         );
 
-                        const parsed = JSON.parse(result.contents[ 0 ]!.text);
+                        const parsed = JSON.parse(result.contents[0]!.text);
                         expect(parsed.categories).toEqual([]);
                     },
                 );
@@ -454,7 +454,7 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         try {
                             await storeDetailResource!.readCallback(
@@ -479,7 +479,7 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         try {
                             await storeDetailResource!.readCallback(
@@ -504,7 +504,7 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         try {
                             await storeDetailResource!.readCallback(
@@ -530,7 +530,7 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         await expect(async () => {
                             await storeDetailResource!.readCallback(
@@ -549,7 +549,7 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         try {
                             await storeDetailResource!.readCallback(
@@ -578,14 +578,14 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         const result = await storeDetailResource!.readCallback(
                             new URL('cortex://store/array-test-store'),
                             { name: ['array-test-store'] }, // Array with single element
                         );
 
-                        const parsed = JSON.parse(result.contents[ 0 ]!.text);
+                        const parsed = JSON.parse(result.contents[0]!.text);
                         expect(parsed).toHaveProperty(
                             'name', 'array-test-store',
                         );
@@ -600,13 +600,15 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         try {
                             await storeDetailResource!.readCallback(
                                 new URL('cortex://store/'), {
-                                    name: [ 'store1',
-                                        'store2' ],
+                                    name: [
+                                        'store1',
+                                        'store2', 
+                                    ],
                                 },
                             ); // Array with multiple elements
                             expect(true).toBe(false); // Should not reach here
@@ -630,14 +632,14 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         const testUrl = new URL('cortex://store/uri-test');
                         const result = await storeDetailResource!.readCallback(
                             testUrl, { name: 'uri-test' },
                         );
 
-                        expect(result.contents[ 0 ]?.uri).toBe('cortex://store/uri-test');
+                        expect(result.contents[0]?.uri).toBe('cortex://store/uri-test');
                     },
                 );
             },
@@ -663,7 +665,7 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         expect(storeDetailResource).toBeDefined();
                         expect(storeDetailResource?.resourceTemplate?._callbacks?.list).toBeDefined();
@@ -696,7 +698,7 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         const listResult = await storeDetailResource!.resourceTemplate._callbacks.list!();
 
@@ -725,7 +727,7 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         expect(storeDetailResource).toBeDefined();
                         expect(storeDetailResource?.resourceTemplate?._callbacks?.list).toBeDefined();
@@ -757,7 +759,7 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         const listResult = await storeDetailResource!.resourceTemplate._callbacks.list!();
 
@@ -788,7 +790,7 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         expect(storeDetailResource?.resourceTemplate?._callbacks?.complete?.name).toBeDefined();
 
@@ -808,7 +810,7 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         const completions =
                             await storeDetailResource!.resourceTemplate._callbacks.complete!.name!();
@@ -836,7 +838,7 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         // Complete handler should return empty array on error (not throw)
                         const completions =
@@ -870,14 +872,14 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         const result = await storeDetailResource!.readCallback(
                             new URL('cortex://store/test-store'),
                             { name: 'test-store' },
                         );
 
-                        const parsed = JSON.parse(result.contents[ 0 ]!.text);
+                        const parsed = JSON.parse(result.contents[0]!.text);
                         expect(parsed.categories).toHaveLength(3);
                         expect(parsed.categories).toContain('subdir-1');
                         expect(parsed.categories).toContain('subdir-2');
@@ -892,7 +894,7 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         try {
                             await storeDetailResource!.readCallback(
@@ -934,14 +936,14 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         const result = await storeDetailResource!.readCallback(
                             new URL('cortex://store/mixed-store'),
                             { name: 'mixed-store' },
                         );
 
-                        const parsed = JSON.parse(result.contents[ 0 ]!.text);
+                        const parsed = JSON.parse(result.contents[0]!.text);
                         expect(parsed.categories).toEqual(['actual-category']);
                     },
                 );
@@ -957,7 +959,7 @@ describe(
                         );
 
                         const registeredResources = getRegisteredResources(server);
-                        const storeListResource = registeredResources[ 'cortex://store/' ];
+                        const storeListResource = registeredResources['cortex://store/'];
 
                         const result = await storeListResource!.readCallback(
                             new URL('cortex://store/'), {},
@@ -965,9 +967,9 @@ describe(
 
                         expect(result).toHaveProperty('contents');
                         expect(Array.isArray(result.contents)).toBe(true);
-                        expect(result.contents[ 0 ]).toHaveProperty('uri');
-                        expect(result.contents[ 0 ]).toHaveProperty('mimeType');
-                        expect(result.contents[ 0 ]).toHaveProperty('text');
+                        expect(result.contents[0]).toHaveProperty('uri');
+                        expect(result.contents[0]).toHaveProperty('mimeType');
+                        expect(result.contents[0]).toHaveProperty('text');
                     },
                 );
 
@@ -982,7 +984,7 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         const result = await storeDetailResource!.readCallback(
                             new URL('cortex://store/structure-test'),
@@ -991,9 +993,9 @@ describe(
 
                         expect(result).toHaveProperty('contents');
                         expect(Array.isArray(result.contents)).toBe(true);
-                        expect(result.contents[ 0 ]).toHaveProperty('uri');
-                        expect(result.contents[ 0 ]).toHaveProperty('mimeType');
-                        expect(result.contents[ 0 ]).toHaveProperty('text');
+                        expect(result.contents[0]).toHaveProperty('uri');
+                        expect(result.contents[0]).toHaveProperty('mimeType');
+                        expect(result.contents[0]).toHaveProperty('text');
                     },
                 );
 
@@ -1016,7 +1018,7 @@ describe(
                         );
 
                         const registeredResources = getRegisteredResources(server);
-                        const storeListResource = registeredResources[ 'cortex://store/' ];
+                        const storeListResource = registeredResources['cortex://store/'];
 
                         await expect(async () => {
                             await storeListResource!.readCallback(
@@ -1033,7 +1035,7 @@ describe(
                         );
 
                         const registeredTemplates = getRegisteredResourceTemplates(server);
-                        const storeDetailResource = registeredTemplates[ 'store-detail' ];
+                        const storeDetailResource = registeredTemplates['store-detail'];
 
                         await expect(async () => {
                             await storeDetailResource!.readCallback(

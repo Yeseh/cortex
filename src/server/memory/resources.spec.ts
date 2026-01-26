@@ -304,7 +304,7 @@ describe(
                 expect(result.ok).toBe(true);
                 if (result.ok) {
                     expect(result.value.contents).toHaveLength(1);
-                    const text = getTextContent(result.value.contents[ 0 ]);
+                    const text = getTextContent(result.value.contents[0]);
                     expect(text).toBe('This is the memory content');
                 }
             },
@@ -330,7 +330,7 @@ describe(
 
                 expect(result.ok).toBe(true);
                 if (result.ok) {
-                    const content = result.value.contents[ 0 ];
+                    const content = result.value.contents[0];
                     expect(content).toBeDefined();
                     expect(content!.mimeType).toBe('text/plain');
                 }
@@ -357,7 +357,7 @@ describe(
 
                 expect(result.ok).toBe(true);
                 if (result.ok) {
-                    const content = result.value.contents[ 0 ];
+                    const content = result.value.contents[0];
                     expect(content).toBeDefined();
                     expect(content!.uri).toBe('cortex://memory/my-store/project/uri-test');
                 }
@@ -386,7 +386,7 @@ describe(
 
                 expect(result.ok).toBe(true);
                 if (result.ok) {
-                    const content = result.value.contents[ 0 ];
+                    const content = result.value.contents[0];
                     expect(content).toBeDefined();
                     const text = getTextContent(content);
                     expect(text).toBe('Deeply nested memory content');
@@ -483,7 +483,7 @@ describe(
 
                 expect(result.ok).toBe(true);
                 if (result.ok) {
-                    const content = result.value.contents[ 0 ];
+                    const content = result.value.contents[0];
                     expect(content).toBeDefined();
                     const text = getTextContent(content);
                     const listing: CategoryListing = JSON.parse(text);
@@ -517,14 +517,14 @@ describe(
 
                 expect(result.ok).toBe(true);
                 if (result.ok) {
-                    const content = result.value.contents[ 0 ];
+                    const content = result.value.contents[0];
                     expect(content).toBeDefined();
                     const text = getTextContent(content);
                     const listing: CategoryListing = JSON.parse(text);
 
                     expect(listing.subcategories).toHaveLength(1);
-                    expect(listing.subcategories[ 0 ]!.path).toBe('project/subcategory');
-                    expect(listing.subcategories[ 0 ]!.memoryCount).toBe(1);
+                    expect(listing.subcategories[0]!.path).toBe('project/subcategory');
+                    expect(listing.subcategories[0]!.memoryCount).toBe(1);
                 }
             },
         );
@@ -549,7 +549,7 @@ describe(
 
                 expect(result.ok).toBe(true);
                 if (result.ok) {
-                    const content = result.value.contents[ 0 ];
+                    const content = result.value.contents[0];
                     expect(content).toBeDefined();
                     const text = getTextContent(content);
                     const listing: CategoryListing = JSON.parse(text);
@@ -560,7 +560,7 @@ describe(
                     expect(listing).toHaveProperty('subcategories');
 
                     // Verify memory entry structure
-                    const firstMemory = listing.memories[ 0 ];
+                    const firstMemory = listing.memories[0];
                     expect(firstMemory).toBeDefined();
                     expect(firstMemory).toHaveProperty('path');
                     expect(firstMemory).toHaveProperty('uri');
@@ -589,7 +589,7 @@ describe(
 
                 expect(result.ok).toBe(true);
                 if (result.ok) {
-                    const content = result.value.contents[ 0 ];
+                    const content = result.value.contents[0];
                     expect(content).toBeDefined();
                     expect(content!.mimeType).toBe('application/json');
                 }
@@ -629,7 +629,7 @@ describe(
 
                 expect(result.ok).toBe(true);
                 if (result.ok) {
-                    const content = result.value.contents[ 0 ];
+                    const content = result.value.contents[0];
                     expect(content).toBeDefined();
                     const text = getTextContent(content);
                     const listing: CategoryListing = JSON.parse(text);
@@ -678,11 +678,11 @@ describe(
 
                 expect(result.ok).toBe(true);
                 if (result.ok) {
-                    const content = result.value.contents[ 0 ];
+                    const content = result.value.contents[0];
                     expect(content).toBeDefined();
                     const text = getTextContent(content);
                     const listing: CategoryListing = JSON.parse(text);
-                    expect(listing.memories[ 0 ]!.uri).toBe('cortex://memory/my-store/project/uri-memory');
+                    expect(listing.memories[0]!.uri).toBe('cortex://memory/my-store/project/uri-memory');
                 }
             },
         );
@@ -707,11 +707,11 @@ describe(
 
                 expect(result.ok).toBe(true);
                 if (result.ok) {
-                    const content = result.value.contents[ 0 ];
+                    const content = result.value.contents[0];
                     expect(content).toBeDefined();
                     const text = getTextContent(content);
                     const listing: CategoryListing = JSON.parse(text);
-                    expect(listing.subcategories[ 0 ]!.uri).toBe('cortex://memory/my-store/project/sub/');
+                    expect(listing.subcategories[0]!.uri).toBe('cortex://memory/my-store/project/sub/');
                 }
             },
         );
@@ -915,7 +915,7 @@ describe(
                 if (result.ok) {
                     // Should still have root resource
                     expect(result.value.resources.length).toBe(1);
-                    expect(result.value.resources[ 0 ]!.name).toContain('Memory Store');
+                    expect(result.value.resources[0]!.name).toContain('Memory Store');
                 }
             },
         );
@@ -1124,12 +1124,12 @@ describe(
                 );
                 expect(categoryResult.ok).toBe(true);
                 if (categoryResult.ok) {
-                    const content = categoryResult.value.contents[ 0 ];
+                    const content = categoryResult.value.contents[0];
                     expect(content).toBeDefined();
                     const text = getTextContent(content);
                     const listing: CategoryListing = JSON.parse(text);
                     expect(listing.memories.length).toBe(1);
-                    expect(listing.memories[ 0 ]!.path).toBe('project/workflow-memory');
+                    expect(listing.memories[0]!.path).toBe('project/workflow-memory');
                 }
 
                 // Step 3: Read specific memory
@@ -1138,7 +1138,7 @@ describe(
                 );
                 expect(memoryResult.ok).toBe(true);
                 if (memoryResult.ok) {
-                    const text = getTextContent(memoryResult.value.contents[ 0 ]);
+                    const text = getTextContent(memoryResult.value.contents[0]);
                     expect(text).toBe('Workflow test content');
                 }
             },
@@ -1178,7 +1178,7 @@ describe(
                 );
                 expect(memoryResult.ok).toBe(true);
                 if (memoryResult.ok) {
-                    const text = getTextContent(memoryResult.value.contents[ 0 ]);
+                    const text = getTextContent(memoryResult.value.contents[0]);
                     expect(text).toBe('Deep nested content');
                 }
             },

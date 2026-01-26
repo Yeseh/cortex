@@ -122,8 +122,10 @@ describe(
 
         it(
             'should reject empty or comment-only path values', () => {
-                const raw = [ 'primary:',
-                    '  path: # empty' ].join('\n');
+                const raw = [
+                    'primary:',
+                    '  path: # empty', 
+                ].join('\n');
 
                 const result = parseStoreRegistry(raw);
 
@@ -156,8 +158,10 @@ describe(
 
         it(
             'should reject paths that are not indented under the store', () => {
-                const raw = [ 'primary:',
-                    'path: /var/lib' ].join('\n');
+                const raw = [
+                    'primary:',
+                    'path: /var/lib', 
+                ].join('\n');
 
                 const result = parseStoreRegistry(raw);
 

@@ -285,8 +285,10 @@ describe(
             'error cases', () => {
                 it(
                     'should return INVALID_ARGUMENTS when memory path is missing', async () => {
-                        const result = await runAddCommand(buildOptions([ '--content',
-                            'Hello' ]));
+                        const result = await runAddCommand(buildOptions([
+                            '--content',
+                            'Hello', 
+                        ]));
 
                         expect(result.ok).toBe(false);
                         if (result.ok) return;
@@ -315,8 +317,10 @@ describe(
 
                 it(
                     'should return INVALID_ARGUMENTS when --content flag has no value', async () => {
-                        const result = await runAddCommand(buildOptions([ 'project/memory',
-                            '--content' ]));
+                        const result = await runAddCommand(buildOptions([
+                            'project/memory',
+                            '--content', 
+                        ]));
 
                         expect(result.ok).toBe(false);
                         if (result.ok) return;
@@ -329,8 +333,10 @@ describe(
 
                 it(
                     'should return INVALID_ARGUMENTS when --file flag has no value', async () => {
-                        const result = await runAddCommand(buildOptions([ 'project/memory',
-                            '--file' ]));
+                        const result = await runAddCommand(buildOptions([
+                            'project/memory',
+                            '--file', 
+                        ]));
 
                         expect(result.ok).toBe(false);
                         if (result.ok) return;

@@ -90,8 +90,10 @@ describe(
                         await createMemoryFile('source-category/test-memory');
                         await createCategory('destination-category');
 
-                        const result = await runMoveCommand(buildOptions([ 'source-category/test-memory',
-                            'destination-category/test-memory' ]));
+                        const result = await runMoveCommand(buildOptions([
+                            'source-category/test-memory',
+                            'destination-category/test-memory', 
+                        ]));
 
                         expect(result.ok).toBe(true);
                         if (!result.ok) {
@@ -114,8 +116,10 @@ describe(
                         await createMemoryFile('projects/work/old-project');
                         await createCategory('archive/2024');
 
-                        const result = await runMoveCommand(buildOptions([ 'projects/work/old-project',
-                            'archive/2024/old-project' ]));
+                        const result = await runMoveCommand(buildOptions([
+                            'projects/work/old-project',
+                            'archive/2024/old-project', 
+                        ]));
 
                         expect(result.ok).toBe(true);
                         if (!result.ok) {
@@ -135,8 +139,10 @@ describe(
                         await createMemoryFile('category/original-name');
                         await createCategory('category');
 
-                        const result = await runMoveCommand(buildOptions([ 'category/original-name',
-                            'category/renamed-memory' ]));
+                        const result = await runMoveCommand(buildOptions([
+                            'category/original-name',
+                            'category/renamed-memory', 
+                        ]));
 
                         expect(result.ok).toBe(true);
                         if (!result.ok) {
@@ -244,8 +250,10 @@ describe(
             'path validation errors', () => {
                 it(
                     'should return INVALID_SOURCE_PATH when source path has no category', async () => {
-                        const result = await runMoveCommand(buildOptions([ 'memory-only',
-                            'dest/memory' ]));
+                        const result = await runMoveCommand(buildOptions([
+                            'memory-only',
+                            'dest/memory', 
+                        ]));
 
                         expect(result.ok).toBe(false);
                         if (result.ok) {
@@ -261,8 +269,10 @@ describe(
                     'should return INVALID_DESTINATION_PATH when destination path has no category', async () => {
                         await createMemoryFile('source/memory');
 
-                        const result = await runMoveCommand(buildOptions([ 'source/memory',
-                            'memory-only' ]));
+                        const result = await runMoveCommand(buildOptions([
+                            'source/memory',
+                            'memory-only', 
+                        ]));
 
                         expect(result.ok).toBe(false);
                         if (result.ok) {
@@ -276,8 +286,10 @@ describe(
 
                 it(
                     'should return INVALID_SOURCE_PATH for invalid slug characters in source', async () => {
-                        const result = await runMoveCommand(buildOptions([ 'Invalid Category/memory',
-                            'dest/memory' ]));
+                        const result = await runMoveCommand(buildOptions([
+                            'Invalid Category/memory',
+                            'dest/memory', 
+                        ]));
 
                         expect(result.ok).toBe(false);
                         if (result.ok) {
@@ -292,8 +304,10 @@ describe(
                     'should return INVALID_DESTINATION_PATH for invalid slug characters in destination', async () => {
                         await createMemoryFile('source/memory');
 
-                        const result = await runMoveCommand(buildOptions([ 'source/memory',
-                            'UPPERCASE/memory' ]));
+                        const result = await runMoveCommand(buildOptions([
+                            'source/memory',
+                            'UPPERCASE/memory', 
+                        ]));
 
                         expect(result.ok).toBe(false);
                         if (result.ok) {
@@ -312,8 +326,10 @@ describe(
                     'should return MOVE_FAILED when destination category does not exist', async () => {
                         await createMemoryFile('source/memory');
 
-                        const result = await runMoveCommand(buildOptions([ 'source/memory',
-                            'nonexistent-category/memory' ]));
+                        const result = await runMoveCommand(buildOptions([
+                            'source/memory',
+                            'nonexistent-category/memory', 
+                        ]));
 
                         expect(result.ok).toBe(false);
                         if (result.ok) {
@@ -330,8 +346,10 @@ describe(
                         await createCategory('source');
                         await createCategory('destination');
 
-                        const result = await runMoveCommand(buildOptions([ 'source/nonexistent-memory',
-                            'destination/memory' ]));
+                        const result = await runMoveCommand(buildOptions([
+                            'source/nonexistent-memory',
+                            'destination/memory', 
+                        ]));
 
                         expect(result.ok).toBe(false);
                         if (result.ok) {
@@ -347,8 +365,10 @@ describe(
                         await createMemoryFile('source/memory');
                         await createCategory('archive'); // Only parent exists, not archive/2024
 
-                        const result = await runMoveCommand(buildOptions([ 'source/memory',
-                            'archive/2024/memory' ]));
+                        const result = await runMoveCommand(buildOptions([
+                            'source/memory',
+                            'archive/2024/memory', 
+                        ]));
 
                         expect(result.ok).toBe(false);
                         if (result.ok) {
@@ -365,8 +385,10 @@ describe(
             'edge cases', () => {
                 it(
                     'should handle empty string arguments gracefully', async () => {
-                        const result = await runMoveCommand(buildOptions([ '',
-                            '' ]));
+                        const result = await runMoveCommand(buildOptions([
+                            '',
+                            '', 
+                        ]));
 
                         expect(result.ok).toBe(false);
                         if (result.ok) {
@@ -380,8 +402,10 @@ describe(
                 it(
                     'should handle whitespace-only source path', async () => {
                         // Whitespace-only paths are not filtered, they pass to validation
-                        const result = await runMoveCommand(buildOptions([ '   ',
-                            'dest/memory' ]));
+                        const result = await runMoveCommand(buildOptions([
+                            '   ',
+                            'dest/memory', 
+                        ]));
 
                         expect(result.ok).toBe(false);
                         if (result.ok) {

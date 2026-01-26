@@ -167,8 +167,10 @@ describe(
 
                 it(
                     'should return INVALID_ARGUMENTS for unknown flag', async () => {
-                        const result = await runRemoveCommand(buildOptions([ '--force',
-                            'project/memory' ]));
+                        const result = await runRemoveCommand(buildOptions([
+                            '--force',
+                            'project/memory', 
+                        ]));
 
                         expect(result.ok).toBe(false);
                         if (result.ok) {
@@ -183,8 +185,10 @@ describe(
 
                 it(
                     'should return INVALID_ARGUMENTS for unknown short flag', async () => {
-                        const result = await runRemoveCommand(buildOptions([ '-f',
-                            'project/memory' ]));
+                        const result = await runRemoveCommand(buildOptions([
+                            '-f',
+                            'project/memory', 
+                        ]));
 
                         expect(result.ok).toBe(false);
                         if (result.ok) {
@@ -199,8 +203,10 @@ describe(
 
                 it(
                     'should return INVALID_ARGUMENTS for too many positional arguments', async () => {
-                        const result = await runRemoveCommand(buildOptions([ 'project/memory-one',
-                            'project/memory-two' ]));
+                        const result = await runRemoveCommand(buildOptions([
+                            'project/memory-one',
+                            'project/memory-two', 
+                        ]));
 
                         expect(result.ok).toBe(false);
                         if (result.ok) {

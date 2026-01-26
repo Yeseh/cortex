@@ -4,5 +4,12 @@
         "write": {
             "eslint.config.js": "ask"
         }
-    } 
+    },
+    "mcp": {
+        "cortex": {
+            "type": "remote",
+            "url": "http://localhost:3000/mcp",
+            "enabled": true
+        }
+    }
 }
