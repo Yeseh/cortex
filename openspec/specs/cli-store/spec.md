@@ -1,19 +1,48 @@
 # cli-store Specification
 
 ## Purpose
-TBD - created by archiving change add-cli-store-management. Update Purpose after archive.
+
+Defines the CLI commands for managing memory stores, including listing, adding, removing, and initializing stores.
+
 ## Requirements
+
 ### Requirement: Store management commands
+
 The CLI SHALL provide commands to list, add, remove, and initialize stores.
 
 #### Scenario: Listing stores
+
 - **WHEN** a user runs `cortex store list`
 - **THEN** the CLI returns all registered stores
 
 ### Requirement: Store initialization
-The CLI SHALL create a .cortex directory with a config and root index when initializing a store.
 
-#### Scenario: Initializing a store
+The `cortex store init` command SHALL create a store root directory with:
+
+- An `index.yaml` file at the root
+- Category directories with their own `index.yaml` files
+  The command SHALL NOT create `memories/` or `indexes/` subdirectories.
+
+#### Scenario: Initializing a store creates canonical layout
+
+- **WHEN** a user runs `cortex store init` in a directory
+- **THEN** the store root contains an `index.yaml` file at the root level
+
+#### Scenario: Store init does not create memories subdirectory
+
 - **WHEN** a user runs `cortex store init`
-- **THEN** a .cortex directory is created with required files
+- **THEN** no `memories/` subdirectory is created
 
+#### Scenario: Store init does not create indexes subdirectory
+
+- **WHEN** a user runs `cortex store init`
+- **THEN** no `indexes/` subdirectory is created
+
+### Requirement: Store init with template categories
+
+When `cortex store init` creates template categories, each category directory SHALL contain its own `index.yaml` file.
+
+#### Scenario: Template category with in-folder index
+
+- **WHEN** a user runs `cortex store init` and template categories are created
+- **THEN** each category directory (e.g., `global/`, `projects/`) contains an `index.yaml` file

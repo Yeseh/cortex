@@ -3,7 +3,7 @@
  */
 
 import { access, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
-import { dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { dirname, extname, isAbsolute, relative, resolve, sep } from 'node:path';
 import type { MemoryIdentity, MemorySlugPath, Result } from '../types.ts';
 import { defaultTokenizer } from '../tokens.ts';
 import type { CategoryIndex, IndexMemoryEntry } from '../index/types.ts';
@@ -13,23 +13,18 @@ import type { StorageAdapter, StorageAdapterError, StorageIndexName } from './ad
 
 export interface FilesystemStorageAdapterOptions {
     rootDirectory: string;
-    memoryDirectory?: string;
-    indexDirectory?: string;
     memoryExtension?: string;
     indexExtension?: string;
 }
 
 type DirEntriesResult = Result<Awaited<ReturnType<typeof readdir>>, StorageAdapterError>;
 type IndexBuildResult = Result<IndexBuildState, StorageAdapterError>;
-type VoidResult = Result<void, StorageAdapterError>;
 type StringOrNullResult = Result<string | null, StorageAdapterError>;
 
 const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
 const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
-const normalizeExtension = (
-    value: string | undefined, fallback: string,
-): string => {
+const normalizeExtension = (value: string | undefined, fallback: string): string => {
     const raw = value?.trim();
     if (!raw) {
         return fallback;
@@ -49,12 +44,8 @@ const resolveStoragePath = (
     relativePath: string,
     errorCode: StorageAdapterError[ 'code' ],
 ): Result<string, StorageAdapterError> => {
-    const resolved = resolve(
-        root, relativePath,
-    );
-    const rootRelative = relative(
-        root, resolved,
-    );
+    const resolved = resolve(root, relativePath);
+    const rootRelative = relative(root, resolved);
     if (rootRelative.startsWith('..') || isAbsolute(rootRelative)) {
         return err({
             code: errorCode,
@@ -66,18 +57,14 @@ const resolveStoragePath = (
     return ok(resolved);
 };
 
-const toSlugPathFromRelative = (
-    relativePath: string, extension: string,
-): string | null => {
+const toSlugPathFromRelative = (relativePath: string, extension: string): string | null => {
     if (!relativePath || relativePath.startsWith('..')) {
         return null;
     }
     if (extname(relativePath) !== extension) {
         return null;
     }
-    const withoutExtension = relativePath.slice(
-        0, -extension.length,
-    );
+    const withoutExtension = relativePath.slice(0, -extension.length);
     const slugPath = withoutExtension
         .split(sep)
         .map((segment) => segment.trim())
@@ -92,25 +79,14 @@ interface IndexBuildState {
 }
 
 export class FilesystemStorageAdapter implements StorageAdapter {
-    private readonly memoryRoot: string;
-    private readonly indexRoot: string;
+    private readonly storeRoot: string;
     private readonly memoryExtension: string;
     private readonly indexExtension: string;
 
     constructor(options: FilesystemStorageAdapterOptions) {
-        const root = resolve(options.rootDirectory);
-        this.memoryRoot = resolve(
-            root, options.memoryDirectory ?? 'memories',
-        );
-        this.indexRoot = resolve(
-            root, options.indexDirectory ?? 'indexes',
-        );
-        this.memoryExtension = normalizeExtension(
-            options.memoryExtension, '.md',
-        );
-        this.indexExtension = normalizeExtension(
-            options.indexExtension, '.yml',
-        );
+        this.storeRoot = resolve(options.rootDirectory);
+        this.memoryExtension = normalizeExtension(options.memoryExtension, '.md');
+        this.indexExtension = normalizeExtension(options.indexExtension, '.yaml');
     }
 
     private validateSlugPath(
@@ -121,6 +97,13 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         if (!identity.ok) {
             return err({ ...failure, cause: identity.error });
         }
+        // Prevent 'index' as memory slug to avoid collision with index files
+        if (identity.value.slug === 'index') {
+            return err({
+                ...failure,
+                message: 'Memory slug "index" is reserved for index files.',
+            });
+        }
         return ok(identity.value);
     }
 
@@ -128,27 +111,27 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         slugPath: MemorySlugPath,
         errorCode: StorageAdapterError[ 'code' ],
     ): Result<string, StorageAdapterError> {
-        return resolveStoragePath(
-            this.memoryRoot, `${slugPath}${this.memoryExtension}`, errorCode,
-        );
+        return resolveStoragePath(this.storeRoot, `${slugPath}${this.memoryExtension}`, errorCode);
     }
 
     private resolveIndexPath(
         name: StorageIndexName,
         errorCode: StorageAdapterError[ 'code' ],
     ): Result<string, StorageAdapterError> {
-        return resolveStoragePath(
-            this.indexRoot, `${name}${this.indexExtension}`, errorCode,
-        );
+        // Category indexes are at: STORE_ROOT/<categoryPath>/index.yaml
+        // For root category (empty string): STORE_ROOT/index.yaml
+        const indexPath =
+            name === '' ? `index${this.indexExtension}` : `${name}/index${this.indexExtension}`;
+        return resolveStoragePath(this.storeRoot, indexPath, errorCode);
     }
 
     private async readDirEntries(current: string): Promise<DirEntriesResult> {
         try {
-            return ok((await readdir(
-                current, {
+            return ok(
+                (await readdir(current, {
                     withFileTypes: true,
-                },
-            )) as unknown as Awaited<ReturnType<typeof readdir>>);
+                })) as unknown as Awaited<ReturnType<typeof readdir>>,
+            );
         }
         catch (error) {
             if (isNotFoundError(error)) {
@@ -206,9 +189,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
                 cause: serialized.error,
             });
         }
-        return this.writeIndexFile(
-            name, serialized.value,
-        );
+        return this.writeIndexFile(name, serialized.value);
     }
 
     private async upsertMemoryEntry(
@@ -216,24 +197,18 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         entry: IndexMemoryEntry,
         options: { createWhenMissing?: boolean } = {},
     ): Promise<Result<void, StorageAdapterError>> {
-        const current = await this.readCategoryIndex(
-            indexName, options,
-        );
+        const current = await this.readCategoryIndex(indexName, options);
         if (!current.ok) {
             return current;
         }
         const memories = current.value.memories.filter((existing) => existing.path !== entry.path);
         memories.push(entry);
-        memories.sort((
-            a, b,
-        ) => a.path.localeCompare(b.path));
+        memories.sort((a, b) => a.path.localeCompare(b.path));
         const nextIndex: CategoryIndex = {
             memories,
             subcategories: current.value.subcategories,
         };
-        return this.writeCategoryIndex(
-            indexName, nextIndex,
-        );
+        return this.writeCategoryIndex(indexName, nextIndex);
     }
 
     private async upsertSubcategoryEntry(
@@ -242,26 +217,21 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         memoryCount: number,
         options: { createWhenMissing?: boolean } = {},
     ): Promise<Result<void, StorageAdapterError>> {
-        const current = await this.readCategoryIndex(
-            indexName, options,
-        );
+        const current = await this.readCategoryIndex(indexName, options);
         if (!current.ok) {
             return current;
         }
         const subcategories = current.value.subcategories.filter(
-            (existing) => existing.path !== entryPath);
+            (existing) => existing.path !== entryPath,
+        );
 
         subcategories.push({ path: entryPath, memoryCount });
-        subcategories.sort((
-            a, b,
-        ) => a.path.localeCompare(b.path));
+        subcategories.sort((a, b) => a.path.localeCompare(b.path));
         const nextIndex: CategoryIndex = {
             memories: current.value.memories,
             subcategories,
         };
-        return this.writeCategoryIndex(
-            indexName, nextIndex,
-        );
+        return this.writeCategoryIndex(indexName, nextIndex);
     }
 
     private async updateCategoryIndexes(
@@ -269,13 +239,11 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         contents: string,
         options: { createWhenMissing?: boolean } = {},
     ): Promise<Result<void, StorageAdapterError>> {
-        const identityResult = this.validateSlugPath(
-            slugPath, {
-                code: 'INDEX_UPDATE_FAILED',
-                message: 'Invalid memory slug path.',
-                path: slugPath,
-            },
-        );
+        const identityResult = this.validateSlugPath(slugPath, {
+            code: 'INDEX_UPDATE_FAILED',
+            message: 'Invalid memory slug path.',
+            path: slugPath,
+        });
         if (!identityResult.ok) {
             return identityResult;
         }
@@ -304,16 +272,30 @@ export class FilesystemStorageAdapter implements StorageAdapter {
             return upsertMemory;
         }
 
-        for (let index = 1; index <= categories.length - 1; index += 1) {
-            const parentIndexName = categories.slice(
-                0, index,
-            ).join('/');
-            const subcategoryPath = categories.slice(
-                0, index + 1,
-            ).join('/');
-            const subcategoryIndex = await this.readCategoryIndex(
-                subcategoryPath, options,
+        // Update root index with top-level category
+        const topLevelCategory = categories[ 0 ];
+        if (topLevelCategory !== undefined) {
+            const rootIndexName = '';
+            const topLevelCategoryIndex = await this.readCategoryIndex(topLevelCategory, options);
+            if (!topLevelCategoryIndex.ok) {
+                return topLevelCategoryIndex;
+            }
+            const upsertRoot = await this.upsertSubcategoryEntry(
+                rootIndexName,
+                topLevelCategory,
+                topLevelCategoryIndex.value.memories.length,
+                { ...options, createWhenMissing: true },
             );
+            if (!upsertRoot.ok) {
+                return upsertRoot;
+            }
+        }
+
+        // Then handle nested subcategories
+        for (let index = 1; index <= categories.length - 1; index += 1) {
+            const parentIndexName = categories.slice(0, index).join('/');
+            const subcategoryPath = categories.slice(0, index + 1).join('/');
+            const subcategoryIndex = await this.readCategoryIndex(subcategoryPath, options);
             if (!subcategoryIndex.ok) {
                 return subcategoryIndex;
             }
@@ -354,14 +336,13 @@ export class FilesystemStorageAdapter implements StorageAdapter {
             for (const entry of entriesResult.value) {
                 const entryName =
                     typeof entry.name === 'string' ? entry.name : entry.name.toString();
-                const entryPath = resolve(
-                    current, entryName,
-                );
+                const entryPath = resolve(current, entryName);
                 if (entry.isDirectory()) {
                     pending.push(entryPath);
                     continue;
                 }
-                if (entry.isFile()) {
+                // Only include memory files (with memory extension), skip index files
+                if (entry.isFile() && extname(entryPath) === this.memoryExtension) {
                     results.push(entryPath);
                 }
             }
@@ -379,14 +360,10 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         slugPath: MemorySlugPath,
         tokenEstimate: number,
     ): void {
-        const categoryPath = slugPath.split('/').slice(
-            0, -1,
-        ).join('/');
+        const categoryPath = slugPath.split('/').slice(0, -1).join('/');
         const current = indexes.get(categoryPath) ?? { memories: [], subcategories: [] };
         current.memories.push({ path: slugPath, tokenEstimate });
-        indexes.set(
-            categoryPath, current,
-        );
+        indexes.set(categoryPath, current);
     }
 
     private recordParentSubcategory(
@@ -398,17 +375,11 @@ export class FilesystemStorageAdapter implements StorageAdapter {
             return;
         }
         for (let index = 1; index < segments.length - 1; index += 1) {
-            const parentCategory = segments.slice(
-                0, index,
-            ).join('/');
-            const subcategoryPath = segments.slice(
-                0, index + 1,
-            ).join('/');
+            const parentCategory = segments.slice(0, index).join('/');
+            const subcategoryPath = segments.slice(0, index + 1).join('/');
             const subcategories = parentSubcategories.get(parentCategory) ?? new Set();
             subcategories.add(subcategoryPath);
-            parentSubcategories.set(
-                parentCategory, subcategories,
-            );
+            parentSubcategories.set(parentCategory, subcategories);
         }
     }
 
@@ -416,7 +387,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         indexes: Map<string, CategoryIndex>,
         parentSubcategories: Map<string, Set<string>>,
     ): void {
-        for (const [ parentCategory, subcategories ] of parentSubcategories.entries()) {
+        for (const [parentCategory, subcategories] of parentSubcategories.entries()) {
             const parentIndex = indexes.get(parentCategory) ?? {
                 memories: [],
                 subcategories: [],
@@ -427,21 +398,17 @@ export class FilesystemStorageAdapter implements StorageAdapter {
                 subcategoryEntries.push({ path: subcategoryPath, memoryCount });
             }
             parentIndex.subcategories = subcategoryEntries;
-            indexes.set(
-                parentCategory, parentIndex,
-            );
+            indexes.set(parentCategory, parentIndex);
         }
     }
 
-    private async buildIndexEntry(filePath: string): Promise<
+    private async buildIndexEntry(
+        filePath: string,
+    ): Promise<
         Result<{ slugPath: MemorySlugPath; tokenEstimate: number } | null, StorageAdapterError>
     > {
-        const relativePath = relative(
-            this.memoryRoot, filePath,
-        );
-        const slugPath = toSlugPathFromRelative(
-            relativePath, this.memoryExtension,
-        );
+        const relativePath = relative(this.storeRoot, filePath);
+        const slugPath = toSlugPathFromRelative(relativePath, this.memoryExtension);
         if (!slugPath) {
             return ok(null);
         }
@@ -456,9 +423,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         }
         let contents: string;
         try {
-            contents = await readFile(
-                filePath, 'utf8',
-            );
+            contents = await readFile(filePath, 'utf8');
         }
         catch (error) {
             return err({
@@ -497,9 +462,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
                 entryResult.value.slugPath,
                 entryResult.value.tokenEstimate,
             );
-            this.recordParentSubcategory(
-                parentSubcategories, entryResult.value.slugPath,
-            );
+            this.recordParentSubcategory(parentSubcategories, entryResult.value.slugPath);
         }
 
         return ok({ indexes, parentSubcategories });
@@ -509,17 +472,12 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         targetRoot: string,
         indexes: Map<string, CategoryIndex>,
     ): Promise<Result<void, StorageAdapterError>> {
-        const sortedIndexes = Array.from(indexes.entries()).sort((
-            a, b,
-        ) =>
-            a[ 0 ].localeCompare(b[ 0 ]));
-        for (const [ indexName, index ] of sortedIndexes) {
-            index.memories.sort((
-                a, b,
-            ) => a.path.localeCompare(b.path));
-            index.subcategories.sort((
-                a, b,
-            ) => a.path.localeCompare(b.path));
+        const sortedIndexes = Array.from(indexes.entries()).sort((a, b) =>
+            a[ 0 ].localeCompare(b[ 0 ]),
+        );
+        for (const [indexName, index] of sortedIndexes) {
+            index.memories.sort((a, b) => a.path.localeCompare(b.path));
+            index.subcategories.sort((a, b) => a.path.localeCompare(b.path));
             const serialized = serializeCategoryIndex(index);
             if (!serialized.ok) {
                 return err({
@@ -529,21 +487,19 @@ export class FilesystemStorageAdapter implements StorageAdapter {
                     cause: serialized.error,
                 });
             }
-            const filePathResult = resolveStoragePath(
-                targetRoot,
-                `${indexName}${this.indexExtension}`,
-                'WRITE_FAILED',
-            );
+            // Index files are at: targetRoot/<categoryPath>/index.yaml
+            // For root category (empty string): targetRoot/index.yaml
+            const indexPath =
+                indexName === ''
+                    ? `index${this.indexExtension}`
+                    : `${indexName}/index${this.indexExtension}`;
+            const filePathResult = resolveStoragePath(targetRoot, indexPath, 'WRITE_FAILED');
             if (!filePathResult.ok) {
                 return filePathResult;
             }
             try {
-                await mkdir(
-                    dirname(filePathResult.value), { recursive: true },
-                );
-                await writeFile(
-                    filePathResult.value, serialized.value, 'utf8',
-                );
+                await mkdir(dirname(filePathResult.value), { recursive: true });
+                await writeFile(filePathResult.value, serialized.value, 'utf8');
             }
             catch (error) {
                 return err({
@@ -557,90 +513,38 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         return ok(undefined);
     }
 
-    private async buildTempIndexRoot(): Promise<Result<string, StorageAdapterError>> {
-        const baseRoot = dirname(this.indexRoot);
-        const tempRoot = join(
-            baseRoot, `indexes.tmp-${Date.now()}`,
-        );
-        try {
-            await mkdir(
-                tempRoot, { recursive: true },
-            );
-            return ok(tempRoot);
+    async reindexCategoryIndexes(): Promise<Result<void, StorageAdapterError>> {
+        const filesResult = await this.collectMemoryFiles(this.storeRoot);
+        if (!filesResult.ok) {
+            return filesResult;
         }
-        catch (error) {
-            return err({
-                code: 'WRITE_FAILED',
-                message: `Failed to create temporary index directory at ${tempRoot}.`,
-                path: tempRoot,
-                cause: error,
-            });
-        }
-    }
 
-    private async replaceIndexDirectory(tempRoot: string): Promise<VoidResult> {
-        const backupRoot = join(
-            dirname(this.indexRoot), `indexes.backup-${Date.now()}`,
+        const buildState = await this.buildIndexState(filesResult.value);
+        if (!buildState.ok) {
+            return buildState;
+        }
+        this.applyParentSubcategories(
+            buildState.value.indexes,
+            buildState.value.parentSubcategories,
         );
-        try {
-            await rm(
-                backupRoot, { recursive: true, force: true },
-            );
-            await rename(
-                this.indexRoot, backupRoot,
-            );
+
+        // Write index files in-place to storeRoot
+        const buildResult = await this.rebuildIndexFiles(this.storeRoot, buildState.value.indexes);
+        if (!buildResult.ok) {
+            return buildResult;
         }
-        catch (error) {
-            if (!isNotFoundError(error)) {
-                return err({
-                    code: 'WRITE_FAILED',
-                    message: `Failed to move existing index directory at ${this.indexRoot}.`,
-                    path: this.indexRoot,
-                    cause: error,
-                });
-            }
-        }
-        try {
-            await rename(
-                tempRoot, this.indexRoot,
-            );
-        }
-        catch (error) {
-            return err({
-                code: 'WRITE_FAILED',
-                message: `Failed to finalize index directory at ${this.indexRoot}.`,
-                path: this.indexRoot,
-                cause: error,
-            });
-        }
-        try {
-            await rm(
-                backupRoot, { recursive: true, force: true },
-            );
-        }
-        catch (error) {
-            return err({
-                code: 'WRITE_FAILED',
-                message: `Failed to cleanup backup index directory at ${backupRoot}.`,
-                path: backupRoot,
-                cause: error,
-            });
-        }
+
         return ok(undefined);
     }
 
     async readMemoryFile(slugPath: MemorySlugPath): Promise<StringOrNullResult> {
-        const filePathResult = this.resolveMemoryPath(
-            slugPath, 'READ_FAILED',
-        );
+        const filePathResult = this.resolveMemoryPath(slugPath, 'READ_FAILED');
         if (!filePathResult.ok) {
             return filePathResult;
         }
         const filePath = filePathResult.value;
         try {
-            const contents = await readFile(
-                filePath, 'utf8',
-            );
+            const contents = await readFile(filePath, 'utf8');
             return ok(contents);
         }
         catch (error) {
@@ -657,20 +561,16 @@ export class FilesystemStorageAdapter implements StorageAdapter {
     }
 
     async removeMemoryFile(slugPath: MemorySlugPath): Promise<Result<void, StorageAdapterError>> {
-        const identityResult = this.validateSlugPath(
-            slugPath, {
-                code: 'WRITE_FAILED',
-                message: 'Invalid memory slug path.',
-                path: slugPath,
-            },
-        );
+        const identityResult = this.validateSlugPath(slugPath, {
+            code: 'WRITE_FAILED',
+            message: 'Invalid memory slug path.',
+            path: slugPath,
+        });
         if (!identityResult.ok) {
             return identityResult;
         }
 
-        const filePathResult = this.resolveMemoryPath(
-            slugPath, 'WRITE_FAILED',
-        );
+        const filePathResult = this.resolveMemoryPath(slugPath, 'WRITE_FAILED');
         if (!filePathResult.ok) {
             return filePathResult;
         }
@@ -696,37 +596,29 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         sourceSlugPath: MemorySlugPath,
         destinationSlugPath: MemorySlugPath,
     ): Promise<Result<void, StorageAdapterError>> {
-        const sourceIdentityResult = this.validateSlugPath(
-            sourceSlugPath, {
-                code: 'WRITE_FAILED',
-                message: 'Invalid source memory slug path.',
-                path: sourceSlugPath,
-            },
-        );
+        const sourceIdentityResult = this.validateSlugPath(sourceSlugPath, {
+            code: 'WRITE_FAILED',
+            message: 'Invalid source memory slug path.',
+            path: sourceSlugPath,
+        });
         if (!sourceIdentityResult.ok) {
             return sourceIdentityResult;
         }
 
-        const destinationIdentityResult = this.validateSlugPath(
-            destinationSlugPath, {
-                code: 'WRITE_FAILED',
-                message: 'Invalid destination memory slug path.',
-                path: destinationSlugPath,
-            },
-        );
+        const destinationIdentityResult = this.validateSlugPath(destinationSlugPath, {
+            code: 'WRITE_FAILED',
+            message: 'Invalid destination memory slug path.',
+            path: destinationSlugPath,
+        });
         if (!destinationIdentityResult.ok) {
             return destinationIdentityResult;
         }
 
-        const sourcePathResult = this.resolveMemoryPath(
-            sourceSlugPath, 'WRITE_FAILED',
-        );
+        const sourcePathResult = this.resolveMemoryPath(sourceSlugPath, 'WRITE_FAILED');
         if (!sourcePathResult.ok) {
             return sourcePathResult;
         }
-        const destinationPathResult = this.resolveMemoryPath(
-            destinationSlugPath, 'WRITE_FAILED',
-        );
+        const destinationPathResult = this.resolveMemoryPath(destinationSlugPath, 'WRITE_FAILED');
         if (!destinationPathResult.ok) {
             return destinationPathResult;
         }
@@ -743,9 +635,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
             });
         }
         try {
-            await rename(
-                sourcePathResult.value, destinationPathResult.value,
-            );
+            await rename(sourcePathResult.value, destinationPathResult.value);
             return ok(undefined);
         }
         catch (error) {
@@ -763,32 +653,24 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         contents: string,
         options: { allowIndexCreate?: boolean; allowIndexUpdate?: boolean } = {},
     ): Promise<Result<void, StorageAdapterError>> {
-        const identityResult = this.validateSlugPath(
-            slugPath, {
-                code: 'WRITE_FAILED',
-                message: 'Invalid memory slug path.',
-                path: slugPath,
-            },
-        );
+        const identityResult = this.validateSlugPath(slugPath, {
+            code: 'WRITE_FAILED',
+            message: 'Invalid memory slug path.',
+            path: slugPath,
+        });
         if (!identityResult.ok) {
             return identityResult;
         }
 
-        const filePathResult = this.resolveMemoryPath(
-            slugPath, 'WRITE_FAILED',
-        );
+        const filePathResult = this.resolveMemoryPath(slugPath, 'WRITE_FAILED');
         if (!filePathResult.ok) {
             return filePathResult;
         }
         const filePath = filePathResult.value;
 
         try {
-            await mkdir(
-                dirname(filePath), { recursive: true },
-            );
-            await writeFile(
-                filePath, contents, 'utf8',
-            );
+            await mkdir(dirname(filePath), { recursive: true });
+            await writeFile(filePath, contents, 'utf8');
         }
         catch (error) {
             return err({
@@ -803,11 +685,9 @@ export class FilesystemStorageAdapter implements StorageAdapter {
             return ok(undefined);
         }
 
-        const indexUpdate = await this.updateCategoryIndexes(
-            slugPath, contents, {
-                createWhenMissing: options.allowIndexCreate,
-            },
-        );
+        const indexUpdate = await this.updateCategoryIndexes(slugPath, contents, {
+            createWhenMissing: options.allowIndexCreate,
+        });
         if (!indexUpdate.ok) {
             return indexUpdate;
         }
@@ -816,17 +696,13 @@ export class FilesystemStorageAdapter implements StorageAdapter {
     }
 
     async readIndexFile(name: StorageIndexName): Promise<StringOrNullResult> {
-        const filePathResult = this.resolveIndexPath(
-            name, 'READ_FAILED',
-        );
+        const filePathResult = this.resolveIndexPath(name, 'READ_FAILED');
         if (!filePathResult.ok) {
             return filePathResult;
         }
         const filePath = filePathResult.value;
         try {
-            const contents = await readFile(
-                filePath, 'utf8',
-            );
+            const contents = await readFile(filePath, 'utf8');
             return ok(contents);
         }
         catch (error) {
@@ -846,20 +722,14 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         name: StorageIndexName,
         contents: string,
     ): Promise<Result<void, StorageAdapterError>> {
-        const filePathResult = this.resolveIndexPath(
-            name, 'WRITE_FAILED',
-        );
+        const filePathResult = this.resolveIndexPath(name, 'WRITE_FAILED');
         if (!filePathResult.ok) {
             return filePathResult;
         }
         const filePath = filePathResult.value;
         try {
-            await mkdir(
-                dirname(filePath), { recursive: true },
-            );
-            await writeFile(
-                filePath, contents, 'utf8',
-            );
+            await mkdir(dirname(filePath), { recursive: true });
+            await writeFile(filePath, contents, 'utf8');
             return ok(undefined);
         }
         catch (error) {
@@ -870,47 +740,5 @@ export class FilesystemStorageAdapter implements StorageAdapter {
                 cause: error,
             });
         }
-    }
-
-    async reindexCategoryIndexes(): Promise<Result<void, StorageAdapterError>> {
-        const filesResult = await this.collectMemoryFiles(this.memoryRoot);
-        if (!filesResult.ok) {
-            return filesResult;
-        }
-
-        const buildState = await this.buildIndexState(filesResult.value);
-        if (!buildState.ok) {
-            return buildState;
-        }
-        this.applyParentSubcategories(
-            buildState.value.indexes,
-            buildState.value.parentSubcategories,
-        );
-
-        const tempRootResult = await this.buildTempIndexRoot();
-        if (!tempRootResult.ok) {
-            return tempRootResult;
-        }
-
-        const buildResult = await this.rebuildIndexFiles(
-            tempRootResult.value,
-            buildState.value.indexes,
-        );
-        if (!buildResult.ok) {
-            await rm(
-                tempRootResult.value, { recursive: true, force: true },
-            );
-            return buildResult;
-        }
-
-        const swapResult = await this.replaceIndexDirectory(tempRootResult.value);
-        if (!swapResult.ok) {
-            await rm(
-                tempRootResult.value, { recursive: true, force: true },
-            );
-            return swapResult;
-        }
-
-        return ok(undefined);
     }
 }

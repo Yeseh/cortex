@@ -88,7 +88,7 @@ const formatYamlScalar = (value: string): string => JSON.stringify(value);
 
 const validateNonNegativeNumber = (
     value: number,
-    field: string
+    field: string,
 ): Result<number, OutputSerializeError> => {
     if (!Number.isFinite(value) || value < 0) {
         return err({
@@ -103,7 +103,7 @@ const validateNonNegativeNumber = (
 const validateRequiredPath = (
     value: string,
     field: string,
-    label: string
+    label: string,
 ): Result<string, OutputSerializeError> => {
     const trimmedValue = typeof value === 'string' ? value.trim() : '';
     if (!trimmedValue) {
@@ -169,7 +169,7 @@ const serializeTags = (tags: string[]): Result<string[], OutputSerializeError> =
 
 const serializeOptionalTimestamp = (
     value: Date | undefined,
-    field: string
+    field: string,
 ): Result<string | undefined, OutputSerializeError> => {
     if (!value) {
         return ok(undefined);
@@ -179,7 +179,7 @@ const serializeOptionalTimestamp = (
 
 const serializeOptionalNumber = (
     value: number | undefined,
-    field: string
+    field: string,
 ): Result<number | undefined, OutputSerializeError> => {
     if (value === undefined) {
         return ok(undefined);
@@ -208,7 +208,7 @@ const addOptionalYamlLine = (lines: string[], key: string, value?: string): void
 const writeOptionalYamlTimestamp = (
     lines: string[],
     key: string,
-    value: Date | undefined
+    value: Date | undefined,
 ): Result<void, OutputSerializeError> => {
     const parsed = serializeOptionalTimestamp(value, key);
     if (!parsed.ok) {
@@ -223,7 +223,7 @@ const writeOptionalYamlTimestamp = (
 const writeOptionalYamlNumber = (
     lines: string[],
     key: string,
-    value: number | undefined
+    value: number | undefined,
 ): Result<void, OutputSerializeError> => {
     const parsed = serializeOptionalNumber(value, key);
     if (!parsed.ok) {
@@ -237,7 +237,7 @@ const writeOptionalYamlNumber = (
 
 const appendCategoryMemories = (
     lines: string[],
-    entries: OutputCategoryMemory[]
+    entries: OutputCategoryMemory[],
 ): Result<void, OutputSerializeError> => {
     if (entries.length === 0) {
         lines.push('memories: []');
@@ -252,7 +252,7 @@ const appendCategoryMemories = (
         lines.push(`  - path: ${formatYamlScalar(entryPath.value)}`);
         const tokenEstimate = serializeOptionalNumber(
             entry.tokenEstimate,
-            'memories.token_estimate'
+            'memories.token_estimate',
         );
         if (!tokenEstimate.ok) {
             return tokenEstimate;
@@ -271,7 +271,7 @@ const appendCategoryMemories = (
 
 const appendCategorySubcategories = (
     lines: string[],
-    entries: OutputSubcategory[]
+    entries: OutputSubcategory[],
 ): Result<void, OutputSerializeError> => {
     if (entries.length === 0) {
         lines.push('subcategories: []');
@@ -282,14 +282,14 @@ const appendCategorySubcategories = (
         const entryPath = validateRequiredPath(
             entry.path,
             'subcategories.path',
-            'Category subcategory'
+            'Category subcategory',
         );
         if (!entryPath.ok) {
             return entryPath;
         }
         const memoryCount = validateNonNegativeNumber(
             entry.memoryCount,
-            'subcategories.memory_count'
+            'subcategories.memory_count',
         );
         if (!memoryCount.ok) {
             return memoryCount;
@@ -328,7 +328,7 @@ const serializeCategoryMemoriesJson = (entries: OutputCategoryMemory[]): JsonRec
 };
 
 const serializeCategorySubcategoriesJson = (
-    entries: OutputSubcategory[]
+    entries: OutputSubcategory[],
 ): JsonRecordArrayResult => {
     const subcategories: Record<string, unknown>[] = [];
     for (const entry of entries) {
@@ -345,7 +345,7 @@ const buildSubcategoryJsonEntry = (entry: OutputSubcategory): JsonRecordResult =
     const entryPath = validateRequiredPath(
         entry.path,
         'subcategories.path',
-        'Category subcategory'
+        'Category subcategory',
     );
     if (!entryPath.ok) {
         return entryPath;
@@ -360,7 +360,7 @@ const buildSubcategoryJsonEntry = (entry: OutputSubcategory): JsonRecordResult =
 const buildMemoryYamlLines = (
     memoryPath: string,
     created: string,
-    metadata: OutputMemoryMetadata
+    metadata: OutputMemoryMetadata,
 ): Result<string[], OutputSerializeError> => {
     const tags = serializeTags(metadata.tags);
     if (!tags.ok) {
@@ -503,7 +503,7 @@ const serializeMemoryJson = (memory: OutputMemory): Result<string, OutputSeriali
             path: memoryPath.value,
             metadata: metadata.value,
             content: memory.content ?? '',
-        })
+        }),
     );
 };
 
@@ -525,7 +525,8 @@ const serializeMemoryToon = (memory: OutputMemory): Result<string, OutputSeriali
 
     try {
         return ok(toonEncode(data, toonOptions));
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'INVALID_FORMAT',
             message: `TOON encoding failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -555,7 +556,7 @@ const serializeCategoryJson = (category: OutputCategory): Result<string, OutputS
             path: categoryPath.value,
             memories: memoriesResult.value,
             subcategories: subcategoriesResult.value,
-        })
+        }),
     );
 };
 
@@ -583,7 +584,8 @@ const serializeCategoryToon = (category: OutputCategory): Result<string, OutputS
 
     try {
         return ok(toonEncode(data, toonOptions));
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'INVALID_FORMAT',
             message: `TOON encoding failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -607,7 +609,7 @@ const serializeStoreYaml = (store: OutputStore): Result<string, OutputSerializeE
             'store:',
             `  name: ${formatYamlScalar(name.value)}`,
             `  path: ${formatYamlScalar(path.value)}`,
-        ].join('\n')
+        ].join('\n'),
     );
 };
 
@@ -627,7 +629,7 @@ const serializeStoreJson = (store: OutputStore): Result<string, OutputSerializeE
                 name: name.value,
                 path: path.value,
             },
-        })
+        }),
     );
 };
 
@@ -650,7 +652,8 @@ const serializeStoreToon = (store: OutputStore): Result<string, OutputSerializeE
 
     try {
         return ok(toonEncode(data, toonOptions));
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'INVALID_FORMAT',
             message: `TOON encoding failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -738,7 +741,8 @@ const serializeStoreRegistryToon = (registry: OutputStoreRegistry): SerializeRes
 
     try {
         return ok(toonEncode({ stores }, toonOptions));
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'INVALID_FORMAT',
             message: `TOON encoding failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -770,7 +774,8 @@ const serializeStoreInitToon = (storeInit: OutputStoreInit): SerializeResult => 
     }
     try {
         return ok(toonEncode({ path: path.value }, toonOptions));
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'INVALID_FORMAT',
             message: `TOON encoding failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -794,7 +799,8 @@ const serializeInitYaml = (init: OutputInit): SerializeResult => {
     const lines = [`path: ${formatYamlScalar(path.value)}`];
     if (init.categories.length === 0) {
         lines.push('categories: []');
-    } else {
+    }
+    else {
         lines.push('categories:');
         for (const category of init.categories) {
             lines.push(`  - ${formatYamlScalar(category)}`);
@@ -832,7 +838,8 @@ const serializeInitToon = (init: OutputInit): SerializeResult => {
     }
     try {
         return ok(toonEncode({ path: path.value, categories: init.categories }, toonOptions));
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'INVALID_FORMAT',
             message: `TOON encoding failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -894,7 +901,7 @@ const serializeToonOutput = (payload: OutputPayload): Result<string, OutputSeria
 
 export const serializeOutput = (
     payload: OutputPayload,
-    format: OutputFormat
+    format: OutputFormat,
 ): Result<string, OutputSerializeError> => {
     if (format === 'yaml') {
         return serializeYamlOutput(payload);

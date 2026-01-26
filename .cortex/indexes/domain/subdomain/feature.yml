@@ -1,6 +1,0 @@
-memories:
-  -
-    path: domain/subdomain/feature/deep-memory
-    token_estimate: 32
-
-subcategories: []

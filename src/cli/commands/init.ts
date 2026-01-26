@@ -42,7 +42,7 @@ const formatInit = (path: string, categories: readonly string[]): OutputInit => 
 });
 
 const buildEmptyRootIndex = (
-    subcategories: readonly string[]
+    subcategories: readonly string[],
 ): Result<string, InitCommandError> => {
     const serialized = serializeCategoryIndex({
         memories: [],
@@ -77,7 +77,8 @@ const pathExists = async (path: string): Promise<boolean> => {
     try {
         await stat(path);
         return true;
-    } catch {
+    }
+    catch {
         return false;
     }
 };
@@ -116,8 +117,9 @@ export const runInitCommand = async (options: InitCommandOptions): Promise<InitR
 
     const { force } = parsedArgs.value;
     const cortexConfigDir = resolve(homedir(), '.config', 'cortex');
-    const globalStorePath = resolve(cortexConfigDir, '.cortex');
-    const configPath = resolve(globalStorePath, 'config.yaml');
+    const globalStorePath = resolve(cortexConfigDir, 'memory');
+    const configPath = resolve(cortexConfigDir, 'config.yaml');
+    const storesPath = resolve(cortexConfigDir, 'stores.yaml');
     const indexPath = resolve(globalStorePath, 'index.yaml');
 
     // Check if already initialized (unless --force is specified)
@@ -129,16 +131,12 @@ export const runInitCommand = async (options: InitCommandOptions): Promise<InitR
     }
 
     try {
-        // Create the main directories
+        // Create the main store directory
         await mkdir(globalStorePath, { recursive: true });
-
-        // Create memory directory
-        const memoryPath = resolve(globalStorePath, 'memory');
-        await mkdir(memoryPath, { recursive: true });
 
         // Create category directories and their indexes
         for (const category of DEFAULT_CATEGORIES) {
-            const categoryPath = resolve(globalStorePath, 'indexes', category);
+            const categoryPath = resolve(globalStorePath, category);
             await mkdir(categoryPath, { recursive: true });
 
             const categoryIndexPath = resolve(categoryPath, 'index.yaml');
@@ -147,21 +145,20 @@ export const runInitCommand = async (options: InitCommandOptions): Promise<InitR
                 return categoryIndex;
             }
             await writeFile(categoryIndexPath, categoryIndex.value, 'utf8');
-
-            // Create category memory directories
-            const categoryMemoryPath = resolve(globalStorePath, 'memory', category);
-            await mkdir(categoryMemoryPath, { recursive: true });
         }
 
-        // Create root config and index
+        // Create root config files at cortexConfigDir level
         await writeFile(configPath, '', 'utf8');
+        await writeFile(storesPath, '', 'utf8');
 
+        // Create root index
         const rootIndex = buildEmptyRootIndex(DEFAULT_CATEGORIES);
         if (!rootIndex.ok) {
             return rootIndex;
         }
         await writeFile(indexPath, rootIndex.value, 'utf8');
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'INIT_FAILED',
             message: `Failed to initialize global config store at ${globalStorePath}.`,

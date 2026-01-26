@@ -9,6 +9,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import * as fs from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { FilesystemStorageAdapter } from '../src/core/storage/filesystem.ts';
+import { serializeMemoryFile, type MemoryFileContents } from '../src/core/memory/file.ts';
 
 /**
  * CLI runner that spawns cortex as a subprocess.
@@ -29,9 +31,13 @@ interface CliOptions {
 /**
  * Runs the cortex CLI with the given arguments.
  * Uses the runCli export directly via bun run for integration testing.
+ *
+ * IMPORTANT: Uses globalStorePath as cwd to avoid picking up local .cortex directory
+ * from the repo root, which would take precedence over --global-store flag.
  */
 const runCortexCli = async (args: string[], options: CliOptions = {}): Promise<CliResult> => {
-    const cwd = options.cwd ?? process.cwd();
+    // Use globalStorePath as cwd to avoid local .cortex directory interference
+    const cwd = options.cwd ?? options.globalStorePath ?? process.cwd();
     const globalStoreFlag = options.globalStorePath
         ? ['--global-store', options.globalStorePath]
         : [];
@@ -90,6 +96,7 @@ const initializeTestStore = async (storeRoot: string): Promise<void> => {
 
 /**
  * Creates a memory file in the test store with the given content.
+ * Uses FilesystemStorageAdapter to ensure indexes are properly created.
  */
 const createMemoryFile = async (
     storeRoot: string,
@@ -107,31 +114,35 @@ const createMemoryFile = async (
     const createdAt = options.createdAt ?? new Date('2024-01-01T00:00:00.000Z');
     const updatedAt = options.updatedAt ?? new Date('2024-01-02T00:00:00.000Z');
 
-    const frontmatter = [
-        '---',
-        `created_at: ${createdAt.toISOString()}`,
-        `updated_at: ${updatedAt.toISOString()}`,
-        `tags: [${tags.join(', ')}]`,
-        'source: user',
-    ];
+    const memoryContents: MemoryFileContents = {
+        frontmatter: {
+            createdAt,
+            updatedAt,
+            tags,
+            source: 'user',
+            expiresAt: options.expiresAt,
+        },
+        content,
+    };
 
-    if (options.expiresAt) {
-        frontmatter.push(`expires_at: ${options.expiresAt.toISOString()}`);
+    const serialized = serializeMemoryFile(memoryContents);
+    if (!serialized.ok) {
+        throw new Error(`Failed to serialize memory: ${serialized.error.message}`);
     }
 
-    frontmatter.push('---');
-    frontmatter.push(content);
-
-    const fileContent = frontmatter.join('\n');
-    const memoryDir = join(storeRoot, 'memories', ...slugPath.split('/').slice(0, -1));
-    await fs.mkdir(memoryDir, { recursive: true });
-    const filePath = join(storeRoot, 'memories', `${slugPath}.md`);
-    await fs.writeFile(filePath, fileContent, 'utf8');
+    const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
+    const result = await adapter.writeMemoryFile(slugPath, serialized.value, {
+        allowIndexCreate: true,
+        allowIndexUpdate: true,
+    });
+    if (!result.ok) {
+        throw new Error(`Failed to write memory: ${result.error.message}`);
+    }
 };
 
 /**
  * Creates a category index file.
- * Note: Indexes are stored as `indexes/<category>.yml` files.
+ * Note: Indexes are stored as `<categoryPath>/index.yaml` files inside the store root.
  * The format is strict: list markers on their own line, fields indented with 4 spaces.
  */
 const createCategoryIndex = async (
@@ -172,9 +183,9 @@ const createCategoryIndex = async (
     }
 
     const content = lines.join('\n');
-    const indexDir = join(storeRoot, 'indexes');
-    await fs.mkdir(indexDir, { recursive: true });
-    await fs.writeFile(join(indexDir, `${categoryPath}.yml`), content, 'utf8');
+    const categoryDir = categoryPath ? join(storeRoot, categoryPath) : storeRoot;
+    await fs.mkdir(categoryDir, { recursive: true });
+    await fs.writeFile(join(categoryDir, 'index.yaml'), content, 'utf8');
 };
 
 /**
@@ -182,7 +193,7 @@ const createCategoryIndex = async (
  */
 const memoryExists = async (storeRoot: string, slugPath: string): Promise<boolean> => {
     try {
-        await fs.access(join(storeRoot, 'memories', `${slugPath}.md`));
+        await fs.access(join(storeRoot, `${slugPath}.md`));
         return true;
     } catch {
         return false;
@@ -194,7 +205,7 @@ const memoryExists = async (storeRoot: string, slugPath: string): Promise<boolea
  */
 const readMemoryFile = async (storeRoot: string, slugPath: string): Promise<string | null> => {
     try {
-        return await fs.readFile(join(storeRoot, 'memories', `${slugPath}.md`), 'utf8');
+        return await fs.readFile(join(storeRoot, `${slugPath}.md`), 'utf8');
     } catch {
         return null;
     }
@@ -357,7 +368,7 @@ describe('Cortex CLI Integration Tests', () => {
 
     describe('list command', () => {
         beforeEach(async () => {
-            // Set up some test memories
+            // Set up some test memories (indexes are created automatically by createMemoryFile)
             await createMemoryFile(testStore, 'project/memory-one', {
                 content: 'First memory content.',
             });
@@ -367,15 +378,6 @@ describe('Cortex CLI Integration Tests', () => {
             await createMemoryFile(testStore, 'domain/other-memory', {
                 content: 'Domain memory content.',
             });
-
-            // Create indexes for the memories
-            await createCategoryIndex(testStore, 'project', [
-                { path: 'project/memory-one', tokenEstimate: 10 },
-                { path: 'project/memory-two', tokenEstimate: 15 },
-            ]);
-            await createCategoryIndex(testStore, 'domain', [
-                { path: 'domain/other-memory', tokenEstimate: 12 },
-            ]);
         });
 
         it('should list all memories across categories', async () => {
@@ -411,16 +413,11 @@ describe('Cortex CLI Integration Tests', () => {
         });
 
         it('should exclude expired memories by default', async () => {
-            // Add an expired memory
+            // Add an expired memory (index is created automatically)
             await createMemoryFile(testStore, 'project/expired-memory', {
                 content: 'This is expired.',
                 expiresAt: new Date('2020-01-01T00:00:00.000Z'),
             });
-
-            await createCategoryIndex(testStore, 'project', [
-                { path: 'project/memory-one', tokenEstimate: 10 },
-                { path: 'project/expired-memory', tokenEstimate: 5 },
-            ]);
 
             const result = await runCortexCli(['list', 'project'], {
                 globalStorePath: testStore,
@@ -432,16 +429,11 @@ describe('Cortex CLI Integration Tests', () => {
         });
 
         it('should include expired memories with --include-expired flag', async () => {
-            // Add an expired memory
+            // Add an expired memory (index is created automatically)
             await createMemoryFile(testStore, 'project/expired-memory', {
                 content: 'This is expired.',
                 expiresAt: new Date('2020-01-01T00:00:00.000Z'),
             });
-
-            await createCategoryIndex(testStore, 'project', [
-                { path: 'project/memory-one', tokenEstimate: 10 },
-                { path: 'project/expired-memory', tokenEstimate: 5 },
-            ]);
 
             const result = await runCortexCli(['list', 'project', '--include-expired'], {
                 globalStorePath: testStore,
@@ -604,7 +596,7 @@ describe('Cortex CLI Integration Tests', () => {
 
     describe('prune command', () => {
         beforeEach(async () => {
-            // Create some expired and non-expired memories
+            // Create some expired and non-expired memories (indexes are created automatically)
             await createMemoryFile(testStore, 'project/fresh-memory', {
                 content: 'Fresh content.',
                 expiresAt: new Date('2099-01-01T00:00:00.000Z'),
@@ -617,12 +609,6 @@ describe('Cortex CLI Integration Tests', () => {
                 content: 'Also expired.',
                 expiresAt: new Date('2019-06-15T00:00:00.000Z'),
             });
-
-            await createCategoryIndex(testStore, 'project', [
-                { path: 'project/fresh-memory', tokenEstimate: 10 },
-                { path: 'project/expired-one', tokenEstimate: 8 },
-                { path: 'project/expired-two', tokenEstimate: 6 },
-            ]);
         });
 
         it('should report expired memories with --dry-run', async () => {
@@ -659,8 +645,8 @@ describe('Cortex CLI Integration Tests', () => {
 
         it('should report when no expired memories found', async () => {
             // Remove expired memories first
-            await fs.rm(join(testStore, 'memories', 'project', 'expired-one.md'));
-            await fs.rm(join(testStore, 'memories', 'project', 'expired-two.md'));
+            await fs.rm(join(testStore, 'project', 'expired-one.md'));
+            await fs.rm(join(testStore, 'project', 'expired-two.md'));
 
             await createCategoryIndex(testStore, 'project', [
                 { path: 'project/fresh-memory', tokenEstimate: 10 },
@@ -694,8 +680,8 @@ describe('Cortex CLI Integration Tests', () => {
             expect(result.exitCode).toBe(0);
             expect(result.stdout).toContain('Reindexed');
 
-            // Verify index was created (indexes are stored as <category>.yml files)
-            const indexPath = join(testStore, 'indexes', 'project.yml');
+            // Verify index was created (indexes are stored as <categoryPath>/index.yaml files)
+            const indexPath = join(testStore, 'project', 'index.yaml');
             const indexExists = await fs
                 .access(indexPath)
                 .then(() => true)
@@ -753,13 +739,10 @@ describe('Cortex CLI Integration Tests', () => {
             const secondStore = await createTestStore();
             await initializeTestStore(secondStore);
 
-            // Add memory to second store
+            // Add memory to second store (index is created automatically)
             await createMemoryFile(secondStore, 'project/second-store-memory', {
                 content: 'Second store content.',
             });
-            await createCategoryIndex(secondStore, 'project', [
-                { path: 'project/second-store-memory', tokenEstimate: 10 },
-            ]);
 
             const result = await runCortexCli(['list', 'project'], {
                 globalStorePath: secondStore,

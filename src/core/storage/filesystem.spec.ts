@@ -1,129 +1,157 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import * as fs from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { FilesystemStorageAdapter } from './filesystem.ts';
 
-describe(
-    'filesystem storage adapter', () => {
-        let tempDir: string;
+describe('filesystem storage adapter', () => {
+    let tempDir: string;
 
-        beforeEach(async () => {
-            tempDir = await mkdtemp(join(
-                tmpdir(), 'cortex-storage-',
-            )); 
+    beforeEach(async () => {
+        tempDir = await fs.mkdtemp(join(tmpdir(), 'cortex-storage-'));
+    });
+
+    afterEach(async () => {
+        if (tempDir) {
+            await fs.rm(tempDir, { recursive: true, force: true });
+        }
+    });
+
+    it('should write and read memory files', async () => {
+        const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
+
+        const writeResult = await adapter.writeMemoryFile(
+            'working/storage-test',
+            'Filesystem payload',
+        );
+
+        expect(writeResult.ok).toBe(true);
+
+        const readResult = await adapter.readMemoryFile('working/storage-test');
+
+        expect(readResult.ok).toBe(true);
+        if (readResult.ok) {
+            expect(readResult.value).toBe('Filesystem payload');
+        }
+    });
+
+    it('should store memories directly under store root', async () => {
+        const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
+
+        await adapter.writeMemoryFile('global/test-memory', 'test content', {
+            allowIndexUpdate: false,
         });
 
-        afterEach(async () => {
-            if (tempDir) {
-                await rm(
-                    tempDir, { recursive: true, force: true },
-                ); 
-            } 
-        });
+        // Verify physical file location
+        const memoryPath = join(tempDir, 'global', 'test-memory.md');
+        const content = await fs.readFile(memoryPath, 'utf8');
+        expect(content).toBe('test content');
+    });
 
-        it(
-            'should write and read memory files', async () => {
-                const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
+    it('should return ok(null) for missing memory files', async () => {
+        const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
 
-                const writeResult = await adapter.writeMemoryFile(
-                    'working/storage-test',
-                    'Filesystem payload',
-                );
+        const result = await adapter.readMemoryFile('working/missing-file');
 
-                expect(writeResult.ok).toBe(true);
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value).toBeNull();
+        }
+    });
 
-                const readResult = await adapter.readMemoryFile('working/storage-test');
+    it('should reject memory path traversal', async () => {
+        const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
 
-                expect(readResult.ok).toBe(true);
-                if (readResult.ok) {
-                    expect(readResult.value).toBe('Filesystem payload'); 
-                }
-            },
-        );
+        const readResult = await adapter.readMemoryFile('../escape');
 
-        it(
-            'should return ok(null) for missing memory files', async () => {
-                const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
+        expect(readResult.ok).toBe(false);
+        if (!readResult.ok) {
+            expect(readResult.error.code).toBe('READ_FAILED');
+            expect(readResult.error.message).toContain('Path escapes storage root');
+        }
 
-                const result = await adapter.readMemoryFile('working/missing-file');
+        const writeResult = await adapter.writeMemoryFile('../escape', 'nope');
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
-                    expect(result.value).toBeNull(); 
-                }
-            },
-        );
+        expect(writeResult.ok).toBe(false);
+        if (!writeResult.ok) {
+            expect(writeResult.error.code).toBe('WRITE_FAILED');
+            expect(writeResult.error.message).toContain('Invalid memory slug path');
+        }
+    });
 
-        it(
-            'should reject memory path traversal', async () => {
-                const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
+    it('should reject index as memory slug', async () => {
+        const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
 
-                const readResult = await adapter.readMemoryFile('../escape');
+        const result = await adapter.writeMemoryFile('global/index', 'content');
 
-                expect(readResult.ok).toBe(false);
-                if (!readResult.ok) {
-                    expect(readResult.error.code).toBe('READ_FAILED');
-                    expect(readResult.error.message).toContain('Path escapes storage root');
-                }
+        expect(result.ok).toBe(false);
+        if (!result.ok) {
+            expect(result.error.message).toContain('reserved');
+        }
+    });
 
-                const writeResult = await adapter.writeMemoryFile(
-                    '../escape', 'nope',
-                );
+    it('should write and read index files at category path', async () => {
+        const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
 
-                expect(writeResult.ok).toBe(false);
-                if (!writeResult.ok) {
-                    expect(writeResult.error.code).toBe('WRITE_FAILED');
-                    expect(writeResult.error.message).toContain('Invalid memory slug path');
-                }
-            },
-        );
+        // Write root index (empty string = STORE_ROOT/index.yaml)
+        const writeRootResult = await adapter.writeIndexFile('', 'memories: []');
+        expect(writeRootResult.ok).toBe(true);
 
-        it(
-            'should write and read index files', async () => {
-                const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
+        const readRootResult = await adapter.readIndexFile('');
+        expect(readRootResult.ok).toBe(true);
+        if (readRootResult.ok) {
+            expect(readRootResult.value).toBe('memories: []');
+        }
 
-                const writeResult = await adapter.writeIndexFile(
-                    'memory-index', '{\n}',
-                );
+        // Write category index (global = STORE_ROOT/global/index.yaml)
+        const writeCatResult = await adapter.writeIndexFile('global', 'memories: []');
+        expect(writeCatResult.ok).toBe(true);
 
-                expect(writeResult.ok).toBe(true);
+        const readCatResult = await adapter.readIndexFile('global');
+        expect(readCatResult.ok).toBe(true);
+        if (readCatResult.ok) {
+            expect(readCatResult.value).toBe('memories: []');
+        }
+    });
 
-                const readResult = await adapter.readIndexFile('memory-index');
+    it('should store indexes in-folder at correct paths', async () => {
+        const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
 
-                expect(readResult.ok).toBe(true);
-                if (readResult.ok) {
-                    expect(readResult.value).toBe('{\n}'); 
-                }
-            },
-        );
+        await adapter.writeIndexFile('', 'root index');
+        await adapter.writeIndexFile('global', 'global index');
+        await adapter.writeIndexFile('global/sub', 'sub index');
 
-        it(
-            'should return ok(null) for missing index files', async () => {
-                const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
+        // Verify physical file locations using fs.access or fs.readFile
+        const rootIndexPath = join(tempDir, 'index.yaml');
+        const globalIndexPath = join(tempDir, 'global', 'index.yaml');
+        const subIndexPath = join(tempDir, 'global', 'sub', 'index.yaml');
 
-                const result = await adapter.readIndexFile('missing-index');
+        await expect(fs.access(rootIndexPath)).resolves.not.toThrow();
+        await expect(fs.access(globalIndexPath)).resolves.not.toThrow();
+        await expect(fs.access(subIndexPath)).resolves.not.toThrow();
+    });
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
-                    expect(result.value).toBeNull(); 
-                }
-            },
-        );
+    it('should return ok(null) for missing index files', async () => {
+        const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
 
-        it(
-            'should reject index path traversal', async () => {
-                const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
+        const result = await adapter.readIndexFile('missing-index');
 
-                const readResult = await adapter.readIndexFile('../escape-index');
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value).toBeNull();
+        }
+    });
 
-                expect(readResult.ok).toBe(false);
-                if (!readResult.ok) {
-                    expect(readResult.error.code).toBe('READ_FAILED');
-                    expect(readResult.error.message).toContain('Path escapes storage root');
-                }
-            },
-        );
-    },
-);
+    it('should reject index path traversal', async () => {
+        const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
+
+        const readResult = await adapter.readIndexFile('../escape-index');
+
+        expect(readResult.ok).toBe(false);
+        if (!readResult.ok) {
+            expect(readResult.error.code).toBe('READ_FAILED');
+            expect(readResult.error.message).toContain('Path escapes storage root');
+        }
+    });
+});

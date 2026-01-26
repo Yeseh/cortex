@@ -66,7 +66,7 @@ const parseStoreFlag = (args: string[]): { store?: string; remaining: string[] }
     let store: string | undefined;
 
     for (let index = 0; index < args.length; index += 1) {
-        const value = args[index];
+        const value = args[ index ];
         if (!value) {
             continue;
         }
@@ -76,7 +76,7 @@ const parseStoreFlag = (args: string[]): { store?: string; remaining: string[] }
             continue;
         }
 
-        const candidate = args[index + 1];
+        const candidate = args[ index + 1 ];
         if (!candidate) {
             store = '';
             continue;
@@ -99,7 +99,7 @@ const parseGlobalStorePath = (args: string[]): GlobalStoreParseResult => {
     let globalStorePath: string | undefined;
 
     for (let index = 0; index < args.length; index += 1) {
-        const value = args[index];
+        const value = args[ index ];
         if (!value) {
             continue;
         }
@@ -109,7 +109,7 @@ const parseGlobalStorePath = (args: string[]): GlobalStoreParseResult => {
             continue;
         }
 
-        const candidate = args[index + 1];
+        const candidate = args[ index + 1 ];
         if (!candidate) {
             globalStorePath = '';
             continue;
@@ -147,7 +147,7 @@ const parseHelpFlag = (args: string[]): HelpFlagParseResult => {
     return { hasHelp, remaining };
 };
 
-const toCliError = (code: CliRunError['code'], message: string, cause?: unknown): CliRunError => ({
+const toCliError = (code: CliRunError[ 'code' ], message: string, cause?: unknown): CliRunError => ({
     code,
     message,
     cause,
@@ -156,7 +156,7 @@ const toCliError = (code: CliRunError['code'], message: string, cause?: unknown)
 const resolveStoreRoot = async (
     args: string[],
     cwd: string,
-    globalStorePath: string
+    globalStorePath: string,
 ): Promise<Result<{ root: string; remainingArgs: string[] }, CliRunError>> => {
     const configResult = await loadConfig({ cwd });
     if (!configResult.ok) {
@@ -164,8 +164,8 @@ const resolveStoreRoot = async (
             toCliError(
                 'CONFIG_LOAD_FAILED',
                 `Failed to load config: ${configResult.error.message}`,
-                configResult.error
-            )
+                configResult.error,
+            ),
         );
     }
 
@@ -183,8 +183,8 @@ const resolveStoreRoot = async (
             toCliError(
                 'STORE_RESOLUTION_FAILED',
                 storeResolution.error.message,
-                storeResolution.error
-            )
+                storeResolution.error,
+            ),
         );
     }
 
@@ -193,8 +193,8 @@ const resolveStoreRoot = async (
             toCliError(
                 'STORE_RESOLUTION_FAILED',
                 `Named store '${parsedStore.store}' is not supported yet.`,
-                { store: parsedStore.store }
-            )
+                { store: parsedStore.store },
+            ),
         );
     }
 
@@ -206,7 +206,7 @@ type StoreCommand = 'reindex' | 'add' | 'update' | 'list' | 'prune' | 'show' | '
 const executeReindexCommand = async (
     root: string,
     remainingArgs: string[],
-    _format: OutputFormat
+    _format: OutputFormat,
 ): Promise<CliRunResult> => {
     const reindexResult = await runReindexCommand({
         storeRoot: root,
@@ -214,7 +214,7 @@ const executeReindexCommand = async (
     });
     if (!reindexResult.ok) {
         return formatError(
-            toCliError('REINDEX_FAILED', reindexResult.error.message, reindexResult.error)
+            toCliError('REINDEX_FAILED', reindexResult.error.message, reindexResult.error),
         );
     }
     return { exitCode: 0, output: reindexResult.value.message };
@@ -223,7 +223,7 @@ const executeReindexCommand = async (
 const executeAddCommand = async (
     root: string,
     remainingArgs: string[],
-    _format: OutputFormat
+    _format: OutputFormat,
 ): Promise<CliRunResult> => {
     const addResult = await runAddCommand({
         storeRoot: root,
@@ -239,7 +239,7 @@ const executeAddCommand = async (
 const executeUpdateCommand = async (
     root: string,
     remainingArgs: string[],
-    _format: OutputFormat
+    _format: OutputFormat,
 ): Promise<CliRunResult> => {
     const updateResult = await runUpdateCommand({
         storeRoot: root,
@@ -248,7 +248,7 @@ const executeUpdateCommand = async (
     });
     if (!updateResult.ok) {
         return formatError(
-            toCliError('UPDATE_FAILED', updateResult.error.message, updateResult.error)
+            toCliError('UPDATE_FAILED', updateResult.error.message, updateResult.error),
         );
     }
     return { exitCode: 0, output: updateResult.value.message };
@@ -257,7 +257,7 @@ const executeUpdateCommand = async (
 const executeListCommand = async (
     root: string,
     remainingArgs: string[],
-    _format: OutputFormat
+    _format: OutputFormat,
 ): Promise<CliRunResult> => {
     const listResult = await runListCommand({
         storeRoot: root,
@@ -272,7 +272,7 @@ const executeListCommand = async (
 const executePruneCommand = async (
     root: string,
     remainingArgs: string[],
-    _format: OutputFormat
+    _format: OutputFormat,
 ): Promise<CliRunResult> => {
     const pruneResult = await runPruneCommand({
         storeRoot: root,
@@ -280,7 +280,7 @@ const executePruneCommand = async (
     });
     if (!pruneResult.ok) {
         return formatError(
-            toCliError('PRUNE_FAILED', pruneResult.error.message, pruneResult.error)
+            toCliError('PRUNE_FAILED', pruneResult.error.message, pruneResult.error),
         );
     }
     return { exitCode: 0, output: pruneResult.value.message };
@@ -289,7 +289,7 @@ const executePruneCommand = async (
 const executeShowCommand = async (
     root: string,
     remainingArgs: string[],
-    format: OutputFormat
+    format: OutputFormat,
 ): Promise<CliRunResult> => {
     const showResult = await runShowCommand({
         storeRoot: root,
@@ -308,7 +308,7 @@ const executeShowCommand = async (
 const executeRemoveCommand = async (
     root: string,
     remainingArgs: string[],
-    _format: OutputFormat
+    _format: OutputFormat,
 ): Promise<CliRunResult> => {
     const removeResult = await runRemoveCommand({
         storeRoot: root,
@@ -316,7 +316,7 @@ const executeRemoveCommand = async (
     });
     if (!removeResult.ok) {
         return formatError(
-            toCliError('REMOVE_FAILED', removeResult.error.message, removeResult.error)
+            toCliError('REMOVE_FAILED', removeResult.error.message, removeResult.error),
         );
     }
     return { exitCode: 0, output: removeResult.value.message };
@@ -325,7 +325,7 @@ const executeRemoveCommand = async (
 const executeMoveCommand = async (
     root: string,
     remainingArgs: string[],
-    _format: OutputFormat
+    _format: OutputFormat,
 ): Promise<CliRunResult> => {
     const moveResult = await runMoveCommand({
         storeRoot: root,
@@ -342,7 +342,7 @@ const runCommandWithStore = async (
     cwd: string,
     globalStorePath: string,
     config: CortexConfig,
-    command: StoreCommand
+    command: StoreCommand,
 ): Promise<CliRunResult> => {
     const storeRootResult = await resolveStoreRoot(args, cwd, globalStorePath);
     if (!storeRootResult.ok) {
@@ -366,7 +366,7 @@ const runCommandWithStore = async (
         move: executeMoveCommand,
     };
 
-    return handlers[command](root, remainingArgs, outputFormat);
+    return handlers[ command ](root, remainingArgs, outputFormat);
 };
 
 export const runCli = async (options: CliRunOptions = {}): Promise<CliRunResult> => {
@@ -384,13 +384,13 @@ export const runCli = async (options: CliRunOptions = {}): Promise<CliRunResult>
             return { exitCode: 0, output: MAIN_HELP };
         }
 
-        const commandHelp = COMMAND_HELP[command];
+        const commandHelp = COMMAND_HELP[ command ];
         if (!commandHelp) {
             return formatError(
                 toCliError(
                     'INVALID_COMMAND',
-                    `Unknown command: ${command}. Run 'cortex --help' for available commands.`
-                )
+                    `Unknown command: ${command}. Run 'cortex --help' for available commands.`,
+                ),
             );
         }
 
@@ -404,8 +404,8 @@ export const runCli = async (options: CliRunOptions = {}): Promise<CliRunResult>
             toCliError(
                 'CONFIG_LOAD_FAILED',
                 `Failed to load config: ${configResult.error.message}`,
-                configResult.error
-            )
+                configResult.error,
+            ),
         );
     }
     const config = configResult.value;
@@ -420,15 +420,15 @@ export const runCli = async (options: CliRunOptions = {}): Promise<CliRunResult>
     const globalStorePath =
         globalStoreFlag.globalStorePath ??
         options.globalStorePath ??
-        resolve(cortexConfigDir, '.cortex');
+        resolve(cortexConfigDir, 'memory');
 
     const [command, ...rest] = remainingArgs;
     if (!command) {
         return formatError(
             toCliError(
                 'INVALID_COMMAND',
-                "No command provided. Run 'cortex --help' for available commands."
-            )
+                "No command provided. Run 'cortex --help' for available commands.",
+            ),
         );
     }
 
@@ -437,7 +437,7 @@ export const runCli = async (options: CliRunOptions = {}): Promise<CliRunResult>
         const helpResult = runHelpCommand({ args: rest });
         if (!helpResult.ok) {
             return formatError(
-                toCliError('HELP_FAILED', helpResult.error.message, helpResult.error)
+                toCliError('HELP_FAILED', helpResult.error.message, helpResult.error),
             );
         }
         return { exitCode: 0, output: helpResult.value.message };
@@ -453,13 +453,13 @@ export const runCli = async (options: CliRunOptions = {}): Promise<CliRunResult>
         });
         if (!storeResult.ok) {
             return formatError(
-                toCliError('STORE_COMMAND_FAILED', storeResult.error.message, storeResult.error)
+                toCliError('STORE_COMMAND_FAILED', storeResult.error.message, storeResult.error),
             );
         }
         const serialized = serializeOutput(storeResult.value.output, outputFormat);
         if (!serialized.ok) {
             return formatError(
-                toCliError('STORE_COMMAND_FAILED', serialized.error.message, serialized.error)
+                toCliError('STORE_COMMAND_FAILED', serialized.error.message, serialized.error),
             );
         }
         return { exitCode: 0, output: serialized.value };
@@ -473,13 +473,13 @@ export const runCli = async (options: CliRunOptions = {}): Promise<CliRunResult>
         });
         if (!initResult.ok) {
             return formatError(
-                toCliError('INIT_FAILED', initResult.error.message, initResult.error)
+                toCliError('INIT_FAILED', initResult.error.message, initResult.error),
             );
         }
         const serialized = serializeOutput(initResult.value.output, outputFormat);
         if (!serialized.ok) {
             return formatError(
-                toCliError('INIT_FAILED', serialized.error.message, serialized.error)
+                toCliError('INIT_FAILED', serialized.error.message, serialized.error),
             );
         }
         return { exitCode: 0, output: serialized.value };
@@ -502,7 +502,7 @@ export const runCli = async (options: CliRunOptions = {}): Promise<CliRunResult>
     return formatError(
         toCliError(
             'INVALID_COMMAND',
-            `Unknown command: ${command}. Run 'cortex --help' for available commands.`
-        )
+            `Unknown command: ${command}. Run 'cortex --help' for available commands.`,
+        ),
     );
 };

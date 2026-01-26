@@ -102,7 +102,7 @@ const loadRegistryOrEmpty = async (registryPath: string): Promise<LoadRegistryRe
 
 const saveRegistry = async (
     registryPath: string,
-    registry: Record<string, { path: string }>
+    registry: Record<string, { path: string }>,
 ): Promise<Result<void, StoreCommandError>> => {
     const saved = await saveStoreRegistry(registryPath, registry);
     if (!saved.ok) {
@@ -144,33 +144,21 @@ const runStoreList = async (options: StoreCommandOptions): Promise<StoreResult> 
 const runStoreAdd = async (
     options: StoreCommandOptions,
     name: string,
-    path: string
+    path: string,
 ): Promise<StoreResult> => {
     const registryResult = await loadRegistryOrEmpty(options.registryPath);
     if (!registryResult.ok) {
         return registryResult;
     }
 
-    if (registryResult.value[name]) {
+    if (registryResult.value[ name ]) {
         return err({
             code: 'STORE_ALREADY_EXISTS',
             message: `Store '${name}' is already registered.`,
         });
     }
 
-    // Create the memory/ folder within the store path
-    const memoryPath = resolve(options.cwd, path, 'memory');
-    try {
-        await mkdir(memoryPath, { recursive: true });
-    } catch (error) {
-        return err({
-            code: 'STORE_INIT_FAILED',
-            message: `Failed to create memory folder at ${memoryPath}.`,
-            cause: error,
-        });
-    }
-
-    registryResult.value[name] = { path };
+    registryResult.value[ name ] = { path };
     const saved = await saveRegistry(options.registryPath, registryResult.value);
     if (!saved.ok) {
         return saved;
@@ -190,14 +178,14 @@ const runStoreRemove = async (options: StoreCommandOptions, name: string): Promi
         return registryResult;
     }
 
-    if (!registryResult.value[name]) {
+    if (!registryResult.value[ name ]) {
         return err({
             code: 'STORE_REGISTRY_FAILED',
             message: `Store '${name}' is not registered.`,
         });
     }
 
-    const { [name]: removed, ...rest } = registryResult.value;
+    const { [ name ]: removed, ...rest } = registryResult.value;
     const remainingEntries = Object.keys(rest).length;
     if (remainingEntries === 0) {
         const removedRegistry = await removeStoreRegistry(options.registryPath);
@@ -208,7 +196,8 @@ const runStoreRemove = async (options: StoreCommandOptions, name: string): Promi
                 cause: removedRegistry.error,
             });
         }
-    } else {
+    }
+    else {
         const saved = await saveRegistry(options.registryPath, rest);
         if (!saved.ok) {
             return saved;
@@ -226,22 +215,22 @@ const runStoreRemove = async (options: StoreCommandOptions, name: string): Promi
 
 const runStoreInit = async (
     options: StoreCommandOptions,
-    targetPath?: string
+    targetPath?: string,
 ): Promise<StoreResult> => {
     const basePath = targetPath?.trim() || resolve(options.cwd, '.cortex');
     const rootPath = targetPath ? resolve(options.cwd, basePath) : basePath;
-    const configPath = resolve(rootPath, 'config.yaml');
     const indexPath = resolve(rootPath, 'index.yaml');
 
     try {
         await mkdir(rootPath, { recursive: true });
-        await writeFile(configPath, '', 'utf8');
+        // Only create root index.yaml, no config.yaml (that's for global config dir only)
         const serializedIndex = buildEmptyRootIndex();
         if (!serializedIndex.ok) {
             return serializedIndex;
         }
         await writeFile(indexPath, serializedIndex.value, 'utf8');
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'STORE_INIT_FAILED',
             message: `Failed to initialize store at ${rootPath}.`,
@@ -260,7 +249,7 @@ const runStoreInit = async (
 const runStoreAction = (
     options: StoreCommandOptions,
     command: string,
-    args: string[]
+    args: string[],
 ): Promise<StoreResult> => {
     const handlers: Record<string, (args: string[]) => Promise<StoreResult>> = {
         list: () => runStoreList(options),
@@ -269,13 +258,13 @@ const runStoreAction = (
         init: ([path]) => runStoreInit(options, path),
     };
 
-    const handler = handlers[command];
+    const handler = handlers[ command ];
     if (!handler) {
         return Promise.resolve(
             err({
                 code: 'INVALID_COMMAND',
                 message: `Unknown store command: ${command}.`,
-            })
+            }),
         );
     }
 
@@ -285,14 +274,14 @@ const runStoreAction = (
 const runStoreAddCommand = (
     options: StoreCommandOptions,
     name: string | undefined,
-    path: string | undefined
+    path: string | undefined,
 ): Promise<StoreResult> => {
     if (!name || !path) {
         return Promise.resolve(
             err({
                 code: 'INVALID_COMMAND',
                 message: 'Store add requires a name and a path.',
-            })
+            }),
         );
     }
     const parsedName = validateStoreNameInput(name);
@@ -308,14 +297,14 @@ const runStoreAddCommand = (
 
 const runStoreRemoveCommand = (
     options: StoreCommandOptions,
-    name: string | undefined
+    name: string | undefined,
 ): Promise<StoreResult> => {
     if (!name) {
         return Promise.resolve(
             err({
                 code: 'INVALID_COMMAND',
                 message: 'Store remove requires a name.',
-            })
+            }),
         );
     }
     const parsedName = validateStoreNameInput(name);

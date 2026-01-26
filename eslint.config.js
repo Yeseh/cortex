@@ -63,7 +63,7 @@ export default [
             eqeqeq: ['error', 'always'],
             'no-console': ['warn', { allow: ['warn', 'error'] }],
             'no-debugger': 'error',
-            complexity: ['error', { max: 19, variant: 'modified' }],
+            complexity: ['warn', { max: 10, variant: 'modified' }],
             // TypeScript-specific (prefer plugin rules)
             'no-unused-vars': 'off',
             '@typescript-eslint/no-unused-vars': [

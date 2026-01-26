@@ -74,8 +74,9 @@ USAGE
   cortex init [options]
 
 DESCRIPTION
-  Creates the global configuration store at ~/.config/cortex/.cortex with two
-  default categories: 'global' and 'projects'.
+  Creates the global configuration at ~/.config/cortex/ with config.yaml
+  and stores.yaml, plus a default global store at ~/.config/cortex/memory/
+  with two categories: 'global' and 'projects'.
 
   This command sets up the foundational directory structure needed for cortex
   to store memories globally across all projects.
@@ -84,13 +85,11 @@ OPTIONS
   --force, -f     Reinitialize even if already exists (overwrites existing)
 
 STRUCTURE CREATED
-  ~/.config/cortex/.cortex/
+  ~/.config/cortex/
   ├── config.yaml           # Global configuration
-  ├── index.yaml            # Root category index
-  ├── memory/
-  │   ├── global/           # Global memories directory
-  │   └── projects/         # Project memories directory
-  └── indexes/
+  ├── stores.yaml           # Store registry
+  └── memory/               # Default global store
+      ├── index.yaml        # Root category index
       ├── global/
       │   └── index.yaml    # Global category index
       └── projects/
@@ -304,11 +303,11 @@ const parseHelpArgs = (args: string[]): Result<{ command?: string }, HelpCommand
         });
     }
 
-    return ok({ command: positional[0] });
+    return ok({ command: positional[ 0 ] });
 };
 
 export const runHelpCommand = (
-    options: HelpCommandOptions
+    options: HelpCommandOptions,
 ): Result<HelpCommandOutput, HelpCommandError> => {
     const parsed = parseHelpArgs(options.args);
     if (!parsed.ok) {
@@ -320,7 +319,7 @@ export const runHelpCommand = (
         return ok({ message: MAIN_HELP });
     }
 
-    const commandHelp = COMMAND_HELP[command];
+    const commandHelp = COMMAND_HELP[ command ];
     if (!commandHelp) {
         return err({
             code: 'INVALID_ARGUMENTS',
