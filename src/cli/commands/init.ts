@@ -1,8 +1,10 @@
 /**
  * Init command for initializing the global cortex configuration store.
  *
- * Creates the global config store at ~/.config/cortex/ with two default
- * categories: 'global' and 'projects'.
+ * Creates the global config store at ~/.config/cortex/ with:
+ * - config.yaml: Global configuration with default settings
+ * - stores.yaml: Store registry with a 'default' store pointing to the memory directory
+ * - memory/: Default global store with 'global' and 'projects' categories
  */
 
 import { mkdir, writeFile, stat } from 'node:fs/promises';
@@ -10,6 +12,7 @@ import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import type { Result } from '../../core/types.ts';
 import { serializeCategoryIndex } from '../../core/index/parser.ts';
+import { serializeStoreRegistry } from '../../core/store/registry.ts';
 import type { OutputPayload, OutputInit } from '../output.ts';
 
 export interface InitCommandOptions {
@@ -34,7 +37,24 @@ type InitResult = Result<InitCommandResult, InitCommandError>;
 const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
 const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
+/**
+ * Default category directories created in the global store.
+ * - 'global': For memories that apply across all projects
+ * - 'projects': For project-specific memories
+ */
 const DEFAULT_CATEGORIES = ['global', 'projects'] as const;
+
+/**
+ * Default configuration content written to config.yaml.
+ * Contains all supported configuration options with their default values.
+ */
+const DEFAULT_CONFIG_CONTENT = `# Cortex global configuration
+# See 'cortex --help' for available options
+
+output_format: yaml
+auto_summary_threshold: 10
+strict_local: false
+`;
 
 const formatInit = (path: string, categories: readonly string[]): OutputInit => ({
     path,
@@ -42,7 +62,7 @@ const formatInit = (path: string, categories: readonly string[]): OutputInit => 
 });
 
 const buildEmptyRootIndex = (
-    subcategories: readonly string[],
+    subcategories: readonly string[]
 ): Result<string, InitCommandError> => {
     const serialized = serializeCategoryIndex({
         memories: [],
@@ -77,8 +97,7 @@ const pathExists = async (path: string): Promise<boolean> => {
     try {
         await stat(path);
         return true;
-    }
-    catch {
+    } catch {
         return false;
     }
 };
@@ -148,8 +167,18 @@ export const runInitCommand = async (options: InitCommandOptions): Promise<InitR
         }
 
         // Create root config files at cortexConfigDir level
-        await writeFile(configPath, '', 'utf8');
-        await writeFile(storesPath, '', 'utf8');
+        await writeFile(configPath, DEFAULT_CONFIG_CONTENT, 'utf8');
+
+        // Serialize and write stores registry
+        const serialized = serializeStoreRegistry({ default: { path: globalStorePath } });
+        if (!serialized.ok) {
+            return err({
+                code: 'INIT_FAILED',
+                message: 'Failed to serialize store registry.',
+                cause: serialized.error,
+            });
+        }
+        await writeFile(storesPath, serialized.value + '\n', 'utf8');
 
         // Create root index
         const rootIndex = buildEmptyRootIndex(DEFAULT_CATEGORIES);
@@ -157,8 +186,7 @@ export const runInitCommand = async (options: InitCommandOptions): Promise<InitR
             return rootIndex;
         }
         await writeFile(indexPath, rootIndex.value, 'utf8');
-    }
-    catch (error) {
+    } catch (error) {
         return err({
             code: 'INIT_FAILED',
             message: `Failed to initialize global config store at ${globalStorePath}.`,
