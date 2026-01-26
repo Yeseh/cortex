@@ -22,12 +22,16 @@ const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 const VERSION = '0.1.0';
 
-const MAIN_HELP = `cortex v${VERSION} - Memory system for AI agents
+export const MAIN_HELP = `cortex v${VERSION} - Memory system for AI agents
 
 USAGE
   cortex <command> [options]
+  cortex <command> --help
 
 COMMANDS
+  Setup
+    init             Initialize global config store (~/.config/cortex/)
+
   Memory Operations
     add <path>       Create a new memory
     show <path>      Display memory content
@@ -46,25 +50,57 @@ COMMANDS
     reindex          Rebuild store indexes
     prune            Delete expired memories
 
-  Help
-    help             Show this help message
-    help <command>   Show help for a specific command
-
 GLOBAL OPTIONS
+  --help                Show help for a command
   --store <name>        Use a specific named store
   --global-store <path> Override the global store path
 
 EXAMPLES
+  cortex init
   cortex add project/tech-stack --content "Using TypeScript and Bun"
   cortex show project/tech-stack
   cortex list project
   cortex store init
   cortex prune --store my-store
+  cortex add --help
 
-For more information, run: cortex help <command>
+For more information, run: cortex <command> --help
 `;
 
-const COMMAND_HELP: Record<string, string> = {
+export const COMMAND_HELP: Record<string, string> = {
+    init: `cortex init - Initialize global config store
+
+USAGE
+  cortex init [options]
+
+DESCRIPTION
+  Creates the global configuration store at ~/.config/cortex/.cortex with two
+  default categories: 'global' and 'projects'.
+
+  This command sets up the foundational directory structure needed for cortex
+  to store memories globally across all projects.
+
+OPTIONS
+  --force, -f     Reinitialize even if already exists (overwrites existing)
+
+STRUCTURE CREATED
+  ~/.config/cortex/.cortex/
+  ├── config.yaml           # Global configuration
+  ├── index.yaml            # Root category index
+  ├── memory/
+  │   ├── global/           # Global memories directory
+  │   └── projects/         # Project memories directory
+  └── indexes/
+      ├── global/
+      │   └── index.yaml    # Global category index
+      └── projects/
+          └── index.yaml    # Projects category index
+
+EXAMPLES
+  cortex init
+  cortex init --force
+`,
+
     add: `cortex add - Create a new memory
 
 USAGE
@@ -243,20 +279,6 @@ EXAMPLES
   cortex prune
   cortex prune --store scratch
 `,
-
-    help: `cortex help - Show help information
-
-USAGE
-  cortex help [command]
-
-ARGUMENTS
-  [command]    Show help for a specific command
-
-EXAMPLES
-  cortex help
-  cortex help add
-  cortex help store
-`,
 };
 
 const parseHelpArgs = (args: string[]): Result<{ command?: string }, HelpCommandError> => {
@@ -264,13 +286,13 @@ const parseHelpArgs = (args: string[]): Result<{ command?: string }, HelpCommand
 
     for (const arg of args) {
         if (!arg) {
-            continue; 
+            continue;
         }
         if (arg.startsWith('-')) {
             return err({
                 code: 'INVALID_ARGUMENTS',
                 message: `Unknown flag: ${arg}.`,
-            }); 
+            });
         }
         positional.push(arg);
     }
@@ -279,30 +301,31 @@ const parseHelpArgs = (args: string[]): Result<{ command?: string }, HelpCommand
         return err({
             code: 'INVALID_ARGUMENTS',
             message: 'Too many arguments for help command.',
-        }); 
+        });
     }
 
-    return ok({ command: positional[ 0 ] });
+    return ok({ command: positional[0] });
 };
 
-export const runHelpCommand = (options: HelpCommandOptions): 
-Result<HelpCommandOutput, HelpCommandError> => {
+export const runHelpCommand = (
+    options: HelpCommandOptions
+): Result<HelpCommandOutput, HelpCommandError> => {
     const parsed = parseHelpArgs(options.args);
     if (!parsed.ok) {
-        return parsed; 
+        return parsed;
     }
 
     const command = parsed.value.command;
     if (!command) {
-        return ok({ message: MAIN_HELP }); 
+        return ok({ message: MAIN_HELP });
     }
 
-    const commandHelp = COMMAND_HELP[ command ];
+    const commandHelp = COMMAND_HELP[command];
     if (!commandHelp) {
         return err({
             code: 'INVALID_ARGUMENTS',
             message: `Unknown command: ${command}. Run 'cortex help' for available commands.`,
-        }); 
+        });
     }
 
     return ok({ message: commandHelp });

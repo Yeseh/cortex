@@ -595,8 +595,8 @@ Examples:
         return;
     }
 
-    const defaultSourceCli = join(homedir(), '.config', 'opencode', 'skills', 'memory', 'cli.ts');
-    const defaultTarget = join(homedir(), '.config', 'cortex', 'memory');
+    const defaultSourceCli = join(homedir(), '.config', 'opencode', 'skills', 'memory', 'index.ts');
+    const defaultTarget = join(homedir(), '.config', 'context', 'memory');
 
     const sourceCli = values['source-cli'] ?? defaultSourceCli;
     const target = values['target'] ?? defaultTarget;

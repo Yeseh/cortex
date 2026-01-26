@@ -1,0 +1,15 @@
+memories:
+  -
+    path: project/file-memory
+    token_estimate: 31
+  -
+    path: project/special-memory
+    token_estimate: 40
+  -
+    path: project/tagged-memory
+    token_estimate: 35
+  -
+    path: project/test-memory
+    token_estimate: 32
+
+subcategories: []

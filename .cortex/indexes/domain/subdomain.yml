@@ -1,0 +1,6 @@
+memories: []
+
+subcategories:
+  -
+    path: domain/subdomain/feature
+    memory_count: 1

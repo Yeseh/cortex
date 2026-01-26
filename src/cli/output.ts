@@ -52,12 +52,18 @@ export interface OutputStoreInit {
     path: string;
 }
 
+export interface OutputInit {
+    path: string;
+    categories: string[];
+}
+
 export type OutputPayload =
     | { kind: 'memory'; value: OutputMemory }
     | { kind: 'category'; value: OutputCategory }
     | { kind: 'store'; value: OutputStore }
     | { kind: 'store-registry'; value: OutputStoreRegistry }
-    | { kind: 'store-init'; value: OutputStoreInit };
+    | { kind: 'store-init'; value: OutputStoreInit }
+    | { kind: 'init'; value: OutputInit };
 
 export interface OutputSerializeError {
     code: 'INVALID_FORMAT' | 'INVALID_FIELD';
@@ -773,6 +779,68 @@ const serializeStoreInitToon = (storeInit: OutputStoreInit): SerializeResult => 
     }
 };
 
+const serializeInitYaml = (init: OutputInit): SerializeResult => {
+    const path = validateRequiredPath(init.path, 'path', 'Init');
+    if (!path.ok) {
+        return path;
+    }
+    if (!Array.isArray(init.categories)) {
+        return err({
+            code: 'INVALID_FIELD',
+            message: 'Categories must be an array.',
+            field: 'categories',
+        });
+    }
+    const lines = [`path: ${formatYamlScalar(path.value)}`];
+    if (init.categories.length === 0) {
+        lines.push('categories: []');
+    } else {
+        lines.push('categories:');
+        for (const category of init.categories) {
+            lines.push(`  - ${formatYamlScalar(category)}`);
+        }
+    }
+    return ok(lines.join('\n'));
+};
+
+const serializeInitJson = (init: OutputInit): SerializeResult => {
+    const path = validateRequiredPath(init.path, 'path', 'Init');
+    if (!path.ok) {
+        return path;
+    }
+    if (!Array.isArray(init.categories)) {
+        return err({
+            code: 'INVALID_FIELD',
+            message: 'Categories must be an array.',
+            field: 'categories',
+        });
+    }
+    return ok(JSON.stringify({ path: path.value, categories: init.categories }));
+};
+
+const serializeInitToon = (init: OutputInit): SerializeResult => {
+    const path = validateRequiredPath(init.path, 'path', 'Init');
+    if (!path.ok) {
+        return path;
+    }
+    if (!Array.isArray(init.categories)) {
+        return err({
+            code: 'INVALID_FIELD',
+            message: 'Categories must be an array.',
+            field: 'categories',
+        });
+    }
+    try {
+        return ok(toonEncode({ path: path.value, categories: init.categories }, toonOptions));
+    } catch (error) {
+        return err({
+            code: 'INVALID_FORMAT',
+            message: `TOON encoding failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            field: 'toon_encoding',
+        });
+    }
+};
+
 const serializeYamlOutput = (payload: OutputPayload): Result<string, OutputSerializeError> => {
     switch (payload.kind) {
         case 'memory':
@@ -785,6 +853,8 @@ const serializeYamlOutput = (payload: OutputPayload): Result<string, OutputSeria
             return serializeStoreRegistryYaml(payload.value);
         case 'store-init':
             return serializeStoreInitYaml(payload.value);
+        case 'init':
+            return serializeInitYaml(payload.value);
     }
 };
 
@@ -800,6 +870,8 @@ const serializeJsonOutput = (payload: OutputPayload): Result<string, OutputSeria
             return serializeStoreRegistryJson(payload.value);
         case 'store-init':
             return serializeStoreInitJson(payload.value);
+        case 'init':
+            return serializeInitJson(payload.value);
     }
 };
 
@@ -815,6 +887,8 @@ const serializeToonOutput = (payload: OutputPayload): Result<string, OutputSeria
             return serializeStoreRegistryToon(payload.value);
         case 'store-init':
             return serializeStoreInitToon(payload.value);
+        case 'init':
+            return serializeInitToon(payload.value);
     }
 };
 
