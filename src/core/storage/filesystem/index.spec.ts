@@ -3,8 +3,8 @@ import * as fs from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { FilesystemStorageAdapter } from './filesystem.ts';
-import { parseCategoryIndex, serializeCategoryIndex } from '../index/parser.ts';
+import { FilesystemStorageAdapter } from './index.ts';
+import { parseIndex, serializeIndex } from '../../serialization.ts';
 
 describe('filesystem storage adapter', () => {
     let tempDir: string;
@@ -184,7 +184,7 @@ describe('CategoryStoragePort implementation', () => {
             subcategories: Array<{ path: string; memoryCount: number; description?: string }>;
         }
     ) => {
-        const serialized = serializeCategoryIndex(index);
+        const serialized = serializeIndex(index);
         if (!serialized.ok) throw new Error('Failed to serialize index');
         return adapter.writeIndexFile(path, serialized.value);
     };
@@ -260,7 +260,7 @@ describe('CategoryStoragePort implementation', () => {
         const indexResult = await adapter.readIndexFile('project');
         expect(indexResult.ok).toBe(true);
         if (indexResult.ok && indexResult.value) {
-            const parsed = parseCategoryIndex(indexResult.value);
+            const parsed = parseIndex(indexResult.value);
             expect(parsed.ok).toBe(true);
             if (parsed.ok) {
                 expect(parsed.value.subcategories[0]?.description).toBe('Test description');
@@ -287,7 +287,7 @@ describe('CategoryStoragePort implementation', () => {
         const indexResult = await adapter.readIndexFile('project');
         expect(indexResult.ok).toBe(true);
         if (indexResult.ok && indexResult.value) {
-            const parsed = parseCategoryIndex(indexResult.value);
+            const parsed = parseIndex(indexResult.value);
             expect(parsed.ok).toBe(true);
             if (parsed.ok) {
                 expect(parsed.value.subcategories[0]?.description).toBeUndefined();
@@ -315,7 +315,7 @@ describe('CategoryStoragePort implementation', () => {
         const indexResult = await adapter.readIndexFile('project');
         expect(indexResult.ok).toBe(true);
         if (indexResult.ok && indexResult.value) {
-            const parsed = parseCategoryIndex(indexResult.value);
+            const parsed = parseIndex(indexResult.value);
             expect(parsed.ok).toBe(true);
             if (parsed.ok) {
                 const entry = parsed.value.subcategories.find((s) => s.path === 'project/new');
@@ -348,7 +348,7 @@ describe('CategoryStoragePort implementation', () => {
         const indexResult = await adapter.readIndexFile('project');
         expect(indexResult.ok).toBe(true);
         if (indexResult.ok && indexResult.value) {
-            const parsed = parseCategoryIndex(indexResult.value);
+            const parsed = parseIndex(indexResult.value);
             expect(parsed.ok).toBe(true);
             if (parsed.ok) {
                 expect(parsed.value.subcategories).toHaveLength(1);
@@ -381,7 +381,7 @@ describe('CategoryStoragePort implementation', () => {
         const indexResult = await adapter.readIndexFile('');
         expect(indexResult.ok).toBe(true);
         if (indexResult.ok && indexResult.value) {
-            const parsed = parseCategoryIndex(indexResult.value);
+            const parsed = parseIndex(indexResult.value);
             expect(parsed.ok).toBe(true);
             if (parsed.ok) {
                 const projectEntry = parsed.value.subcategories.find((s) => s.path === 'project');
