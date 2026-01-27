@@ -47,7 +47,8 @@ const canAccess = async (path: string): Promise<Result<boolean, StoreResolutionE
     try {
         await access(path);
         return ok(true);
-    } catch (error) {
+    } 
+    catch (error) {
         if (isMissingPath(error)) {
             return ok(false);
         }
@@ -61,7 +62,7 @@ const canAccess = async (path: string): Promise<Result<boolean, StoreResolutionE
 };
 
 export const resolveStore = async (
-    options: StoreResolutionOptions
+    options: StoreResolutionOptions,
 ): Promise<ResolveStoreResult> => {
     const cwd = options.cwd ?? process.cwd();
     const localPath = resolveCortexDir(cwd);
@@ -87,7 +88,7 @@ export const resolveStore = async (
 
 const resolveGlobalStore = async (
     cwd: string,
-    globalStorePath: string
+    globalStorePath: string,
 ): Promise<Result<StoreResolution, StoreResolutionError>> => {
     const globalPath = isAbsolute(globalStorePath)
         ? globalStorePath
