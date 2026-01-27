@@ -20,8 +20,8 @@ import { resolve } from 'node:path';
 import type { Result } from '../../core/types.ts';
 import { parseMemoryFile } from '../../core/memory/index.ts';
 import { validateMemorySlugPath } from '../../core/memory/validation.ts';
-import { FilesystemStorageAdapter } from '../../core/storage/filesystem.ts';
-import { parseCategoryIndex } from '../../core/index/parser.ts';
+import { FilesystemStorageAdapter } from '../../core/storage/filesystem/index.ts';
+import { parseIndex } from '../../core/serialization.ts';
 import type { ServerConfig } from '../config.ts';
 
 // ---------------------------------------------------------------------------
@@ -376,7 +376,7 @@ const readCategoryListing = async (
     }
 
     // Parse the category index
-    const parsed = parseCategoryIndex(indexResult.value);
+    const parsed = parseIndex(indexResult.value);
     if (!parsed.ok) {
         return err(
             new McpError(
@@ -437,7 +437,7 @@ const readRootCategoryListing = async (
             continue;
         }
 
-        const parsed = parseCategoryIndex(indexResult.value);
+        const parsed = parseIndex(indexResult.value);
         if (!parsed.ok) {
             continue;
         }
@@ -509,7 +509,7 @@ const listResources = async (config: ServerConfig): Promise<ListResourcesResult>
             continue;
         }
 
-        const parsed = parseCategoryIndex(indexResult.value);
+        const parsed = parseIndex(indexResult.value);
         if (!parsed.ok) {
             continue;
         }
@@ -640,7 +640,7 @@ export const registerMemoryResources = (server: McpServer, config: ServerConfig)
                     // Read the parent category index
                     const indexResult = await adapter.readIndexFile(categoryPath);
                     if (indexResult.ok && indexResult.value) {
-                        const parsed = parseCategoryIndex(indexResult.value);
+                        const parsed = parseIndex(indexResult.value);
                         if (parsed.ok) {
                             // Add matching subcategories
                             for (const sub of parsed.value.subcategories) {

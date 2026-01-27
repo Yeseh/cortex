@@ -4,7 +4,7 @@
 
 import type { Result } from '../../core/types.ts';
 import type { StorageAdapterError } from '../../core/storage/adapter.ts';
-import { FilesystemStorageAdapter } from '../../core/storage/filesystem.ts';
+import { FilesystemStorageAdapter } from '../../core/storage/filesystem/index.ts';
 
 export interface ReindexCommandOptions {
     storeRoot: string;
@@ -28,7 +28,8 @@ const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
 const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 export const runReindexCommand = async (
-    options: ReindexCommandOptions): Promise<ReindexCommandResult> => {
+    options: ReindexCommandOptions
+): Promise<ReindexCommandResult> => {
     if (options.args.length > 0) {
         return err({
             code: 'INVALID_ARGUMENTS',

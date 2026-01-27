@@ -11,7 +11,7 @@ import { mkdir, writeFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import type { Result } from '../../core/types.ts';
-import { serializeCategoryIndex } from '../../core/index/parser.ts';
+import { serializeIndex } from '../../core/serialization.ts';
 import { serializeStoreRegistry } from '../../core/store/registry.ts';
 import type { OutputPayload, OutputInit } from '../output.ts';
 
@@ -64,7 +64,7 @@ const formatInit = (path: string, categories: readonly string[]): OutputInit => 
 const buildEmptyRootIndex = (
     subcategories: readonly string[]
 ): Result<string, InitCommandError> => {
-    const serialized = serializeCategoryIndex({
+    const serialized = serializeIndex({
         memories: [],
         subcategories: subcategories.map((name) => ({ path: name, memoryCount: 0 })),
     });
@@ -79,7 +79,7 @@ const buildEmptyRootIndex = (
 };
 
 const buildEmptyCategoryIndex = (): Result<string, InitCommandError> => {
-    const serialized = serializeCategoryIndex({
+    const serialized = serializeIndex({
         memories: [],
         subcategories: [],
     });

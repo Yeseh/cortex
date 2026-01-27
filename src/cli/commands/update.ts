@@ -10,7 +10,7 @@ import {
 } from '../../core/memory/index.ts';
 import { validateMemorySlugPath } from '../../core/memory/validation.ts';
 import type { StorageAdapterError } from '../../core/storage/adapter.ts';
-import { FilesystemStorageAdapter } from '../../core/storage/filesystem.ts';
+import { FilesystemStorageAdapter } from '../../core/storage/filesystem/index.ts';
 import {
     resolveMemoryContentInput,
     type MemoryContentInputError,

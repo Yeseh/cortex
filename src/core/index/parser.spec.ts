@@ -5,7 +5,7 @@ import { join } from 'node:path';
 
 import { defaultTokenizer } from '../tokens.ts';
 import { parseCategoryIndex, serializeCategoryIndex } from './parser.ts';
-import { FilesystemStorageAdapter } from '../storage/filesystem.ts';
+import { FilesystemStorageAdapter } from '../storage/filesystem/index.ts';
 import { runReindexCommand } from '../../cli/commands/reindex.ts';
 
 describe('category index parsing and serialization', () => {

@@ -21,7 +21,7 @@ import {
     deleteCategoryHandler,
 } from './tools.ts';
 import { addMemoryHandler, removeMemoryHandler } from '../memory/tools.ts';
-import { FilesystemStorageAdapter } from '../../core/storage/filesystem.ts';
+import { FilesystemStorageAdapter } from '../../core/storage/filesystem/index.ts';
 
 const createTestConfig = (dataPath: string): ServerConfig => ({
     dataPath,

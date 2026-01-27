@@ -8,7 +8,7 @@ import { ok, err } from '../../core/result.ts';
 import { serializeMemoryFile, type MemoryFileContents } from '../../core/memory/index.ts';
 import { validateMemorySlugPath } from '../../core/memory/validation.ts';
 import type { StorageAdapterError } from '../../core/storage/adapter.ts';
-import { FilesystemStorageAdapter } from '../../core/storage/filesystem.ts';
+import { FilesystemStorageAdapter } from '../../core/storage/filesystem/index.ts';
 
 import type { MemoryContentInputError } from '../input.ts';
 import { resolveMemoryContentInput } from '../input.ts';

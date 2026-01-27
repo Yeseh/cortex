@@ -9,8 +9,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import * as fs from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { FilesystemStorageAdapter } from '../src/core/storage/filesystem.ts';
-import { serializeMemoryFile, type MemoryFileContents } from '../src/core/memory/file.ts';
+import { FilesystemStorageAdapter } from '../src/core/storage/filesystem/index.ts';
+import { serializeMemoryFile, type MemoryFileContents } from '../src/core/memory/index.ts';
 
 /**
  * CLI runner that spawns cortex as a subprocess.

@@ -18,7 +18,7 @@ import {
     saveStoreRegistry,
     removeStoreRegistry,
 } from '../../core/store/registry.ts';
-import { serializeCategoryIndex } from '../../core/index/parser.ts';
+import { serializeIndex } from '../../core/serialization.ts';
 
 export interface StoreCommandOptions {
     args: string[];
@@ -186,7 +186,7 @@ const saveRegistry = async (
 };
 
 const buildEmptyRootIndex = (): Result<string, StoreCommandError> => {
-    const serialized = serializeCategoryIndex({ memories: [], subcategories: [] });
+    const serialized = serializeIndex({ memories: [], subcategories: [] });
     if (!serialized.ok) {
         return err({
             code: 'STORE_INIT_FAILED',

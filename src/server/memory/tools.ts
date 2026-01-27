@@ -20,8 +20,8 @@ import {
     type MemoryFileContents,
 } from '../../core/memory/index.ts';
 import { validateMemorySlugPath } from '../../core/memory/validation.ts';
-import { FilesystemStorageAdapter } from '../../core/storage/filesystem.ts';
-import { parseCategoryIndex } from '../../core/index/parser.ts';
+import { FilesystemStorageAdapter } from '../../core/storage/filesystem/index.ts';
+import { parseIndex } from '../../core/serialization.ts';
 import type { ServerConfig } from '../config.ts';
 import { getMemoryPath } from '../config.ts';
 
@@ -623,7 +623,7 @@ export const listMemoriesHandler = async (
             return;
         }
 
-        const parsed = parseCategoryIndex(indexResult.value);
+        const parsed = parseIndex(indexResult.value);
         if (!parsed.ok) {
             return;
         }
@@ -667,7 +667,7 @@ export const listMemoriesHandler = async (
             return;
         }
 
-        const parsed = parseCategoryIndex(indexResult.value);
+        const parsed = parseIndex(indexResult.value);
         if (!parsed.ok) {
             return;
         }
@@ -747,7 +747,7 @@ export const pruneMemoriesHandler = async (
             return;
         }
 
-        const parsed = parseCategoryIndex(indexResult.value);
+        const parsed = parseIndex(indexResult.value);
         if (!parsed.ok) {
             return;
         }

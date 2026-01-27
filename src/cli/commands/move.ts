@@ -4,7 +4,7 @@
 
 import type { Result } from '../../core/types.ts';
 import { validateMemorySlugPath } from '../../core/memory/validation.ts';
-import { FilesystemStorageAdapter } from '../../core/storage/filesystem.ts';
+import { FilesystemStorageAdapter } from '../../core/storage/filesystem/index.ts';
 
 export interface MoveCommandOptions {
     storeRoot: string;
@@ -101,7 +101,7 @@ export const runMoveCommand = async (options: MoveCommandOptions): Promise<MoveC
     const adapter = new FilesystemStorageAdapter({ rootDirectory: options.storeRoot });
     const moveResult = await adapter.moveMemoryFile(
         sourceIdentity.value.slugPath,
-        destinationIdentity.value.slugPath,
+        destinationIdentity.value.slugPath
     );
 
     if (!moveResult.ok) {

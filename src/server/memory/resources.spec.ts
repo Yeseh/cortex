@@ -20,9 +20,9 @@ import {
     MEMORY_URI_SCHEME,
     type CategoryListing,
 } from './resources.ts';
-import { FilesystemStorageAdapter } from '../../core/storage/filesystem.ts';
+import { FilesystemStorageAdapter } from '../../core/storage/filesystem/index.ts';
 import { serializeMemoryFile, type MemoryFileContents } from '../../core/memory/index.ts';
-import { serializeCategoryIndex } from '../../core/index/parser.ts';
+import { serializeIndex } from '../../core/serialization.ts';
 import type { CategoryIndex } from '../../core/index/types.ts';
 
 // Test configuration
@@ -73,7 +73,7 @@ const _createCategoryIndex = async (
     index: CategoryIndex
 ): Promise<void> => {
     const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
-    const serialized = serializeCategoryIndex(index);
+    const serialized = serializeIndex(index);
     if (!serialized.ok) {
         throw new Error(`Failed to serialize index: ${serialized.error.message}`);
     }

@@ -4,7 +4,7 @@
 
 import type { Result } from '../../core/types.ts';
 import { validateMemorySlugPath } from '../../core/memory/validation.ts';
-import { FilesystemStorageAdapter } from '../../core/storage/filesystem.ts';
+import { FilesystemStorageAdapter } from '../../core/storage/filesystem/index.ts';
 
 export interface RemoveCommandOptions {
     storeRoot: string;
@@ -64,7 +64,8 @@ const parseRemoveArgs = (args: string[]): Result<ParsedRemoveArgs, RemoveCommand
 };
 
 export const runRemoveCommand = async (
-    options: RemoveCommandOptions): Promise<RemoveCommandResult> => {
+    options: RemoveCommandOptions
+): Promise<RemoveCommandResult> => {
     const parsed = parseRemoveArgs(options.args);
     if (!parsed.ok) {
         return parsed;

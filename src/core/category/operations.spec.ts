@@ -4,8 +4,7 @@
 
 import { describe, expect, it, mock } from 'bun:test';
 import type { CategoryStorage, CategoryError } from './types.ts';
-import type { CategoryIndex } from '../index/types.ts';
-import type { Result } from '../types.ts';
+import {ok, err} from '../result.ts';
 import {
     isRootCategory,
     getParentPath,
@@ -14,10 +13,6 @@ import {
     setDescription,
     deleteCategory,
 } from './operations.ts';
-import { MAX_DESCRIPTION_LENGTH } from './types.ts';
-
-const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
-const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 // Mock storage port factory
 const createMockStorage = (overrides: Partial<CategoryStorage> = {}): CategoryStorage => ({

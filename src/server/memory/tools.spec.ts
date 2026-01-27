@@ -24,9 +24,9 @@ import {
     type ListMemoriesInput,
     type PruneMemoriesInput,
 } from './tools.ts';
-import { FilesystemStorageAdapter } from '../../core/storage/filesystem.ts';
+import { FilesystemStorageAdapter } from '../../core/storage/filesystem/index.ts';
 import { serializeMemoryFile, type MemoryFileContents } from '../../core/memory/index.ts';
-import { serializeCategoryIndex } from '../../core/index/parser.ts';
+import { serializeIndex } from '../../core/serialization.ts';
 
 // Test configuration
 const createTestConfig = (dataPath: string): ServerConfig => ({
@@ -615,7 +615,7 @@ describe('list_memories tool', () => {
         const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
 
         // Write an index with a described subcategory
-        const indexContent = serializeCategoryIndex({
+        const indexContent = serializeIndex({
             memories: [],
             subcategories: [
                 { path: 'project/cortex', memoryCount: 0, description: 'Cortex memory system' },

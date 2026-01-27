@@ -3,7 +3,7 @@ import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
-import { parseCategoryIndex } from '../../core/index/parser.ts';
+import { parseIndex } from '../../core/serialization.ts';
 import { runStoreCommand } from './store.ts';
 import { parseStoreRegistry, saveStoreRegistry } from '../../core/store/registry.ts';
 
@@ -175,7 +175,7 @@ describe('store CLI commands', () => {
 
         const indexPath = join(expectedRoot, 'index.yaml');
         const indexContents = await readFile(indexPath, 'utf8');
-        const parsedIndex = parseCategoryIndex(indexContents);
+        const parsedIndex = parseIndex(indexContents);
         expect(parsedIndex.ok).toBe(true);
         if (parsedIndex.ok) {
             expect(parsedIndex.value).toEqual({ memories: [], subcategories: [] });
@@ -201,7 +201,7 @@ describe('store CLI commands', () => {
         const indexPath = join(expectedRoot, 'index.yaml');
         await expect(access(configPath)).resolves.toBeNull();
         const indexContents = await readFile(indexPath, 'utf8');
-        const parsedIndex = parseCategoryIndex(indexContents);
+        const parsedIndex = parseIndex(indexContents);
         expect(parsedIndex.ok).toBe(true);
     });
 
