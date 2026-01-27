@@ -1,0 +1,18 @@
+memories: []
+
+subcategories:
+  -
+    path: global/human
+    memory_count: 1
+  -
+    path: human
+    memory_count: 2
+  -
+    path: openspec
+    memory_count: 1
+  -
+    path: project
+    memory_count: 0
+  -
+    path: projects
+    memory_count: 0

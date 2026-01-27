@@ -1,0 +1,36 @@
+memories:
+  -
+    path: projects/cortex/standards/barrel-exports
+    token_estimate: 229
+  -
+    path: projects/cortex/standards/core-module-architecture
+    token_estimate: 573
+  -
+    path: projects/cortex/standards/documentation
+    token_estimate: 326
+  -
+    path: projects/cortex/standards/file-organization
+    token_estimate: 271
+  -
+    path: projects/cortex/standards/function-signatures
+    token_estimate: 155
+  -
+    path: projects/cortex/standards/module-checklist
+    token_estimate: 221
+  -
+    path: projects/cortex/standards/operation-results
+    token_estimate: 173
+  -
+    path: projects/cortex/standards/result-types
+    token_estimate: 254
+  -
+    path: projects/cortex/standards/self-documenting-errors
+    token_estimate: 303
+  -
+    path: projects/cortex/standards/testing
+    token_estimate: 309
+  -
+    path: projects/cortex/standards/types-vs-interfaces
+    token_estimate: 377
+
+subcategories: []
