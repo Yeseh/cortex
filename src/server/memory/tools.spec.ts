@@ -25,7 +25,7 @@ import {
     type PruneMemoriesInput,
 } from './tools.ts';
 import { FilesystemStorageAdapter } from '../../core/storage/filesystem.ts';
-import { serializeMemoryFile, type MemoryFileContents } from '../../core/memory/file.ts';
+import { serializeMemoryFile, type MemoryFileContents } from '../../core/memory/index.ts';
 import { serializeCategoryIndex } from '../../core/index/parser.ts';
 
 // Test configuration

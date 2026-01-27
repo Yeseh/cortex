@@ -7,7 +7,7 @@ import {
     parseMemoryFile,
     serializeMemoryFile,
     type MemoryFileContents,
-} from '../../core/memory/file.ts';
+} from '../../core/memory/index.ts';
 import { validateMemorySlugPath } from '../../core/memory/validation.ts';
 import type { StorageAdapterError } from '../../core/storage/adapter.ts';
 import { FilesystemStorageAdapter } from '../../core/storage/filesystem.ts';
@@ -84,7 +84,7 @@ const parseFlagValue = (
     args: string[],
     index: number,
     flag: string,
-    field: UpdateCommandError['field'],
+    field: UpdateCommandError['field']
 ): Result<{ value: string; nextIndex: number }, UpdateCommandError> => {
     const candidate = args[index + 1];
     if (candidate === undefined) {
@@ -101,11 +101,9 @@ const readUpdateFlag = (
     args: string[],
     index: number,
     flag: string,
-    field: UpdateCommandError['field'],
+    field: UpdateCommandError['field']
 ): Result<{ value: string; nextIndex: number }, UpdateCommandError> =>
-    parseFlagValue(
-        args, index, flag, field,
-    );
+    parseFlagValue(args, index, flag, field);
 
 const parseExpiresAtValue = (raw: string): Result<Date, UpdateCommandError> => {
     const parsed = new Date(raw);
@@ -121,7 +119,7 @@ const parseExpiresAtValue = (raw: string): Result<Date, UpdateCommandError> => {
 
 const hasUpdatesRequested = (
     parsedArgs: ParsedUpdateArgs,
-    contentInput: MemoryContentInputResult,
+    contentInput: MemoryContentInputResult
 ): boolean => {
     const hasContentUpdate = contentInput.content !== null;
     const hasTagsUpdate = parsedArgs.tags !== undefined;
@@ -142,23 +140,17 @@ const applyFlagValue = (
     index: number,
     flag: string,
     field: UpdateCommandError['field'],
-    handler: FlagHandler,
+    handler: FlagHandler
 ): Result<UpdateArgResult, UpdateCommandError> => {
-    const parsed = readUpdateFlag(
-        args, index, flag, field,
-    );
+    const parsed = readUpdateFlag(args, index, flag, field);
     if (!parsed.ok) {
         return parsed;
     }
-    handler(
-        state, parsed.value.value,
-    );
+    handler(state, parsed.value.value);
     return ok({ kind: 'set', nextIndex: parsed.value.nextIndex });
 };
 
-const handleTagsFlag = (
-    state: ParsedUpdateArgs, raw: string,
-): Result<void, UpdateCommandError> => {
+const handleTagsFlag = (state: ParsedUpdateArgs, raw: string): Result<void, UpdateCommandError> => {
     const parsedTags = parseTagsValue(raw);
     if (!parsedTags.ok) {
         return parsedTags;
@@ -169,7 +161,7 @@ const handleTagsFlag = (
 
 const handleExpiresFlag = (
     state: ParsedUpdateArgs,
-    raw: string,
+    raw: string
 ): Result<void, UpdateCommandError> => {
     const parsedExpires = parseExpiresAtValue(raw);
     if (!parsedExpires.ok) {
@@ -182,63 +174,39 @@ const handleExpiresFlag = (
 type FlagHandlerFn = (
     state: ParsedUpdateArgs,
     args: string[],
-    index: number,
+    index: number
 ) => Result<UpdateArgResult, UpdateCommandError>;
 
 const updateFlagHandlers: Record<string, FlagHandlerFn> = {
-    '--content': (
-        state, args, index,
-    ) =>
-        applyFlagValue(
-            state, args, index, '--content', 'content', (
-                target, next,
-            ) => {
-                target.content = next;
-            },
-        ),
-    '--file': (
-        state, args, index,
-    ) =>
-        applyFlagValue(
-            state, args, index, '--file', 'file', (
-                target, next,
-            ) => {
-                target.filePath = next;
-            },
-        ),
+    '--content': (state, args, index) =>
+        applyFlagValue(state, args, index, '--content', 'content', (target, next) => {
+            target.content = next;
+        }),
+    '--file': (state, args, index) =>
+        applyFlagValue(state, args, index, '--file', 'file', (target, next) => {
+            target.filePath = next;
+        }),
     '--stdin': (state) => {
         state.stdinRequested = true;
         return ok({ kind: 'skip' });
     },
-    '--tags': (
-        state, args, index,
-    ) => {
-        const parsed = readUpdateFlag(
-            args, index, '--tags', 'tags',
-        );
+    '--tags': (state, args, index) => {
+        const parsed = readUpdateFlag(args, index, '--tags', 'tags');
         if (!parsed.ok) {
             return parsed;
         }
-        const handled = handleTagsFlag(
-            state, parsed.value.value,
-        );
+        const handled = handleTagsFlag(state, parsed.value.value);
         if (!handled.ok) {
             return handled;
         }
         return ok({ kind: 'set', nextIndex: parsed.value.nextIndex });
     },
-    '--expires-at': (
-        state, args, index,
-    ) => {
-        const parsed = readUpdateFlag(
-            args, index, '--expires-at', 'expires_at',
-        );
+    '--expires-at': (state, args, index) => {
+        const parsed = readUpdateFlag(args, index, '--expires-at', 'expires_at');
         if (!parsed.ok) {
             return parsed;
         }
-        const handled = handleExpiresFlag(
-            state, parsed.value.value,
-        );
+        const handled = handleExpiresFlag(state, parsed.value.value);
         if (!handled.ok) {
             return handled;
         }
@@ -254,13 +222,11 @@ const applyUpdateArg = (
     state: ParsedUpdateArgs,
     args: string[],
     index: number,
-    value: string,
+    value: string
 ): Result<UpdateArgResult, UpdateCommandError> => {
     const handler = updateFlagHandlers[value];
     if (handler) {
-        return handler(
-            state, args, index,
-        );
+        return handler(state, args, index);
     }
     if (value.startsWith('-')) {
         return err({
@@ -280,7 +246,7 @@ const applyUpdateArg = (
 
 const loadMemoryForUpdate = async (
     adapter: FilesystemStorageAdapter,
-    slugPath: string,
+    slugPath: string
 ): Promise<Result<MemoryFileContents, UpdateCommandError>> => {
     const readResult = await adapter.readMemoryFile(slugPath);
     if (!readResult.ok) {
@@ -311,7 +277,7 @@ const buildUpdatedMemory = (
     parsedMemory: MemoryFileContents,
     parsedArgs: ParsedUpdateArgs,
     contentInput: MemoryContentInputResult,
-    now?: Date,
+    now?: Date
 ): MemoryFileContents => ({
     frontmatter: {
         ...parsedMemory.frontmatter,
@@ -327,7 +293,7 @@ const buildUpdatedMemory = (
 const persistUpdatedMemory = async (
     adapter: FilesystemStorageAdapter,
     slugPath: string,
-    contents: MemoryFileContents,
+    contents: MemoryFileContents
 ): Promise<Result<void, UpdateCommandError>> => {
     const serialized = serializeMemoryFile(contents);
     if (!serialized.ok) {
@@ -337,11 +303,9 @@ const persistUpdatedMemory = async (
             cause: serialized.error,
         });
     }
-    const writeResult = await adapter.writeMemoryFile(
-        slugPath, serialized.value, {
-            allowIndexUpdate: false,
-        },
-    );
+    const writeResult = await adapter.writeMemoryFile(slugPath, serialized.value, {
+        allowIndexUpdate: false,
+    });
     if (!writeResult.ok) {
         return err({
             code: 'WRITE_FAILED',
@@ -364,9 +328,7 @@ const parseUpdateArgs = (args: string[]): Result<ParsedUpdateArgs, UpdateCommand
         if (!value) {
             continue;
         }
-        const applied = applyUpdateArg(
-            state, args, index, value,
-        );
+        const applied = applyUpdateArg(state, args, index, value);
         if (!applied.ok) {
             return applied;
         }
@@ -394,7 +356,8 @@ const parseUpdateArgs = (args: string[]): Result<ParsedUpdateArgs, UpdateCommand
 };
 
 export const runUpdateCommand = async (
-    options: UpdateCommandOptions): Promise<UpdateCommandResult> => {
+    options: UpdateCommandOptions
+): Promise<UpdateCommandResult> => {
     const parsedArgs = parseUpdateArgs(options.args);
     if (!parsedArgs.ok) {
         return parsedArgs;
@@ -425,9 +388,7 @@ export const runUpdateCommand = async (
         });
     }
 
-    const hasUpdates = hasUpdatesRequested(
-        parsedArgs.value, contentInput.value,
-    );
+    const hasUpdates = hasUpdatesRequested(parsedArgs.value, contentInput.value);
 
     if (!hasUpdates) {
         return err({
@@ -437,9 +398,7 @@ export const runUpdateCommand = async (
     }
 
     const adapter = new FilesystemStorageAdapter({ rootDirectory: options.storeRoot });
-    const parsedMemory = await loadMemoryForUpdate(
-        adapter, identity.value.slugPath,
-    );
+    const parsedMemory = await loadMemoryForUpdate(adapter, identity.value.slugPath);
     if (!parsedMemory.ok) {
         return parsedMemory;
     }
@@ -448,11 +407,9 @@ export const runUpdateCommand = async (
         parsedMemory.value,
         parsedArgs.value,
         contentInput.value,
-        options.now,
+        options.now
     );
-    const persisted = await persistUpdatedMemory(
-        adapter, identity.value.slugPath, nextMemory,
-    );
+    const persisted = await persistUpdatedMemory(adapter, identity.value.slugPath, nextMemory);
     if (!persisted.ok) {
         return persisted;
     }

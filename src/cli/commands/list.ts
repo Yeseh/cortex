@@ -5,12 +5,12 @@
 import type { Result } from '../../core/types.ts';
 import type { CategoryIndex } from '../../core/index/types.ts';
 import { parseCategoryIndex } from '../../core/index/parser.ts';
-import { parseMemoryFile } from '../../core/memory/file.ts';
+import { parseMemoryFile } from '../../core/memory/index.ts';
 import type { StorageAdapterError } from '../../core/storage/adapter.ts';
 import { FilesystemStorageAdapter } from '../../core/storage/filesystem.ts';
 import type { OutputFormat } from '../output.ts';
 import { toonOptions } from '../output.ts';
-import { encode as toonEncode } from '../toon.ts';
+import { encode as toonEncode } from '@toon-format/toon';
 
 export interface ListCommandOptions {
     storeRoot: string;

@@ -5,7 +5,7 @@
 import type { Result } from '../../core/types.ts';
 import type { CategoryIndex } from '../../core/index/types.ts';
 import { parseCategoryIndex } from '../../core/index/parser.ts';
-import { parseMemoryFile } from '../../core/memory/file.ts';
+import { parseMemoryFile } from '../../core/memory/index.ts';
 import type { StorageAdapterError } from '../../core/storage/adapter.ts';
 import { FilesystemStorageAdapter } from '../../core/storage/filesystem.ts';
 
@@ -66,9 +66,7 @@ const parsePruneArgs = (args: string[]): Result<ParsedPruneArgs, PruneCommandErr
     return ok({ dryRun });
 };
 
-const isExpired = (
-    expiresAt: Date | undefined, now: Date,
-): boolean => {
+const isExpired = (expiresAt: Date | undefined, now: Date): boolean => {
     if (!expiresAt) {
         return false;
     }
@@ -77,7 +75,7 @@ const isExpired = (
 
 const loadCategoryIndex = async (
     adapter: FilesystemStorageAdapter,
-    categoryPath: string,
+    categoryPath: string
 ): Promise<Result<CategoryIndex | null, PruneCommandError>> => {
     const indexContents = await adapter.readIndexFile(categoryPath);
     if (!indexContents.ok) {
@@ -104,7 +102,7 @@ const loadCategoryIndex = async (
 const checkMemoryExpiry = async (
     adapter: FilesystemStorageAdapter,
     slugPath: string,
-    now: Date,
+    now: Date
 ): Promise<Result<{ expired: boolean; expiresAt?: Date }, PruneCommandError>> => {
     const contents = await adapter.readMemoryFile(slugPath);
     if (!contents.ok) {
@@ -126,25 +124,21 @@ const checkMemoryExpiry = async (
         });
     }
     const expiresAt = parsed.value.frontmatter.expiresAt;
-    return ok({ expired: isExpired(
-        expiresAt, now,
-    ), expiresAt });
+    return ok({ expired: isExpired(expiresAt, now), expiresAt });
 };
 
 const collectExpiredFromCategory = async (
     adapter: FilesystemStorageAdapter,
     categoryPath: string,
     now: Date,
-    visited: Set<string>,
+    visited: Set<string>
 ): Promise<Result<PrunedMemoryEntry[], PruneCommandError>> => {
     if (visited.has(categoryPath)) {
         return ok([]);
     }
     visited.add(categoryPath);
 
-    const indexResult = await loadCategoryIndex(
-        adapter, categoryPath,
-    );
+    const indexResult = await loadCategoryIndex(adapter, categoryPath);
     if (!indexResult.ok) {
         return indexResult;
     }
@@ -155,9 +149,7 @@ const collectExpiredFromCategory = async (
     const entries: PrunedMemoryEntry[] = [];
 
     for (const memory of indexResult.value.memories) {
-        const expiryResult = await checkMemoryExpiry(
-            adapter, memory.path, now,
-        );
+        const expiryResult = await checkMemoryExpiry(adapter, memory.path, now);
         if (!expiryResult.ok) {
             return expiryResult;
         }
@@ -170,9 +162,7 @@ const collectExpiredFromCategory = async (
     }
 
     for (const subcategory of indexResult.value.subcategories) {
-        const subResult = await collectExpiredFromCategory(
-            adapter, subcategory.path, now, visited,
-        );
+        const subResult = await collectExpiredFromCategory(adapter, subcategory.path, now, visited);
         if (!subResult.ok) {
             return subResult;
         }
@@ -184,21 +174,14 @@ const collectExpiredFromCategory = async (
 
 const collectAllExpired = async (
     adapter: FilesystemStorageAdapter,
-    now: Date,
+    now: Date
 ): Promise<Result<PrunedMemoryEntry[], PruneCommandError>> => {
-    const rootCategories = [
-        'human',
-        'persona',
-        'project',
-        'domain',
-    ];
+    const rootCategories = ['human', 'persona', 'project', 'domain'];
     const entries: PrunedMemoryEntry[] = [];
     const visited = new Set<string>();
 
     for (const category of rootCategories) {
-        const result = await collectExpiredFromCategory(
-            adapter, category, now, visited,
-        );
+        const result = await collectExpiredFromCategory(adapter, category, now, visited);
         if (!result.ok) {
             return result;
         }
@@ -210,7 +193,7 @@ const collectAllExpired = async (
 
 const deleteExpiredMemories = async (
     adapter: FilesystemStorageAdapter,
-    entries: PrunedMemoryEntry[],
+    entries: PrunedMemoryEntry[]
 ): Promise<Result<void, PruneCommandError>> => {
     for (const entry of entries) {
         const removeResult = await adapter.removeMemoryFile(entry.path);
@@ -226,7 +209,8 @@ const deleteExpiredMemories = async (
 };
 
 export const runPruneCommand = async (
-    options: PruneCommandOptions): Promise<PruneCommandResult> => {
+    options: PruneCommandOptions
+): Promise<PruneCommandResult> => {
     const parsed = parsePruneArgs(options.args);
     if (!parsed.ok) {
         return parsed;
@@ -235,9 +219,7 @@ export const runPruneCommand = async (
     const now = options.now ?? new Date();
     const adapter = new FilesystemStorageAdapter({ rootDirectory: options.storeRoot });
 
-    const expiredResult = await collectAllExpired(
-        adapter, now,
-    );
+    const expiredResult = await collectAllExpired(adapter, now);
     if (!expiredResult.ok) {
         return expiredResult;
     }
@@ -259,9 +241,7 @@ export const runPruneCommand = async (
         });
     }
 
-    const deleteResult = await deleteExpiredMemories(
-        adapter, pruned,
-    );
+    const deleteResult = await deleteExpiredMemories(adapter, pruned);
     if (!deleteResult.ok) {
         return deleteResult;
     }

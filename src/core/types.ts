@@ -20,17 +20,3 @@ export interface MemoryIdentity {
     categories: MemoryCategoryPath;
     slug: MemorySlug;
 }
-
-/**
- * Metadata attached to memory entries
- */
-export interface MemoryMetadata {
-    /** Source of the memory (e.g., "user", "system", "tool") */
-    source?: string;
-    /** Tags for categorization */
-    tags?: string[];
-    /** Optional expiry for the memory */
-    expiresAt?: Date;
-    /** Custom key-value pairs */
-    [key: string]: unknown;
-}

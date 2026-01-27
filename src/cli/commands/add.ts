@@ -5,7 +5,7 @@
 import type { Result } from '../../core/result.ts';
 import { ok, err } from '../../core/result.ts';
 
-import { serializeMemoryFile, type MemoryFileContents } from '../../core/memory/file.ts';
+import { serializeMemoryFile, type MemoryFileContents } from '../../core/memory/index.ts';
 import { validateMemorySlugPath } from '../../core/memory/validation.ts';
 import type { StorageAdapterError } from '../../core/storage/adapter.ts';
 import { FilesystemStorageAdapter } from '../../core/storage/filesystem.ts';
@@ -37,7 +37,6 @@ export interface AddCommandError {
 }
 
 type AddCommandResult = Result<AddCommandOutput, AddCommandError>;
-
 
 interface ParsedAddArgs {
     slugPath: string;
@@ -85,7 +84,7 @@ const parseFlagValue = (
     args: string[],
     index: number,
     flag: string,
-    field: AddCommandError['field'],
+    field: AddCommandError['field']
 ): Result<{ value: string; nextIndex: number }, AddCommandError> => {
     const candidate = args[index + 1];
     if (candidate === undefined) {
@@ -108,53 +107,33 @@ const applyFlagValue = (
     index: number,
     flag: string,
     field: AddCommandError['field'],
-    handler: FlagHandler,
+    handler: FlagHandler
 ): Result<AddArgResult, AddCommandError> => {
-    const parsed = parseFlagValue(
-        args, index, flag, field,
-    );
+    const parsed = parseFlagValue(args, index, flag, field);
     if (!parsed.ok) {
         return parsed;
     }
-    handler(
-        state, parsed.value.value,
-    );
+    handler(state, parsed.value.value);
     return ok({ kind: 'set', nextIndex: parsed.value.nextIndex });
 };
 
 type FlagHandlerFn = (
     state: ParsedAddArgs,
     args: string[],
-    index: number,
+    index: number
 ) => Result<AddArgResult, AddCommandError>;
 
 const addFlagHandlers: Record<string, FlagHandlerFn> = {
-    '--content': (
-        state, args, index,
-    ) =>
-        applyFlagValue(
-            state, args, index, '--content', 'content', (
-                target, next,
-            ) => {
-                target.content = next;
-            },
-        ),
-    '--file': (
-        state, args, index,
-    ) =>
-        applyFlagValue(
-            state, args, index, '--file', 'file', (
-                target, next,
-            ) => {
-                target.filePath = next;
-            },
-        ),
-    '--tags': (
-        state, args, index,
-    ) => {
-        const parsed = parseFlagValue(
-            args, index, '--tags', 'tags',
-        );
+    '--content': (state, args, index) =>
+        applyFlagValue(state, args, index, '--content', 'content', (target, next) => {
+            target.content = next;
+        }),
+    '--file': (state, args, index) =>
+        applyFlagValue(state, args, index, '--file', 'file', (target, next) => {
+            target.filePath = next;
+        }),
+    '--tags': (state, args, index) => {
+        const parsed = parseFlagValue(args, index, '--tags', 'tags');
         if (!parsed.ok) {
             return parsed;
         }
@@ -165,12 +144,8 @@ const addFlagHandlers: Record<string, FlagHandlerFn> = {
         state.tags = tagsResult.value;
         return ok({ kind: 'set', nextIndex: parsed.value.nextIndex });
     },
-    '--expires-at': (
-        state, args, index,
-    ) => {
-        const parsed = parseFlagValue(
-            args, index, '--expires-at', 'expires_at',
-        );
+    '--expires-at': (state, args, index) => {
+        const parsed = parseFlagValue(args, index, '--expires-at', 'expires_at');
         if (!parsed.ok) {
             return parsed;
         }
@@ -187,13 +162,11 @@ const applyAddArg = (
     state: ParsedAddArgs,
     args: string[],
     index: number,
-    value: string,
+    value: string
 ): Result<AddArgResult, AddCommandError> => {
     const handler = addFlagHandlers[value];
     if (handler) {
-        return handler(
-            state, args, index,
-        );
+        return handler(state, args, index);
     }
     if (value.startsWith('-')) {
         return err({
@@ -219,9 +192,7 @@ const parseAddArgs = (args: string[]): Result<ParsedAddArgs, AddCommandError> =>
         if (!value) {
             continue;
         }
-        const applied = applyAddArg(
-            state, args, index, value,
-        );
+        const applied = applyAddArg(state, args, index, value);
         if (!applied.ok) {
             return applied;
         }
@@ -291,12 +262,10 @@ export const runAddCommand = async (options: AddCommandOptions): Promise<AddComm
     }
 
     const adapter = new FilesystemStorageAdapter({ rootDirectory: options.storeRoot });
-    const persisted = await adapter.writeMemoryFile(
-        identity.value.slugPath, serialized.value, {
-            allowIndexCreate: true,
-            allowIndexUpdate: true,
-        },
-    );
+    const persisted = await adapter.writeMemoryFile(identity.value.slugPath, serialized.value, {
+        allowIndexCreate: true,
+        allowIndexUpdate: true,
+    });
     if (!persisted.ok) {
         return err({
             code: 'WRITE_FAILED',

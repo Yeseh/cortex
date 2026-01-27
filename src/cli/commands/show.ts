@@ -4,7 +4,7 @@
 
 import type { Result } from '../../core/types.ts';
 import { defaultTokenizer } from '../../core/tokens.ts';
-import { parseMemoryFile } from '../../core/memory/file.ts';
+import { parseMemoryFile } from '../../core/memory/index.ts';
 import { validateMemorySlugPath } from '../../core/memory/validation.ts';
 import { FilesystemStorageAdapter } from '../../core/storage/filesystem.ts';
 import type { OutputPayload, OutputMemory, OutputFormat } from '../output.ts';

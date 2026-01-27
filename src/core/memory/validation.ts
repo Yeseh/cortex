@@ -1,8 +1,14 @@
 /**
- * Validation helpers for memory identity and categories
+ * Validation helpers for memory identity and categories.
+ *
+ * This module provides functions for validating memory paths and
+ * category structures to ensure they conform to the expected format.
+ *
+ * @module core/memory/validation
  */
 
-import type { MemoryCategoryPath, MemoryIdentity, MemorySlug, Result } from '../types.ts';
+import type { MemoryCategoryPath, MemoryIdentity, MemorySlug } from '../types.ts';
+import { ok, err, type Result } from '../result.ts';
 import { buildMemoryIdentity, isValidMemorySlug, normalizeSlugSegments } from '../slug.ts';
 
 export interface MemoryPathValidationError {
@@ -14,9 +20,23 @@ export interface MemoryPathValidationError {
 type CategoryPathResult = Result<MemoryCategoryPath, MemoryPathValidationError>;
 type IdentityResult = Result<MemoryIdentity, MemoryPathValidationError>;
 
-export const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
-export const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
-
+/**
+ * Validates that category segments form a valid path.
+ *
+ * Category paths must have at least one segment, and each segment
+ * must be a valid lowercase slug (letters, numbers, hyphens).
+ *
+ * @param categories - Array of category segments to validate
+ * @returns Result containing the validated path or a validation error
+ *
+ * @example
+ * ```typescript
+ * const result = validateCategoryPath(['project', 'cortex']);
+ * if (result.ok) {
+ *   console.log(result.value); // ['project', 'cortex']
+ * }
+ * ```
+ */
 export const validateCategoryPath = (categories: string[]): CategoryPathResult => {
     const normalized = normalizeSlugSegments(categories);
 
@@ -40,6 +60,25 @@ export const validateCategoryPath = (categories: string[]): CategoryPathResult =
     return ok(normalized as MemoryCategoryPath);
 };
 
+/**
+ * Validates and parses a memory slug path into its identity components.
+ *
+ * A memory slug path must contain at least two segments separated by `/`:
+ * one or more category segments followed by the memory slug. All segments
+ * must be valid lowercase slugs (letters, numbers, hyphens).
+ *
+ * @param slugPath - The full path string (e.g., "project/cortex/config")
+ * @returns Result containing the validated MemoryIdentity or a validation error
+ *
+ * @example
+ * ```typescript
+ * const result = validateMemorySlugPath('project/cortex/config');
+ * if (result.ok) {
+ *   console.log(result.value.categories); // ['project', 'cortex']
+ *   console.log(result.value.slug);       // 'config'
+ * }
+ * ```
+ */
 export const validateMemorySlugPath = (slugPath: string): IdentityResult => {
     const segments = normalizeSlugSegments(slugPath.split('/'));
 
@@ -57,9 +96,7 @@ export const validateMemorySlugPath = (slugPath: string): IdentityResult => {
             message: 'Memory slug path must include at least two segments.',
         });
     }
-    const categories = segments.slice(
-        0, -1,
-    );
+    const categories = segments.slice(0, -1);
     const categoryResult = validateCategoryPath(categories);
 
     if (!categoryResult.ok) {
@@ -74,7 +111,5 @@ export const validateMemorySlugPath = (slugPath: string): IdentityResult => {
         });
     }
 
-    return ok(buildMemoryIdentity(
-        categoryResult.value, slug as MemorySlug,
-    ));
+    return ok(buildMemoryIdentity(categoryResult.value, slug as MemorySlug));
 };
