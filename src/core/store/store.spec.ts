@@ -4,147 +4,109 @@ import { resolveStore } from './store.ts';
 
 const access = mock(async (_path: string) => undefined);
 
-mock.module(
-    'node:fs/promises', () => ({ access }),
-);
+mock.module('node:fs/promises', () => ({ access }));
 
-describe(
-    'store resolution', () => {
-        beforeEach(() => {
-            access.mockReset(); 
+describe('store resolution', () => {
+    beforeEach(() => {
+        access.mockReset();
+    });
+
+    it('should prefer a local store when available', async () => {
+        access.mockResolvedValueOnce(undefined);
+
+        const result = await resolveStore({
+            cwd: '/work/project',
+            globalStorePath: '/global/.cortex',
         });
 
-        it(
-            'should prefer a local store when available', async () => {
-                access.mockResolvedValueOnce(undefined);
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value.root).toBe('/work/project/.cortex/memory');
+            expect(result.value.scope).toBe('local');
+        }
+    });
 
-                const result = await resolveStore({
-                    cwd: 'C:/work/project',
-                    globalStorePath: 'C:/global/.cortex',
-                });
+    it('should fall back to the global store when local is missing', async () => {
+        const missing = Object.assign(new Error('missing'), { code: 'ENOENT' });
+        access.mockRejectedValueOnce(missing);
+        access.mockResolvedValueOnce(undefined);
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
-                    expect(result.value.root.replace(
-                        /\\/g, '/',
-                    )).toBe('C:/work/project/.cortex');
-                    expect(result.value.scope).toBe('local');
-                }
-            },
-        );
+        const result = await resolveStore({
+            cwd: '/work/missing',
+            globalStorePath: '/global/.cortex',
+        });
 
-        it(
-            'should fall back to the global store when local is missing', async () => {
-                const missing = Object.assign(
-                    new Error('missing'), { code: 'ENOENT' },
-                );
-                access.mockRejectedValueOnce(missing);
-                access.mockResolvedValueOnce(undefined);
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value.root).toBe('/global/.cortex');
+            expect(result.value.scope).toBe('global');
+        }
+    });
 
-                const result = await resolveStore({
-                    cwd: 'C:/work/missing',
-                    globalStorePath: 'C:/global/.cortex',
-                });
+    it('should resolve relative global paths against cwd', async () => {
+        const missing = Object.assign(new Error('missing'), { code: 'ENOENT' });
+        access.mockRejectedValueOnce(missing);
+        access.mockResolvedValueOnce(undefined);
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
-                    expect(result.value.root.replace(
-                        /\\/g, '/',
-                    )).toBe('C:/global/.cortex');
-                    expect(result.value.scope).toBe('global');
-                }
-            },
-        );
+        const result = await resolveStore({
+            cwd: '/work/missing',
+            globalStorePath: 'stores/.cortex',
+        });
 
-        it(
-            'should resolve relative global paths against cwd', async () => {
-                const missing = Object.assign(
-                    new Error('missing'), { code: 'ENOENT' },
-                );
-                access.mockRejectedValueOnce(missing);
-                access.mockResolvedValueOnce(undefined);
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value.root).toBe('/work/missing/stores/.cortex');
+            expect(result.value.scope).toBe('global');
+        }
+    });
 
-                const result = await resolveStore({
-                    cwd: 'C:/work/missing',
-                    globalStorePath: 'stores/.cortex',
-                });
+    it('should reject missing local store when strict_local is enabled', async () => {
+        const missing = Object.assign(new Error('missing'), { code: 'ENOENT' });
+        access.mockRejectedValueOnce(missing);
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
-                    expect(result.value.root.replace(
-                        /\\/g, '/',
-                    )).toBe('C:/work/missing/stores/.cortex');
-                    expect(result.value.scope).toBe('global');
-                }
-            },
-        );
+        const result = await resolveStore({
+            cwd: '/work/missing',
+            globalStorePath: '/global/.cortex',
+            config: { strict_local: true },
+        });
 
-        it(
-            'should reject missing local store when strict_local is enabled', async () => {
-                const missing = Object.assign(
-                    new Error('missing'), { code: 'ENOENT' },
-                );
-                access.mockRejectedValueOnce(missing);
+        expect(result.ok).toBe(false);
+        if (!result.ok) {
+            expect(result.error.code).toBe('LOCAL_STORE_MISSING');
+            expect(result.error.path).toBe('/work/missing/.cortex/memory');
+        }
+    });
 
-                const result = await resolveStore({
-                    cwd: 'C:/work/missing',
-                    globalStorePath: 'C:/global/.cortex',
-                    config: { strict_local: true },
-                });
+    it('should reject missing global store when local is absent', async () => {
+        const missing = Object.assign(new Error('missing'), { code: 'ENOENT' });
+        access.mockRejectedValueOnce(missing);
+        access.mockRejectedValueOnce(missing);
 
-                expect(result.ok).toBe(false);
-                if (!result.ok) {
-                    expect(result.error.code).toBe('LOCAL_STORE_MISSING');
-                    expect(result.error.path?.replace(
-                        /\\/g, '/',
-                    )).toBe('C:/work/missing/.cortex');
-                }
-            },
-        );
+        const result = await resolveStore({
+            cwd: '/work/missing',
+            globalStorePath: '/global/missing',
+        });
 
-        it(
-            'should reject missing global store when local is absent', async () => {
-                const missing = Object.assign(
-                    new Error('missing'), { code: 'ENOENT' },
-                );
-                access.mockRejectedValueOnce(missing);
-                access.mockRejectedValueOnce(missing);
+        expect(result.ok).toBe(false);
+        if (!result.ok) {
+            expect(result.error.code).toBe('GLOBAL_STORE_MISSING');
+            expect(result.error.path).toBe('/global/missing');
+        }
+    });
 
-                const result = await resolveStore({
-                    cwd: 'C:/work/missing',
-                    globalStorePath: 'C:/global/missing',
-                });
+    it('should surface access errors for stores', async () => {
+        const failure = Object.assign(new Error('denied'), { code: 'EACCES' });
+        access.mockRejectedValueOnce(failure);
 
-                expect(result.ok).toBe(false);
-                if (!result.ok) {
-                    expect(result.error.code).toBe('GLOBAL_STORE_MISSING');
-                    expect(result.error.path?.replace(
-                        /\\/g, '/',
-                    )).toBe('C:/global/missing');
-                }
-            },
-        );
+        const result = await resolveStore({
+            cwd: '/work/error',
+            globalStorePath: '/global/.cortex',
+        });
 
-        it(
-            'should surface access errors for stores', async () => {
-                const failure = Object.assign(
-                    new Error('denied'), { code: 'EACCES' },
-                );
-                access.mockRejectedValueOnce(failure);
-
-                const result = await resolveStore({
-                    cwd: 'C:/work/error',
-                    globalStorePath: 'C:/global/.cortex',
-                });
-
-                expect(result.ok).toBe(false);
-                if (!result.ok) {
-                    expect(result.error.code).toBe('STORE_ACCESS_FAILED');
-                    expect(result.error.path?.replace(
-                        /\\/g, '/',
-                    )).toBe('C:/work/error/.cortex');
-                }
-            },
-        );
-    },
-);
+        expect(result.ok).toBe(false);
+        if (!result.ok) {
+            expect(result.error.code).toBe('STORE_ACCESS_FAILED');
+            expect(result.error.path).toBe('/work/error/.cortex/memory');
+        }
+    });
+});

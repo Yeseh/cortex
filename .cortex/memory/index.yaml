@@ -1,9 +1,0 @@
-memories: []
-
-subcategories:
-  -
-    path: global
-    memory_count: 0
-  -
-    path: projects
-    memory_count: 0

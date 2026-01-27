@@ -22,7 +22,7 @@ type Section = 'memories' | 'subcategories';
 const parseNumber = (
     value: string,
     field: string,
-    line: number,
+    line: number
 ): Result<number, IndexParseError> => {
     const trimmed = value.trim();
     if (!trimmed) {
@@ -55,7 +55,7 @@ const parseNumber = (
 
 const parseEntryLine = (
     line: string,
-    lineNumber: number,
+    lineNumber: number
 ): Result<{ key: string; value: string }, IndexParseError> => {
     const match = /^\s*([A-Za-z0-9_]+)\s*:\s*(.*)$/.exec(line);
     if (!match || !match[1]) {
@@ -68,9 +68,7 @@ const parseEntryLine = (
     return ok({ key: match[1], value: match[2] ?? '' });
 };
 
-const parsePathValue = (
-    value: string, line: number,
-): Result<string, IndexParseError> => {
+const parsePathValue = (value: string, line: number): Result<string, IndexParseError> => {
     const trimmed = value.trim();
     if (trimmed) {
         return ok(trimmed);
@@ -85,24 +83,14 @@ const parsePathValue = (
 
 const parseEntryLineValue = (
     rawLine: string,
-    lineNumber: number,
-): Result<{ key: string; value: string }, IndexParseError> => parseEntryLine(
-    rawLine, lineNumber,
-);
+    lineNumber: number
+): Result<{ key: string; value: string }, IndexParseError> => parseEntryLine(rawLine, lineNumber);
 
-const parseTokenEstimate = (
-    value: string, line: number,
-): Result<number, IndexParseError> =>
-    parseNumber(
-        value, 'token_estimate', line,
-    );
+const parseTokenEstimate = (value: string, line: number): Result<number, IndexParseError> =>
+    parseNumber(value, 'token_estimate', line);
 
-const parseMemoryCount = (
-    value: string, line: number,
-): Result<number, IndexParseError> =>
-    parseNumber(
-        value, 'memory_count', line,
-    );
+const parseMemoryCount = (value: string, line: number): Result<number, IndexParseError> =>
+    parseNumber(value, 'memory_count', line);
 
 const isIndentedEntryLine = (line: string): boolean => {
     const indentMatch = /^(\s*)/.exec(line);
@@ -112,10 +100,8 @@ const isIndentedEntryLine = (line: string): boolean => {
 
 const parseEntryKeyValue = (
     line: string,
-    lineNumber: number,
-): Result<{ key: string; value: string }, IndexParseError> => parseEntryLineValue(
-    line, lineNumber,
-);
+    lineNumber: number
+): Result<{ key: string; value: string }, IndexParseError> => parseEntryLineValue(line, lineNumber);
 
 interface EntryState {
     path?: string;
@@ -127,17 +113,13 @@ interface EntryState {
 type EntryHandler = (
     state: EntryState,
     value: string,
-    lineNumber: number,
+    lineNumber: number
 ) => Result<void, IndexParseError>;
 
 const entryHandlers: Record<string, { section?: Section; apply: EntryHandler }> = {
     path: {
-        apply: (
-            state, value, lineNumber,
-        ) => {
-            const parsedPath = parsePathValue(
-                value, lineNumber,
-            );
+        apply: (state, value, lineNumber) => {
+            const parsedPath = parsePathValue(value, lineNumber);
             if (!parsedPath.ok) {
                 return parsedPath;
             }
@@ -147,12 +129,8 @@ const entryHandlers: Record<string, { section?: Section; apply: EntryHandler }> 
     },
     token_estimate: {
         section: 'memories',
-        apply: (
-            state, value, lineNumber,
-        ) => {
-            const parsedNumber = parseTokenEstimate(
-                value, lineNumber,
-            );
+        apply: (state, value, lineNumber) => {
+            const parsedNumber = parseTokenEstimate(value, lineNumber);
             if (!parsedNumber.ok) {
                 return parsedNumber;
             }
@@ -162,21 +140,15 @@ const entryHandlers: Record<string, { section?: Section; apply: EntryHandler }> 
     },
     summary: {
         section: 'memories',
-        apply: (
-            state, value,
-        ) => {
+        apply: (state, value) => {
             state.summary = value.trim();
             return ok(undefined);
         },
     },
     memory_count: {
         section: 'subcategories',
-        apply: (
-            state, value, lineNumber,
-        ) => {
-            const parsedNumber = parseMemoryCount(
-                value, lineNumber,
-            );
+        apply: (state, value, lineNumber) => {
+            const parsedNumber = parseMemoryCount(value, lineNumber);
             if (!parsedNumber.ok) {
                 return parsedNumber;
             }
@@ -191,7 +163,7 @@ const applyEntryKey = (
     section: Section,
     key: string,
     value: string,
-    lineNumber: number,
+    lineNumber: number
 ): Result<void, IndexParseError> => {
     const handler = entryHandlers[key];
     if (!handler) {
@@ -210,16 +182,14 @@ const applyEntryKey = (
             line: lineNumber,
         });
     }
-    return handler.apply(
-        state, value, lineNumber,
-    );
+    return handler.apply(state, value, lineNumber);
 };
 
 const finalizeEntry = (
     state: EntryState,
     section: Section,
     entryLine: number,
-    nextIndex: number,
+    nextIndex: number
 ): Result<
     { entry: IndexMemoryEntry | IndexSubcategoryEntry; nextIndex: number },
     IndexParseError
@@ -261,7 +231,7 @@ const parseEntry = (
     lines: string[],
     startIndex: number,
     lineOffset: number,
-    section: Section,
+    section: Section
 ): Result<
     { entry: IndexMemoryEntry | IndexSubcategoryEntry; nextIndex: number },
     IndexParseError
@@ -283,9 +253,7 @@ const parseEntry = (
             break;
         }
 
-        const parsedLine = parseEntryKeyValue(
-            rawLine, index + lineOffset,
-        );
+        const parsedLine = parseEntryKeyValue(rawLine, index + lineOffset);
         if (!parsedLine.ok) {
             return parsedLine;
         }
@@ -294,7 +262,7 @@ const parseEntry = (
             section,
             parsedLine.value.key,
             parsedLine.value.value,
-            index + lineOffset,
+            index + lineOffset
         );
         if (!applied.ok) {
             return applied;
@@ -302,14 +270,66 @@ const parseEntry = (
         index += 1;
     }
 
-    return finalizeEntry(
-        state, section, entryLine, index,
-    );
+    return finalizeEntry(state, section, entryLine, index);
 };
 
-const parseSectionHeader = (
-    line: string, section: Section,
-): Result<boolean, IndexParseError> => {
+const parseEntryWithInitial = (
+    lines: string[],
+    startIndex: number,
+    lineOffset: number,
+    section: Section,
+    initialKey: string,
+    initialValue: string,
+    initialLine: number
+): Result<
+    { entry: IndexMemoryEntry | IndexSubcategoryEntry; nextIndex: number },
+    IndexParseError
+> => {
+    const state: EntryState = {};
+
+    // Apply the initial key-value from the inline format
+    const initialApplied = applyEntryKey(state, section, initialKey, initialValue, initialLine);
+    if (!initialApplied.ok) {
+        return initialApplied;
+    }
+
+    let index = startIndex;
+    const entryLine = initialLine;
+
+    while (index < lines.length) {
+        const rawLine = lines[index];
+        if (rawLine === undefined) {
+            break;
+        }
+        if (!rawLine.trim()) {
+            index += 1;
+            continue;
+        }
+        if (!isIndentedEntryLine(rawLine)) {
+            break;
+        }
+
+        const parsedLine = parseEntryKeyValue(rawLine, index + lineOffset);
+        if (!parsedLine.ok) {
+            return parsedLine;
+        }
+        const applied = applyEntryKey(
+            state,
+            section,
+            parsedLine.value.key,
+            parsedLine.value.value,
+            index + lineOffset
+        );
+        if (!applied.ok) {
+            return applied;
+        }
+        index += 1;
+    }
+
+    return finalizeEntry(state, section, entryLine, index);
+};
+
+const parseSectionHeader = (line: string, section: Section): Result<boolean, IndexParseError> => {
     if (line === `${section}:`) {
         return ok(true);
     }
@@ -324,7 +344,7 @@ const pushParsedEntry = (
     section: Section,
     entry: IndexMemoryEntry | IndexSubcategoryEntry,
     memories: IndexMemoryEntry[],
-    subcategories: IndexSubcategoryEntry[],
+    subcategories: IndexSubcategoryEntry[]
 ): void => {
     if (section === 'memories') {
         memories.push(entry as IndexMemoryEntry);
@@ -336,13 +356,22 @@ const pushParsedEntry = (
 const parseIndexEntry = (
     lines: string[],
     index: number,
-    section: Section,
+    section: Section
 ): Result<
     { entry: IndexMemoryEntry | IndexSubcategoryEntry; nextIndex: number },
     IndexParseError
-> => parseEntry(
-    lines, index + 1, 1, section,
-);
+> => parseEntry(lines, index + 1, 1, section);
+
+const parseIndexEntryInline = (
+    lines: string[],
+    index: number,
+    section: Section,
+    firstKey: string,
+    firstValue: string
+): Result<
+    { entry: IndexMemoryEntry | IndexSubcategoryEntry; nextIndex: number },
+    IndexParseError
+> => parseEntryWithInitial(lines, index + 1, 1, section, firstKey, firstValue, index + 1);
 
 const serializeMemoryEntry = (entry: IndexMemoryEntry): Result<string[], IndexSerializeError> => {
     if (!entry.path?.trim()) {
@@ -352,9 +381,7 @@ const serializeMemoryEntry = (entry: IndexMemoryEntry): Result<string[], IndexSe
             field: 'path',
         });
     }
-    const parsedToken = serializeNumber(
-        entry.tokenEstimate, 'token_estimate',
-    );
+    const parsedToken = serializeNumber(entry.tokenEstimate, 'token_estimate');
     if (!parsedToken.ok) {
         return parsedToken;
     }
@@ -377,32 +404,22 @@ const serializeSubcategoryEntry = (entry: IndexSubcategoryEntry): IndexLineResul
             field: 'path',
         });
     }
-    const parsedCount = serializeNumber(
-        entry.memoryCount, 'memory_count',
-    );
+    const parsedCount = serializeNumber(entry.memoryCount, 'memory_count');
     if (!parsedCount.ok) {
         return parsedCount;
     }
-    return ok([
-        '  -',
-        `    path: ${entry.path.trim()}`,
-        `    memory_count: ${parsedCount.value}`,
-    ]);
+    return ok(['  -', `    path: ${entry.path.trim()}`, `    memory_count: ${parsedCount.value}`]);
 };
 
 const resolveSection = (line: string): Result<Section | null, IndexParseError> => {
-    const memoriesHeader = parseSectionHeader(
-        line, 'memories',
-    );
+    const memoriesHeader = parseSectionHeader(line, 'memories');
     if (!memoriesHeader.ok) {
         return memoriesHeader;
     }
     if (memoriesHeader.value) {
         return ok('memories');
     }
-    const subcategoriesHeader = parseSectionHeader(
-        line, 'subcategories',
-    );
+    const subcategoriesHeader = parseSectionHeader(line, 'subcategories');
     if (!subcategoriesHeader.ok) {
         return subcategoriesHeader;
     }
@@ -413,9 +430,7 @@ const resolveSection = (line: string): Result<Section | null, IndexParseError> =
 };
 
 export const parseCategoryIndex = (raw: string): Result<CategoryIndex, IndexParseError> => {
-    const normalized = raw.replace(
-        /\r\n/g, '\n',
-    );
+    const normalized = raw.replace(/\r\n/g, '\n');
     const lines = normalized.split('\n');
     const memories: IndexMemoryEntry[] = [];
     const subcategories: IndexSubcategoryEntry[] = [];
@@ -453,8 +468,11 @@ export const parseCategoryIndex = (raw: string): Result<CategoryIndex, IndexPars
             });
         }
 
-        const listMatch = /^\s*-\s*$/.exec(rawLine);
-        if (!listMatch) {
+        // Match either `  -` alone or `  - key: value` inline format
+        const listMatchAlone = /^\s*-\s*$/.exec(rawLine);
+        const listMatchInline = /^\s*-\s+(\w+):\s*(.*)$/.exec(rawLine);
+
+        if (!listMatchAlone && !listMatchInline) {
             return err({
                 code: 'INVALID_FORMAT',
                 message: "Index entries must start with '-' list markers.",
@@ -462,16 +480,20 @@ export const parseCategoryIndex = (raw: string): Result<CategoryIndex, IndexPars
             });
         }
 
-        const parsedEntry = parseIndexEntry(
-            lines, index, section,
-        );
+        const parsedEntry = listMatchInline
+            ? parseIndexEntryInline(
+                  lines,
+                  index,
+                  section,
+                  listMatchInline[1]!,
+                  listMatchInline[2] ?? ''
+              )
+            : parseIndexEntry(lines, index, section);
         if (!parsedEntry.ok) {
             return parsedEntry;
         }
 
-        pushParsedEntry(
-            section, parsedEntry.value.entry, memories, subcategories,
-        );
+        pushParsedEntry(section, parsedEntry.value.entry, memories, subcategories);
 
         index = parsedEntry.value.nextIndex;
     }
@@ -479,9 +501,7 @@ export const parseCategoryIndex = (raw: string): Result<CategoryIndex, IndexPars
     return ok({ memories, subcategories });
 };
 
-const serializeNumber = (
-    value: number, field: string,
-): Result<number, IndexSerializeError> => {
+const serializeNumber = (value: number, field: string): Result<number, IndexSerializeError> => {
     if (!Number.isFinite(value)) {
         return err({
             code: 'INVALID_NUMBER',
@@ -503,8 +523,7 @@ export const serializeCategoryIndex = (index: CategoryIndex): IndexSerializeResu
     const memories: string[] = [];
     if (index.memories.length === 0) {
         memories.push('memories: []');
-    }
-    else {
+    } else {
         memories.push('memories:');
         for (const entry of index.memories) {
             const serialized = serializeMemoryEntry(entry);
@@ -518,8 +537,7 @@ export const serializeCategoryIndex = (index: CategoryIndex): IndexSerializeResu
     const subcategories: string[] = [];
     if (index.subcategories.length === 0) {
         subcategories.push('subcategories: []');
-    }
-    else {
+    } else {
         subcategories.push('subcategories:');
         for (const entry of index.subcategories) {
             const serialized = serializeSubcategoryEntry(entry);
@@ -530,9 +548,5 @@ export const serializeCategoryIndex = (index: CategoryIndex): IndexSerializeResu
         }
     }
 
-    return ok([
-        ...memories,
-        '',
-        ...subcategories,
-    ].join('\n'));
+    return ok([...memories, '', ...subcategories].join('\n'));
 };
