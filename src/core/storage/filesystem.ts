@@ -10,6 +10,7 @@ import type { CategoryIndex, IndexMemoryEntry } from '../index/types.ts';
 import { parseCategoryIndex, serializeCategoryIndex } from '../index/parser.ts';
 import { validateMemorySlugPath } from '../memory/validation.ts';
 import type { StorageAdapter, StorageAdapterError, StorageIndexName } from './adapter.ts';
+import type { CategoryError } from '../category/types.ts';
 
 export interface FilesystemStorageAdapterOptions {
     rootDirectory: string;
@@ -23,6 +24,13 @@ type StringOrNullResult = Result<string | null, StorageAdapterError>;
 
 const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
 const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
+
+const toCategoryError = (
+    code: CategoryError['code'],
+    message: string,
+    path: string,
+    cause?: unknown
+): CategoryError => ({ code, message, path, cause });
 
 const normalizeExtension = (value: string | undefined, fallback: string): string => {
     const raw = value?.trim();
@@ -42,7 +50,7 @@ const isNotFoundError = (error: unknown): boolean => {
 const resolveStoragePath = (
     root: string,
     relativePath: string,
-    errorCode: StorageAdapterError['code'],
+    errorCode: StorageAdapterError['code']
 ): Result<string, StorageAdapterError> => {
     const resolved = resolve(root, relativePath);
     const rootRelative = relative(root, resolved);
@@ -91,7 +99,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
 
     private validateSlugPath(
         slugPath: string,
-        failure: { code: StorageAdapterError['code']; message: string; path: string },
+        failure: { code: StorageAdapterError['code']; message: string; path: string }
     ): Result<MemoryIdentity, StorageAdapterError> {
         const identity = validateMemorySlugPath(slugPath);
         if (!identity.ok) {
@@ -109,14 +117,14 @@ export class FilesystemStorageAdapter implements StorageAdapter {
 
     private resolveMemoryPath(
         slugPath: MemorySlugPath,
-        errorCode: StorageAdapterError['code'],
+        errorCode: StorageAdapterError['code']
     ): Result<string, StorageAdapterError> {
         return resolveStoragePath(this.storeRoot, `${slugPath}${this.memoryExtension}`, errorCode);
     }
 
     private resolveIndexPath(
         name: StorageIndexName,
-        errorCode: StorageAdapterError['code'],
+        errorCode: StorageAdapterError['code']
     ): Result<string, StorageAdapterError> {
         // Category indexes are at: STORE_ROOT/<categoryPath>/index.yaml
         // For root category (empty string): STORE_ROOT/index.yaml
@@ -130,10 +138,9 @@ export class FilesystemStorageAdapter implements StorageAdapter {
             return ok(
                 (await readdir(current, {
                     withFileTypes: true,
-                })) as unknown as Awaited<ReturnType<typeof readdir>>,
+                })) as unknown as Awaited<ReturnType<typeof readdir>>
             );
-        }
-        catch (error) {
+        } catch (error) {
             if (isNotFoundError(error)) {
                 return ok([] as unknown as Awaited<ReturnType<typeof readdir>>);
             }
@@ -148,7 +155,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
 
     private async readCategoryIndex(
         name: StorageIndexName,
-        options: { createWhenMissing?: boolean } = {},
+        options: { createWhenMissing?: boolean } = {}
     ): Promise<Result<CategoryIndex, StorageAdapterError>> {
         const contents = await this.readIndexFile(name);
         if (!contents.ok) {
@@ -178,7 +185,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
 
     private async writeCategoryIndex(
         name: StorageIndexName,
-        index: CategoryIndex,
+        index: CategoryIndex
     ): Promise<Result<void, StorageAdapterError>> {
         const serialized = serializeCategoryIndex(index);
         if (!serialized.ok) {
@@ -195,7 +202,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
     private async upsertMemoryEntry(
         indexName: StorageIndexName,
         entry: IndexMemoryEntry,
-        options: { createWhenMissing?: boolean } = {},
+        options: { createWhenMissing?: boolean } = {}
     ): Promise<Result<void, StorageAdapterError>> {
         const current = await this.readCategoryIndex(indexName, options);
         if (!current.ok) {
@@ -215,17 +222,20 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         indexName: StorageIndexName,
         entryPath: string,
         memoryCount: number,
-        options: { createWhenMissing?: boolean } = {},
+        options: { createWhenMissing?: boolean } = {}
     ): Promise<Result<void, StorageAdapterError>> {
         const current = await this.readCategoryIndex(indexName, options);
         if (!current.ok) {
             return current;
         }
-        const subcategories = current.value.subcategories.filter(
-            (existing) => existing.path !== entryPath,
-        );
+        const existing = current.value.subcategories.find((s) => s.path === entryPath);
+        const subcategories = current.value.subcategories.filter((s) => s.path !== entryPath);
 
-        subcategories.push({ path: entryPath, memoryCount });
+        subcategories.push({
+            path: entryPath,
+            memoryCount,
+            ...(existing?.description ? { description: existing.description } : {}),
+        });
         subcategories.sort((a, b) => a.path.localeCompare(b.path));
         const nextIndex: CategoryIndex = {
             memories: current.value.memories,
@@ -237,7 +247,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
     private async updateCategoryIndexes(
         slugPath: MemorySlugPath,
         contents: string,
-        options: { createWhenMissing?: boolean } = {},
+        options: { createWhenMissing?: boolean } = {}
     ): Promise<Result<void, StorageAdapterError>> {
         const identityResult = this.validateSlugPath(slugPath, {
             code: 'INDEX_UPDATE_FAILED',
@@ -266,7 +276,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
                 path: slugPath,
                 tokenEstimate: tokenEstimateResult.value,
             },
-            { ...options, createWhenMissing: true },
+            { ...options, createWhenMissing: true }
         );
         if (!upsertMemory.ok) {
             return upsertMemory;
@@ -276,7 +286,10 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         const topLevelCategory = categories[0];
         if (topLevelCategory !== undefined) {
             const rootIndexName = '';
-            const topLevelCategoryIndex = await this.readCategoryIndex(topLevelCategory, options);
+            const topLevelCategoryIndex = await this.readCategoryIndex(topLevelCategory, {
+                ...options,
+                createWhenMissing: true,
+            });
             if (!topLevelCategoryIndex.ok) {
                 return topLevelCategoryIndex;
             }
@@ -284,7 +297,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
                 rootIndexName,
                 topLevelCategory,
                 topLevelCategoryIndex.value.memories.length,
-                { ...options, createWhenMissing: true },
+                { ...options, createWhenMissing: true }
             );
             if (!upsertRoot.ok) {
                 return upsertRoot;
@@ -295,7 +308,10 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         for (let index = 1; index <= categories.length - 1; index += 1) {
             const parentIndexName = categories.slice(0, index).join('/');
             const subcategoryPath = categories.slice(0, index + 1).join('/');
-            const subcategoryIndex = await this.readCategoryIndex(subcategoryPath, options);
+            const subcategoryIndex = await this.readCategoryIndex(subcategoryPath, {
+                ...options,
+                createWhenMissing: true,
+            });
             if (!subcategoryIndex.ok) {
                 return subcategoryIndex;
             }
@@ -303,7 +319,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
                 parentIndexName,
                 subcategoryPath,
                 subcategoryIndex.value.memories.length,
-                { ...options, createWhenMissing: true },
+                { ...options, createWhenMissing: true }
             );
             if (!upsertSubcategory.ok) {
                 return upsertSubcategory;
@@ -358,7 +374,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
     private addIndexEntry(
         indexes: Map<string, CategoryIndex>,
         slugPath: MemorySlugPath,
-        tokenEstimate: number,
+        tokenEstimate: number
     ): void {
         const categoryPath = slugPath.split('/').slice(0, -1).join('/');
         const current = indexes.get(categoryPath) ?? { memories: [], subcategories: [] };
@@ -368,7 +384,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
 
     private recordParentSubcategory(
         parentSubcategories: Map<string, Set<string>>,
-        slugPath: MemorySlugPath,
+        slugPath: MemorySlugPath
     ): void {
         const segments = slugPath.split('/').filter((segment) => segment.length > 0);
         if (segments.length <= 2) {
@@ -385,11 +401,9 @@ export class FilesystemStorageAdapter implements StorageAdapter {
 
     private applyParentSubcategories(
         indexes: Map<string, CategoryIndex>,
-        parentSubcategories: Map<string, Set<string>>,
+        parentSubcategories: Map<string, Set<string>>
     ): void {
-        for (const [
-            parentCategory, subcategories,
-        ] of parentSubcategories.entries()) {
+        for (const [parentCategory, subcategories] of parentSubcategories.entries()) {
             const parentIndex = indexes.get(parentCategory) ?? {
                 memories: [],
                 subcategories: [],
@@ -405,7 +419,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
     }
 
     private async buildIndexEntry(
-        filePath: string,
+        filePath: string
     ): Promise<
         Result<{ slugPath: MemorySlugPath; tokenEstimate: number } | null, StorageAdapterError>
     > {
@@ -426,8 +440,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         let contents: string;
         try {
             contents = await readFile(filePath, 'utf8');
-        }
-        catch (error) {
+        } catch (error) {
             return err({
                 code: 'READ_FAILED',
                 message: `Failed to read memory file at ${filePath}.`,
@@ -462,7 +475,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
             this.addIndexEntry(
                 indexes,
                 entryResult.value.slugPath,
-                entryResult.value.tokenEstimate,
+                entryResult.value.tokenEstimate
             );
             this.recordParentSubcategory(parentSubcategories, entryResult.value.slugPath);
         }
@@ -472,14 +485,12 @@ export class FilesystemStorageAdapter implements StorageAdapter {
 
     private async rebuildIndexFiles(
         targetRoot: string,
-        indexes: Map<string, CategoryIndex>,
+        indexes: Map<string, CategoryIndex>
     ): Promise<Result<void, StorageAdapterError>> {
         const sortedIndexes = Array.from(indexes.entries()).sort((a, b) =>
-            a[0].localeCompare(b[0]),
+            a[0].localeCompare(b[0])
         );
-        for (const [
-            indexName, index,
-        ] of sortedIndexes) {
+        for (const [indexName, index] of sortedIndexes) {
             index.memories.sort((a, b) => a.path.localeCompare(b.path));
             index.subcategories.sort((a, b) => a.path.localeCompare(b.path));
             const serialized = serializeCategoryIndex(index);
@@ -504,8 +515,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
             try {
                 await mkdir(dirname(filePathResult.value), { recursive: true });
                 await writeFile(filePathResult.value, serialized.value, 'utf8');
-            }
-            catch (error) {
+            } catch (error) {
                 return err({
                     code: 'WRITE_FAILED',
                     message: `Failed to write index file at ${filePathResult.value}.`,
@@ -529,7 +539,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         }
         this.applyParentSubcategories(
             buildState.value.indexes,
-            buildState.value.parentSubcategories,
+            buildState.value.parentSubcategories
         );
 
         // Write index files in-place to storeRoot
@@ -550,8 +560,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         try {
             const contents = await readFile(filePath, 'utf8');
             return ok(contents);
-        }
-        catch (error) {
+        } catch (error) {
             if (isNotFoundError(error)) {
                 return ok(null);
             }
@@ -582,8 +591,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         try {
             await rm(filePath);
             return ok(undefined);
-        }
-        catch (error) {
+        } catch (error) {
             if (isNotFoundError(error)) {
                 return ok(undefined);
             }
@@ -598,7 +606,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
 
     async moveMemoryFile(
         sourceSlugPath: MemorySlugPath,
-        destinationSlugPath: MemorySlugPath,
+        destinationSlugPath: MemorySlugPath
     ): Promise<Result<void, StorageAdapterError>> {
         const sourceIdentityResult = this.validateSlugPath(sourceSlugPath, {
             code: 'WRITE_FAILED',
@@ -629,8 +637,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         const destinationDirectory = dirname(destinationPathResult.value);
         try {
             await access(destinationDirectory);
-        }
-        catch (error) {
+        } catch (error) {
             return err({
                 code: 'WRITE_FAILED',
                 message: `Destination category does not exist for ${destinationSlugPath}.`,
@@ -641,8 +648,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         try {
             await rename(sourcePathResult.value, destinationPathResult.value);
             return ok(undefined);
-        }
-        catch (error) {
+        } catch (error) {
             return err({
                 code: 'WRITE_FAILED',
                 message: `Failed to move memory from ${sourceSlugPath} to ${destinationSlugPath}.`,
@@ -655,7 +661,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
     async writeMemoryFile(
         slugPath: MemorySlugPath,
         contents: string,
-        options: { allowIndexCreate?: boolean; allowIndexUpdate?: boolean } = {},
+        options: { allowIndexCreate?: boolean; allowIndexUpdate?: boolean } = {}
     ): Promise<Result<void, StorageAdapterError>> {
         const identityResult = this.validateSlugPath(slugPath, {
             code: 'WRITE_FAILED',
@@ -675,8 +681,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         try {
             await mkdir(dirname(filePath), { recursive: true });
             await writeFile(filePath, contents, 'utf8');
-        }
-        catch (error) {
+        } catch (error) {
             return err({
                 code: 'WRITE_FAILED',
                 message: `Failed to write memory file at ${filePath}.`,
@@ -708,8 +713,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         try {
             const contents = await readFile(filePath, 'utf8');
             return ok(contents);
-        }
-        catch (error) {
+        } catch (error) {
             if (isNotFoundError(error)) {
                 return ok(null);
             }
@@ -724,7 +728,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
 
     async writeIndexFile(
         name: StorageIndexName,
-        contents: string,
+        contents: string
     ): Promise<Result<void, StorageAdapterError>> {
         const filePathResult = this.resolveIndexPath(name, 'WRITE_FAILED');
         if (!filePathResult.ok) {
@@ -735,8 +739,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
             await mkdir(dirname(filePath), { recursive: true });
             await writeFile(filePath, contents, 'utf8');
             return ok(undefined);
-        }
-        catch (error) {
+        } catch (error) {
             return err({
                 code: 'WRITE_FAILED',
                 message: `Failed to write index file at ${filePath}.`,
@@ -744,5 +747,183 @@ export class FilesystemStorageAdapter implements StorageAdapter {
                 cause: error,
             });
         }
+    }
+
+    // CategoryStoragePort implementation
+
+    async categoryExists(path: string): Promise<Result<boolean, CategoryError>> {
+        const dirPath = resolve(this.storeRoot, path);
+        try {
+            await access(dirPath);
+            return ok(true);
+        } catch {
+            return ok(false);
+        }
+    }
+
+    async ensureCategoryDirectory(path: string): Promise<Result<void, CategoryError>> {
+        const dirPath = resolve(this.storeRoot, path);
+        try {
+            await mkdir(dirPath, { recursive: true });
+            return ok(undefined);
+        } catch (error) {
+            return err(
+                toCategoryError(
+                    'STORAGE_ERROR',
+                    `Failed to create category directory: ${path}`,
+                    path,
+                    error
+                )
+            );
+        }
+    }
+
+    async deleteCategoryDirectory(path: string): Promise<Result<void, CategoryError>> {
+        const dirPath = resolve(this.storeRoot, path);
+        try {
+            await rm(dirPath, { recursive: true });
+            return ok(undefined);
+        } catch (error) {
+            if (isNotFoundError(error)) {
+                return ok(undefined);
+            }
+            return err(
+                toCategoryError(
+                    'STORAGE_ERROR',
+                    `Failed to delete category directory: ${path}`,
+                    path,
+                    error
+                )
+            );
+        }
+    }
+
+    async updateSubcategoryDescription(
+        parentPath: string,
+        subcategoryPath: string,
+        description: string | null
+    ): Promise<Result<void, CategoryError>> {
+        const indexName = parentPath === '' ? '' : parentPath;
+        const currentResult = await this.readCategoryIndex(indexName, { createWhenMissing: true });
+        if (!currentResult.ok) {
+            return err(
+                toCategoryError(
+                    'STORAGE_ERROR',
+                    `Failed to read parent index: ${parentPath}`,
+                    parentPath,
+                    currentResult.error
+                )
+            );
+        }
+
+        const currentIndex = currentResult.value;
+        const subcategories = [...currentIndex.subcategories];
+
+        // Find existing entry or create new one
+        let entryIndex = subcategories.findIndex((s) => s.path === subcategoryPath);
+        if (entryIndex === -1) {
+            subcategories.push({ path: subcategoryPath, memoryCount: 0 });
+            entryIndex = subcategories.length - 1;
+        }
+
+        // Update description
+        const entry = subcategories[entryIndex];
+        if (entry) {
+            if (description === null) {
+                delete entry.description;
+            } else {
+                entry.description = description;
+            }
+        }
+
+        // Sort and write back
+        subcategories.sort((a, b) => a.path.localeCompare(b.path));
+        const writeResult = await this.writeCategoryIndex(indexName, {
+            memories: currentIndex.memories,
+            subcategories,
+        });
+
+        if (!writeResult.ok) {
+            return err(
+                toCategoryError(
+                    'STORAGE_ERROR',
+                    `Failed to write parent index: ${parentPath}`,
+                    parentPath,
+                    writeResult.error
+                )
+            );
+        }
+
+        return ok(undefined);
+    }
+
+    async removeSubcategoryEntry(
+        parentPath: string,
+        subcategoryPath: string
+    ): Promise<Result<void, CategoryError>> {
+        const indexName = parentPath === '' ? '' : parentPath;
+        const currentResult = await this.readCategoryIndex(indexName, { createWhenMissing: false });
+
+        if (!currentResult.ok) {
+            // If we can't read the index, just return ok (nothing to remove)
+            return ok(undefined);
+        }
+
+        const currentIndex = currentResult.value;
+        const subcategories = currentIndex.subcategories.filter((s) => s.path !== subcategoryPath);
+
+        const writeResult = await this.writeCategoryIndex(indexName, {
+            memories: currentIndex.memories,
+            subcategories,
+        });
+
+        if (!writeResult.ok) {
+            return err(
+                toCategoryError(
+                    'STORAGE_ERROR',
+                    `Failed to update parent index: ${parentPath}`,
+                    parentPath,
+                    writeResult.error
+                )
+            );
+        }
+
+        return ok(undefined);
+    }
+
+    // Adapter methods for CategoryStoragePort interface
+    async readCategoryIndexForPort(
+        path: string
+    ): Promise<Result<CategoryIndex | null, CategoryError>> {
+        const result = await this.readCategoryIndex(path, { createWhenMissing: false });
+        if (!result.ok) {
+            return err(
+                toCategoryError(
+                    'STORAGE_ERROR',
+                    `Failed to read category index: ${path}`,
+                    path,
+                    result.error
+                )
+            );
+        }
+        return ok(result.value);
+    }
+
+    async writeCategoryIndexForPort(
+        path: string,
+        index: CategoryIndex
+    ): Promise<Result<void, CategoryError>> {
+        const result = await this.writeCategoryIndex(path, index);
+        if (!result.ok) {
+            return err(
+                toCategoryError(
+                    'STORAGE_ERROR',
+                    `Failed to write category index: ${path}`,
+                    path,
+                    result.error
+                )
+            );
+        }
+        return ok(undefined);
     }
 }

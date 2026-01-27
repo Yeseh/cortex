@@ -11,6 +11,7 @@ export interface IndexMemoryEntry {
 export interface IndexSubcategoryEntry {
     path: string;
     memoryCount: number;
+    description?: string; // Max 500 chars, optional
 }
 
 export interface CategoryIndex {

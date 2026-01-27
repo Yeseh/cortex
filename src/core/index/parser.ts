@@ -108,6 +108,7 @@ interface EntryState {
     tokenEstimate?: number;
     summary?: string;
     memoryCount?: number;
+    description?: string;
 }
 
 type EntryHandler = (
@@ -153,6 +154,13 @@ const entryHandlers: Record<string, { section?: Section; apply: EntryHandler }> 
                 return parsedNumber;
             }
             state.memoryCount = parsedNumber.value;
+            return ok(undefined);
+        },
+    },
+    description: {
+        section: 'subcategories',
+        apply: (state, value) => {
+            state.description = value.trim();
             return ok(undefined);
         },
     },
@@ -224,7 +232,14 @@ const finalizeEntry = (
             line: entryLine,
         });
     }
-    return ok({ entry: { path: state.path, memoryCount: state.memoryCount }, nextIndex });
+    return ok({
+        entry: {
+            path: state.path,
+            memoryCount: state.memoryCount,
+            ...(state.description ? { description: state.description } : {}),
+        },
+        nextIndex,
+    });
 };
 
 const parseEntry = (
@@ -408,7 +423,15 @@ const serializeSubcategoryEntry = (entry: IndexSubcategoryEntry): IndexLineResul
     if (!parsedCount.ok) {
         return parsedCount;
     }
-    return ok(['  -', `    path: ${entry.path.trim()}`, `    memory_count: ${parsedCount.value}`]);
+    const lines = [
+        '  -',
+        `    path: ${entry.path.trim()}`,
+        `    memory_count: ${parsedCount.value}`,
+    ];
+    if (entry.description?.trim()) {
+        lines.push(`    description: ${entry.description.trim()}`);
+    }
+    return ok(lines);
 };
 
 const resolveSection = (line: string): Result<Section | null, IndexParseError> => {

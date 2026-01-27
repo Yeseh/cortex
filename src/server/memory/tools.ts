@@ -603,7 +603,14 @@ export const listMemoriesHandler = async (
         is_expired: boolean;
     }
 
+    interface SubcategoryEntry {
+        path: string;
+        memory_count: number;
+        description?: string;
+    }
+
     const memories: MemoryEntry[] = [];
+    const subcategories: SubcategoryEntry[] = [];
 
     const collectMemories = async (catPath: string, visited: Set<string>): Promise<void> => {
         if (visited.has(catPath)) {
@@ -653,22 +660,48 @@ export const listMemoriesHandler = async (
         }
     };
 
+    // Collect direct subcategories of the requested category (for discoverability)
+    const collectDirectSubcategories = async (catPath: string): Promise<void> => {
+        const indexResult = await adapter.readIndexFile(catPath);
+        if (!indexResult.ok || !indexResult.value) {
+            return;
+        }
+
+        const parsed = parseCategoryIndex(indexResult.value);
+        if (!parsed.ok) {
+            return;
+        }
+
+        for (const subcategory of parsed.value.subcategories) {
+            subcategories.push({
+                path: subcategory.path,
+                memory_count: subcategory.memoryCount,
+                description: subcategory.description,
+            });
+        }
+    };
+
     const visited = new Set<string>();
 
     if (categoryPath) {
         // List specific category
         await collectMemories(categoryPath, visited);
+        // Also collect direct subcategories for discoverability
+        await collectDirectSubcategories(categoryPath);
     } else {
         // List all root categories
         for (const category of ROOT_CATEGORIES) {
             await collectMemories(category, visited);
         }
+        // Collect root-level subcategories
+        await collectDirectSubcategories('');
     }
 
     const output = {
         category: categoryPath || 'all',
         count: memories.length,
         memories,
+        subcategories,
     };
 
     return {

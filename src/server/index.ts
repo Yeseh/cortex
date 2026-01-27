@@ -35,6 +35,7 @@ import { createMcpContext, type McpContext } from './mcp.ts';
 import { createHealthRouter } from './health.ts';
 import { registerMemoryTools } from './memory/index.ts';
 import { registerStoreTools } from './store/index.ts';
+import { registerCategoryTools } from './category/index.ts';
 import type { Result } from '../core/types.ts';
 
 /**
@@ -172,6 +173,7 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
     // Register MCP tools
     registerMemoryTools(server, config);
     registerStoreTools(server, config);
+    registerCategoryTools(server, config);
 
     // Connect MCP server to transport
     await server.connect(transport);
