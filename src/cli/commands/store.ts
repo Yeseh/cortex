@@ -3,6 +3,7 @@
  */
 
 import { mkdir, writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import type { Result } from '../../core/types.ts';
 import type {
@@ -52,9 +53,7 @@ const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 const formatRegistry = (registry: Record<string, { path: string }>): OutputStoreRegistry => ({
     stores: Object.entries(registry)
-        .map(([
-            name, definition,
-        ]) => ({ name, path: definition.path }))
+        .map(([name, definition]) => ({ name, path: definition.path }))
         .sort((left, right) => left.name.localeCompare(right.name)),
 });
 
@@ -90,6 +89,75 @@ const validateStorePathInput = (path: string): Result<string, StoreCommandError>
     return ok(trimmed);
 };
 
+/**
+ * Checks if a path is absolute (Unix or Windows style).
+ *
+ * Detects:
+ * - Unix absolute paths starting with `/`
+ * - Windows drive paths like `C:/` or `C:\`
+ * - Windows UNC paths like `\\server\share` or `//server/share`
+ *
+ * @param inputPath - The path to check
+ * @returns `true` if the path is absolute, `false` otherwise
+ */
+const isAbsolutePath = (inputPath: string): boolean => {
+    // Unix absolute path
+    if (inputPath.startsWith('/')) {
+        return true;
+    }
+    // Windows absolute path (e.g., C:/ or C:\)
+    if (/^[a-zA-Z]:[/\\]/.test(inputPath)) {
+        return true;
+    }
+    // Windows UNC paths (e.g., \\server\share or //server/share)
+    if (inputPath.startsWith('\\\\') || inputPath.startsWith('//')) {
+        return true;
+    }
+    return false;
+};
+
+/**
+ * Resolves a store path to an absolute path.
+ *
+ * Path resolution rules:
+ * - Tilde (`~`) is expanded to the user's home directory
+ * - Relative paths are resolved against the current working directory
+ * - Absolute paths are normalized (resolving `.` and `..` segments)
+ *
+ * Note: The `~username` syntax (Unix convention for other users' home directories)
+ * is not supported. Paths like `~bob` will be resolved as `<home>/bob`.
+ *
+ * @param inputPath - The path provided by the user
+ * @param cwd - The current working directory for relative path resolution
+ * @returns The resolved absolute path
+ *
+ * @example
+ * // Relative paths
+ * resolveStorePath('./store', '/home/user')  // '/home/user/store'
+ * resolveStorePath('../other', '/home/user') // '/home/other'
+ *
+ * @example
+ * // Tilde expansion
+ * resolveStorePath('~/memories', '/anywhere') // '/home/user/memories' (on Unix)
+ *
+ * @example
+ * // Absolute paths (normalized)
+ * resolveStorePath('/opt/../etc', '/anywhere') // '/etc'
+ */
+const resolveStorePath = (inputPath: string, cwd: string): string => {
+    // Handle tilde expansion
+    if (inputPath.startsWith('~')) {
+        const home = homedir();
+        return resolve(home, inputPath.slice(1).replace(/^[/\\]/, ''));
+    }
+    // Normalize absolute paths (resolves .. and . segments)
+    if (isAbsolutePath(inputPath)) {
+        return resolve(inputPath);
+    }
+    // Resolve relative paths against cwd
+    return resolve(cwd, inputPath);
+};
+
 const loadRegistryOrEmpty = async (registryPath: string): Promise<LoadRegistryResult> => {
     const loaded = await loadStoreRegistry(registryPath, { allowMissing: true });
     if (!loaded.ok) {
@@ -104,7 +172,7 @@ const loadRegistryOrEmpty = async (registryPath: string): Promise<LoadRegistryRe
 
 const saveRegistry = async (
     registryPath: string,
-    registry: Record<string, { path: string }>,
+    registry: Record<string, { path: string }>
 ): Promise<Result<void, StoreCommandError>> => {
     const saved = await saveStoreRegistry(registryPath, registry);
     if (!saved.ok) {
@@ -146,7 +214,7 @@ const runStoreList = async (options: StoreCommandOptions): Promise<StoreResult> 
 const runStoreAdd = async (
     options: StoreCommandOptions,
     name: string,
-    path: string,
+    path: string
 ): Promise<StoreResult> => {
     const registryResult = await loadRegistryOrEmpty(options.registryPath);
     if (!registryResult.ok) {
@@ -198,8 +266,7 @@ const runStoreRemove = async (options: StoreCommandOptions, name: string): Promi
                 cause: removedRegistry.error,
             });
         }
-    }
-    else {
+    } else {
         const saved = await saveRegistry(options.registryPath, rest);
         if (!saved.ok) {
             return saved;
@@ -217,7 +284,7 @@ const runStoreRemove = async (options: StoreCommandOptions, name: string): Promi
 
 const runStoreInit = async (
     options: StoreCommandOptions,
-    targetPath?: string,
+    targetPath?: string
 ): Promise<StoreResult> => {
     const basePath = targetPath?.trim() || resolve(options.cwd, '.cortex');
     const rootPath = targetPath ? resolve(options.cwd, basePath) : basePath;
@@ -231,8 +298,7 @@ const runStoreInit = async (
             return serializedIndex;
         }
         await writeFile(indexPath, serializedIndex.value, 'utf8');
-    }
-    catch (error) {
+    } catch (error) {
         return err({
             code: 'STORE_INIT_FAILED',
             message: `Failed to initialize store at ${rootPath}.`,
@@ -251,13 +317,11 @@ const runStoreInit = async (
 const runStoreAction = (
     options: StoreCommandOptions,
     command: string,
-    args: string[],
+    args: string[]
 ): Promise<StoreResult> => {
     const handlers: Record<string, (args: string[]) => Promise<StoreResult>> = {
         list: () => runStoreList(options),
-        add: ([
-            name, path,
-        ]) => runStoreAddCommand(options, name, path),
+        add: ([name, path]) => runStoreAddCommand(options, name, path),
         remove: ([name]) => runStoreRemoveCommand(options, name),
         init: ([path]) => runStoreInit(options, path),
     };
@@ -268,7 +332,7 @@ const runStoreAction = (
             err({
                 code: 'INVALID_COMMAND',
                 message: `Unknown store command: ${command}.`,
-            }),
+            })
         );
     }
 
@@ -278,14 +342,14 @@ const runStoreAction = (
 const runStoreAddCommand = (
     options: StoreCommandOptions,
     name: string | undefined,
-    path: string | undefined,
+    path: string | undefined
 ): Promise<StoreResult> => {
     if (!name || !path) {
         return Promise.resolve(
             err({
                 code: 'INVALID_COMMAND',
                 message: 'Store add requires a name and a path.',
-            }),
+            })
         );
     }
     const parsedName = validateStoreNameInput(name);
@@ -296,19 +360,20 @@ const runStoreAddCommand = (
     if (!parsedPath.ok) {
         return Promise.resolve(parsedPath);
     }
-    return runStoreAdd(options, parsedName.value, parsedPath.value);
+    const resolvedPath = resolveStorePath(parsedPath.value, options.cwd);
+    return runStoreAdd(options, parsedName.value, resolvedPath);
 };
 
 const runStoreRemoveCommand = (
     options: StoreCommandOptions,
-    name: string | undefined,
+    name: string | undefined
 ): Promise<StoreResult> => {
     if (!name) {
         return Promise.resolve(
             err({
                 code: 'INVALID_COMMAND',
                 message: 'Store remove requires a name.',
-            }),
+            })
         );
     }
     const parsedName = validateStoreNameInput(name);
@@ -319,9 +384,7 @@ const runStoreRemoveCommand = (
 };
 
 export const runStoreCommand = async (options: StoreCommandOptions): Promise<StoreResult> => {
-    const [
-        command, ...rest
-    ] = options.args;
+    const [command, ...rest] = options.args;
     if (!command) {
         return err({
             code: 'INVALID_COMMAND',
