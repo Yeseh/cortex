@@ -2,7 +2,7 @@
  * Pure category business logic operations.
  *
  * This module contains the core business logic for category operations,
- * separated from storage concerns via the CategoryStoragePort interface.
+ * separated from storage concerns via the CategoryStorage interface.
  * All functions are pure (given the same storage state) and return
  * Result types for explicit error handling.
  *
@@ -12,7 +12,7 @@
 import type { Result } from '../types.ts';
 import { ok, err } from '../result.ts';
 import type {
-    CategoryStoragePort,
+    CategoryStorage,
     CategoryError,
     CreateCategoryResult,
     SetDescriptionResult,
@@ -140,7 +140,7 @@ export const getAncestorPaths = (path: string): string[] => {
  * ```
  */
 export const createCategory = async (
-    storage: CategoryStoragePort,
+    storage: CategoryStorage,
     path: string,
 ): Promise<Result<CreateCategoryResult, CategoryError>> => {
     // Validate path
@@ -235,7 +235,7 @@ export const createCategory = async (
  * ```
  */
 export const setDescription = async (
-    storage: CategoryStoragePort,
+    storage: CategoryStorage,
     path: string,
     description: string,
 ): Promise<Result<SetDescriptionResult, CategoryError>> => {
@@ -315,7 +315,7 @@ export const setDescription = async (
  * ```
  */
 export const deleteCategory = async (
-    storage: CategoryStoragePort,
+    storage: CategoryStorage,
     path: string,
 ): Promise<Result<DeleteCategoryResult, CategoryError>> => {
     // Reject root categories

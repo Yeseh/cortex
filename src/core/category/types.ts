@@ -110,7 +110,7 @@ export interface DeleteCategoryResult {
  * }
  * ```
  */
-export interface CategoryStoragePort {
+export interface CategoryStorage {
     /**
      * Checks if a category exists at the given path.
      *

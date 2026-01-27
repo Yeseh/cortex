@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it, mock } from 'bun:test';
-import type { CategoryStoragePort, CategoryError } from './types.ts';
+import type { CategoryStorage, CategoryError } from './types.ts';
 import type { CategoryIndex } from '../index/types.ts';
 import type { Result } from '../types.ts';
 import {
@@ -20,7 +20,7 @@ const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
 const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 // Mock storage port factory
-const createMockStorage = (overrides: Partial<CategoryStoragePort> = {}): CategoryStoragePort => ({
+const createMockStorage = (overrides: Partial<CategoryStorage> = {}): CategoryStorage => ({
     categoryExists: mock(async () => ok(false)),
     readCategoryIndex: mock(async () => ok(null)),
     writeCategoryIndex: mock(async () => ok(undefined)),

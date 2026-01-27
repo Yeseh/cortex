@@ -10,7 +10,7 @@ export type {
     CreateCategoryResult,
     SetDescriptionResult,
     DeleteCategoryResult,
-    CategoryStoragePort,
+    CategoryStorage as CategoryStoragePort,
 } from './types.ts';
 
 export { MAX_DESCRIPTION_LENGTH } from './types.ts';

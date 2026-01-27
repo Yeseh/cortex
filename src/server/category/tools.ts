@@ -20,7 +20,7 @@ import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { Result } from '../../core/types.ts';
 import { FilesystemStorageAdapter } from '../../core/storage/filesystem.ts';
-import type { CategoryStoragePort } from '../../core/category/types.ts';
+import type { CategoryStorage } from '../../core/category/types.ts';
 import type { CategoryIndex } from '../../core/index/types.ts';
 import {
     createCategory,
@@ -191,7 +191,7 @@ const resolveStoreRoot = async (
  * @param storeRoot - Absolute path to the store root directory
  * @returns CategoryStoragePort implementation backed by filesystem
  */
-const createCategoryStoragePort = (storeRoot: string): CategoryStoragePort => {
+const createCategoryStoragePort = (storeRoot: string): CategoryStorage => {
     const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
 
     return {
