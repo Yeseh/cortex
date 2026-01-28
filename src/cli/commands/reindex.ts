@@ -28,7 +28,7 @@ const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
 const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 export const runReindexCommand = async (
-    options: ReindexCommandOptions
+    options: ReindexCommandOptions,
 ): Promise<ReindexCommandResult> => {
     if (options.args.length > 0) {
         return err({

@@ -23,7 +23,7 @@ const toCategoryError = (
     code: CategoryError['code'],
     message: string,
     path: string,
-    cause?: unknown
+    cause?: unknown,
 ): CategoryError => ({ code, message, path, cause });
 
 /**
@@ -35,13 +35,14 @@ const toCategoryError = (
  */
 export const categoryExists = async (
     ctx: FilesystemContext,
-    path: string
+    path: string,
 ): Promise<Result<boolean, CategoryError>> => {
     const dirPath = resolve(ctx.storeRoot, path);
     try {
         await access(dirPath);
         return ok(true);
-    } catch {
+    }
+    catch {
         return ok(false);
     }
 };
@@ -57,20 +58,21 @@ export const categoryExists = async (
  */
 export const ensureCategoryDirectory = async (
     ctx: FilesystemContext,
-    path: string
+    path: string,
 ): Promise<Result<void, CategoryError>> => {
     const dirPath = resolve(ctx.storeRoot, path);
     try {
         await mkdir(dirPath, { recursive: true });
         return ok(undefined);
-    } catch (error) {
+    }
+    catch (error) {
         return err(
             toCategoryError(
                 'STORAGE_ERROR',
                 `Failed to create category directory: ${path}`,
                 path,
-                error
-            )
+                error,
+            ),
         );
     }
 };
@@ -86,13 +88,14 @@ export const ensureCategoryDirectory = async (
  */
 export const deleteCategoryDirectory = async (
     ctx: FilesystemContext,
-    path: string
+    path: string,
 ): Promise<Result<void, CategoryError>> => {
     const dirPath = resolve(ctx.storeRoot, path);
     try {
         await rm(dirPath, { recursive: true });
         return ok(undefined);
-    } catch (error) {
+    }
+    catch (error) {
         if (isNotFoundError(error)) {
             return ok(undefined);
         }
@@ -101,8 +104,8 @@ export const deleteCategoryDirectory = async (
                 'STORAGE_ERROR',
                 `Failed to delete category directory: ${path}`,
                 path,
-                error
-            )
+                error,
+            ),
         );
     }
 };
@@ -122,7 +125,7 @@ export const updateSubcategoryDescription = async (
     ctx: FilesystemContext,
     parentPath: string,
     subcategoryPath: string,
-    description: string | null
+    description: string | null,
 ): Promise<Result<void, CategoryError>> => {
     const indexName = parentPath === '' ? '' : parentPath;
     const currentResult = await readCategoryIndex(ctx, indexName, { createWhenMissing: true });
@@ -132,8 +135,8 @@ export const updateSubcategoryDescription = async (
                 'STORAGE_ERROR',
                 `Failed to read parent index: ${parentPath}`,
                 parentPath,
-                currentResult.error
-            )
+                currentResult.error,
+            ),
         );
     }
 
@@ -152,7 +155,8 @@ export const updateSubcategoryDescription = async (
     if (entry) {
         if (description === null) {
             delete entry.description;
-        } else {
+        }
+        else {
             entry.description = description;
         }
     }
@@ -170,8 +174,8 @@ export const updateSubcategoryDescription = async (
                 'STORAGE_ERROR',
                 `Failed to write parent index: ${parentPath}`,
                 parentPath,
-                writeResult.error
-            )
+                writeResult.error,
+            ),
         );
     }
 
@@ -191,7 +195,7 @@ export const updateSubcategoryDescription = async (
 export const removeSubcategoryEntry = async (
     ctx: FilesystemContext,
     parentPath: string,
-    subcategoryPath: string
+    subcategoryPath: string,
 ): Promise<Result<void, CategoryError>> => {
     const indexName = parentPath === '' ? '' : parentPath;
     const currentResult = await readCategoryIndex(ctx, indexName, { createWhenMissing: false });
@@ -215,8 +219,8 @@ export const removeSubcategoryEntry = async (
                 'STORAGE_ERROR',
                 `Failed to update parent index: ${parentPath}`,
                 parentPath,
-                writeResult.error
-            )
+                writeResult.error,
+            ),
         );
     }
 
@@ -230,7 +234,7 @@ export const removeSubcategoryEntry = async (
  */
 export const readCategoryIndexForPort = async (
     ctx: FilesystemContext,
-    path: string
+    path: string,
 ): Promise<Result<CategoryIndex | null, CategoryError>> => {
     const result = await readCategoryIndex(ctx, path, { createWhenMissing: false });
     if (!result.ok) {
@@ -239,8 +243,8 @@ export const readCategoryIndexForPort = async (
                 'STORAGE_ERROR',
                 `Failed to read category index: ${path}`,
                 path,
-                result.error
-            )
+                result.error,
+            ),
         );
     }
     return ok(result.value);
@@ -252,7 +256,7 @@ export const readCategoryIndexForPort = async (
 export const writeCategoryIndexForPort = async (
     ctx: FilesystemContext,
     path: string,
-    index: CategoryIndex
+    index: CategoryIndex,
 ): Promise<Result<void, CategoryError>> => {
     const result = await writeCategoryIndex(ctx, path, index);
     if (!result.ok) {
@@ -261,8 +265,8 @@ export const writeCategoryIndexForPort = async (
                 'STORAGE_ERROR',
                 `Failed to write category index: ${path}`,
                 path,
-                result.error
-            )
+                result.error,
+            ),
         );
     }
     return ok(undefined);

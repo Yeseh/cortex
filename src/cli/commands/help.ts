@@ -308,7 +308,7 @@ const parseHelpArgs = (args: string[]): Result<{ command?: string }, HelpCommand
 };
 
 export const runHelpCommand = (
-    options: HelpCommandOptions
+    options: HelpCommandOptions,
 ): Result<HelpCommandOutput, HelpCommandError> => {
     const parsed = parseHelpArgs(options.args);
     if (!parsed.ok) {

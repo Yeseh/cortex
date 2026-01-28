@@ -14,9 +14,9 @@ describe('show CLI command', () => {
     });
 
     const createMemoryFile = async (storeRoot: string, slugPath: string, content: string) => {
-        const memoryDir = join(storeRoot, 'memories', ...slugPath.split('/').slice(0, -1));
+        const memoryDir = join(storeRoot, ...slugPath.split('/').slice(0, -1));
         await mkdir(memoryDir, { recursive: true });
-        const filePath = join(storeRoot, 'memories', `${slugPath}.md`);
+        const filePath = join(storeRoot, `${slugPath}.md`);
         await writeFile(filePath, content, 'utf8');
     };
 
@@ -61,7 +61,9 @@ describe('show CLI command', () => {
             expect(memory.path).toBe(slugPath);
             expect(memory.metadata.createdAt).toEqual(new Date('2024-01-01T00:00:00.000Z'));
             expect(memory.metadata.updatedAt).toEqual(new Date('2024-01-02T00:00:00.000Z'));
-            expect(memory.metadata.tags).toEqual(['test', 'example']);
+            expect(memory.metadata.tags).toEqual([
+                'test', 'example',
+            ]);
             expect(memory.metadata.source).toBe('user');
             expect(memory.content).toBe('Memory content goes here.');
         });
@@ -130,7 +132,9 @@ describe('show CLI command', () => {
             expect(memory.metadata.expiresAt).toBeUndefined();
             expect(memory.metadata.createdAt).toEqual(new Date('2024-03-15T10:30:00.000Z'));
             expect(memory.metadata.updatedAt).toEqual(new Date('2024-03-16T14:45:00.000Z'));
-            expect(memory.metadata.tags).toEqual(['permanent', 'important']);
+            expect(memory.metadata.tags).toEqual([
+                'permanent', 'important',
+            ]);
             expect(memory.metadata.source).toBe('agent');
             expect(memory.content).toBe('This memory has no expiration.');
         });
@@ -295,7 +299,9 @@ describe('show CLI command', () => {
         });
 
         it('should return INVALID_ARGUMENTS for too many positional arguments', async () => {
-            const result = await runShowCommand(buildOptions(['project/memory', 'extra-arg']));
+            const result = await runShowCommand(buildOptions([
+                'project/memory', 'extra-arg',
+            ]));
 
             expect(result.ok).toBe(false);
             if (result.ok) {
@@ -550,7 +556,11 @@ describe('show CLI command', () => {
 
             await createMemoryFile(tempDir, slugPath, memoryContent);
 
-            const result = await runShowCommand(buildOptions(['', slugPath, '']));
+            const result = await runShowCommand(buildOptions([
+                '',
+                slugPath,
+                '',
+            ]));
 
             expect(result.ok).toBe(true);
             if (!result.ok) {
@@ -639,7 +649,9 @@ describe('show CLI command', () => {
                 return;
             }
 
-            expect(result.value.output.value.metadata.tags).toEqual(['first-tag', 'second-tag']);
+            expect(result.value.output.value.metadata.tags).toEqual([
+                'first-tag', 'second-tag',
+            ]);
         });
     });
 
@@ -658,7 +670,11 @@ describe('show CLI command', () => {
         it('should accept --format yaml', async () => {
             await createMemoryFile(tempDir, slugPath, memoryContent);
 
-            const result = await runShowCommand(buildOptions([slugPath, '--format', 'yaml']));
+            const result = await runShowCommand(buildOptions([
+                slugPath,
+                '--format',
+                'yaml',
+            ]));
 
             expect(result.ok).toBe(true);
             if (!result.ok) {
@@ -671,7 +687,11 @@ describe('show CLI command', () => {
         it('should accept --format json', async () => {
             await createMemoryFile(tempDir, slugPath, memoryContent);
 
-            const result = await runShowCommand(buildOptions([slugPath, '--format', 'json']));
+            const result = await runShowCommand(buildOptions([
+                slugPath,
+                '--format',
+                'json',
+            ]));
 
             expect(result.ok).toBe(true);
             if (!result.ok) {
@@ -684,7 +704,11 @@ describe('show CLI command', () => {
         it('should accept --format toon', async () => {
             await createMemoryFile(tempDir, slugPath, memoryContent);
 
-            const result = await runShowCommand(buildOptions([slugPath, '--format', 'toon']));
+            const result = await runShowCommand(buildOptions([
+                slugPath,
+                '--format',
+                'toon',
+            ]));
 
             expect(result.ok).toBe(true);
             if (!result.ok) {
@@ -708,7 +732,9 @@ describe('show CLI command', () => {
         });
 
         it('should return INVALID_ARGUMENTS for --format without value', async () => {
-            const result = await runShowCommand(buildOptions(['some/path', '--format']));
+            const result = await runShowCommand(buildOptions([
+                'some/path', '--format',
+            ]));
 
             expect(result.ok).toBe(false);
             if (result.ok) {
@@ -720,7 +746,11 @@ describe('show CLI command', () => {
         });
 
         it('should return INVALID_ARGUMENTS for invalid format value', async () => {
-            const result = await runShowCommand(buildOptions(['some/path', '--format', 'xml']));
+            const result = await runShowCommand(buildOptions([
+                'some/path',
+                '--format',
+                'xml',
+            ]));
 
             expect(result.ok).toBe(false);
             if (result.ok) {

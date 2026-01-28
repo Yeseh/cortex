@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { loadServerConfig, serverConfigSchema, getDefaultDataPath } from './config.ts';
 
 // Expected default data path based on user's home directory
-const expectedDefaultDataPath = join(homedir(), '.config', 'cortex', 'memory');
+const expectedDefaultDataPath = join(homedir(), '.config', 'cortex');
 
 describe('server config loading', () => {
     // Store original env
@@ -460,10 +460,10 @@ describe('getDefaultDataPath', () => {
         expect(result).toContain(homedir());
     });
 
-    it('should include cortex/memory path components', () => {
+    it('should include cortex path component', () => {
         const result = getDefaultDataPath();
 
         expect(result).toContain('cortex');
-        expect(result).toContain('memory');
+        // Note: memory is a subdirectory accessed via getMemoryPath()
     });
 });

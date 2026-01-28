@@ -136,7 +136,7 @@ describe('init CLI command', () => {
         await writeFile(
             configPath,
             'output_format: json\nauto_summary_threshold: 99\nstrict_local: true\n',
-            'utf8'
+            'utf8',
         );
 
         // Verify modification took effect
@@ -207,7 +207,9 @@ describe('init CLI command', () => {
         if (result.value.output.kind === 'init') {
             const expectedPath = join(tempDir, '.config', 'cortex', 'memory');
             expect(normalizePath(result.value.output.value.path)).toBe(normalizePath(expectedPath));
-            expect(result.value.output.value.categories).toEqual(['global', 'projects']);
+            expect(result.value.output.value.categories).toEqual([
+                'global', 'projects',
+            ]);
         }
     });
 });

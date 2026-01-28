@@ -84,7 +84,7 @@ const parseFlagValue = (
     args: string[],
     index: number,
     flag: string,
-    field: AddCommandError['field']
+    field: AddCommandError['field'],
 ): Result<{ value: string; nextIndex: number }, AddCommandError> => {
     const candidate = args[index + 1];
     if (candidate === undefined) {
@@ -107,7 +107,7 @@ const applyFlagValue = (
     index: number,
     flag: string,
     field: AddCommandError['field'],
-    handler: FlagHandler
+    handler: FlagHandler,
 ): Result<AddArgResult, AddCommandError> => {
     const parsed = parseFlagValue(args, index, flag, field);
     if (!parsed.ok) {
@@ -120,7 +120,7 @@ const applyFlagValue = (
 type FlagHandlerFn = (
     state: ParsedAddArgs,
     args: string[],
-    index: number
+    index: number,
 ) => Result<AddArgResult, AddCommandError>;
 
 const addFlagHandlers: Record<string, FlagHandlerFn> = {
@@ -162,7 +162,7 @@ const applyAddArg = (
     state: ParsedAddArgs,
     args: string[],
     index: number,
-    value: string
+    value: string,
 ): Result<AddArgResult, AddCommandError> => {
     const handler = addFlagHandlers[value];
     if (handler) {

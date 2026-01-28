@@ -4,8 +4,8 @@
  * This module registers MCP tools and resources for managing memory stores:
  *
  * Tools:
- * - `list_stores` - List all available memory stores
- * - `create_store` - Create a new memory store
+ * - `cortex_list_stores` - List all available memory stores
+ * - `cortex_create_store` - Create a new memory store
  *
  * Resources:
  * - `cortex://store/` - List all available stores
@@ -31,8 +31,8 @@ import { registerStoreResources } from './resources.ts';
  * Registers store management tools with the MCP server.
  *
  * Registers the following tools:
- * - `list_stores` - Lists all available memory stores in the data directory
- * - `create_store` - Creates a new memory store with the given name
+ * - `cortex_list_stores` - Lists all available memory stores in the data directory
+ * - `cortex_create_store` - Creates a new memory store with the given name
  *
  * Also registers store resources:
  * - `cortex://store/` - Lists all available stores
@@ -48,12 +48,10 @@ import { registerStoreResources } from './resources.ts';
  * registerStoreTools(server, config);
  * ```
  */
-export const registerStoreTools = (
-    server: McpServer, config: ServerConfig,
-): void => {
-    // Register list_stores tool
+export const registerStoreTools = (server: McpServer, config: ServerConfig): void => {
+    // Register cortex_list_stores tool
     server.registerTool(
-        'list_stores',
+        'cortex_list_stores',
         {
             description: 'List all available memory stores',
         },
@@ -63,47 +61,41 @@ export const registerStoreTools = (
                 return {
                     content: [{ type: 'text', text: `Error: ${result.error.message}` }],
                     isError: true,
-                }; 
+                };
             }
             return {
-                content: [{ type: 'text', text: JSON.stringify(
-                    { stores: result.value }, null, 2,
-                ) }],
+                content: [{ type: 'text', text: JSON.stringify({ stores: result.value }, null, 2) }],
             };
         },
     );
 
-    // Register create_store tool with input schema
+    // Register cortex_create_store tool with input schema
     server.registerTool(
-        'create_store',
+        'cortex_create_store',
         {
             description: 'Create a new memory store',
             inputSchema: {
-                name: storeNameSchema.describe('Name of the store to create (alphanumeric, hyphens, underscores only)'),
+                name: storeNameSchema.describe(
+                    'Name of the store to create (alphanumeric, hyphens, underscores only)',
+                ),
             },
         },
         async ({ name }) => {
-            const result = await createStore(
-                config.dataPath, name,
-            );
+            const result = await createStore(config.dataPath, name);
             if (!result.ok) {
                 return {
                     content: [{ type: 'text', text: `Error: ${result.error.message}` }],
                     isError: true,
-                }; 
+                };
             }
             return {
-                content: [{ type: 'text', text: JSON.stringify(
-                    { created: name }, null, 2,
-                ) }],
+                content: [{ type: 'text', text: JSON.stringify({ created: name }, null, 2) }],
             };
         },
     );
 
     // Register store resources
-    registerStoreResources(
-        server, config,
-    );
+    registerStoreResources(server, config);
 };
 
 // Re-export tools for direct usage

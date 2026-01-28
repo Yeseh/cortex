@@ -53,7 +53,9 @@ const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 const formatRegistry = (registry: Record<string, { path: string }>): OutputStoreRegistry => ({
     stores: Object.entries(registry)
-        .map(([name, definition]) => ({ name, path: definition.path }))
+        .map(([
+            name, definition,
+        ]) => ({ name, path: definition.path }))
         .sort((left, right) => left.name.localeCompare(right.name)),
 });
 
@@ -172,7 +174,7 @@ const loadRegistryOrEmpty = async (registryPath: string): Promise<LoadRegistryRe
 
 const saveRegistry = async (
     registryPath: string,
-    registry: Record<string, { path: string }>
+    registry: Record<string, { path: string }>,
 ): Promise<Result<void, StoreCommandError>> => {
     const saved = await saveStoreRegistry(registryPath, registry);
     if (!saved.ok) {
@@ -214,7 +216,7 @@ const runStoreList = async (options: StoreCommandOptions): Promise<StoreResult> 
 const runStoreAdd = async (
     options: StoreCommandOptions,
     name: string,
-    path: string
+    path: string,
 ): Promise<StoreResult> => {
     const registryResult = await loadRegistryOrEmpty(options.registryPath);
     if (!registryResult.ok) {
@@ -266,7 +268,8 @@ const runStoreRemove = async (options: StoreCommandOptions, name: string): Promi
                 cause: removedRegistry.error,
             });
         }
-    } else {
+    }
+    else {
         const saved = await saveRegistry(options.registryPath, rest);
         if (!saved.ok) {
             return saved;
@@ -284,7 +287,7 @@ const runStoreRemove = async (options: StoreCommandOptions, name: string): Promi
 
 const runStoreInit = async (
     options: StoreCommandOptions,
-    targetPath?: string
+    targetPath?: string,
 ): Promise<StoreResult> => {
     const basePath = targetPath?.trim() || resolve(options.cwd, '.cortex');
     const rootPath = targetPath ? resolve(options.cwd, basePath) : basePath;
@@ -298,7 +301,8 @@ const runStoreInit = async (
             return serializedIndex;
         }
         await writeFile(indexPath, serializedIndex.value, 'utf8');
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'STORE_INIT_FAILED',
             message: `Failed to initialize store at ${rootPath}.`,
@@ -317,11 +321,13 @@ const runStoreInit = async (
 const runStoreAction = (
     options: StoreCommandOptions,
     command: string,
-    args: string[]
+    args: string[],
 ): Promise<StoreResult> => {
     const handlers: Record<string, (args: string[]) => Promise<StoreResult>> = {
         list: () => runStoreList(options),
-        add: ([name, path]) => runStoreAddCommand(options, name, path),
+        add: ([
+            name, path,
+        ]) => runStoreAddCommand(options, name, path),
         remove: ([name]) => runStoreRemoveCommand(options, name),
         init: ([path]) => runStoreInit(options, path),
     };
@@ -332,7 +338,7 @@ const runStoreAction = (
             err({
                 code: 'INVALID_COMMAND',
                 message: `Unknown store command: ${command}.`,
-            })
+            }),
         );
     }
 
@@ -342,14 +348,14 @@ const runStoreAction = (
 const runStoreAddCommand = (
     options: StoreCommandOptions,
     name: string | undefined,
-    path: string | undefined
+    path: string | undefined,
 ): Promise<StoreResult> => {
     if (!name || !path) {
         return Promise.resolve(
             err({
                 code: 'INVALID_COMMAND',
                 message: 'Store add requires a name and a path.',
-            })
+            }),
         );
     }
     const parsedName = validateStoreNameInput(name);
@@ -366,14 +372,14 @@ const runStoreAddCommand = (
 
 const runStoreRemoveCommand = (
     options: StoreCommandOptions,
-    name: string | undefined
+    name: string | undefined,
 ): Promise<StoreResult> => {
     if (!name) {
         return Promise.resolve(
             err({
                 code: 'INVALID_COMMAND',
                 message: 'Store remove requires a name.',
-            })
+            }),
         );
     }
     const parsedName = validateStoreNameInput(name);
@@ -384,7 +390,9 @@ const runStoreRemoveCommand = (
 };
 
 export const runStoreCommand = async (options: StoreCommandOptions): Promise<StoreResult> => {
-    const [command, ...rest] = options.args;
+    const [
+        command, ...rest
+    ] = options.args;
     if (!command) {
         return err({
             code: 'INVALID_COMMAND',

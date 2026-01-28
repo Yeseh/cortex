@@ -105,7 +105,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
     async writeMemoryFile(
         slugPath: MemorySlugPath,
         contents: string,
-        options: { allowIndexCreate?: boolean; allowIndexUpdate?: boolean } = {}
+        options: { allowIndexCreate?: boolean; allowIndexUpdate?: boolean } = {},
     ): Promise<Result<void, StorageAdapterError>> {
         const writeResult = await writeMemoryFileOp(this.ctx, slugPath, contents);
         if (!writeResult.ok) {
@@ -143,7 +143,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
      */
     async moveMemoryFile(
         sourceSlugPath: MemorySlugPath,
-        destinationSlugPath: MemorySlugPath
+        destinationSlugPath: MemorySlugPath,
     ): Promise<Result<void, StorageAdapterError>> {
         return moveMemoryFileOp(this.ctx, sourceSlugPath, destinationSlugPath);
     }
@@ -170,7 +170,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
      */
     async writeIndexFile(
         name: StorageIndexName,
-        contents: string
+        contents: string,
     ): Promise<Result<void, StorageAdapterError>> {
         return writeIndexFileOp(this.ctx, name, contents);
     }
@@ -226,7 +226,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
     async updateSubcategoryDescription(
         parentPath: string,
         subcategoryPath: string,
-        description: string | null
+        description: string | null,
     ): Promise<Result<void, CategoryError>> {
         return updateSubcategoryDescriptionOp(this.ctx, parentPath, subcategoryPath, description);
     }
@@ -239,7 +239,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
      */
     async removeSubcategoryEntry(
         parentPath: string,
-        subcategoryPath: string
+        subcategoryPath: string,
     ): Promise<Result<void, CategoryError>> {
         return removeSubcategoryEntryOp(this.ctx, parentPath, subcategoryPath);
     }
@@ -251,7 +251,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
      * @returns The parsed CategoryIndex or null if not found
      */
     async readCategoryIndexForPort(
-        path: string
+        path: string,
     ): Promise<Result<CategoryIndex | null, CategoryError>> {
         return readCategoryIndexForPort(this.ctx, path);
     }
@@ -264,7 +264,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
      */
     async writeCategoryIndexForPort(
         path: string,
-        index: CategoryIndex
+        index: CategoryIndex,
     ): Promise<Result<void, CategoryError>> {
         return writeCategoryIndexForPort(this.ctx, path, index);
     }

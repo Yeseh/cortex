@@ -21,7 +21,7 @@ import { err, isNotFoundError, ok, resolveStoragePath } from './utils.ts';
  */
 export const validateSlugPath = (
     slugPath: string,
-    failure: { code: StorageAdapterError['code']; message: string; path: string }
+    failure: { code: StorageAdapterError['code']; message: string; path: string },
 ): Result<MemoryIdentity, StorageAdapterError> => {
     const identity = validateMemorySlugPath(slugPath);
     if (!identity.ok) {
@@ -43,7 +43,7 @@ export const validateSlugPath = (
 export const resolveMemoryPath = (
     ctx: FilesystemContext,
     slugPath: MemorySlugPath,
-    errorCode: StorageAdapterError['code']
+    errorCode: StorageAdapterError['code'],
 ): Result<string, StorageAdapterError> => {
     return resolveStoragePath(ctx.storeRoot, `${slugPath}${ctx.memoryExtension}`, errorCode);
 };
@@ -57,7 +57,7 @@ export const resolveMemoryPath = (
  */
 export const readMemoryFile = async (
     ctx: FilesystemContext,
-    slugPath: MemorySlugPath
+    slugPath: MemorySlugPath,
 ): Promise<StringOrNullResult> => {
     const filePathResult = resolveMemoryPath(ctx, slugPath, 'READ_FAILED');
     if (!filePathResult.ok) {
@@ -67,7 +67,8 @@ export const readMemoryFile = async (
     try {
         const contents = await readFile(filePath, 'utf8');
         return ok(contents);
-    } catch (error) {
+    }
+    catch (error) {
         if (isNotFoundError(error)) {
             return ok(null);
         }
@@ -93,7 +94,7 @@ export const readMemoryFile = async (
 export const writeMemoryFile = async (
     ctx: FilesystemContext,
     slugPath: MemorySlugPath,
-    contents: string
+    contents: string,
 ): Promise<Result<void, StorageAdapterError>> => {
     const identityResult = validateSlugPath(slugPath, {
         code: 'WRITE_FAILED',
@@ -113,7 +114,8 @@ export const writeMemoryFile = async (
     try {
         await mkdir(dirname(filePath), { recursive: true });
         await writeFile(filePath, contents, 'utf8');
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'WRITE_FAILED',
             message: `Failed to write memory file at ${filePath}.`,
@@ -134,7 +136,7 @@ export const writeMemoryFile = async (
  */
 export const removeMemoryFile = async (
     ctx: FilesystemContext,
-    slugPath: MemorySlugPath
+    slugPath: MemorySlugPath,
 ): Promise<Result<void, StorageAdapterError>> => {
     const identityResult = validateSlugPath(slugPath, {
         code: 'WRITE_FAILED',
@@ -153,7 +155,8 @@ export const removeMemoryFile = async (
     try {
         await rm(filePath);
         return ok(undefined);
-    } catch (error) {
+    }
+    catch (error) {
         if (isNotFoundError(error)) {
             return ok(undefined);
         }
@@ -179,7 +182,7 @@ export const removeMemoryFile = async (
 export const moveMemoryFile = async (
     ctx: FilesystemContext,
     sourceSlugPath: MemorySlugPath,
-    destinationSlugPath: MemorySlugPath
+    destinationSlugPath: MemorySlugPath,
 ): Promise<Result<void, StorageAdapterError>> => {
     const sourceIdentityResult = validateSlugPath(sourceSlugPath, {
         code: 'WRITE_FAILED',
@@ -210,7 +213,8 @@ export const moveMemoryFile = async (
     const destinationDirectory = dirname(destinationPathResult.value);
     try {
         await access(destinationDirectory);
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'WRITE_FAILED',
             message: `Destination category does not exist for ${destinationSlugPath}.`,
@@ -221,7 +225,8 @@ export const moveMemoryFile = async (
     try {
         await rename(sourcePathResult.value, destinationPathResult.value);
         return ok(undefined);
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'WRITE_FAILED',
             message: `Failed to move memory from ${sourceSlugPath} to ${destinationSlugPath}.`,

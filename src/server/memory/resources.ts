@@ -34,7 +34,12 @@ import type { ServerConfig } from '../config.ts';
  * These are the top-level categories in the memory hierarchy that are
  * enumerated when listing resources or providing path completions.
  */
-const ROOT_CATEGORIES = ['human', 'persona', 'project', 'domain'] as const;
+const ROOT_CATEGORIES = [
+    'human',
+    'persona',
+    'project',
+    'domain',
+] as const;
 
 /**
  * URI scheme prefix for memory resources.
@@ -182,7 +187,7 @@ const getVariableString = (value: string | string[] | undefined): string => {
  */
 const parseUriVariables = (
     variables: Variables,
-    config: ServerConfig
+    config: ServerConfig,
 ): Result<ParsedUriVariables, McpError> => {
     const store = getVariableString(variables.store) || config.defaultStore;
     const rawPath = getVariableString(variables['path*']);
@@ -277,13 +282,13 @@ interface CategoryListing {
 const readMemoryContent = async (
     adapter: FilesystemStorageAdapter,
     store: string,
-    memoryPath: string
+    memoryPath: string,
 ): Promise<Result<ReadResourceResult, McpError>> => {
     // Validate the memory path
     const identity = validateMemorySlugPath(memoryPath);
     if (!identity.ok) {
         return err(
-            new McpError(ErrorCode.InvalidParams, `Invalid memory path: ${identity.error.message}`)
+            new McpError(ErrorCode.InvalidParams, `Invalid memory path: ${identity.error.message}`),
         );
     }
 
@@ -293,8 +298,8 @@ const readMemoryContent = async (
         return err(
             new McpError(
                 ErrorCode.InternalError,
-                `Failed to read memory: ${readResult.error.message}`
-            )
+                `Failed to read memory: ${readResult.error.message}`,
+            ),
         );
     }
 
@@ -306,20 +311,18 @@ const readMemoryContent = async (
     const parsed = parseMemoryFile(readResult.value);
     if (!parsed.ok) {
         return err(
-            new McpError(ErrorCode.InternalError, `Failed to parse memory: ${parsed.error.message}`)
+            new McpError(ErrorCode.InternalError, `Failed to parse memory: ${parsed.error.message}`),
         );
     }
 
     const uri = buildResourceUri(store, memoryPath, false);
 
     return ok({
-        contents: [
-            {
-                uri,
-                mimeType: 'text/plain',
-                text: parsed.value.content,
-            },
-        ],
+        contents: [{
+            uri,
+            mimeType: 'text/plain',
+            text: parsed.value.content,
+        }],
     });
 };
 
@@ -353,7 +356,7 @@ const readMemoryContent = async (
 const readCategoryListing = async (
     adapter: FilesystemStorageAdapter,
     store: string,
-    categoryPath: string
+    categoryPath: string,
 ): Promise<Result<ReadResourceResult, McpError>> => {
     // Handle root listing (empty path)
     if (!categoryPath) {
@@ -366,8 +369,8 @@ const readCategoryListing = async (
         return err(
             new McpError(
                 ErrorCode.InternalError,
-                `Failed to read category index: ${indexResult.error.message}`
-            )
+                `Failed to read category index: ${indexResult.error.message}`,
+            ),
         );
     }
 
@@ -381,8 +384,8 @@ const readCategoryListing = async (
         return err(
             new McpError(
                 ErrorCode.InternalError,
-                `Failed to parse category index: ${parsed.error.message}`
-            )
+                `Failed to parse category index: ${parsed.error.message}`,
+            ),
         );
     }
 
@@ -404,13 +407,11 @@ const readCategoryListing = async (
     const uri = buildResourceUri(store, categoryPath, true);
 
     return ok({
-        contents: [
-            {
-                uri,
-                mimeType: 'application/json',
-                text: JSON.stringify(listing, null, 2),
-            },
-        ],
+        contents: [{
+            uri,
+            mimeType: 'application/json',
+            text: JSON.stringify(listing, null, 2),
+        }],
     });
 };
 
@@ -426,7 +427,7 @@ const readCategoryListing = async (
  */
 const readRootCategoryListing = async (
     adapter: FilesystemStorageAdapter,
-    store: string
+    store: string,
 ): Promise<Result<ReadResourceResult, McpError>> => {
     const subcategories: CategoryListing['subcategories'] = [];
 
@@ -458,13 +459,11 @@ const readRootCategoryListing = async (
     const uri = buildResourceUri(store, '', true);
 
     return ok({
-        contents: [
-            {
-                uri,
-                mimeType: 'application/json',
-                text: JSON.stringify(listing, null, 2),
-            },
-        ],
+        contents: [{
+            uri,
+            mimeType: 'application/json',
+            text: JSON.stringify(listing, null, 2),
+        }],
     });
 };
 
@@ -636,7 +635,8 @@ export const registerMemoryResources = (server: McpServer, config: ServerConfig)
                 if (categoryPath === '') {
                     const matches = ROOT_CATEGORIES.filter((cat) => cat.startsWith(prefix));
                     completions.push(...matches);
-                } else {
+                }
+                else {
                     // Read the parent category index
                     const indexResult = await adapter.readIndexFile(categoryPath);
                     if (indexResult.ok && indexResult.value) {
@@ -691,7 +691,8 @@ export const registerMemoryResources = (server: McpServer, config: ServerConfig)
                     throw result.error;
                 }
                 return result.value;
-            } else {
+            }
+            else {
                 const result = await readMemoryContent(adapter, store, path);
                 // MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
                 if (!result.ok) {
@@ -699,6 +700,6 @@ export const registerMemoryResources = (server: McpServer, config: ServerConfig)
                 }
                 return result.value;
             }
-        }
+        },
     );
 };

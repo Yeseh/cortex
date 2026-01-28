@@ -7,7 +7,7 @@
  */
 
 import type { Result } from '../core/types.ts';
-import { serialize, type OutputFormat } from '../core/serialize.ts';
+import { serialize, type OutputFormat } from '../core/serialization.ts';
 
 // Re-export OutputFormat from core
 export type { OutputFormat };
@@ -76,7 +76,7 @@ export interface OutputSerializeError {
 }
 
 /** Re-export toonOptions for backwards compatibility */
-export { toonOptions } from '../core/serialize.ts';
+export { toonOptions } from '../core/serialization.ts';
 
 const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
 const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
@@ -93,12 +93,13 @@ const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
  */
 export const serializeOutput = (
     payload: OutputPayload,
-    format: OutputFormat
+    format: OutputFormat,
 ): Result<string, OutputSerializeError> => {
     try {
         const result = serialize(payload.value, format);
         return ok(result);
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'SERIALIZE_FAILED',
             message: error instanceof Error ? error.message : 'Serialization failed',

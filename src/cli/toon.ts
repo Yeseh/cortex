@@ -219,7 +219,7 @@ const isUniformArray = (arr: unknown[]): arr is Record<string, unknown>[] => {
         (item) =>
             Object.keys(item as object)
                 .sort()
-                .join(',') === firstKeys
+                .join(',') === firstKeys,
     );
 };
 
@@ -252,7 +252,7 @@ const isUniformArray = (arr: unknown[]): arr is Record<string, unknown>[] => {
 const serializeTabularArray = (
     arr: Record<string, unknown>[],
     key: string,
-    delimiter: string
+    delimiter: string,
 ): string => {
     if (arr.length === 0) return `${key}:[]`;
 
@@ -265,7 +265,9 @@ const serializeTabularArray = (
         return delimiter + values.join(delimiter);
     });
 
-    return [headerLine, ...rows].join('\n');
+    return [
+        headerLine, ...rows,
+    ].join('\n');
 };
 
 /**
@@ -286,16 +288,19 @@ const serializeTabularArray = (
  */
 const flattenObject = (
     obj: Record<string, unknown>,
-    prefix: string = ''
+    prefix: string = '',
 ): Record<string, unknown> => {
     const result: Record<string, unknown> = {};
 
-    for (const [key, value] of Object.entries(obj)) {
+    for (const [
+        key, value,
+    ] of Object.entries(obj)) {
         const fullKey = prefix ? `${prefix}.${key}` : key;
 
         if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
             Object.assign(result, flattenObject(value as Record<string, unknown>, fullKey));
-        } else {
+        }
+        else {
             result[fullKey] = value;
         }
     }
@@ -348,10 +353,13 @@ const serializeValue = (value: unknown, options: Required<ToonOptions>, key?: st
     const entries = Object.entries(obj);
     const parts: string[] = [];
 
-    for (const [k, v] of entries) {
+    for (const [
+        k, v,
+    ] of entries) {
         if (Array.isArray(v) && isUniformArray(v)) {
             parts.push(serializeTabularArray(v, k, delimiter));
-        } else if (
+        }
+        else if (
             typeof v === 'object' &&
             v !== null &&
             !Array.isArray(v) &&
@@ -359,7 +367,8 @@ const serializeValue = (value: unknown, options: Required<ToonOptions>, key?: st
         ) {
             // Nested object without key folding - serialize inline
             parts.push(`${k}:{${serializeValue(v, options)}}`);
-        } else {
+        }
+        else {
             const serialized = serializePrimitive(v, delimiter);
             parts.push(`${k}:${serialized}`);
         }

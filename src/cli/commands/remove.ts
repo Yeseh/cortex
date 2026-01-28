@@ -64,7 +64,7 @@ const parseRemoveArgs = (args: string[]): Result<ParsedRemoveArgs, RemoveCommand
 };
 
 export const runRemoveCommand = async (
-    options: RemoveCommandOptions
+    options: RemoveCommandOptions,
 ): Promise<RemoveCommandResult> => {
     const parsed = parseRemoveArgs(options.args);
     if (!parsed.ok) {

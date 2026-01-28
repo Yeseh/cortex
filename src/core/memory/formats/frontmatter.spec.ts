@@ -22,7 +22,9 @@ describe('memory file parsing', () => {
             expect(result.value.metadata.createdAt.toISOString()).toBe('2024-01-01T00:00:00.000Z');
             expect(result.value.metadata.updatedAt.toISOString()).toBe('2024-01-02T00:00:00.000Z');
             expect(result.value.metadata.expiresAt?.toISOString()).toBe('2024-02-01T00:00:00.000Z');
-            expect(result.value.metadata.tags).toEqual(['personal', 'onboarding']);
+            expect(result.value.metadata.tags).toEqual([
+                'personal', 'onboarding',
+            ]);
             expect(result.value.metadata.source).toBe('user');
             expect(result.value.content).toBe('Remember the onboarding checklist.');
         }
@@ -120,7 +122,9 @@ describe('memory file parsing', () => {
 
         expect(result.ok).toBe(true);
         if (result.ok) {
-            expect(result.value.metadata.tags).toEqual(['product', 'research']);
+            expect(result.value.metadata.tags).toEqual([
+                'product', 'research',
+            ]);
             expect(result.value.content).toBe('Tags list style.');
         }
     });
@@ -271,7 +275,9 @@ describe('memory file serialization', () => {
             metadata: {
                 createdAt: new Date('2024-03-01T08:30:00.000Z'),
                 updatedAt: new Date('2024-03-02T10:15:00.000Z'),
-                tags: ['alpha', 'beta'],
+                tags: [
+                    'alpha', 'beta',
+                ],
                 source: 'system',
                 expiresAt: new Date('2024-04-01T00:00:00.000Z'),
             },
@@ -288,18 +294,20 @@ describe('memory file serialization', () => {
         expect(reparsed.ok).toBe(true);
         if (reparsed.ok) {
             expect(reparsed.value.metadata.createdAt.toISOString()).toBe(
-                '2024-03-01T08:30:00.000Z'
+                '2024-03-01T08:30:00.000Z',
             );
             expect(reparsed.value.metadata.updatedAt.toISOString()).toBe(
-                '2024-03-02T10:15:00.000Z'
+                '2024-03-02T10:15:00.000Z',
             );
             expect(reparsed.value.metadata.expiresAt?.toISOString()).toBe(
-                '2024-04-01T00:00:00.000Z'
+                '2024-04-01T00:00:00.000Z',
             );
-            expect(reparsed.value.metadata.tags).toEqual(['alpha', 'beta']);
+            expect(reparsed.value.metadata.tags).toEqual([
+                'alpha', 'beta',
+            ]);
             expect(reparsed.value.metadata.source).toBe('system');
             expect(reparsed.value.content).toBe(
-                'Memory payload with multiple lines.\nSecond line.'
+                'Memory payload with multiple lines.\nSecond line.',
             );
         }
     });
@@ -384,7 +392,7 @@ describe('memory file serialization', () => {
         };
 
         const result = serializeFrontmatter(
-            memory as unknown as Parameters<typeof serializeFrontmatter>[0]
+            memory as unknown as Parameters<typeof serializeFrontmatter>[0],
         );
 
         expect(result.ok).toBe(false);
@@ -399,14 +407,16 @@ describe('memory file serialization', () => {
             metadata: {
                 createdAt: new Date('2024-03-01T08:30:00.000Z'),
                 updatedAt: new Date('2024-03-02T10:15:00.000Z'),
-                tags: ['alpha', 42],
+                tags: [
+                    'alpha', 42,
+                ],
                 source: 'system',
             },
             content: 'Serialized memory.',
         };
 
         const result = serializeFrontmatter(
-            memory as unknown as Parameters<typeof serializeFrontmatter>[0]
+            memory as unknown as Parameters<typeof serializeFrontmatter>[0],
         );
 
         expect(result.ok).toBe(false);

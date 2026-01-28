@@ -15,7 +15,9 @@ const sampleMemory: OutputMemory = {
     metadata: {
         createdAt: new Date('2024-01-15T10:00:00Z'),
         updatedAt: new Date('2024-01-16T14:30:00Z'),
-        tags: ['test', 'example'],
+        tags: [
+            'test', 'example',
+        ],
         source: 'unit-test',
         tokenEstimate: 42,
     },
@@ -385,7 +387,11 @@ describe('serializeInitToon', () => {
     test('encodes init with path and categories', () => {
         const init: OutputInit = {
             path: '/project/root',
-            categories: ['persona', 'project', 'domain'],
+            categories: [
+                'persona',
+                'project',
+                'domain',
+            ],
         };
         const result = toonSerialize('init', init);
 
@@ -507,7 +513,9 @@ describe('TOON edge cases', () => {
             path: 'test/unicode',
             metadata: {
                 createdAt: new Date('2024-01-15T10:00:00Z'),
-                tags: ['emoji', 'unicode'],
+                tags: [
+                    'emoji', 'unicode',
+                ],
             },
             content: 'Hello, world! Bonjour! Hola!',
         };
@@ -541,13 +549,11 @@ describe('TOON edge cases', () => {
     test('handles category memory with summary containing special characters', () => {
         const category: OutputCategory = {
             path: 'test/special-summary',
-            memories: [
-                {
-                    path: 'test/mem1',
-                    tokenEstimate: 10,
-                    summary: 'Summary with "quotes" and: colons',
-                },
-            ],
+            memories: [{
+                path: 'test/mem1',
+                tokenEstimate: 10,
+                summary: 'Summary with "quotes" and: colons',
+            }],
             subcategories: [],
         };
         const result = toonSerialize('category', category);
@@ -564,7 +570,11 @@ describe('TOON edge cases', () => {
             path: 'test/tags',
             metadata: {
                 createdAt: new Date('2024-01-15T10:00:00Z'),
-                tags: ['tag1', 'tag-two', 'tag_three'],
+                tags: [
+                    'tag1',
+                    'tag-two',
+                    'tag_three',
+                ],
             },
             content: 'Tagged content',
         };

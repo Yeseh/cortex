@@ -102,7 +102,7 @@ const isExpired = (expiresAt: Date | undefined, now: Date): boolean => {
 
 const loadMemoryExpiry = async (
     adapter: FilesystemStorageAdapter,
-    slugPath: string
+    slugPath: string,
 ): Promise<Result<Date | undefined, ListCommandError>> => {
     const contents = await adapter.readMemoryFile(slugPath);
     if (!contents.ok) {
@@ -128,7 +128,7 @@ const loadMemoryExpiry = async (
 
 const loadCategoryIndex = async (
     adapter: FilesystemStorageAdapter,
-    categoryPath: string
+    categoryPath: string,
 ): Promise<Result<CategoryIndex | null, ListCommandError>> => {
     const indexContents = await adapter.readIndexFile(categoryPath);
     if (!indexContents.ok) {
@@ -157,7 +157,7 @@ const collectMemoriesFromCategory = async (
     categoryPath: string,
     includeExpired: boolean,
     now: Date,
-    visited: Set<string>
+    visited: Set<string>,
 ): Promise<Result<ListMemoryEntry[], ListCommandError>> => {
     if (visited.has(categoryPath)) {
         return ok([]);
@@ -198,7 +198,7 @@ const collectMemoriesFromCategory = async (
             subcategory.path,
             includeExpired,
             now,
-            visited
+            visited,
         );
         if (!subResult.ok) {
             return subResult;
@@ -212,9 +212,14 @@ const collectMemoriesFromCategory = async (
 const collectAllCategories = async (
     adapter: FilesystemStorageAdapter,
     includeExpired: boolean,
-    now: Date
+    now: Date,
 ): Promise<Result<ListMemoryEntry[], ListCommandError>> => {
-    const rootCategories = ['human', 'persona', 'project', 'domain'];
+    const rootCategories = [
+        'human',
+        'persona',
+        'project',
+        'domain',
+    ];
     const entries: ListMemoryEntry[] = [];
     const visited = new Set<string>();
 
@@ -224,7 +229,7 @@ const collectAllCategories = async (
             category,
             includeExpired,
             now,
-            visited
+            visited,
         );
         if (!result.ok) {
             return result;
@@ -237,7 +242,7 @@ const collectAllCategories = async (
 
 const formatOutput = (
     memories: ListMemoryEntry[],
-    format: OutputFormat
+    format: OutputFormat,
 ): Result<string, ListCommandError> => {
     const outputMemories = memories.map((memory) => ({
         path: memory.path,
@@ -293,13 +298,14 @@ export const runListCommand = async (options: ListCommandOptions): Promise<ListC
             parsed.value.category,
             parsed.value.includeExpired,
             now,
-            new Set()
+            new Set(),
         );
         if (!result.ok) {
             return result;
         }
         memories = result.value;
-    } else {
+    }
+    else {
         const result = await collectAllCategories(adapter, parsed.value.includeExpired, now);
         if (!result.ok) {
             return result;

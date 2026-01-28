@@ -101,7 +101,7 @@ export const runMoveCommand = async (options: MoveCommandOptions): Promise<MoveC
     const adapter = new FilesystemStorageAdapter({ rootDirectory: options.storeRoot });
     const moveResult = await adapter.moveMemoryFile(
         sourceIdentity.value.slugPath,
-        destinationIdentity.value.slugPath
+        destinationIdentity.value.slugPath,
     );
 
     if (!moveResult.ok) {

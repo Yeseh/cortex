@@ -50,7 +50,7 @@ export const normalizeExtension = (value: string | undefined, fallback: string):
 export const resolveStoragePath = (
     root: string,
     relativePath: string,
-    errorCode: StorageAdapterError['code']
+    errorCode: StorageAdapterError['code'],
 ): Result<string, StorageAdapterError> => {
     const resolved = resolve(root, relativePath);
     const rootRelative = relative(root, resolved);

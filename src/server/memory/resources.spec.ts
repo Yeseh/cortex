@@ -40,7 +40,7 @@ const createTestConfig = (dataPath: string): ServerConfig => ({
 const createTestDir = async (): Promise<string> => {
     const testDir = join(
         tmpdir(),
-        `cortex-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
+        `cortex-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     );
     await mkdir(testDir, { recursive: true });
     return testDir;
@@ -50,7 +50,7 @@ const createTestDir = async (): Promise<string> => {
 const createMemoryFile = async (
     storeRoot: string,
     slugPath: string,
-    contents: MemoryFileContents
+    contents: MemoryFileContents,
 ): Promise<void> => {
     const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
     const serialized = serializeMemoryFile(contents);
@@ -70,7 +70,7 @@ const createMemoryFile = async (
 const _createCategoryIndex = async (
     storeRoot: string,
     categoryPath: string,
-    index: CategoryIndex
+    index: CategoryIndex,
 ): Promise<void> => {
     const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
     const serialized = serializeIndex(index);
@@ -85,7 +85,7 @@ const _createCategoryIndex = async (
 
 // Helper to safely extract text content from resource result
 const getTextContent = (
-    content: { uri: string; text?: string; blob?: string } | undefined
+    content: { uri: string; text?: string; blob?: string } | undefined,
 ): string => {
     if (!content) {
         throw new Error('Content is undefined');
@@ -174,7 +174,11 @@ describe('parseUriVariables', () => {
     });
 
     it('should handle path* as array', () => {
-        const variables = { store: 'default', 'path*': ['project', 'subcategory', 'memory'] };
+        const variables = { store: 'default', 'path*': [
+            'project',
+            'subcategory',
+            'memory',
+        ] };
         const result = parseUriVariables(variables, config);
 
         expect(result.ok).toBe(true);
@@ -295,7 +299,7 @@ describe('readMemoryContent', () => {
         const result = await readMemoryContent(
             adapter,
             'default',
-            'project/subcategory/deep-memory'
+            'project/subcategory/deep-memory',
         );
 
         expect(result.ok).toBe(true);
@@ -622,7 +626,7 @@ describe('listResources', () => {
         expect(result.ok).toBe(true);
         if (result.ok) {
             const rootResource = result.value.resources.find((r) =>
-                r.name.includes('Memory Store')
+                r.name.includes('Memory Store'),
             );
             expect(rootResource).toBeDefined();
             expect(rootResource!.uri).toBe('cortex://memory/default/');
@@ -649,7 +653,7 @@ describe('listResources', () => {
         expect(result.ok).toBe(true);
         if (result.ok) {
             const categoryResource = result.value.resources.find(
-                (r) => r.name === 'Category: project'
+                (r) => r.name === 'Category: project',
             );
             expect(categoryResource).toBeDefined();
             expect(categoryResource!.uri).toBe('cortex://memory/default/project/');
@@ -676,7 +680,7 @@ describe('listResources', () => {
         expect(result.ok).toBe(true);
         if (result.ok) {
             const memoryResource = result.value.resources.find(
-                (r) => r.name === 'Memory: project/memory-resource'
+                (r) => r.name === 'Memory: project/memory-resource',
             );
             expect(memoryResource).toBeDefined();
             expect(memoryResource!.uri).toBe('cortex://memory/default/project/memory-resource');
@@ -703,7 +707,7 @@ describe('listResources', () => {
         expect(result.ok).toBe(true);
         if (result.ok) {
             const subResource = result.value.resources.find(
-                (r) => r.name === 'Category: project/sub'
+                (r) => r.name === 'Category: project/sub',
             );
             expect(subResource).toBeDefined();
             expect(subResource!.uri).toBe('cortex://memory/default/project/sub/');
@@ -917,7 +921,7 @@ describe('resource workflow', () => {
         const memoryResult = await readMemoryContent(
             adapter,
             'default',
-            'project/level1/level2/deep-memory'
+            'project/level1/level2/deep-memory',
         );
         expect(memoryResult.ok).toBe(true);
         if (memoryResult.ok) {

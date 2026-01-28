@@ -182,7 +182,8 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
     app.post('/mcp', async (req, res) => {
         try {
             await transport.handleRequest(req, res, req.body);
-        } catch (error) {
+        }
+        catch (error) {
             if (!res.headersSent) {
                 res.status(500).json({ error: 'Internal server error' });
             }

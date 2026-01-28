@@ -215,8 +215,10 @@ const parseMetadata = (frontmatterLines: string[]): ParseMetadataResult => {
     try {
         const doc = parseDocument(frontmatterText, { uniqueKeys: true });
 
-        const hasDuplicateKeyIssue = [...doc.errors, ...doc.warnings].some((issue) =>
-            /duplicate key/i.test(issue.message)
+        const hasDuplicateKeyIssue = [
+            ...doc.errors, ...doc.warnings,
+        ].some((issue) =>
+            /duplicate key/i.test(issue.message),
         );
 
         if (hasDuplicateKeyIssue) {
@@ -234,7 +236,8 @@ const parseMetadata = (frontmatterLines: string[]): ParseMetadataResult => {
         }
 
         data = doc.toJS();
-    } catch {
+    }
+    catch {
         return err({
             code: 'INVALID_FRONTMATTER',
             message: 'Invalid YAML frontmatter.',

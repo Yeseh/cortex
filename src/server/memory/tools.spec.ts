@@ -27,6 +27,7 @@ import {
 import { FilesystemStorageAdapter } from '../../core/storage/filesystem/index.ts';
 import { serializeMemoryFile, type MemoryFileContents } from '../../core/memory/index.ts';
 import { serializeIndex } from '../../core/serialization.ts';
+import { MEMORY_SUBDIR } from '../config.ts';
 
 // Test configuration
 const createTestConfig = (dataPath: string): ServerConfig => ({
@@ -43,7 +44,7 @@ const createTestConfig = (dataPath: string): ServerConfig => ({
 const createTestDir = async (): Promise<string> => {
     const testDir = join(
         tmpdir(),
-        `cortex-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
+        `cortex-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     );
     await mkdir(testDir, { recursive: true });
     return testDir;
@@ -53,7 +54,7 @@ const createTestDir = async (): Promise<string> => {
 const createMemoryFile = async (
     storeRoot: string,
     slugPath: string,
-    contents: MemoryFileContents
+    contents: MemoryFileContents,
 ): Promise<void> => {
     const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
     const serialized = serializeMemoryFile(contents);
@@ -69,7 +70,7 @@ const createMemoryFile = async (
     }
 };
 
-describe('add_memory tool', () => {
+describe('cortex_add_memory tool', () => {
     let testDir: string;
     let config: ServerConfig;
 
@@ -99,7 +100,9 @@ describe('add_memory tool', () => {
         const input: AddMemoryInput = {
             path: 'project/tagged-memory',
             content: 'Content with tags',
-            tags: ['test', 'example'],
+            tags: [
+                'test', 'example',
+            ],
         };
 
         const result = await addMemoryHandler({ config }, input);
@@ -110,10 +113,12 @@ describe('add_memory tool', () => {
             { config },
             {
                 path: 'project/tagged-memory',
-            }
+            },
         );
         const output = JSON.parse(getResult.content[0]!.text);
-        expect(output.metadata.tags).toEqual(['test', 'example']);
+        expect(output.metadata.tags).toEqual([
+            'test', 'example',
+        ]);
     });
 
     it('should create a memory with expiration', async () => {
@@ -132,7 +137,7 @@ describe('add_memory tool', () => {
             { config },
             {
                 path: 'project/expiring-memory',
-            }
+            },
         );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.expires_at).toBeDefined();
@@ -159,7 +164,7 @@ describe('add_memory tool', () => {
     });
 });
 
-describe('get_memory tool', () => {
+describe('cortex_get_memory tool', () => {
     let testDir: string;
     let config: ServerConfig;
 
@@ -168,7 +173,7 @@ describe('get_memory tool', () => {
         config = createTestConfig(testDir);
 
         // Create a test memory
-        const storeRoot = join(testDir, 'default');
+        const storeRoot = join(testDir, MEMORY_SUBDIR, 'default');
         await mkdir(storeRoot, { recursive: true });
 
         await createMemoryFile(storeRoot, 'project/existing-memory', {
@@ -209,7 +214,7 @@ describe('get_memory tool', () => {
     });
 
     it('should not return expired memory by default', async () => {
-        const storeRoot = join(testDir, 'default');
+        const storeRoot = join(testDir, MEMORY_SUBDIR, 'default');
         await createMemoryFile(storeRoot, 'project/expired-memory', {
             frontmatter: {
                 createdAt: new Date('2024-01-01'),
@@ -229,7 +234,7 @@ describe('get_memory tool', () => {
     });
 
     it('should return expired memory when include_expired is true', async () => {
-        const storeRoot = join(testDir, 'default');
+        const storeRoot = join(testDir, MEMORY_SUBDIR, 'default');
         await createMemoryFile(storeRoot, 'project/expired-memory-2', {
             frontmatter: {
                 createdAt: new Date('2024-01-01'),
@@ -252,7 +257,7 @@ describe('get_memory tool', () => {
     });
 });
 
-describe('update_memory tool', () => {
+describe('cortex_update_memory tool', () => {
     let testDir: string;
     let config: ServerConfig;
 
@@ -260,7 +265,7 @@ describe('update_memory tool', () => {
         testDir = await createTestDir();
         config = createTestConfig(testDir);
 
-        const storeRoot = join(testDir, 'default');
+        const storeRoot = join(testDir, MEMORY_SUBDIR, 'default');
         await mkdir(storeRoot, { recursive: true });
 
         await createMemoryFile(storeRoot, 'project/update-target', {
@@ -322,7 +327,7 @@ describe('update_memory tool', () => {
 
     it('should clear expiry', async () => {
         // First add expiry
-        const storeRoot = join(testDir, 'default');
+        const storeRoot = join(testDir, MEMORY_SUBDIR, 'default');
         await createMemoryFile(storeRoot, 'project/with-expiry', {
             frontmatter: {
                 createdAt: new Date('2024-01-01'),
@@ -364,7 +369,7 @@ describe('update_memory tool', () => {
     });
 });
 
-describe('remove_memory tool', () => {
+describe('cortex_remove_memory tool', () => {
     let testDir: string;
     let config: ServerConfig;
 
@@ -372,7 +377,7 @@ describe('remove_memory tool', () => {
         testDir = await createTestDir();
         config = createTestConfig(testDir);
 
-        const storeRoot = join(testDir, 'default');
+        const storeRoot = join(testDir, MEMORY_SUBDIR, 'default');
         await mkdir(storeRoot, { recursive: true });
 
         await createMemoryFile(storeRoot, 'project/remove-target', {
@@ -400,7 +405,7 @@ describe('remove_memory tool', () => {
 
         // Verify it's gone
         await expect(
-            getMemoryHandler({ config }, { path: 'project/remove-target' })
+            getMemoryHandler({ config }, { path: 'project/remove-target' }),
         ).rejects.toThrow('not found');
     });
 
@@ -413,7 +418,7 @@ describe('remove_memory tool', () => {
     });
 });
 
-describe('move_memory tool', () => {
+describe('cortex_move_memory tool', () => {
     let testDir: string;
     let config: ServerConfig;
 
@@ -421,7 +426,7 @@ describe('move_memory tool', () => {
         testDir = await createTestDir();
         config = createTestConfig(testDir);
 
-        const storeRoot = join(testDir, 'default');
+        const storeRoot = join(testDir, MEMORY_SUBDIR, 'default');
         await mkdir(storeRoot, { recursive: true });
 
         await createMemoryFile(storeRoot, 'project/move-source', {
@@ -450,7 +455,7 @@ describe('move_memory tool', () => {
 
         // Verify source is gone
         await expect(getMemoryHandler({ config }, { path: 'project/move-source' })).rejects.toThrow(
-            'not found'
+            'not found',
         );
 
         // Verify destination exists
@@ -470,7 +475,7 @@ describe('move_memory tool', () => {
 
     it('should return error when destination exists', async () => {
         // Create destination
-        const storeRoot = join(testDir, 'default');
+        const storeRoot = join(testDir, MEMORY_SUBDIR, 'default');
         await createMemoryFile(storeRoot, 'project/existing-destination', {
             frontmatter: {
                 createdAt: new Date('2024-01-01'),
@@ -490,7 +495,7 @@ describe('move_memory tool', () => {
     });
 });
 
-describe('list_memories tool', () => {
+describe('cortex_list_memories tool', () => {
     let testDir: string;
     let config: ServerConfig;
 
@@ -498,7 +503,7 @@ describe('list_memories tool', () => {
         testDir = await createTestDir();
         config = createTestConfig(testDir);
 
-        const storeRoot = join(testDir, 'default');
+        const storeRoot = join(testDir, MEMORY_SUBDIR, 'default');
         await mkdir(storeRoot, { recursive: true });
 
         // Create multiple memories
@@ -561,7 +566,7 @@ describe('list_memories tool', () => {
     });
 
     it('should exclude expired memories by default', async () => {
-        const storeRoot = join(testDir, 'default');
+        const storeRoot = join(testDir, MEMORY_SUBDIR, 'default');
         await createMemoryFile(storeRoot, 'project/expired', {
             frontmatter: {
                 createdAt: new Date('2024-01-01'),
@@ -585,7 +590,7 @@ describe('list_memories tool', () => {
     });
 
     it('should include expired memories when flag is set', async () => {
-        const storeRoot = join(testDir, 'default');
+        const storeRoot = join(testDir, MEMORY_SUBDIR, 'default');
         await createMemoryFile(storeRoot, 'project/expired-2', {
             frontmatter: {
                 createdAt: new Date('2024-01-01'),
@@ -611,7 +616,7 @@ describe('list_memories tool', () => {
 
     it('should include subcategory descriptions in response', async () => {
         // Create a subcategory with a description using index manipulation
-        const storeRoot = join(testDir, 'default');
+        const storeRoot = join(testDir, MEMORY_SUBDIR, 'default');
         const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
 
         // Write an index with a described subcategory
@@ -638,20 +643,20 @@ describe('list_memories tool', () => {
         expect(output.subcategories).toHaveLength(2);
 
         const cortexSubcat = output.subcategories.find(
-            (s: { path: string }) => s.path === 'project/cortex'
+            (s: { path: string }) => s.path === 'project/cortex',
         );
         expect(cortexSubcat).toBeDefined();
         expect(cortexSubcat.description).toBe('Cortex memory system');
 
         const otherSubcat = output.subcategories.find(
-            (s: { path: string }) => s.path === 'project/other'
+            (s: { path: string }) => s.path === 'project/other',
         );
         expect(otherSubcat).toBeDefined();
         expect(otherSubcat.description).toBeUndefined();
     });
 });
 
-describe('prune_memories tool', () => {
+describe('cortex_prune_memories tool', () => {
     let testDir: string;
     let config: ServerConfig;
 
@@ -659,7 +664,7 @@ describe('prune_memories tool', () => {
         testDir = await createTestDir();
         config = createTestConfig(testDir);
 
-        const storeRoot = join(testDir, 'default');
+        const storeRoot = join(testDir, MEMORY_SUBDIR, 'default');
         await mkdir(storeRoot, { recursive: true });
 
         // Create mix of expired and non-expired memories
@@ -715,12 +720,12 @@ describe('prune_memories tool', () => {
 
         // Verify expired memories are gone
         await expect(getMemoryHandler({ config }, { path: 'project/expired-1' })).rejects.toThrow(
-            'not found'
+            'not found',
         );
     });
 
     it('should return zero when no memories are expired', async () => {
-        const storeRoot = join(testDir, 'clean-store');
+        const storeRoot = join(testDir, MEMORY_SUBDIR, 'clean-store');
         await mkdir(storeRoot, { recursive: true });
 
         await createMemoryFile(storeRoot, 'project/active', {

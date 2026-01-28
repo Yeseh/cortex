@@ -21,7 +21,9 @@ describe('memory slug validation', () => {
         expect(result.ok).toBe(true);
         if (result.ok) {
             expect(result.value.slugPath).toBe('semantic/concepts/priority-cues');
-            expect(result.value.categories).toEqual(['semantic', 'concepts']);
+            expect(result.value.categories).toEqual([
+                'semantic', 'concepts',
+            ]);
             expect(result.value.slug).toBe('priority-cues');
         }
     });
@@ -41,14 +43,24 @@ describe('memory slug validation', () => {
         expect(result.ok).toBe(true);
         if (result.ok) {
             expect(result.value.slugPath).toBe('a/b/c/d');
-            expect(result.value.categories).toEqual(['a', 'b', 'c']);
+            expect(result.value.categories).toEqual([
+                'a',
+                'b',
+                'c',
+            ]);
             expect(result.value.slug).toBe('d');
         }
     });
 
     it('should normalize whitespace and empty segments', () => {
-        const normalized = normalizeSlugSegments(['  working ', ' ', 'memory  ']);
-        expect(normalized).toEqual(['working', 'memory']);
+        const normalized = normalizeSlugSegments([
+            '  working ',
+            ' ',
+            'memory  ',
+        ]);
+        expect(normalized).toEqual([
+            'working', 'memory',
+        ]);
 
         const result = validateMemorySlugPath('working/ /memory');
         expect(result.ok).toBe(true);
@@ -68,10 +80,14 @@ describe('memory category validation', () => {
             expect(oneLevel.value).toEqual(['working']);
         }
 
-        const twoLevel = validateCategoryPath(['semantic', 'concepts']);
+        const twoLevel = validateCategoryPath([
+            'semantic', 'concepts',
+        ]);
         expect(twoLevel.ok).toBe(true);
         if (twoLevel.ok) {
-            expect(twoLevel.value).toEqual(['semantic', 'concepts']);
+            expect(twoLevel.value).toEqual([
+                'semantic', 'concepts',
+            ]);
         }
     });
 
@@ -85,16 +101,26 @@ describe('memory category validation', () => {
     });
 
     it('should accept deep category paths', () => {
-        const deep = validateCategoryPath(['one', 'two', 'three']);
+        const deep = validateCategoryPath([
+            'one',
+            'two',
+            'three',
+        ]);
 
         expect(deep.ok).toBe(true);
         if (deep.ok) {
-            expect(deep.value).toEqual(['one', 'two', 'three']);
+            expect(deep.value).toEqual([
+                'one',
+                'two',
+                'three',
+            ]);
         }
     });
 
     it('should reject non-slug segments', () => {
-        const result = validateCategoryPath(['Working', 'notes']);
+        const result = validateCategoryPath([
+            'Working', 'notes',
+        ]);
 
         expect(result.ok).toBe(false);
         if (!result.ok) {
