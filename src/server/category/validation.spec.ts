@@ -10,7 +10,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { mkdir, rm, readdir } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -34,12 +34,7 @@ const createTestConfig = (dataPath: string): ServerConfig => ({
 });
 
 const createTestDir = async (): Promise<string> => {
-    const testDir = join(
-        tmpdir(),
-        `cortex-validation-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
-    );
-    await mkdir(testDir, { recursive: true });
-    return testDir;
+    return mkdtemp(join(tmpdir(), 'cortex-cat-validation-'));
 };
 
 describe('Category Descriptions Validation', () => {
@@ -60,8 +55,8 @@ describe('Category Descriptions Validation', () => {
             await expect(
                 setCategoryDescriptionHandler(
                     { config },
-                    { path: 'project', description: 'Test description' }
-                )
+                    { path: 'project', description: 'Test description' },
+                ),
             ).rejects.toThrow(/root category/i);
         });
 
@@ -69,8 +64,8 @@ describe('Category Descriptions Validation', () => {
             await expect(
                 setCategoryDescriptionHandler(
                     { config },
-                    { path: 'human', description: 'Test description' }
-                )
+                    { path: 'human', description: 'Test description' },
+                ),
             ).rejects.toThrow(/root category/i);
         });
 
@@ -78,8 +73,8 @@ describe('Category Descriptions Validation', () => {
             await expect(
                 setCategoryDescriptionHandler(
                     { config },
-                    { path: 'persona', description: 'Test description' }
-                )
+                    { path: 'persona', description: 'Test description' },
+                ),
             ).rejects.toThrow(/root category/i);
         });
 
@@ -87,32 +82,32 @@ describe('Category Descriptions Validation', () => {
             await expect(
                 setCategoryDescriptionHandler(
                     { config },
-                    { path: 'domain', description: 'Test description' }
-                )
+                    { path: 'domain', description: 'Test description' },
+                ),
             ).rejects.toThrow(/root category/i);
         });
 
         it('deleteCategory should reject root category "project"', async () => {
             await expect(deleteCategoryHandler({ config }, { path: 'project' })).rejects.toThrow(
-                /root category/i
+                /root category/i,
             );
         });
 
         it('deleteCategory should reject root category "human"', async () => {
             await expect(deleteCategoryHandler({ config }, { path: 'human' })).rejects.toThrow(
-                /root category/i
+                /root category/i,
             );
         });
 
         it('deleteCategory should reject root category "persona"', async () => {
             await expect(deleteCategoryHandler({ config }, { path: 'persona' })).rejects.toThrow(
-                /root category/i
+                /root category/i,
             );
         });
 
         it('deleteCategory should reject root category "domain"', async () => {
             await expect(deleteCategoryHandler({ config }, { path: 'domain' })).rejects.toThrow(
-                /root category/i
+                /root category/i,
             );
         });
 
@@ -123,7 +118,7 @@ describe('Category Descriptions Validation', () => {
             // Setting description on subcategory should succeed
             const result = await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/cortex', description: 'Valid description' }
+                { path: 'project/cortex', description: 'Valid description' },
             );
             const output = JSON.parse(result.content[0]!.text);
 
@@ -160,7 +155,7 @@ describe('Category Descriptions Validation', () => {
             await createCategoryHandler({ config }, { path: 'project/cortex' });
             await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/cortex', description: 'Cortex memory system' }
+                { path: 'project/cortex', description: 'Cortex memory system' },
             );
 
             // Add a memory to the category
@@ -169,7 +164,7 @@ describe('Category Descriptions Validation', () => {
                 {
                     path: 'project/cortex/test-memory',
                     content: 'Test memory content',
-                }
+                },
             );
 
             // Remove the memory
@@ -178,7 +173,7 @@ describe('Category Descriptions Validation', () => {
             // Category should still exist - verify by setting description again
             const result = await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/cortex', description: 'Updated description' }
+                { path: 'project/cortex', description: 'Updated description' },
             );
             const output = JSON.parse(result.content[0]!.text);
 
@@ -190,21 +185,21 @@ describe('Category Descriptions Validation', () => {
             await createCategoryHandler({ config }, { path: 'project/test-cat' });
             await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/test-cat', description: 'Test category' }
+                { path: 'project/test-cat', description: 'Test category' },
             );
 
             // Add multiple memories
             await addMemoryHandler(
                 { config },
-                { path: 'project/test-cat/mem1', content: 'Memory 1' }
+                { path: 'project/test-cat/mem1', content: 'Memory 1' },
             );
             await addMemoryHandler(
                 { config },
-                { path: 'project/test-cat/mem2', content: 'Memory 2' }
+                { path: 'project/test-cat/mem2', content: 'Memory 2' },
             );
             await addMemoryHandler(
                 { config },
-                { path: 'project/test-cat/mem3', content: 'Memory 3' }
+                { path: 'project/test-cat/mem3', content: 'Memory 3' },
             );
 
             // Remove all memories
@@ -215,7 +210,7 @@ describe('Category Descriptions Validation', () => {
             // Category should still exist - can update description
             const result = await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/test-cat', description: 'Still here!' }
+                { path: 'project/test-cat', description: 'Still here!' },
             );
             const output = JSON.parse(result.content[0]!.text);
 
@@ -229,7 +224,7 @@ describe('Category Descriptions Validation', () => {
             // Add and remove memory
             await addMemoryHandler(
                 { config },
-                { path: 'project/persist/temp', content: 'Temporary' }
+                { path: 'project/persist/temp', content: 'Temporary' },
             );
             await removeMemoryHandler({ config }, { path: 'project/persist/temp' });
 
@@ -264,7 +259,7 @@ describe('Category Descriptions Validation', () => {
             const exactDescription = 'a'.repeat(500);
             const result = await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/exact', description: exactDescription }
+                { path: 'project/exact', description: exactDescription },
             );
             const output = JSON.parse(result.content[0]!.text);
 
@@ -278,8 +273,8 @@ describe('Category Descriptions Validation', () => {
             await expect(
                 setCategoryDescriptionHandler(
                     { config },
-                    { path: 'project/toolong', description: longDescription }
-                )
+                    { path: 'project/toolong', description: longDescription },
+                ),
             ).rejects.toThrow(/500 characters/i);
         });
 
@@ -290,8 +285,8 @@ describe('Category Descriptions Validation', () => {
             await expect(
                 setCategoryDescriptionHandler(
                     { config },
-                    { path: 'project/waylong', description: veryLongDescription }
-                )
+                    { path: 'project/waylong', description: veryLongDescription },
+                ),
             ).rejects.toThrow(/500 characters/i);
         });
 
@@ -299,12 +294,12 @@ describe('Category Descriptions Validation', () => {
             await createCategoryHandler({ config }, { path: 'project/clear' });
             await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/clear', description: 'Initial' }
+                { path: 'project/clear', description: 'Initial' },
             );
 
             const result = await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/clear', description: '' }
+                { path: 'project/clear', description: '' },
             );
             const output = JSON.parse(result.content[0]!.text);
 
@@ -316,7 +311,7 @@ describe('Category Descriptions Validation', () => {
 
             const result = await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/trimmed', description: '   Padded description   ' }
+                { path: 'project/trimmed', description: '   Padded description   ' },
             );
             const output = JSON.parse(result.content[0]!.text);
 
@@ -330,7 +325,7 @@ describe('Category Descriptions Validation', () => {
             const paddedDescription = '   ' + 'a'.repeat(495) + '   ';
             const result = await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/padcount', description: paddedDescription }
+                { path: 'project/padcount', description: paddedDescription },
             );
             const output = JSON.parse(result.content[0]!.text);
 
@@ -373,7 +368,8 @@ describe('Category Descriptions Validation', () => {
 
                 if (i === 0) {
                     expect(output.created).toBe(true);
-                } else {
+                }
+                else {
                     expect(output.created).toBe(false);
                 }
             }
@@ -384,13 +380,13 @@ describe('Category Descriptions Validation', () => {
             await createCategoryHandler({ config }, { path: 'project/preserve' });
             await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/preserve', description: 'Preserved description' }
+                { path: 'project/preserve', description: 'Preserved description' },
             );
 
             // Call createCategory again
             const createResult = await createCategoryHandler(
                 { config },
-                { path: 'project/preserve' }
+                { path: 'project/preserve' },
             );
             const createOutput = JSON.parse(createResult.content[0]!.text);
             expect(createOutput.created).toBe(false);
@@ -399,7 +395,7 @@ describe('Category Descriptions Validation', () => {
             // (we can't directly read, but we can set and verify the response)
             const descResult = await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/preserve', description: 'New description' }
+                { path: 'project/preserve', description: 'New description' },
             );
             const descOutput = JSON.parse(descResult.content[0]!.text);
             expect(descOutput.description).toBe('New description');
@@ -443,7 +439,7 @@ describe('Category Descriptions Validation', () => {
             const beforeParent = await adapter.categoryExists('project/parent');
             const beforeChild = await adapter.categoryExists('project/parent/child');
             const beforeGrandchild = await adapter.categoryExists(
-                'project/parent/child/grandchild'
+                'project/parent/child/grandchild',
             );
             expect(beforeParent.ok && beforeParent.value).toBe(true);
             expect(beforeChild.ok && beforeChild.value).toBe(true);
@@ -468,11 +464,11 @@ describe('Category Descriptions Validation', () => {
             await createCategoryHandler({ config }, { path: 'project/with-memories' });
             await addMemoryHandler(
                 { config },
-                { path: 'project/with-memories/mem1', content: 'Memory 1' }
+                { path: 'project/with-memories/mem1', content: 'Memory 1' },
             );
             await addMemoryHandler(
                 { config },
-                { path: 'project/with-memories/mem2', content: 'Memory 2' }
+                { path: 'project/with-memories/mem2', content: 'Memory 2' },
             );
 
             const storeRoot = join(testDir, 'memory', 'default');
@@ -485,7 +481,7 @@ describe('Category Descriptions Validation', () => {
             // Delete category
             const result = await deleteCategoryHandler(
                 { config },
-                { path: 'project/with-memories' }
+                { path: 'project/with-memories' },
             );
             const output = JSON.parse(result.content[0]!.text);
             expect(output.deleted).toBe(true);
@@ -509,15 +505,15 @@ describe('Category Descriptions Validation', () => {
 
             await addMemoryHandler(
                 { config },
-                { path: 'project/complex/mem1', content: 'Parent memory' }
+                { path: 'project/complex/mem1', content: 'Parent memory' },
             );
             await addMemoryHandler(
                 { config },
-                { path: 'project/complex/sub1/mem2', content: 'Child memory' }
+                { path: 'project/complex/sub1/mem2', content: 'Child memory' },
             );
             await addMemoryHandler(
                 { config },
-                { path: 'project/complex/sub2/mem3', content: 'Another child memory' }
+                { path: 'project/complex/sub2/mem3', content: 'Another child memory' },
             );
 
             const storeRoot = join(testDir, 'memory', 'default');
@@ -561,7 +557,7 @@ describe('Category Descriptions Validation', () => {
 
             await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/keep', description: 'I should stay' }
+                { path: 'project/keep', description: 'I should stay' },
             );
 
             // Delete one branch
@@ -572,7 +568,7 @@ describe('Category Descriptions Validation', () => {
             // Sibling should still exist
             const siblingResult = await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/keep', description: 'Still here!' }
+                { path: 'project/keep', description: 'Still here!' },
             );
             const siblingOutput = JSON.parse(siblingResult.content[0]!.text);
             expect(siblingOutput.description).toBe('Still here!');

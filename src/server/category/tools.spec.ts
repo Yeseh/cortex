@@ -3,7 +3,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { mkdir, rm } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -28,12 +28,7 @@ const createTestConfig = (dataPath: string): ServerConfig => ({
 });
 
 const createTestDir = async (): Promise<string> => {
-    const testDir = join(
-        tmpdir(),
-        `cortex-cat-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
-    );
-    await mkdir(testDir, { recursive: true });
-    return testDir;
+    return mkdtemp(join(tmpdir(), 'cortex-cat-tools-'));
 };
 
 describe('cortex_create_category tool', () => {
@@ -78,7 +73,7 @@ describe('cortex_create_category tool', () => {
         const input = { path: '' };
 
         await expect(
-            createCategoryHandler({ config }, input as CreateCategoryInput)
+            createCategoryHandler({ config }, input as CreateCategoryInput),
         ).rejects.toThrow();
     });
 });
@@ -115,7 +110,7 @@ describe('cortex_set_category_description tool', () => {
         };
 
         await expect(setCategoryDescriptionHandler({ config }, input)).rejects.toThrow(
-            /root category/i
+            /root category/i,
         );
     });
 
@@ -126,7 +121,7 @@ describe('cortex_set_category_description tool', () => {
             {
                 path: 'project/cortex',
                 description: 'Initial',
-            }
+            },
         );
 
         // Then clear it
@@ -135,7 +130,7 @@ describe('cortex_set_category_description tool', () => {
             {
                 path: 'project/cortex',
                 description: '',
-            }
+            },
         );
         const output = JSON.parse(result.content[0]!.text);
 
