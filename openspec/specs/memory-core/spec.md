@@ -3,9 +3,7 @@
 ## Purpose
 
 TBD - created by archiving change add-memory-core-model. Update Purpose after archive.
-
 ## Requirements
-
 ### Requirement: Memory hierarchy and identity
 
 The system SHALL represent memories using one or more category levels and identify each memory by its slug path. Category depth is unlimited.
@@ -28,9 +26,16 @@ The system SHALL represent memories using one or more category levels and identi
 
 ### Requirement: Memory file format
 
-The system SHALL store each memory as a markdown file with YAML frontmatter metadata and free-form content.
+The system SHALL store each memory as a markdown file with YAML frontmatter metadata and free-form content. The frontmatter format is an implementation detail of the filesystem storage adapter, not a core domain concern.
 
 #### Scenario: Persisting a memory file
 
-- **WHEN** a memory is persisted
+- **WHEN** a memory is persisted via the filesystem storage adapter
 - **THEN** the file includes frontmatter fields for timestamps, tags, source, and optional expiry
+
+#### Scenario: Format handling is storage-layer concern
+
+- **WHEN** the memory domain model is used
+- **THEN** it does not expose file format parsing or serialization functions
+- **AND** format handling is delegated to the storage adapter
+

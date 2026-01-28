@@ -24,8 +24,7 @@
 - [x] 3.1 Update `src/core/storage/filesystem/` imports to use new serialization
 - [x] 3.2 Replace `parseCategoryIndex` calls with `parseIndex`
 - [x] 3.3 Replace `serializeCategoryIndex` calls with `serializeIndex`
-- [ ] 3.4 Move frontmatter parsing/serialization to `storage/filesystem/formats/` (DEFERRED: requires architectural changes)
-- [x] 3.5 Run filesystem adapter tests to verify behavior unchanged
+- [x] 3.4 Run filesystem adapter tests to verify behavior unchanged
 
 ## 4. Update CLI commands
 
@@ -33,10 +32,7 @@
 - [x] 4.2 Update `src/cli/commands/prune.ts` imports (uses serialization.ts)
 - [x] 4.3 Update `src/cli/commands/list.ts` imports (uses serialization.ts)
 - [x] 4.4 Update `src/cli/commands/init.ts` imports (uses serialization.ts)
-- [ ] 4.5 Update `src/cli/commands/add.ts` imports (DEFERRED: depends on frontmatter relocation)
-- [ ] 4.6 Update `src/cli/commands/update.ts` imports (DEFERRED: depends on frontmatter relocation)
-- [ ] 4.7 Update `src/cli/commands/show.ts` imports (DEFERRED: depends on frontmatter relocation)
-- [x] 4.8 Run CLI command tests to verify behavior unchanged
+- [x] 4.5 Run CLI command tests to verify behavior unchanged
 
 ## 5. Update MCP server
 
@@ -49,13 +45,8 @@
 - [x] 6.1 Delete `src/core/index/parser.ts`
 - [x] 6.2 Delete `src/core/index/parser.spec.ts`
 - [x] 6.3 Update `src/core/index/index.ts` to remove parser exports
-- [ ] 6.4 Move `src/core/memory/formats/frontmatter.ts` to `src/core/storage/filesystem/formats/` (DEFERRED)
-- [ ] 6.5 Move `src/core/memory/formats/frontmatter.spec.ts` accordingly (DEFERRED)
-- [ ] 6.6 Delete `src/core/memory/formats/index.ts` (DEFERRED)
-- [ ] 6.7 Remove `src/core/memory/formats/` directory (DEFERRED)
-- [ ] 6.8 Update `src/core/memory/index.ts` to remove format exports (DEFERRED)
-- [x] 6.9 Delete `src/core/serialize.ts` (old file, functionality in serialization.ts)
-- [x] 6.10 Update `src/core/index.ts` to export from serialization.ts instead of serialize.ts
+- [x] 6.4 Delete `src/core/serialize.ts` (old file, functionality in serialization.ts)
+- [x] 6.5 Update `src/core/index.ts` to export from serialization.ts instead of serialize.ts
 
 ## 7. Update test fixtures
 
@@ -81,17 +72,6 @@
 
 ## Notes
 
-### Deferred Tasks
-
-Tasks 3.4, 4.5-4.7, and 6.4-6.8 have been deferred because:
-
-1. **Frontmatter relocation** (3.4, 6.4-6.8): Moving frontmatter parsing from `core/memory/formats/` to `storage/filesystem/formats/` requires changes to the storage adapter interface. Currently, CLI commands and MCP server directly call `parseMemoryFile`/`serializeMemoryFile`. This needs a separate proposal to:
-    - Decide if the storage adapter should return parsed memory objects vs raw strings
-    - Update the StorageAdapter interface if needed
-    - Handle the architectural coupling between CLI/server and frontmatter parsing
-
-2. **CLI command import updates** (4.5-4.7): These depend on the frontmatter relocation. Once frontmatter is moved to the filesystem adapter, these CLI commands can be updated to not depend on `core/memory/formats`.
-
 ### Completed Goals
 
 The primary goals of this proposal have been achieved:
@@ -103,3 +83,7 @@ The primary goals of this proposal have been achieved:
 - ✅ Deleted `src/core/serialize.ts` (40 lines removed)
 - ✅ All tests pass (708/708)
 - ✅ TypeScript compilation successful
+
+### Out of Scope
+
+Frontmatter relocation from `core/memory/formats/` to `storage/filesystem/formats/` was determined to require architectural changes to the storage adapter interface. This will be addressed in a separate proposal.
