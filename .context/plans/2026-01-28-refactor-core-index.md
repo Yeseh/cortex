@@ -1,3 +1,37 @@
+# Refactor Core Index Module Implementation Plan
+
+**Goal:** Add comprehensive JSDoc documentation to `src/core/index/types.ts` and align error types with project standards.
+**Architecture:** Documentation-only changes following the patterns established in `src/core/category/types.ts`. No behavioral changes.
+**Tech Stack:** TypeScript, JSDoc
+**Session Id:** ses_3fa1ce134ffe5SereLgQ781xy5
+
+---
+
+## Context
+
+The `src/core/index/` module manages category index structures (memories list + subcategories list). It currently lacks comprehensive documentation compared to the exemplary `src/core/category/` module.
+
+### Reference Files
+
+- **Target file:** `src/core/index/types.ts` (43 lines)
+- **Reference for style:** `src/core/category/types.ts` (206 lines)
+- **Barrel export:** `src/core/index/index.ts` (7 lines)
+
+### Blocked Tasks
+
+Task 3 (Create operations.ts module) is **blocked** by `refactor-serialization-module` which will delete `parser.ts`. Operations cannot be extracted until the parser is deleted. Add a comment documenting this decision.
+
+---
+
+## Implementation Tasks
+
+### Task 1: Add Module Header and Document Types
+
+**File:** `src/core/index/types.ts`
+
+#### 1.1 Add module header (replace current single-line comment)
+
+```typescript
 /**
  * Index types for category indexes.
  *
@@ -8,7 +42,11 @@
  *
  * @module core/index/types
  */
+```
 
+#### 1.2 Document IndexMemoryEntry interface
+
+````typescript
 /**
  * Entry for a memory within a category index.
  *
@@ -33,7 +71,11 @@ export interface IndexMemoryEntry {
     /** Optional brief summary of memory contents (for listing displays) */
     summary?: string;
 }
+````
 
+#### 1.3 Document IndexSubcategoryEntry interface
+
+````typescript
 /**
  * Entry for a subcategory within a category index.
  *
@@ -58,7 +100,11 @@ export interface IndexSubcategoryEntry {
     /** Optional description (max 500 chars) for the subcategory */
     description?: string;
 }
+````
 
+#### 1.4 Document CategoryIndex interface
+
+````typescript
 /**
  * Complete index structure for a category directory.
  *
@@ -86,7 +132,11 @@ export interface CategoryIndex {
     /** List of subcategory entries in this category */
     subcategories: IndexSubcategoryEntry[];
 }
+````
 
+#### 1.5 Document IndexParseErrorCode
+
+```typescript
 /**
  * Error codes for index parsing failures.
  *
@@ -103,7 +153,11 @@ export type IndexParseErrorCode =
     | 'INVALID_ENTRY'
     | 'MISSING_FIELD'
     | 'INVALID_NUMBER';
+```
 
+#### 1.6 Document IndexParseError interface
+
+```typescript
 /**
  * Error details for index parsing failures.
  *
@@ -123,7 +177,11 @@ export interface IndexParseError {
     /** Underlying error that caused this failure (for debugging) */
     cause?: unknown;
 }
+```
 
+#### 1.7 Document IndexSerializeErrorCode
+
+```typescript
 /**
  * Error codes for index serialization failures.
  *
@@ -132,7 +190,11 @@ export interface IndexParseError {
  * - `INVALID_NUMBER` - Numeric field is not a valid finite non-negative number
  */
 export type IndexSerializeErrorCode = 'INVALID_ENTRY' | 'INVALID_NUMBER';
+```
 
+#### 1.8 Document IndexSerializeError interface
+
+```typescript
 /**
  * Error details for index serialization failures.
  *
@@ -149,7 +211,13 @@ export interface IndexSerializeError {
     /** Underlying error that caused this failure (for debugging) */
     cause?: unknown;
 }
+```
 
+### Task 2: Add INDEX_FILE_NAME Constant
+
+Add after the interfaces:
+
+```typescript
 /**
  * Standard filename for category index files.
  *
@@ -157,3 +225,54 @@ export interface IndexSerializeError {
  * storing the {@link CategoryIndex} structure in YAML format.
  */
 export const INDEX_FILE_NAME = 'index.yaml';
+```
+
+### Task 3: Update Barrel Export
+
+**File:** `src/core/index/index.ts`
+
+````typescript
+/**
+ * Index module for category index management.
+ *
+ * This module provides types and utilities for working with category
+ * index files, which track memories and subcategories within each
+ * category directory.
+ *
+ * @module core/index
+ *
+ * @example
+ * ```typescript
+ * import { CategoryIndex, parseCategoryIndex, serializeCategoryIndex } from './core/index';
+ *
+ * // Parse an index file
+ * const result = parseCategoryIndex(rawYaml);
+ * if (result.ok) {
+ *   console.log(result.value.memories.length);
+ * }
+ *
+ * // Serialize an index
+ * const serialized = serializeCategoryIndex(index);
+ * ```
+ */
+
+export * from './types.ts';
+export * from './parser.ts';
+````
+
+---
+
+## Verification
+
+After implementation:
+
+1. Run typecheck: `bun run typecheck`
+2. Run tests: `bun test src/core/index`
+3. Verify documentation renders in IDE hover
+4. Compare style with `src/core/category/types.ts`
+
+---
+
+## Blocked Work
+
+Task 3 from the proposal (Create operations.ts module) cannot proceed until `refactor-serialization-module` completes and deletes `parser.ts`. Document this in a code comment in the barrel export.
