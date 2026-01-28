@@ -20,12 +20,10 @@
 
 ## 3. Create operations module (if applicable)
 
-- [ ] 3.1 Evaluate if pure operations exist after serialization refactor completes
-- [ ] 3.2 If operations exist: Create `operations.ts` following category pattern
-- [ ] 3.3 If operations exist: Add JSDoc with `@module`, `@example`, `@param`, `@returns`
-- [x] 3.4 ~~If no operations needed: Document decision in code comment~~ Added comment in barrel export explaining blockage
-
-**BLOCKED**: Tasks 3.1-3.3 depend on `refactor-serialization-module` completing and deleting `parser.ts`.
+- [x] 3.1 Evaluate if pure operations exist after serialization refactor completes
+- [x] 3.2 Decision: No operations module needed (see notes below)
+- [x] 3.3 N/A - No operations module created
+- [x] 3.4 ~~If no operations needed: Document decision in code comment~~ Added comment in barrel export explaining this
 
 ## 4. Update barrel export
 
@@ -53,3 +51,17 @@
 - `.context/plans/2026-01-28-refactor-core-index.md` (new)
 
 **Review Status:** Approved by code-reviewer agent
+
+### Operations Module Decision (Task 3)
+
+After evaluating the index module post-serialization refactor, **no operations module is needed** because:
+
+1. **Index manipulation is storage-bound**: All index operations (upsert, read, write, reindex) require filesystem access and live appropriately in `core/storage/filesystem/indexes.ts`
+
+2. **No pure domain logic**: Unlike `core/category/operations.ts` which has pure helpers (`isRootCategory`, `getParentPath`, `getAncestorPaths`), the index module has no similar domain logic independent of storage
+
+3. **Serialization is centralized**: Parse/serialize functions are in `core/serialization.ts` (`parseIndex`, `serializeIndex`)
+
+4. **Types are sufficient**: `CategoryIndex`, `IndexMemoryEntry`, and `IndexSubcategoryEntry` are simple data structures with no invariants requiring enforcement code
+
+The barrel export (`src/core/index/index.ts`) includes a JSDoc comment explaining that parsing/serialization is available in `core/serialization`.

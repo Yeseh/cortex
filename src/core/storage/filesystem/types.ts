@@ -41,7 +41,7 @@ export interface FilesystemContext {
 /**
  * Result types for directory entries.
  */
-export type DirEntriesResult = Result<Dirent[], StorageAdapterError>;
+export type DirEntriesResult = Result<Dirent<string | Buffer>[], StorageAdapterError>;
 
 /**
  * Result type for string or null values.
