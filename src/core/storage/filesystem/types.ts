@@ -7,7 +7,9 @@
  * @module core/storage/filesystem/types
  */
 
+import type { Dirent } from 'node:fs';
 import type { Result } from '../../types.ts';
+import type { StorageAdapterError } from '../adapter.ts';
 
 /**
  * Configuration options for the filesystem storage adapter.
@@ -39,12 +41,9 @@ export interface FilesystemContext {
 /**
  * Result types for directory entries.
  */
-export type DirEntriesResult = Result<
-    Awaited<ReturnType<typeof import('node:fs/promises').readdir>>,
-    import('../adapter.ts').StorageAdapterError
->;
+export type DirEntriesResult = Result<Dirent[], StorageAdapterError>;
 
 /**
  * Result type for string or null values.
  */
-export type StringOrNullResult = Result<string | null, import('../adapter.ts').StorageAdapterError>;
+export type StringOrNullResult = Result<string | null, StorageAdapterError>;

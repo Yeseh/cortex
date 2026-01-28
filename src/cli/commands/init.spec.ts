@@ -5,12 +5,13 @@ import { join } from 'node:path';
 
 import { parseConfig } from '../../core/config.ts';
 import { parseStoreRegistry } from '../../core/store/registry.ts';
+import type { runInitCommand as RunInitCommandType } from './init.ts';
 
 const normalizePath = (value: string): string => value.replace(/\\/g, '/');
 
 describe('init CLI command', () => {
     let tempDir: string;
-    let runInitCommand: typeof import('./init.ts').runInitCommand;
+    let runInitCommand: typeof RunInitCommandType;
 
     const buildOptions = (args: string[]) => ({
         args,

@@ -69,7 +69,7 @@
 - [x] 8.1 Remove unused imports across codebase
 - [x] 8.2 Update any remaining references to old function names
 - [x] 8.3 Verify no dead code remains
-- [ ] 8.4 Run linter: `bun run lint`
+- [x] 8.4 Run linter: `bun run lint` (0 errors, warnings acceptable)
 
 ## 9. Test isolation fix (added during implementation)
 

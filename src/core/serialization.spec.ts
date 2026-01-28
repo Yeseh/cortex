@@ -10,7 +10,6 @@ import {
     parseIndex,
     serializeIndex,
     type OutputFormat,
-    type SerializationError,
 } from './serialization.ts';
 import type { CategoryIndex } from './index/types.ts';
 

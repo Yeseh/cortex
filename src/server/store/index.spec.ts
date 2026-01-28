@@ -10,7 +10,7 @@ import type { ServerConfig } from '../config.ts';
 interface RegisteredToolHandler {
     handler: (
         args: Record<string, unknown>,
-        extra: unknown
+        extra: unknown,
     ) => Promise<{ content: { type: string; text: string }[]; isError?: boolean }>;
 }
 
@@ -58,9 +58,9 @@ describe('store tool registration', () => {
                     return originalRegisterTool(
                         name,
                         configArg as Parameters<typeof originalRegisterTool>[1],
-                        cb as Parameters<typeof originalRegisterTool>[2]
+                        cb as Parameters<typeof originalRegisterTool>[2],
                     );
-                }
+                },
             );
 
             registerStoreTools(server, config);
@@ -78,9 +78,9 @@ describe('store tool registration', () => {
                     return originalRegisterTool(
                         name,
                         configArg as Parameters<typeof originalRegisterTool>[1],
-                        cb as Parameters<typeof originalRegisterTool>[2]
+                        cb as Parameters<typeof originalRegisterTool>[2],
                     );
-                }
+                },
             );
 
             registerStoreTools(server, config);
@@ -98,9 +98,9 @@ describe('store tool registration', () => {
                     return originalRegisterTool(
                         name,
                         configArg as Parameters<typeof originalRegisterTool>[1],
-                        cb as Parameters<typeof originalRegisterTool>[2]
+                        cb as Parameters<typeof originalRegisterTool>[2],
                     );
-                }
+                },
             );
 
             registerStoreTools(server, config);
@@ -121,18 +121,18 @@ describe('store tool registration', () => {
                     return originalRegisterTool(
                         name,
                         configArg as Parameters<typeof originalRegisterTool>[1],
-                        cb as Parameters<typeof originalRegisterTool>[2]
+                        cb as Parameters<typeof originalRegisterTool>[2],
                     );
-                }
+                },
             );
 
             registerStoreTools(server, config);
 
             const listStoresTool = registeredDescriptions.find(
-                (t) => t.name === 'cortex_list_stores'
+                (t) => t.name === 'cortex_list_stores',
             );
             const createStoreTool = registeredDescriptions.find(
-                (t) => t.name === 'cortex_create_store'
+                (t) => t.name === 'cortex_create_store',
             );
 
             expect(listStoresTool?.description).toBe('List all available memory stores');
@@ -151,9 +151,9 @@ describe('store tool registration', () => {
                     return originalRegisterTool(
                         name,
                         configArg as Parameters<typeof originalRegisterTool>[1],
-                        cb as Parameters<typeof originalRegisterTool>[2]
+                        cb as Parameters<typeof originalRegisterTool>[2],
                     );
-                }
+                },
             );
 
             registerStoreTools(server, config);
