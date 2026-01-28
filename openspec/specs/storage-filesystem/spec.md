@@ -3,9 +3,7 @@
 ## Purpose
 
 Defines the filesystem storage adapter that persists memories and indexes to disk using the canonical store layout.
-
 ## Requirements
-
 ### Requirement: Storage adapter interface
 
 The system SHALL provide a storage adapter interface for memory persistence.
@@ -17,12 +15,18 @@ The system SHALL provide a storage adapter interface for memory persistence.
 
 ### Requirement: Filesystem adapter
 
-The system SHALL provide a filesystem adapter that reads and writes memory files and indexes.
+The system SHALL provide a filesystem adapter organized as a module with focused sub-modules for memories, indexes, and categories.
 
 #### Scenario: Writing a memory to disk
 
 - **WHEN** a memory is persisted
 - **THEN** the filesystem adapter writes the memory file and updates indexes
+
+#### Scenario: Module organization
+
+- **WHEN** the filesystem adapter is examined
+- **THEN** it is organized into separate files for memory operations, index operations, and category operations
+- **AND** a facade class composes these modules into the public `FilesystemStorageAdapter`
 
 ### Requirement: Memory file location
 
@@ -60,3 +64,4 @@ Index files SHALL use the `.yaml` extension, not `.yml`.
 
 - **WHEN** the filesystem adapter writes a category index
 - **THEN** the file is named `index.yaml`
+
