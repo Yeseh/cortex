@@ -6,16 +6,15 @@
  * category directory. Index files (`index.yaml`) are maintained
  * automatically when memories are written or deleted.
  *
+ * Parsing and serialization functions are available in the
+ * `core/serialization` module.
+ *
  * @module core/index
  *
  * @example
  * ```typescript
- * import {
- *   CategoryIndex,
- *   parseCategoryIndex,
- *   serializeCategoryIndex,
- *   INDEX_FILE_NAME
- * } from './core/index';
+ * import { CategoryIndex, INDEX_FILE_NAME } from './core/index';
+ * import { parseCategoryIndex, serializeCategoryIndex } from './core/serialization';
  *
  * // Parse an index file
  * const result = parseCategoryIndex(rawYaml);
@@ -29,9 +28,3 @@
  */
 
 export * from './types.ts';
-export * from './parser.ts';
-
-// NOTE: Operations module (operations.ts) is intentionally omitted.
-// Pure index manipulation helpers will be added after the
-// refactor-serialization-module change completes and parser.ts is deleted.
-// See: openspec/changes/refactor-core-index/proposal.md

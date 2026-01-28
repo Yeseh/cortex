@@ -37,7 +37,11 @@ describe('serialize()', () => {
         });
 
         it('should serialize arrays to JSON', () => {
-            const obj = { items: [1, 2, 3] };
+            const obj = { items: [
+                1,
+                2,
+                3,
+            ] };
 
             const result = serialize(obj, 'json');
 
@@ -73,7 +77,11 @@ describe('serialize()', () => {
         });
 
         it('should serialize arrays to YAML', () => {
-            const obj = { items: ['a', 'b', 'c'] };
+            const obj = { items: [
+                'a',
+                'b',
+                'c',
+            ] };
 
             const result = serialize(obj, 'yaml');
 
@@ -109,7 +117,7 @@ describe('serialize()', () => {
             const obj = { name: 'test' };
 
             expect(() => serialize(obj, 'xml' as OutputFormat)).toThrow(
-                'Unsupported output format: xml'
+                'Unsupported output format: xml',
             );
         });
     });
@@ -181,7 +189,7 @@ describe('deserialize()', () => {
             const raw = '<xml>test</xml>';
 
             expect(() => deserialize(raw, 'xml' as 'json' | 'yaml')).toThrow(
-                'Unsupported input format: xml'
+                'Unsupported input format: xml',
             );
         });
     });
@@ -258,8 +266,16 @@ describe('parseYaml()', () => {
 
         expect(result.ok).toBe(true);
         if (result.ok) {
-            expect(result.value.items).toEqual(['first', 'second', 'third']);
-            expect(result.value.numbers).toEqual([1, 2, 3]);
+            expect(result.value.items).toEqual([
+                'first',
+                'second',
+                'third',
+            ]);
+            expect(result.value.numbers).toEqual([
+                1,
+                2,
+                3,
+            ]);
         }
     });
 
@@ -281,7 +297,11 @@ describe('parseYaml()', () => {
 
         expect(result.ok).toBe(true);
         if (result.ok) {
-            expect(result.value.tags).toEqual(['a', 'b', 'c']);
+            expect(result.value.tags).toEqual([
+                'a',
+                'b',
+                'c',
+            ]);
         }
     });
 });
@@ -326,7 +346,11 @@ describe('stringifyYaml()', () => {
     });
 
     it('should stringify arrays', () => {
-        const obj = { items: ['a', 'b', 'c'] };
+        const obj = { items: [
+            'a',
+            'b',
+            'c',
+        ] };
 
         const result = stringifyYaml(obj);
 
@@ -385,7 +409,11 @@ describe('parseJson()', () => {
 
         expect(result.ok).toBe(true);
         if (result.ok) {
-            expect(result.value).toEqual([1, 2, 3]);
+            expect(result.value).toEqual([
+                1,
+                2,
+                3,
+            ]);
         }
     });
 
@@ -440,7 +468,11 @@ describe('stringifyJson()', () => {
     });
 
     it('should stringify arrays', () => {
-        const obj = [1, 2, 3];
+        const obj = [
+            1,
+            2,
+            3,
+        ];
 
         const result = stringifyJson(obj);
 
@@ -540,7 +572,7 @@ describe('parseIndex()', () => {
         if (result.ok) {
             expect(result.value.memories[0]?.tokenEstimate).toBe(42);
             expect(
-                (result.value.memories[0] as unknown as Record<string, unknown>)['token_estimate']
+                (result.value.memories[0] as unknown as Record<string, unknown>)['token_estimate'],
             ).toBeUndefined();
         }
     });
@@ -561,7 +593,7 @@ describe('parseIndex()', () => {
             expect(
                 (result.value.subcategories[0] as unknown as Record<string, unknown>)[
                     'memory_count'
-                ]
+                ],
             ).toBeUndefined();
         }
     });
@@ -631,14 +663,18 @@ describe('parseIndex()', () => {
         expect(result.ok).toBe(true);
         if (result.ok) {
             expect(result.value.subcategories[0]?.description).toBe(
-                'Cortex memory system project knowledge'
+                'Cortex memory system project knowledge',
             );
         }
     });
 
     it('should return VALIDATION_FAILED for missing memories field', () => {
-        const raw = ['subcategories:', '  - path: semantic/concepts', '    memory_count: 3'].join(
-            '\n'
+        const raw = [
+            'subcategories:',
+            '  - path: semantic/concepts',
+            '    memory_count: 3',
+        ].join(
+            '\n',
         );
 
         const result = parseIndex(raw);
@@ -651,7 +687,11 @@ describe('parseIndex()', () => {
     });
 
     it('should return VALIDATION_FAILED for missing subcategories field', () => {
-        const raw = ['memories:', '  - path: working/notes', '    token_estimate: 50'].join('\n');
+        const raw = [
+            'memories:',
+            '  - path: working/notes',
+            '    token_estimate: 50',
+        ].join('\n');
 
         const result = parseIndex(raw);
 
@@ -662,7 +702,11 @@ describe('parseIndex()', () => {
     });
 
     it('should return VALIDATION_FAILED for missing path in memory entry', () => {
-        const raw = ['memories:', '  - token_estimate: 100', 'subcategories: []'].join('\n');
+        const raw = [
+            'memories:',
+            '  - token_estimate: 100',
+            'subcategories: []',
+        ].join('\n');
 
         const result = parseIndex(raw);
 
@@ -673,7 +717,11 @@ describe('parseIndex()', () => {
     });
 
     it('should return VALIDATION_FAILED for missing token_estimate in memory entry', () => {
-        const raw = ['memories:', '  - path: working/notes', 'subcategories: []'].join('\n');
+        const raw = [
+            'memories:',
+            '  - path: working/notes',
+            'subcategories: []',
+        ].join('\n');
 
         const result = parseIndex(raw);
 
@@ -795,16 +843,12 @@ describe('serializeIndex()', () => {
 
     it('should serialize with optional fields present', () => {
         const index: CategoryIndex = {
-            memories: [
-                { path: 'working/preferences', tokenEstimate: 100, summary: 'User preferences' },
-            ],
-            subcategories: [
-                {
-                    path: 'projects/cortex',
-                    memoryCount: 5,
-                    description: 'Project knowledge',
-                },
-            ],
+            memories: [{ path: 'working/preferences', tokenEstimate: 100, summary: 'User preferences' }],
+            subcategories: [{
+                path: 'projects/cortex',
+                memoryCount: 5,
+                description: 'Project knowledge',
+            }],
         };
 
         const result = serializeIndex(index);

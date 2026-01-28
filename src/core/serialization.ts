@@ -109,7 +109,8 @@ export const parseYaml = <T = unknown>(raw: string): Result<T, SerializationErro
     try {
         const value = YAML.parse(raw) as T;
         return ok(value);
-    } catch (cause) {
+    }
+    catch (cause) {
         return err({
             code: 'PARSE_FAILED',
             message: 'Failed to parse YAML.',
@@ -135,7 +136,8 @@ export const parseYaml = <T = unknown>(raw: string): Result<T, SerializationErro
 export const stringifyYaml = (obj: unknown): Result<string, SerializationError> => {
     try {
         return ok(YAML.stringify(obj));
-    } catch (cause) {
+    }
+    catch (cause) {
         return err({
             code: 'SERIALIZE_FAILED',
             message: 'Failed to serialize to YAML.',
@@ -162,7 +164,8 @@ export const parseJson = <T = unknown>(raw: string): Result<T, SerializationErro
     try {
         const value = JSON.parse(raw) as T;
         return ok(value);
-    } catch (cause) {
+    }
+    catch (cause) {
         return err({
             code: 'PARSE_FAILED',
             message: 'Failed to parse JSON.',
@@ -188,7 +191,8 @@ export const parseJson = <T = unknown>(raw: string): Result<T, SerializationErro
 export const stringifyJson = (obj: unknown): Result<string, SerializationError> => {
     try {
         return ok(JSON.stringify(obj));
-    } catch (cause) {
+    }
+    catch (cause) {
         return err({
             code: 'SERIALIZE_FAILED',
             message: 'Failed to serialize to JSON.',
