@@ -16,7 +16,7 @@ import { defaultTokenizer } from '../../tokens.ts';
 import { validateMemorySlugPath } from '../../memory/validation.ts';
 import type { DirEntriesResult, FilesystemContext, StringOrNullResult } from './types.ts';
 import { err, isNotFoundError, ok, resolveStoragePath, toSlugPathFromRelative } from './utils.ts';
-import { validateSlugPath } from './files.ts';
+import { validateSlugPath } from './memories.ts';
 
 /**
  * Internal state for building indexes during reindex.

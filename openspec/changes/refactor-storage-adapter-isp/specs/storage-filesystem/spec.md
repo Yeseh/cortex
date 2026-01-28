@@ -1,0 +1,95 @@
+## MODIFIED Requirements
+
+### Requirement: Storage adapter interface
+
+The system SHALL provide a storage adapter interface that composes four focused storage interfaces: `MemoryStorage`, `IndexStorage`, `CategoryStorage`, and `StoreStorage`.
+
+#### Scenario: Accessing memory operations
+
+- **WHEN** a consumer needs to read or write memory files
+- **THEN** it accesses `adapter.memories.read()` or `adapter.memories.write()`
+
+#### Scenario: Accessing index operations
+
+- **WHEN** a consumer needs to read or write index files
+- **THEN** it accesses `adapter.indexes.read()` or `adapter.indexes.write()`
+
+#### Scenario: Accessing category operations
+
+- **WHEN** a consumer needs to manage categories
+- **THEN** it accesses `adapter.categories.exists()`, `adapter.categories.readIndex()`, etc.
+
+#### Scenario: Accessing store operations
+
+- **WHEN** a consumer needs to manage store registries
+- **THEN** it accesses `adapter.stores.load()`, `adapter.stores.save()`, or `adapter.stores.remove()`
+
+### Requirement: Filesystem adapter
+
+The system SHALL provide a filesystem adapter that implements `StorageAdapter` by composing four focused storage implementations.
+
+#### Scenario: Writing a memory to disk
+
+- **WHEN** a memory is persisted via `adapter.memories.write()`
+- **THEN** the filesystem adapter writes the memory file
+- **AND** the business layer is responsible for updating indexes via `adapter.indexes`
+
+#### Scenario: Module organization
+
+- **WHEN** the filesystem adapter is examined
+- **THEN** it composes four separate storage implementations: `FilesystemMemoryStorage`, `FilesystemIndexStorage`, `FilesystemCategoryStorage`, and `FilesystemStoreStorage`
+- **AND** each implementation receives the shared `FilesystemContext` in its constructor
+
+## ADDED Requirements
+
+### Requirement: Memory storage interface
+
+The system SHALL provide a `MemoryStorage` interface for memory file operations with simplified method names.
+
+#### Scenario: Interface methods
+
+- **WHEN** the `MemoryStorage` interface is defined
+- **THEN** it includes `read(slugPath)`, `write(slugPath, contents)`, `remove(slugPath)`, and `move(source, destination)`
+
+### Requirement: Index storage interface
+
+The system SHALL provide an `IndexStorage` interface for index file operations with simplified method names.
+
+#### Scenario: Interface methods
+
+- **WHEN** the `IndexStorage` interface is defined
+- **THEN** it includes `read(name)`, `write(name, contents)`, and `reindex()`
+
+### Requirement: Category storage interface location
+
+The `CategoryStorage` interface SHALL be defined in the category module (`core/category/types.ts`) and re-exported by the storage module.
+
+#### Scenario: Interface reuse
+
+- **WHEN** the filesystem storage adapter needs a category storage interface
+- **THEN** it imports `CategoryStorage` from `core/category/types.ts`
+- **AND** the interface does not use a "Port" suffix
+
+### Requirement: Store storage interface
+
+The system SHALL provide a `StoreStorage` interface for store registry operations with simplified method names.
+
+#### Scenario: Interface methods
+
+- **WHEN** the `StoreStorage` interface is defined
+- **THEN** it includes `load(path, options?)`, `save(path, registry)`, and `remove(path)`
+
+#### Scenario: Load with allowMissing option
+
+- **WHEN** `adapter.stores.load(path, { allowMissing: true })` is called and the registry file does not exist
+- **THEN** an empty registry is returned instead of an error
+
+### Requirement: Business layer index coordination
+
+Index updates during memory writes SHALL be the responsibility of the business layer, not the storage adapter.
+
+#### Scenario: Memory write without automatic index update
+
+- **WHEN** `adapter.memories.write(slugPath, contents)` is called
+- **THEN** only the memory file is written
+- **AND** the caller is responsible for calling `adapter.indexes` or `adapter.categories` to update indexes

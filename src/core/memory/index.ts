@@ -37,18 +37,3 @@ export type { MemoryMetadata, Memory, MemoryErrorCode, MemoryError } from './typ
 export { validateCategoryPath, validateMemorySlugPath } from './validation.ts';
 
 export type { MemoryPathValidationError } from './validation.ts';
-
-// Format adapters (new API)
-export { parseFrontmatter, serializeFrontmatter } from './formats/index.ts';
-
-// Format adapters (deprecated backwards compatibility)
-export {
-    parseMemoryFile,
-    serializeMemoryFile,
-    type MemoryFileFrontmatter,
-    type MemoryFileContents,
-    type MemoryFileParseErrorCode,
-    type MemoryFileParseError,
-    type MemoryFileSerializeErrorCode,
-    type MemoryFileSerializeError,
-} from './formats/index.ts';

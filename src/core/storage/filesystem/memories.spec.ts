@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
-import { parseFrontmatter, serializeFrontmatter } from './frontmatter.ts';
+import { parseMemory, serializeMemory } from './memories.ts';
 
 describe('memory file parsing', () => {
     it('should parse frontmatter with required fields and optional expiry', () => {
@@ -15,7 +15,7 @@ describe('memory file parsing', () => {
             'Remember the onboarding checklist.',
         ].join('\n');
 
-        const result = parseFrontmatter(raw);
+        const result = parseMemory(raw);
 
         expect(result.ok).toBe(true);
         if (result.ok) {
@@ -40,7 +40,7 @@ describe('memory file parsing', () => {
             'Missing the source field.',
         ].join('\n');
 
-        const result = parseFrontmatter(raw);
+        const result = parseMemory(raw);
 
         expect(result.ok).toBe(false);
         if (!result.ok) {
@@ -59,7 +59,7 @@ describe('memory file parsing', () => {
             'This line should be treated as content.',
         ].join('\n');
 
-        const result = parseFrontmatter(raw);
+        const result = parseMemory(raw);
 
         expect(result.ok).toBe(false);
         if (!result.ok) {
@@ -77,7 +77,7 @@ describe('memory file parsing', () => {
             'Missing opening marker.',
         ].join('\n');
 
-        const result = parseFrontmatter(raw);
+        const result = parseMemory(raw);
 
         expect(result.ok).toBe(false);
         if (!result.ok) {
@@ -96,7 +96,7 @@ describe('memory file parsing', () => {
             'Invalid timestamp format.',
         ].join('\n');
 
-        const result = parseFrontmatter(raw);
+        const result = parseMemory(raw);
 
         expect(result.ok).toBe(false);
         if (!result.ok) {
@@ -118,7 +118,7 @@ describe('memory file parsing', () => {
             'Tags list style.',
         ].join('\n');
 
-        const result = parseFrontmatter(raw);
+        const result = parseMemory(raw);
 
         expect(result.ok).toBe(true);
         if (result.ok) {
@@ -140,7 +140,7 @@ describe('memory file parsing', () => {
             'No tags inline.',
         ].join('\n');
 
-        const result = parseFrontmatter(raw);
+        const result = parseMemory(raw);
 
         expect(result.ok).toBe(true);
         if (result.ok) {
@@ -160,7 +160,7 @@ describe('memory file parsing', () => {
             'No tags in list style.',
         ].join('\n');
 
-        const result = parseFrontmatter(raw);
+        const result = parseMemory(raw);
 
         expect(result.ok).toBe(true);
         if (result.ok) {
@@ -180,7 +180,7 @@ describe('memory file parsing', () => {
             'Missing source.',
         ].join('\n');
 
-        const result = parseFrontmatter(raw);
+        const result = parseMemory(raw);
 
         expect(result.ok).toBe(false);
         if (!result.ok) {
@@ -201,7 +201,7 @@ describe('memory file parsing', () => {
             'Duplicate keys.',
         ].join('\n');
 
-        const result = parseFrontmatter(raw);
+        const result = parseMemory(raw);
 
         expect(result.ok).toBe(false);
         if (!result.ok) {
@@ -221,7 +221,7 @@ describe('memory file parsing', () => {
             'Invalid frontmatter line.',
         ].join('\n');
 
-        const result = parseFrontmatter(raw);
+        const result = parseMemory(raw);
 
         expect(result.ok).toBe(false);
         if (!result.ok) {
@@ -240,7 +240,7 @@ describe('memory file parsing', () => {
             'Trailing commas are normalized by yaml parser.',
         ].join('\n');
 
-        const result = parseFrontmatter(raw);
+        const result = parseMemory(raw);
 
         expect(result.ok).toBe(true);
         if (result.ok) {
@@ -260,7 +260,7 @@ describe('memory file parsing', () => {
             'Invalid tag entry.',
         ].join('\n');
 
-        const result = parseFrontmatter(raw);
+        const result = parseMemory(raw);
 
         expect(result.ok).toBe(false);
         if (!result.ok) {
@@ -284,13 +284,13 @@ describe('memory file serialization', () => {
             content: 'Memory payload with multiple lines.\nSecond line.',
         };
 
-        const serialized = serializeFrontmatter(memory);
+        const serialized = serializeMemory(memory);
         expect(serialized.ok).toBe(true);
         if (!serialized.ok) {
             return;
         }
 
-        const reparsed = parseFrontmatter(serialized.value);
+        const reparsed = parseMemory(serialized.value);
         expect(reparsed.ok).toBe(true);
         if (reparsed.ok) {
             expect(reparsed.value.metadata.createdAt.toISOString()).toBe(
@@ -323,13 +323,13 @@ describe('memory file serialization', () => {
             content: '',
         };
 
-        const serialized = serializeFrontmatter(memory);
+        const serialized = serializeMemory(memory);
         expect(serialized.ok).toBe(true);
         if (!serialized.ok) {
             return;
         }
 
-        const reparsed = parseFrontmatter(serialized.value);
+        const reparsed = parseMemory(serialized.value);
         expect(reparsed.ok).toBe(true);
         if (reparsed.ok) {
             expect(reparsed.value.content).toBe('');
@@ -347,13 +347,13 @@ describe('memory file serialization', () => {
             content: '\nLeading newline content.',
         };
 
-        const serialized = serializeFrontmatter(memory);
+        const serialized = serializeMemory(memory);
         expect(serialized.ok).toBe(true);
         if (!serialized.ok) {
             return;
         }
 
-        const reparsed = parseFrontmatter(serialized.value);
+        const reparsed = parseMemory(serialized.value);
         expect(reparsed.ok).toBe(true);
         if (reparsed.ok) {
             expect(reparsed.value.content).toBe('Leading newline content.');
@@ -371,7 +371,7 @@ describe('memory file serialization', () => {
             content: 'Serialized memory.',
         };
 
-        const result = serializeFrontmatter(memory);
+        const result = serializeMemory(memory);
 
         expect(result.ok).toBe(false);
         if (!result.ok) {
@@ -391,8 +391,8 @@ describe('memory file serialization', () => {
             content: 'Serialized memory.',
         };
 
-        const result = serializeFrontmatter(
-            memory as unknown as Parameters<typeof serializeFrontmatter>[0],
+        const result = serializeMemory(
+            memory as unknown as Parameters<typeof serializeMemory>[0],
         );
 
         expect(result.ok).toBe(false);
@@ -415,8 +415,8 @@ describe('memory file serialization', () => {
             content: 'Serialized memory.',
         };
 
-        const result = serializeFrontmatter(
-            memory as unknown as Parameters<typeof serializeFrontmatter>[0],
+        const result = serializeMemory(
+            memory as unknown as Parameters<typeof serializeMemory>[0],
         );
 
         expect(result.ok).toBe(false);
@@ -437,7 +437,7 @@ describe('memory file serialization', () => {
             content: 'Serialized memory.',
         };
 
-        const result = serializeFrontmatter(memory);
+        const result = serializeMemory(memory);
 
         expect(result.ok).toBe(false);
         if (!result.ok) {

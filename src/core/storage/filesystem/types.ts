@@ -47,3 +47,9 @@ export type DirEntriesResult = Result<Dirent<string | Buffer>[], StorageAdapterE
  * Result type for string or null values.
  */
 export type StringOrNullResult = Result<string | null, StorageAdapterError>;
+
+export type FileWithMetadata<TMeta> = {
+    metadata: TMeta;
+    content: string;
+};
+

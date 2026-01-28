@@ -36,11 +36,11 @@ import { normalizeExtension, ok } from './utils.ts';
 
 // Import operations from focused modules
 import {
-    readMemoryFile as readMemoryFileOp,
-    writeMemoryFile as writeMemoryFileOp,
-    removeMemoryFile as removeMemoryFileOp,
-    moveMemoryFile as moveMemoryFileOp,
-} from './files.ts';
+    readMemory as readMemoryFileOp,
+    writeMemory as writeMemoryFileOp,
+    removeMemory as removeMemoryFileOp,
+    moveMemory as moveMemoryFileOp,
+} from './memories.ts';
 
 import {
     readIndexFile as readIndexFileOp,
