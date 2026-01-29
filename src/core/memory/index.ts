@@ -46,6 +46,9 @@ export { validateCategoryPath, validateMemorySlugPath } from './validation.ts';
 
 export type { MemoryPathValidationError } from './validation.ts';
 
+// Expiration utilities
+export { isExpired, isExpiredNow } from './expiration.ts';
+
 /**
  * Contents of a memory file with frontmatter metadata and content.
  * This type uses `frontmatter` as the property name for API compatibility.
@@ -94,3 +97,25 @@ export const serializeMemoryFile = (contents: MemoryFileContents): Result<string
     };
     return serializeMemory(memory);
 };
+
+// Operations
+export {
+    createMemory,
+    getMemory,
+    updateMemory,
+    moveMemory,
+    removeMemory,
+    listMemories,
+    pruneExpiredMemories,
+    type CreateMemoryInput,
+    type UpdateMemoryInput,
+    type GetMemoryOptions,
+    type ListMemoriesOptions,
+    type PruneOptions,
+    type ListedMemory,
+    type ListedSubcategory,
+    type ListMemoriesResult,
+    type PrunedMemory,
+    type PruneResult,
+} from './operations.ts';
+

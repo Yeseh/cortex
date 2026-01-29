@@ -24,6 +24,7 @@ import { FilesystemStorageAdapter } from '../../core/storage/filesystem/index.ts
 import { parseIndex } from '../../core/serialization.ts';
 import { loadStoreRegistry, resolveStorePath } from '../../core/store/registry.ts';
 import type { ServerConfig } from '../config.ts';
+import { storeNameSchema } from '../store/tools.ts';
 
 // ---------------------------------------------------------------------------
 // Zod Schemas
@@ -36,9 +37,6 @@ const isoDateSchema = z.string().refine((value) => !Number.isNaN(Date.parse(valu
 
 /** Schema for memory path (category/slug format) */
 const memoryPathSchema = z.string().min(1, 'Memory path is required');
-
-/** Schema for store name */
-const storeNameSchema = z.string().min(1, 'Store name is required');
 
 /** Schema for tags array */
 const tagsSchema = z.array(z.string()).optional();

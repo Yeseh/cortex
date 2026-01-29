@@ -54,6 +54,8 @@ export type Memory = {
  * - `STORAGE_ERROR` - Underlying storage operation failed (filesystem, network, etc.)
  * - `INVALID_PATH` - Memory path is malformed or doesn't conform to the expected format
  * - `MEMORY_EXPIRED` - The requested memory exists but has passed its expiration date
+ * - `INVALID_INPUT` - No updates provided, or invalid arguments
+ * - `DESTINATION_EXISTS` - Move destination already exists
  */
 export type MemoryErrorCode =
     // Parsing/validation errors
@@ -67,7 +69,9 @@ export type MemoryErrorCode =
     | 'MEMORY_NOT_FOUND'
     | 'STORAGE_ERROR'
     | 'INVALID_PATH'
-    | 'MEMORY_EXPIRED';
+    | 'MEMORY_EXPIRED'
+    | 'INVALID_INPUT'
+    | 'DESTINATION_EXISTS';
 
 /**
  * Error details for memory parsing and validation operations.

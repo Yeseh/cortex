@@ -156,7 +156,7 @@ describe('FilesystemCategoryStorage', () => {
             await fs.mkdir(join(tempDir, 'bad-index'), { recursive: true });
             await fs.writeFile(
                 join(tempDir, 'bad-index', 'index.yaml'),
-                'not valid yaml content:::'
+                'not valid yaml content:::',
             );
 
             const result = await storage.readCategoryIndex('bad-index');
@@ -200,7 +200,7 @@ describe('FilesystemCategoryStorage', () => {
 
             const content = await fs.readFile(
                 join(tempDir, 'existing-index', 'index.yaml'),
-                'utf8'
+                'utf8',
             );
             expect(content).toContain('existing-index/new');
             expect(content).not.toContain('old content');
@@ -234,7 +234,7 @@ describe('FilesystemCategoryStorage', () => {
             const result = await storage.updateSubcategoryDescription(
                 'parent',
                 'parent/child',
-                'A child category'
+                'A child category',
             );
 
             expect(result.ok).toBe(true);
@@ -251,7 +251,7 @@ describe('FilesystemCategoryStorage', () => {
             const result = await storage.updateSubcategoryDescription(
                 'parent2',
                 'parent2/new-child',
-                'New child description'
+                'New child description',
             );
 
             expect(result.ok).toBe(true);
@@ -275,7 +275,7 @@ describe('FilesystemCategoryStorage', () => {
             const result = await storage.updateSubcategoryDescription(
                 'parent3',
                 'parent3/child',
-                null
+                null,
             );
 
             expect(result.ok).toBe(true);
@@ -290,14 +290,14 @@ describe('FilesystemCategoryStorage', () => {
             const result = await storage.updateSubcategoryDescription(
                 'no-index-parent',
                 'no-index-parent/child',
-                'Child category'
+                'Child category',
             );
 
             expect(result.ok).toBe(true);
 
             const content = await fs.readFile(
                 join(tempDir, 'no-index-parent', 'index.yaml'),
-                'utf8'
+                'utf8',
             );
             expect(content).toContain('no-index-parent/child');
         });

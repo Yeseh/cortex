@@ -24,7 +24,15 @@ describe('utils module', () => {
             expect(ok(42)).toEqual({ ok: true, value: 42 });
             expect(ok(null)).toEqual({ ok: true, value: null });
             expect(ok({ key: 'value' })).toEqual({ ok: true, value: { key: 'value' } });
-            expect(ok([1, 2, 3])).toEqual({ ok: true, value: [1, 2, 3] });
+            expect(ok([
+                1,
+                2,
+                3,
+            ])).toEqual({ ok: true, value: [
+                1,
+                2,
+                3,
+            ] });
         });
     });
 
@@ -119,7 +127,8 @@ describe('utils module', () => {
                 if (result.ok) {
                     expect(result.value).toBe(resolve(tempDir, 'category/memory'));
                 }
-            } finally {
+            }
+            finally {
                 await rm(tempDir, { recursive: true, force: true });
             }
         });
@@ -137,7 +146,8 @@ describe('utils module', () => {
                 if (result.ok) {
                     expect(result.value).toBe(resolve(tempDir, 'a/b/c/d'));
                 }
-            } finally {
+            }
+            finally {
                 await rm(tempDir, { recursive: true, force: true });
             }
         });
@@ -156,7 +166,8 @@ describe('utils module', () => {
                     expect(result.error.code).toBe('READ_FAILED');
                     expect(result.error.message).toContain('Path escapes storage root');
                 }
-            } finally {
+            }
+            finally {
                 await rm(tempDir, { recursive: true, force: true });
             }
         });
@@ -174,7 +185,8 @@ describe('utils module', () => {
                 if (!result.ok) {
                     expect(result.error.code).toBe('WRITE_FAILED');
                 }
-            } finally {
+            }
+            finally {
                 await rm(tempDir, { recursive: true, force: true });
             }
         });
@@ -192,7 +204,8 @@ describe('utils module', () => {
                 if (!result.ok) {
                     expect(result.error.code).toBe('WRITE_FAILED');
                 }
-            } finally {
+            }
+            finally {
                 await rm(tempDir, { recursive: true, force: true });
             }
         });
