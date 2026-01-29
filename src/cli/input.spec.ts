@@ -302,7 +302,7 @@ describe('resolveMemoryContentInput', () => {
 
         it('should handle stdin without setEncoding', async () => {
             // Create a minimal stream that doesn't have setEncoding
-            const chunks: string[] = [];
+            const _chunks: string[] = [];
             const mockStdin = {
                 isTTY: false,
                 [Symbol.asyncIterator]: async function* () {

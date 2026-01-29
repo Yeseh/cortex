@@ -849,13 +849,13 @@ describe('cortex_prune_memories tool', () => {
         // Verify memories still exist (not deleted)
         const getResult1 = await getMemoryHandler(
             { config },
-            { store: 'default', path: 'project/expired-1', include_expired: true }
+            { store: 'default', path: 'project/expired-1', include_expired: true },
         );
         expect(getResult1.content[0]!.text).toContain('Expired 1');
 
         const getResult2 = await getMemoryHandler(
             { config },
-            { store: 'default', path: 'human/expired-2', include_expired: true }
+            { store: 'default', path: 'human/expired-2', include_expired: true },
         );
         expect(getResult2.content[0]!.text).toContain('Expired 2');
     });
