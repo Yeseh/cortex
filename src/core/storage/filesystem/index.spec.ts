@@ -9,6 +9,19 @@ import { parseIndex, serializeIndex } from '../../serialization.ts';
 describe('filesystem storage adapter', () => {
     let tempDir: string;
 
+    // Helper to generate valid memory content with frontmatter
+    const createMemoryContent = (content: string) => {
+        return [
+            '---',
+            'created_at: 2024-01-01T00:00:00.000Z',
+            'updated_at: 2024-01-01T00:00:00.000Z',
+            'tags: []',
+            'source: test',
+            '---',
+            content,
+        ].join('\n');
+    };
+
     beforeEach(async () => {
         tempDir = await fs.mkdtemp(join(tmpdir(), 'cortex-storage-'));
     });
@@ -21,10 +34,11 @@ describe('filesystem storage adapter', () => {
 
     it('should write and read memory files', async () => {
         const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
+        const content = createMemoryContent('Filesystem payload');
 
         const writeResult = await adapter.writeMemoryFile(
             'working/storage-test',
-            'Filesystem payload',
+            content,
         );
 
         expect(writeResult.ok).toBe(true);
@@ -33,21 +47,24 @@ describe('filesystem storage adapter', () => {
 
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
-            expect(readResult.value).toBe('Filesystem payload');
+            expect(readResult.value).toContain('Filesystem payload');
+            expect(readResult.value).toContain('---'); // Has frontmatter
         }
     });
 
     it('should store memories directly under store root', async () => {
         const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
+        const content = createMemoryContent('test content');
 
-        await adapter.writeMemoryFile('global/test-memory', 'test content', {
+        await adapter.writeMemoryFile('global/test-memory', content, {
             allowIndexUpdate: false,
         });
 
         // Verify physical file location
         const memoryPath = join(tempDir, 'global', 'test-memory.md');
-        const content = await fs.readFile(memoryPath, 'utf8');
-        expect(content).toBe('test content');
+        const fileContent = await fs.readFile(memoryPath, 'utf8');
+        expect(fileContent).toContain('test content');
+        expect(fileContent).toContain('---'); // Has frontmatter
     });
 
     it('should return ok(null) for missing memory files', async () => {
@@ -72,7 +89,8 @@ describe('filesystem storage adapter', () => {
             expect(readResult.error.message).toContain('Path escapes storage root');
         }
 
-        const writeResult = await adapter.writeMemoryFile('../escape', 'nope');
+        const content = createMemoryContent('nope');
+        const writeResult = await adapter.writeMemoryFile('../escape', content);
 
         expect(writeResult.ok).toBe(false);
         if (!writeResult.ok) {
@@ -83,8 +101,9 @@ describe('filesystem storage adapter', () => {
 
     it('should reject index as memory slug', async () => {
         const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
+        const content = createMemoryContent('content');
 
-        const result = await adapter.writeMemoryFile('global/index', 'content');
+        const result = await adapter.writeMemoryFile('global/index', content);
 
         expect(result.ok).toBe(false);
         if (!result.ok) {
@@ -164,6 +183,19 @@ describe('filesystem storage adapter', () => {
 
 describe('CategoryStoragePort implementation', () => {
     let tempDir: string;
+
+    // Helper to generate valid memory content with frontmatter
+    const createMemoryContent = (content: string) => {
+        return [
+            '---',
+            'created_at: 2024-01-01T00:00:00.000Z',
+            'updated_at: 2024-01-01T00:00:00.000Z',
+            'tags: []',
+            'source: test',
+            '---',
+            content,
+        ].join('\n');
+    };
 
     beforeEach(async () => {
         tempDir = await fs.mkdtemp(join(tmpdir(), 'cortex-cat-storage-'));
@@ -371,7 +403,8 @@ describe('CategoryStoragePort implementation', () => {
         await writeIndex(adapter, 'project', { memories: [], subcategories: [] });
 
         // Add a memory, which triggers upsertSubcategoryEntry with updated count
-        const writeResult = await adapter.writeMemoryFile('project/test-memory', 'Test content', {
+        const content = createMemoryContent('Test content');
+        const writeResult = await adapter.writeMemoryFile('project/test-memory', content, {
             allowIndexCreate: true,
             allowIndexUpdate: true,
         });
