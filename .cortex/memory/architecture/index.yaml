@@ -1,0 +1,6 @@
+memories:
+  - path: global/projects/cortex/architecture/patterns
+    token_estimate: 267
+  - path: global/projects/cortex/architecture/storage-adapter-composition
+    token_estimate: 344
+subcategories: []

@@ -1,24 +1,16 @@
 memories:
-  - path: projects/cortex/standards/barrel-exports
-    token_estimate: 229
-  - path: projects/cortex/standards/core-module-architecture
-    token_estimate: 573
-  - path: projects/cortex/standards/documentation
-    token_estimate: 326
-  - path: projects/cortex/standards/file-organization
-    token_estimate: 271
-  - path: projects/cortex/standards/function-signatures
-    token_estimate: 155
-  - path: projects/cortex/standards/module-checklist
-    token_estimate: 221
-  - path: projects/cortex/standards/operation-results
-    token_estimate: 173
-  - path: projects/cortex/standards/result-types
-    token_estimate: 254
-  - path: projects/cortex/standards/self-documenting-errors
-    token_estimate: 303
-  - path: projects/cortex/standards/testing
-    token_estimate: 309
-  - path: projects/cortex/standards/types-vs-interfaces
-    token_estimate: 377
+  - path: global/projects/cortex/standards/cli-command-pattern
+    token_estimate: 328
+  - path: global/projects/cortex/standards/cli-error-mapping
+    token_estimate: 268
+  - path: global/projects/cortex/standards/cross-platform-paths
+    token_estimate: 372
+  - path: global/projects/cortex/standards/frontmatter-format
+    token_estimate: 208
+  - path: global/projects/cortex/standards/mcp-server-thin-wrapper
+    token_estimate: 468
+  - path: global/projects/cortex/standards/registry-caches-loaded-data
+    token_estimate: 405
+  - path: global/projects/cortex/standards/test-failure-policy
+    token_estimate: 301
 subcategories: []
