@@ -4,7 +4,7 @@
  * Handles reading, writing, moving, and removing memory files
  * from the filesystem.
  *
- * @module core/storage/filesystem/files
+ * @module core/storage/filesystem/memories
  */
 
 import { access, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
@@ -25,13 +25,14 @@ export type SerializeMemoryResult = Result<string, MemoryError>;
 
 /**
  * Schema for parsing YAML frontmatter from memory files.
+ * Uses snake_case keys to match the file format.
  */
 const FrontmatterSchema = z.object({
-    createdAt: dateSchema,
-    updatedAt: dateSchema,
+    created_at: dateSchema,
+    updated_at: dateSchema,
     tags: tagsSchema,
     source: nonEmptyStringSchema,
-    expiresAt: dateSchema.optional(),
+    expires_at: dateSchema.optional(),
 });
 
 /**
@@ -69,15 +70,13 @@ const mapSerializeErrorCode = (field: string | undefined): MemoryErrorCode => {
 };
 
 /**
- * Maps camelCase field names to snake_case for error reporting.
+ * Maps field names for error reporting.
+ * Schema now uses snake_case, so no conversion needed.
  *
- * @param field - The camelCase field name
- * @returns The snake_case field name
+ * @param field - The field name
+ * @returns The field name unchanged
  */
 const mapSerializeFieldName = (field: string | undefined): string | undefined => {
-    if (field === 'createdAt') return 'created_at';
-    if (field === 'updatedAt') return 'updated_at';
-    if (field === 'expiresAt') return 'expires_at';
     return field;
 };
 
@@ -170,12 +169,13 @@ const parseMetadata = (frontmatterLines: string[]): ParseMetadataResult => {
         });
     }
 
+    // Convert snake_case to camelCase for internal API
     return ok({
-        createdAt: result.data.createdAt,
-        updatedAt: result.data.updatedAt,
+        createdAt: result.data.created_at,
+        updatedAt: result.data.updated_at,
         tags: result.data.tags,
         source: result.data.source,
-        expiresAt: result.data.expiresAt,
+        expiresAt: result.data.expires_at,
     });
 };
 
@@ -226,7 +226,16 @@ export const resolveMemoryPath = (
  * ```
  */
 export const serializeMemory = (memory: Memory): SerializeMemoryResult => {
-    const result = FrontmatterSchema.safeParse(memory.metadata);
+    // Convert camelCase from internal API to snake_case for validation/serialization
+    const snakeCaseMetadata = {
+        created_at: memory.metadata.createdAt,
+        updated_at: memory.metadata.updatedAt,
+        tags: memory.metadata.tags,
+        source: memory.metadata.source,
+        expires_at: memory.metadata.expiresAt,
+    };
+
+    const result = FrontmatterSchema.safeParse(snakeCaseMetadata);
     if (!result.success) {
         const issue = result.error.issues[0];
         const field = issue?.path[0]?.toString();
@@ -237,14 +246,15 @@ export const serializeMemory = (memory: Memory): SerializeMemoryResult => {
         });
     }
 
-    const { createdAt, updatedAt, tags, source, expiresAt } = result.data;
+    const { created_at, updated_at, tags, source, expires_at } = result.data;
 
+    // Output snake_case for file format
     const frontmatterData = {
-        createdAt: createdAt.toISOString(),
-        updatedAt: updatedAt.toISOString(),
+        created_at: created_at.toISOString(),
+        updated_at: updated_at.toISOString(),
         tags,
         source,
-        ...(expiresAt ? { expiresAt: expiresAt.toISOString() } : {}),
+        ...(expires_at ? { expires_at: expires_at.toISOString() } : {}),
     };
 
 

@@ -14,7 +14,8 @@ import type { CategoryError } from '../../category/types.ts';
 import type { CategoryIndex } from '../../index/types.ts';
 import type { FilesystemContext } from './types.ts';
 import { err, isNotFoundError, ok } from './utils.ts';
-import { readCategoryIndex, writeCategoryIndex } from './indexes.ts';
+import { readCategoryIndex, readIndexFile, writeCategoryIndex } from './indexes.ts';
+import { parseIndex } from '../../serialization.ts';
 
 /**
  * Creates a CategoryError from components.
@@ -236,18 +237,33 @@ export const readCategoryIndexForPort = async (
     ctx: FilesystemContext,
     path: string,
 ): Promise<Result<CategoryIndex | null, CategoryError>> => {
-    const result = await readCategoryIndex(ctx, path, { createWhenMissing: false });
-    if (!result.ok) {
+    const contents = await readIndexFile(ctx, path);
+    if (!contents.ok) {
         return err(
             toCategoryError(
                 'STORAGE_ERROR',
                 `Failed to read category index: ${path}`,
                 path,
-                result.error,
+                contents.error,
             ),
         );
     }
-    return ok(result.value);
+    // Return null for missing index file (per interface contract)
+    if (contents.value === null) {
+        return ok(null);
+    }
+    const parsed = parseIndex(contents.value);
+    if (!parsed.ok) {
+        return err(
+            toCategoryError(
+                'STORAGE_ERROR',
+                `Failed to parse category index: ${path}`,
+                path,
+                parsed.error,
+            ),
+        );
+    }
+    return ok(parsed.value);
 };
 
 /**
