@@ -17,7 +17,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { mkdir } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { join } from 'node:path';
 import type { Result } from '../../core/types.ts';
 import { FilesystemStorageAdapter } from '../../core/storage/filesystem/index.ts';
 import type { CategoryStorage } from '../../core/category/types.ts';
@@ -28,8 +28,8 @@ import {
     deleteCategory,
     MAX_DESCRIPTION_LENGTH,
 } from '../../core/category/index.ts';
+import { loadStoreRegistry, resolveStorePath } from '../../core/store/registry.ts';
 import type { ServerConfig } from '../config.ts';
-import { getMemoryPath } from '../config.ts';
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -76,7 +76,7 @@ export const setCategoryDescriptionInputSchema = z.object({
         .string()
         .max(
             MAX_DESCRIPTION_LENGTH,
-            `Description must be ${MAX_DESCRIPTION_LENGTH} characters or less`,
+            `Description must be ${MAX_DESCRIPTION_LENGTH} characters or less`
         )
         .describe('Category description (empty string to clear)'),
 });
@@ -148,7 +148,7 @@ const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
 const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 /**
- * Resolves the store root directory from configuration.
+ * Resolves the store root directory from the registry.
  *
  * Optionally creates the store directory if it doesn't exist.
  *
@@ -160,21 +160,36 @@ const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 const resolveStoreRoot = async (
     config: ServerConfig,
     storeName: string,
-    autoCreate: boolean,
+    autoCreate: boolean
 ): Promise<Result<string, McpError>> => {
-    const memoryPath = getMemoryPath(config);
-    const storeRoot = resolve(memoryPath, storeName);
+    const registryPath = join(config.dataPath, 'stores.yaml');
+    const registryResult = await loadStoreRegistry(registryPath, { allowMissing: false });
+
+    if (!registryResult.ok) {
+        return err(
+            new McpError(
+                ErrorCode.InternalError,
+                `Failed to load store registry: ${registryResult.error.message}`
+            )
+        );
+    }
+
+    const storePathResult = resolveStorePath(registryResult.value, storeName);
+    if (!storePathResult.ok) {
+        return err(new McpError(ErrorCode.InvalidParams, storePathResult.error.message));
+    }
+
+    const storeRoot = storePathResult.value;
 
     if (autoCreate) {
         try {
             await mkdir(storeRoot, { recursive: true });
-        }
-        catch {
+        } catch {
             return err(
                 new McpError(
                     ErrorCode.InternalError,
-                    `Failed to create store directory: ${storeName}`,
-                ),
+                    `Failed to create store directory: ${storeName}`
+                )
             );
         }
     }
@@ -205,7 +220,7 @@ const createCategoryStoragePort = (storeRoot: string): CategoryStorage => {
         updateSubcategoryDescription: (
             parentPath: string,
             subcategoryPath: string,
-            description: string | null,
+            description: string | null
         ) => adapter.updateSubcategoryDescription(parentPath, subcategoryPath, description),
         removeSubcategoryEntry: (parentPath: string, subcategoryPath: string) =>
             adapter.removeSubcategoryEntry(parentPath, subcategoryPath),
@@ -258,7 +273,7 @@ const parseInput = <T>(schema: z.ZodSchema<T>, input: unknown): T => {
  */
 export const createCategoryHandler = async (
     ctx: ToolContext,
-    input: CreateCategoryInput,
+    input: CreateCategoryInput
 ): Promise<McpToolResponse> => {
     const storeRoot = await resolveStoreRoot(ctx.config, input.store, true);
     if (!storeRoot.ok) {
@@ -276,13 +291,15 @@ export const createCategoryHandler = async (
     }
 
     return {
-        content: [{
-            type: 'text',
-            text: JSON.stringify({
-                path: result.value.path,
-                created: result.value.created,
-            }),
-        }],
+        content: [
+            {
+                type: 'text',
+                text: JSON.stringify({
+                    path: result.value.path,
+                    created: result.value.created,
+                }),
+            },
+        ],
     };
 };
 
@@ -315,7 +332,7 @@ export const createCategoryHandler = async (
  */
 export const setCategoryDescriptionHandler = async (
     ctx: ToolContext,
-    input: SetCategoryDescriptionInput,
+    input: SetCategoryDescriptionInput
 ): Promise<McpToolResponse> => {
     const storeRoot = await resolveStoreRoot(ctx.config, input.store, true);
     if (!storeRoot.ok) {
@@ -346,13 +363,15 @@ export const setCategoryDescriptionHandler = async (
     }
 
     return {
-        content: [{
-            type: 'text',
-            text: JSON.stringify({
-                path: result.value.path,
-                description: result.value.description,
-            }),
-        }],
+        content: [
+            {
+                type: 'text',
+                text: JSON.stringify({
+                    path: result.value.path,
+                    description: result.value.description,
+                }),
+            },
+        ],
     };
 };
 
@@ -381,7 +400,7 @@ export const setCategoryDescriptionHandler = async (
  */
 export const deleteCategoryHandler = async (
     ctx: ToolContext,
-    input: DeleteCategoryInput,
+    input: DeleteCategoryInput
 ): Promise<McpToolResponse> => {
     const storeRoot = await resolveStoreRoot(ctx.config, input.store, false);
     if (!storeRoot.ok) {
@@ -402,13 +421,15 @@ export const deleteCategoryHandler = async (
     }
 
     return {
-        content: [{
-            type: 'text',
-            text: JSON.stringify({
-                path: result.value.path,
-                deleted: result.value.deleted,
-            }),
-        }],
+        content: [
+            {
+                type: 'text',
+                text: JSON.stringify({
+                    path: result.value.path,
+                    deleted: result.value.deleted,
+                }),
+            },
+        ],
     };
 };
 
@@ -449,7 +470,7 @@ export const registerCategoryTools = (server: McpServer, config: ServerConfig): 
         async (input) => {
             const parsed = parseInput(createCategoryInputSchema, input);
             return createCategoryHandler(ctx, parsed);
-        },
+        }
     );
 
     server.tool(
@@ -459,7 +480,7 @@ export const registerCategoryTools = (server: McpServer, config: ServerConfig): 
         async (input) => {
             const parsed = parseInput(setCategoryDescriptionInputSchema, input);
             return setCategoryDescriptionHandler(ctx, parsed);
-        },
+        }
     );
 
     server.tool(
@@ -469,6 +490,6 @@ export const registerCategoryTools = (server: McpServer, config: ServerConfig): 
         async (input) => {
             const parsed = parseInput(deleteCategoryInputSchema, input);
             return deleteCategoryHandler(ctx, parsed);
-        },
+        }
     );
 };

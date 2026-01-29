@@ -10,11 +10,13 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 import type { ServerConfig } from '../config.ts';
+import { MEMORY_SUBDIR } from '../config.ts';
+import { serializeStoreRegistry } from '../../core/store/registry.ts';
 import {
     createCategoryHandler,
     setCategoryDescriptionHandler,
@@ -36,7 +38,19 @@ const createTestConfig = (dataPath: string): ServerConfig => ({
 });
 
 const createTestDir = async (): Promise<string> => {
-    return mkdtemp(join(tmpdir(), 'cortex-cat-validation-'));
+    const testDir = await mkdtemp(join(tmpdir(), 'cortex-cat-validation-'));
+
+    // Create stores.yaml registry pointing default store to memory subdirectory
+    const memoryDir = join(testDir, MEMORY_SUBDIR);
+    await mkdir(memoryDir, { recursive: true });
+    const registry = { default: { path: memoryDir } };
+    const serialized = serializeStoreRegistry(registry);
+    if (!serialized.ok) {
+        throw new Error(`Failed to serialize registry: ${serialized.error.message}`);
+    }
+    await writeFile(join(testDir, 'stores.yaml'), serialized.value);
+
+    return testDir;
 };
 
 describe('Category Descriptions Validation', () => {
@@ -238,7 +252,7 @@ describe('Category Descriptions Validation', () => {
             await removeMemoryHandler({ config }, { store: STORE, path: 'project/persist/temp' });
 
             // Verify directory still exists using the adapter
-            const storeRoot = join(testDir, 'memory', 'default');
+            const storeRoot = join(testDir, 'memory');
             const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
             const existsResult = await adapter.categoryExists('project/persist');
 
@@ -455,7 +469,7 @@ describe('Category Descriptions Validation', () => {
                 { store: STORE, path: 'project/parent/child/grandchild' }
             );
 
-            const storeRoot = join(testDir, 'memory', 'default');
+            const storeRoot = join(testDir, 'memory');
             const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
 
             // Verify all exist before delete
@@ -500,7 +514,7 @@ describe('Category Descriptions Validation', () => {
                 { store: STORE, path: 'project/with-memories/mem2', content: 'Memory 2' }
             );
 
-            const storeRoot = join(testDir, 'memory', 'default');
+            const storeRoot = join(testDir, 'memory');
             const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
 
             // Verify category exists before delete
@@ -545,7 +559,7 @@ describe('Category Descriptions Validation', () => {
                 { store: STORE, path: 'project/complex/sub2/mem3', content: 'Another child memory' }
             );
 
-            const storeRoot = join(testDir, 'memory', 'default');
+            const storeRoot = join(testDir, 'memory');
             const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
 
             // Verify everything exists before delete
@@ -620,7 +634,7 @@ describe('Category Descriptions Validation', () => {
                 { store: STORE, path: 'project/todelete/mem', content: 'test' }
             );
 
-            const storeRoot = join(testDir, 'memory', 'default');
+            const storeRoot = join(testDir, 'memory');
             const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
 
             // Verify it exists

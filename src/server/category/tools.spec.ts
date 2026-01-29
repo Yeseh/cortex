@@ -3,11 +3,13 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 import type { ServerConfig } from '../config.ts';
+import { MEMORY_SUBDIR } from '../config.ts';
+import { serializeStoreRegistry } from '../../core/store/registry.ts';
 import {
     createCategoryHandler,
     setCategoryDescriptionHandler,
@@ -28,7 +30,19 @@ const createTestConfig = (dataPath: string): ServerConfig => ({
 });
 
 const createTestDir = async (): Promise<string> => {
-    return mkdtemp(join(tmpdir(), 'cortex-cat-tools-'));
+    const testDir = await mkdtemp(join(tmpdir(), 'cortex-cat-tools-'));
+
+    // Create stores.yaml registry pointing default store to memory subdirectory
+    const memoryDir = join(testDir, MEMORY_SUBDIR);
+    await mkdir(memoryDir, { recursive: true });
+    const registry = { default: { path: memoryDir } };
+    const serialized = serializeStoreRegistry(registry);
+    if (!serialized.ok) {
+        throw new Error(`Failed to serialize registry: ${serialized.error.message}`);
+    }
+    await writeFile(join(testDir, 'stores.yaml'), serialized.value);
+
+    return testDir;
 };
 
 describe('cortex_create_category tool', () => {

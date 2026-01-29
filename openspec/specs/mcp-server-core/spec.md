@@ -19,12 +19,12 @@ The MCP server SHALL expose MCP protocol messages via Streamable HTTP transport 
 
 ### Requirement: Environment-based configuration
 
-The MCP server SHALL be fully configurable via environment variables without requiring config files.
+The MCP server SHALL be fully configurable via environment variables without requiring config files. The default store name SHALL be `'default'`.
 
 #### Scenario: Server starts with defaults
 
 - **WHEN** the server starts without environment variables set
-- **THEN** the server uses default values for all configuration options
+- **THEN** the server uses default values for all configuration options including `defaultStore: 'default'`
 
 #### Scenario: Custom configuration
 
@@ -35,6 +35,11 @@ The MCP server SHALL be fully configurable via environment variables without req
 
 - **WHEN** an invalid value is provided (e.g., `CORTEX_PORT=not-a-number`)
 - **THEN** the server fails to start with a clear error message
+
+#### Scenario: Default store name
+
+- **WHEN** `CORTEX_DEFAULT_STORE` is not set
+- **THEN** the server uses `'default'` as the default store name
 
 ### Requirement: Health check endpoint
 

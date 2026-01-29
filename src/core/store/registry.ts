@@ -54,8 +54,7 @@ const parsePathValue = (raw: string): string => {
                 if (typeof parsed === 'string') {
                     return parsed;
                 }
-            }
-            catch {
+            } catch {
                 return rawValue;
             }
         }
@@ -106,7 +105,7 @@ const validateStoreIndent = (
     mode: RegistryState['mode'],
     indent: number,
     storesIndent: number,
-    line: number,
+    line: number
 ): Result<void, StoreRegistryParseError> => {
     if (mode === 'stores' && indent <= storesIndent) {
         return err({
@@ -159,12 +158,10 @@ const handleStoreHeader = (
     state: RegistryState,
     storeName: string,
     indent: number,
-    line: number,
+    line: number
 ): Result<RegistryState, StoreRegistryParseError> => {
     const nextMode = state.mode === 'unknown' ? 'root' : state.mode;
-    const indentResult = validateStoreIndent(
-        nextMode, indent, state.storesIndent, line,
-    );
+    const indentResult = validateStoreIndent(nextMode, indent, state.storesIndent, line);
     if (!indentResult.ok) {
         return indentResult;
     }
@@ -199,7 +196,7 @@ const handlePathValue = (
     state: RegistryState,
     pathValue: string,
     indent: number,
-    line: number,
+    line: number
 ): Result<RegistryState, StoreRegistryParseError> => {
     if (!state.currentStore) {
         if (state.mode === 'unknown') {
@@ -242,14 +239,14 @@ const handlePathValue = (
     }
     return ok({
         ...state,
-        registry: { 
-            ...state.registry, 
-            [state.currentStore.name]: { 
+        registry: {
+            ...state.registry,
+            [state.currentStore.name]: {
                 path: parsedPath,
-                ...(state.currentStore.description !== undefined && { 
+                ...(state.currentStore.description !== undefined && {
                     description: state.currentStore.description,
                 }),
-            }, 
+            },
         },
         currentStore: { ...state.currentStore, path: parsedPath },
     });
@@ -259,7 +256,7 @@ const handleDescriptionValue = (
     state: RegistryState,
     descValue: string,
     indent: number,
-    line: number,
+    line: number
 ): Result<RegistryState, StoreRegistryParseError> => {
     if (!state.currentStore) {
         return err({
@@ -295,7 +292,7 @@ const handleDescriptionValue = (
 const handleStoresSection = (
     state: RegistryState,
     rawLine: string,
-    line: number,
+    line: number
 ): Result<{ handled: boolean; state: RegistryState }, StoreRegistryParseError> => {
     if (state.mode !== 'unknown') {
         return ok({ handled: false, state });
@@ -321,11 +318,9 @@ const handleStoresSection = (
 const readRegistryLine = (
     rawLine: string,
     lineNumber: number,
-    state: RegistryState,
+    state: RegistryState
 ): Result<RegistryState, StoreRegistryParseError> => {
-    const storesResult = handleStoresSection(
-        state, rawLine, lineNumber,
-    );
+    const storesResult = handleStoresSection(state, rawLine, lineNumber);
     if (!storesResult.ok) {
         return storesResult;
     }
@@ -336,23 +331,17 @@ const readRegistryLine = (
     const { indent, content } = parseIndent(rawLine);
     const storeName = isStoreHeader(content);
     if (storeName) {
-        return handleStoreHeader(
-            state, storeName, indent, lineNumber,
-        );
+        return handleStoreHeader(state, storeName, indent, lineNumber);
     }
 
     const pathValue = isPathEntry(content);
     if (pathValue !== null) {
-        return handlePathValue(
-            state, pathValue, indent, lineNumber,
-        );
+        return handlePathValue(state, pathValue, indent, lineNumber);
     }
 
     const descValue = isDescriptionEntry(content);
     if (descValue !== null) {
-        return handleDescriptionValue(
-            state, descValue, indent, lineNumber,
-        );
+        return handleDescriptionValue(state, descValue, indent, lineNumber);
     }
 
     if (state.mode === 'unknown') {
@@ -371,9 +360,7 @@ const readRegistryLine = (
 };
 
 export const parseStoreRegistry = (raw: string): Result<StoreRegistry, StoreRegistryParseError> => {
-    const normalized = raw.replace(
-        /\r\n/g, '\n',
-    );
+    const normalized = raw.replace(/\r\n/g, '\n');
     const lines = normalized.split('\n');
 
     let state: RegistryState = {
@@ -395,9 +382,7 @@ export const parseStoreRegistry = (raw: string): Result<StoreRegistry, StoreRegi
         if (!trimmed || trimmed.startsWith('#')) {
             continue;
         }
-        const nextState = readRegistryLine(
-            rawLine, lineNumber, state,
-        );
+        const nextState = readRegistryLine(rawLine, lineNumber, state);
         if (!nextState.ok) {
             return nextState;
         }
@@ -465,9 +450,7 @@ const isNotFoundError = (error: unknown): boolean => {
 const formatYamlScalar = (value: string): string => JSON.stringify(value);
 
 export const serializeStoreRegistry = (registry: StoreRegistry): SerializeRegistryResult => {
-    const entries = Object.entries(registry).sort((
-        [left], [right],
-    ) => left.localeCompare(right));
+    const entries = Object.entries(registry).sort(([left], [right]) => left.localeCompare(right));
     if (entries.length === 0) {
         return err({
             code: 'EMPTY_REGISTRY',
@@ -476,9 +459,7 @@ export const serializeStoreRegistry = (registry: StoreRegistry): SerializeRegist
     }
 
     const lines: string[] = ['stores:'];
-    for (const [
-        name, definition, 
-    ] of entries) {
+    for (const [name, definition] of entries) {
         if (!isValidStoreName(name)) {
             return err({
                 code: 'INVALID_STORE_NAME',
@@ -506,15 +487,12 @@ export const serializeStoreRegistry = (registry: StoreRegistry): SerializeRegist
 
 export const loadStoreRegistry = async (
     path: string,
-    options: { allowMissing?: boolean } = {},
+    options: { allowMissing?: boolean } = {}
 ): Promise<Result<StoreRegistry, StoreRegistryLoadError>> => {
     let contents: string;
     try {
-        contents = await readFile(
-            path, 'utf8',
-        );
-    }
-    catch (error) {
+        contents = await readFile(path, 'utf8');
+    } catch (error) {
         if (isNotFoundError(error)) {
             if (options.allowMissing) {
                 return ok({});
@@ -548,7 +526,7 @@ export const loadStoreRegistry = async (
 
 export const saveStoreRegistry = async (
     path: string,
-    registry: StoreRegistry,
+    registry: StoreRegistry
 ): Promise<Result<void, StoreRegistrySaveError>> => {
     const serialized = serializeStoreRegistry(registry);
     if (!serialized.ok) {
@@ -560,15 +538,10 @@ export const saveStoreRegistry = async (
     }
 
     try {
-        await mkdir(
-            dirname(path), { recursive: true },
-        );
-        await writeFile(
-            path, serialized.value, 'utf8',
-        );
+        await mkdir(dirname(path), { recursive: true });
+        await writeFile(path, serialized.value, 'utf8');
         return ok(undefined);
-    }
-    catch (error) {
+    } catch (error) {
         return err({
             code: 'REGISTRY_WRITE_FAILED',
             message: `Failed to write store registry at ${path}.`,
@@ -580,12 +553,9 @@ export const saveStoreRegistry = async (
 
 export const removeStoreRegistry = async (path: string): Promise<RemoveRegistryResult> => {
     try {
-        await rm(
-            path, { force: true },
-        );
+        await rm(path, { force: true });
         return ok(undefined);
-    }
-    catch (error) {
+    } catch (error) {
         return err({
             code: 'REGISTRY_WRITE_FAILED',
             message: `Failed to remove store registry at ${path}.`,
@@ -593,4 +563,50 @@ export const removeStoreRegistry = async (path: string): Promise<RemoveRegistryR
             cause: error,
         });
     }
+};
+
+// ---------------------------------------------------------------------------
+// Store Resolution
+// ---------------------------------------------------------------------------
+
+export type StoreResolveErrorCode = 'STORE_NOT_FOUND';
+
+export interface StoreResolveError {
+    code: StoreResolveErrorCode;
+    message: string;
+    store: string;
+}
+
+/**
+ * Resolves a store name to its filesystem path using the registry.
+ *
+ * Looks up the store name in the provided registry and returns its
+ * configured path. Returns an error if the store is not registered.
+ *
+ * @param registry - The store registry to search
+ * @param storeName - The store name to resolve
+ * @returns Result with the store path or error
+ *
+ * @example
+ * ```ts
+ * const registry = { default: { path: '/path/to/default' } };
+ * const result = resolveStorePath(registry, 'default');
+ * if (result.ok) {
+ *   console.log(result.value); // '/path/to/default'
+ * }
+ * ```
+ */
+export const resolveStorePath = (
+    registry: StoreRegistry,
+    storeName: string
+): Result<string, StoreResolveError> => {
+    const definition = registry[storeName];
+    if (!definition) {
+        return err({
+            code: 'STORE_NOT_FOUND',
+            message: `Store '${storeName}' is not registered. Use 'cortex store list' to see available stores.`,
+            store: storeName,
+        });
+    }
+    return ok(definition.path);
 };
