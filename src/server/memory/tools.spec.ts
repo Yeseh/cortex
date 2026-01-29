@@ -44,7 +44,7 @@ const createTestConfig = (dataPath: string): ServerConfig => ({
 const createTestDir = async (): Promise<string> => {
     const testDir = join(
         tmpdir(),
-        `cortex-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
+        `cortex-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     );
     await mkdir(testDir, { recursive: true });
     return testDir;
@@ -54,7 +54,7 @@ const createTestDir = async (): Promise<string> => {
 const createMemoryFile = async (
     storeRoot: string,
     slugPath: string,
-    contents: MemoryFileContents
+    contents: MemoryFileContents,
 ): Promise<void> => {
     const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
     const serialized = serializeMemoryFile(contents);
@@ -102,7 +102,9 @@ describe('cortex_add_memory tool', () => {
             store: 'default',
             path: 'project/tagged-memory',
             content: 'Content with tags',
-            tags: ['test', 'example'],
+            tags: [
+                'test', 'example',
+            ],
         };
 
         const result = await addMemoryHandler({ config }, input);
@@ -114,10 +116,12 @@ describe('cortex_add_memory tool', () => {
             {
                 store: 'default',
                 path: 'project/tagged-memory',
-            }
+            },
         );
         const output = JSON.parse(getResult.content[0]!.text);
-        expect(output.metadata.tags).toEqual(['test', 'example']);
+        expect(output.metadata.tags).toEqual([
+            'test', 'example',
+        ]);
     });
 
     it('should create a memory with expiration', async () => {
@@ -138,7 +142,7 @@ describe('cortex_add_memory tool', () => {
             {
                 store: 'default',
                 path: 'project/expiring-memory',
-            }
+            },
         );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.expires_at).toBeDefined();
@@ -302,7 +306,7 @@ describe('cortex_update_memory tool', () => {
         // Verify
         const getResult = await getMemoryHandler(
             { config },
-            { store: 'default', path: 'project/update-target' }
+            { store: 'default', path: 'project/update-target' },
         );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.content).toBe('Updated content');
@@ -319,7 +323,7 @@ describe('cortex_update_memory tool', () => {
 
         const getResult = await getMemoryHandler(
             { config },
-            { store: 'default', path: 'project/update-target' }
+            { store: 'default', path: 'project/update-target' },
         );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.tags).toEqual(['new-tag']);
@@ -337,7 +341,7 @@ describe('cortex_update_memory tool', () => {
 
         const getResult = await getMemoryHandler(
             { config },
-            { store: 'default', path: 'project/update-target' }
+            { store: 'default', path: 'project/update-target' },
         );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.expires_at).toBeDefined();
@@ -367,7 +371,7 @@ describe('cortex_update_memory tool', () => {
 
         const getResult = await getMemoryHandler(
             { config },
-            { store: 'default', path: 'project/with-expiry' }
+            { store: 'default', path: 'project/with-expiry' },
         );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.expires_at).toBeUndefined();
@@ -430,7 +434,7 @@ describe('cortex_remove_memory tool', () => {
 
         // Verify it's gone
         await expect(
-            getMemoryHandler({ config }, { store: 'default', path: 'project/remove-target' })
+            getMemoryHandler({ config }, { store: 'default', path: 'project/remove-target' }),
         ).rejects.toThrow('not found');
     });
 
@@ -482,13 +486,13 @@ describe('cortex_move_memory tool', () => {
 
         // Verify source is gone
         await expect(
-            getMemoryHandler({ config }, { store: 'default', path: 'project/move-source' })
+            getMemoryHandler({ config }, { store: 'default', path: 'project/move-source' }),
         ).rejects.toThrow('not found');
 
         // Verify destination exists
         const getResult = await getMemoryHandler(
             { config },
-            { store: 'default', path: 'project/move-destination' }
+            { store: 'default', path: 'project/move-destination' },
         );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.content).toBe('Content to move');
@@ -681,13 +685,13 @@ describe('cortex_list_memories tool', () => {
         expect(output.subcategories).toHaveLength(2);
 
         const cortexSubcat = output.subcategories.find(
-            (s: { path: string }) => s.path === 'project/cortex'
+            (s: { path: string }) => s.path === 'project/cortex',
         );
         expect(cortexSubcat).toBeDefined();
         expect(cortexSubcat.description).toBe('Cortex memory system');
 
         const otherSubcat = output.subcategories.find(
-            (s: { path: string }) => s.path === 'project/other'
+            (s: { path: string }) => s.path === 'project/other',
         );
         expect(otherSubcat).toBeDefined();
         expect(otherSubcat.description).toBeUndefined();
@@ -757,13 +761,13 @@ describe('cortex_prune_memories tool', () => {
         // Verify active memory still exists
         const getResult = await getMemoryHandler(
             { config },
-            { store: 'default', path: 'project/active' }
+            { store: 'default', path: 'project/active' },
         );
         expect(getResult.content[0]!.text).toContain('Active memory');
 
         // Verify expired memories are gone
         await expect(
-            getMemoryHandler({ config }, { store: 'default', path: 'project/expired-1' })
+            getMemoryHandler({ config }, { store: 'default', path: 'project/expired-1' }),
         ).rejects.toThrow('not found');
     });
 

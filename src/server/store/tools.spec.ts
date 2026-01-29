@@ -679,7 +679,9 @@ describe(
                 expect(result.ok).toBe(true);
                 if (result.ok) {
                     expect(result.value.stores.map((s) => s.name)).toEqual([
-                        'alpha', 'middle', 'zebra',
+                        'alpha',
+                        'middle',
+                        'zebra',
                     ]);
                 }
             },

@@ -23,6 +23,8 @@ import {
 import { addMemoryHandler, removeMemoryHandler } from '../memory/tools.ts';
 import { FilesystemStorageAdapter } from '../../core/storage/filesystem/index.ts';
 
+const STORE = 'default';
+
 const createTestConfig = (dataPath: string): ServerConfig => ({
     dataPath,
     port: 3000,
@@ -55,8 +57,8 @@ describe('Category Descriptions Validation', () => {
             await expect(
                 setCategoryDescriptionHandler(
                     { config },
-                    { path: 'project', description: 'Test description' },
-                ),
+                    { store: STORE, path: 'project', description: 'Test description' }
+                )
             ).rejects.toThrow(/root category/i);
         });
 
@@ -64,8 +66,8 @@ describe('Category Descriptions Validation', () => {
             await expect(
                 setCategoryDescriptionHandler(
                     { config },
-                    { path: 'human', description: 'Test description' },
-                ),
+                    { store: STORE, path: 'human', description: 'Test description' }
+                )
             ).rejects.toThrow(/root category/i);
         });
 
@@ -73,8 +75,8 @@ describe('Category Descriptions Validation', () => {
             await expect(
                 setCategoryDescriptionHandler(
                     { config },
-                    { path: 'persona', description: 'Test description' },
-                ),
+                    { store: STORE, path: 'persona', description: 'Test description' }
+                )
             ).rejects.toThrow(/root category/i);
         });
 
@@ -82,43 +84,43 @@ describe('Category Descriptions Validation', () => {
             await expect(
                 setCategoryDescriptionHandler(
                     { config },
-                    { path: 'domain', description: 'Test description' },
-                ),
+                    { store: STORE, path: 'domain', description: 'Test description' }
+                )
             ).rejects.toThrow(/root category/i);
         });
 
         it('deleteCategory should reject root category "project"', async () => {
-            await expect(deleteCategoryHandler({ config }, { path: 'project' })).rejects.toThrow(
-                /root category/i,
-            );
+            await expect(
+                deleteCategoryHandler({ config }, { store: STORE, path: 'project' })
+            ).rejects.toThrow(/root category/i);
         });
 
         it('deleteCategory should reject root category "human"', async () => {
-            await expect(deleteCategoryHandler({ config }, { path: 'human' })).rejects.toThrow(
-                /root category/i,
-            );
+            await expect(
+                deleteCategoryHandler({ config }, { store: STORE, path: 'human' })
+            ).rejects.toThrow(/root category/i);
         });
 
         it('deleteCategory should reject root category "persona"', async () => {
-            await expect(deleteCategoryHandler({ config }, { path: 'persona' })).rejects.toThrow(
-                /root category/i,
-            );
+            await expect(
+                deleteCategoryHandler({ config }, { store: STORE, path: 'persona' })
+            ).rejects.toThrow(/root category/i);
         });
 
         it('deleteCategory should reject root category "domain"', async () => {
-            await expect(deleteCategoryHandler({ config }, { path: 'domain' })).rejects.toThrow(
-                /root category/i,
-            );
+            await expect(
+                deleteCategoryHandler({ config }, { store: STORE, path: 'domain' })
+            ).rejects.toThrow(/root category/i);
         });
 
         it('setDescription should allow subcategories of root', async () => {
             // Create a subcategory
-            await createCategoryHandler({ config }, { path: 'project/cortex' });
+            await createCategoryHandler({ config }, { store: STORE, path: 'project/cortex' });
 
             // Setting description on subcategory should succeed
             const result = await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/cortex', description: 'Valid description' },
+                { store: STORE, path: 'project/cortex', description: 'Valid description' }
             );
             const output = JSON.parse(result.content[0]!.text);
 
@@ -127,10 +129,13 @@ describe('Category Descriptions Validation', () => {
 
         it('deleteCategory should allow subcategories of root', async () => {
             // Create a subcategory
-            await createCategoryHandler({ config }, { path: 'project/cortex' });
+            await createCategoryHandler({ config }, { store: STORE, path: 'project/cortex' });
 
             // Deleting subcategory should succeed
-            const result = await deleteCategoryHandler({ config }, { path: 'project/cortex' });
+            const result = await deleteCategoryHandler(
+                { config },
+                { store: STORE, path: 'project/cortex' }
+            );
             const output = JSON.parse(result.content[0]!.text);
 
             expect(output.deleted).toBe(true);
@@ -152,28 +157,32 @@ describe('Category Descriptions Validation', () => {
 
         it('category should persist after all memories are deleted', async () => {
             // Create category with description
-            await createCategoryHandler({ config }, { path: 'project/cortex' });
+            await createCategoryHandler({ config }, { store: STORE, path: 'project/cortex' });
             await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/cortex', description: 'Cortex memory system' },
+                { store: STORE, path: 'project/cortex', description: 'Cortex memory system' }
             );
 
             // Add a memory to the category
             await addMemoryHandler(
                 { config },
                 {
+                    store: STORE,
                     path: 'project/cortex/test-memory',
                     content: 'Test memory content',
-                },
+                }
             );
 
             // Remove the memory
-            await removeMemoryHandler({ config }, { path: 'project/cortex/test-memory' });
+            await removeMemoryHandler(
+                { config },
+                { store: STORE, path: 'project/cortex/test-memory' }
+            );
 
             // Category should still exist - verify by setting description again
             const result = await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/cortex', description: 'Updated description' },
+                { store: STORE, path: 'project/cortex', description: 'Updated description' }
             );
             const output = JSON.parse(result.content[0]!.text);
 
@@ -182,35 +191,35 @@ describe('Category Descriptions Validation', () => {
 
         it('category with description persists after multiple memories deleted', async () => {
             // Create category with description
-            await createCategoryHandler({ config }, { path: 'project/test-cat' });
+            await createCategoryHandler({ config }, { store: STORE, path: 'project/test-cat' });
             await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/test-cat', description: 'Test category' },
+                { store: STORE, path: 'project/test-cat', description: 'Test category' }
             );
 
             // Add multiple memories
             await addMemoryHandler(
                 { config },
-                { path: 'project/test-cat/mem1', content: 'Memory 1' },
+                { store: STORE, path: 'project/test-cat/mem1', content: 'Memory 1' }
             );
             await addMemoryHandler(
                 { config },
-                { path: 'project/test-cat/mem2', content: 'Memory 2' },
+                { store: STORE, path: 'project/test-cat/mem2', content: 'Memory 2' }
             );
             await addMemoryHandler(
                 { config },
-                { path: 'project/test-cat/mem3', content: 'Memory 3' },
+                { store: STORE, path: 'project/test-cat/mem3', content: 'Memory 3' }
             );
 
             // Remove all memories
-            await removeMemoryHandler({ config }, { path: 'project/test-cat/mem1' });
-            await removeMemoryHandler({ config }, { path: 'project/test-cat/mem2' });
-            await removeMemoryHandler({ config }, { path: 'project/test-cat/mem3' });
+            await removeMemoryHandler({ config }, { store: STORE, path: 'project/test-cat/mem1' });
+            await removeMemoryHandler({ config }, { store: STORE, path: 'project/test-cat/mem2' });
+            await removeMemoryHandler({ config }, { store: STORE, path: 'project/test-cat/mem3' });
 
             // Category should still exist - can update description
             const result = await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/test-cat', description: 'Still here!' },
+                { store: STORE, path: 'project/test-cat', description: 'Still here!' }
             );
             const output = JSON.parse(result.content[0]!.text);
 
@@ -219,14 +228,14 @@ describe('Category Descriptions Validation', () => {
 
         it('category directory physically exists after memories deleted', async () => {
             // Create category
-            await createCategoryHandler({ config }, { path: 'project/persist' });
+            await createCategoryHandler({ config }, { store: STORE, path: 'project/persist' });
 
             // Add and remove memory
             await addMemoryHandler(
                 { config },
-                { path: 'project/persist/temp', content: 'Temporary' },
+                { store: STORE, path: 'project/persist/temp', content: 'Temporary' }
             );
-            await removeMemoryHandler({ config }, { path: 'project/persist/temp' });
+            await removeMemoryHandler({ config }, { store: STORE, path: 'project/persist/temp' });
 
             // Verify directory still exists using the adapter
             const storeRoot = join(testDir, 'memory', 'default');
@@ -254,12 +263,12 @@ describe('Category Descriptions Validation', () => {
         });
 
         it('should accept description at exactly 500 characters', async () => {
-            await createCategoryHandler({ config }, { path: 'project/exact' });
+            await createCategoryHandler({ config }, { store: STORE, path: 'project/exact' });
 
             const exactDescription = 'a'.repeat(500);
             const result = await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/exact', description: exactDescription },
+                { store: STORE, path: 'project/exact', description: exactDescription }
             );
             const output = JSON.parse(result.content[0]!.text);
 
@@ -267,39 +276,39 @@ describe('Category Descriptions Validation', () => {
         });
 
         it('should reject description at 501 characters', async () => {
-            await createCategoryHandler({ config }, { path: 'project/toolong' });
+            await createCategoryHandler({ config }, { store: STORE, path: 'project/toolong' });
 
             const longDescription = 'a'.repeat(501);
             await expect(
                 setCategoryDescriptionHandler(
                     { config },
-                    { path: 'project/toolong', description: longDescription },
-                ),
+                    { store: STORE, path: 'project/toolong', description: longDescription }
+                )
             ).rejects.toThrow(/500 characters/i);
         });
 
         it('should reject description at 1000 characters', async () => {
-            await createCategoryHandler({ config }, { path: 'project/waylong' });
+            await createCategoryHandler({ config }, { store: STORE, path: 'project/waylong' });
 
             const veryLongDescription = 'a'.repeat(1000);
             await expect(
                 setCategoryDescriptionHandler(
                     { config },
-                    { path: 'project/waylong', description: veryLongDescription },
-                ),
+                    { store: STORE, path: 'project/waylong', description: veryLongDescription }
+                )
             ).rejects.toThrow(/500 characters/i);
         });
 
         it('should accept empty description (clears)', async () => {
-            await createCategoryHandler({ config }, { path: 'project/clear' });
+            await createCategoryHandler({ config }, { store: STORE, path: 'project/clear' });
             await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/clear', description: 'Initial' },
+                { store: STORE, path: 'project/clear', description: 'Initial' }
             );
 
             const result = await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/clear', description: '' },
+                { store: STORE, path: 'project/clear', description: '' }
             );
             const output = JSON.parse(result.content[0]!.text);
 
@@ -307,11 +316,11 @@ describe('Category Descriptions Validation', () => {
         });
 
         it('should trim whitespace from description', async () => {
-            await createCategoryHandler({ config }, { path: 'project/trimmed' });
+            await createCategoryHandler({ config }, { store: STORE, path: 'project/trimmed' });
 
             const result = await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/trimmed', description: '   Padded description   ' },
+                { store: STORE, path: 'project/trimmed', description: '   Padded description   ' }
             );
             const output = JSON.parse(result.content[0]!.text);
 
@@ -319,13 +328,13 @@ describe('Category Descriptions Validation', () => {
         });
 
         it('should count trimmed length for limit', async () => {
-            await createCategoryHandler({ config }, { path: 'project/padcount' });
+            await createCategoryHandler({ config }, { store: STORE, path: 'project/padcount' });
 
             // 495 chars + lots of whitespace should be accepted
             const paddedDescription = '   ' + 'a'.repeat(495) + '   ';
             const result = await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/padcount', description: paddedDescription },
+                { store: STORE, path: 'project/padcount', description: paddedDescription }
             );
             const output = JSON.parse(result.content[0]!.text);
 
@@ -348,12 +357,18 @@ describe('Category Descriptions Validation', () => {
 
         it('calling createCategory twice should succeed without error', async () => {
             // First call
-            const result1 = await createCategoryHandler({ config }, { path: 'project/idempotent' });
+            const result1 = await createCategoryHandler(
+                { config },
+                { store: STORE, path: 'project/idempotent' }
+            );
             const output1 = JSON.parse(result1.content[0]!.text);
             expect(output1.created).toBe(true);
 
             // Second call - should not throw
-            const result2 = await createCategoryHandler({ config }, { path: 'project/idempotent' });
+            const result2 = await createCategoryHandler(
+                { config },
+                { store: STORE, path: 'project/idempotent' }
+            );
             const output2 = JSON.parse(result2.content[0]!.text);
             expect(output2.created).toBe(false);
         });
@@ -363,13 +378,12 @@ describe('Category Descriptions Validation', () => {
 
             // Call 5 times
             for (let i = 0; i < 5; i++) {
-                const result = await createCategoryHandler({ config }, { path });
+                const result = await createCategoryHandler({ config }, { store: STORE, path });
                 const output = JSON.parse(result.content[0]!.text);
 
                 if (i === 0) {
                     expect(output.created).toBe(true);
-                }
-                else {
+                } else {
                     expect(output.created).toBe(false);
                 }
             }
@@ -377,16 +391,16 @@ describe('Category Descriptions Validation', () => {
 
         it('createCategory idempotency preserves existing description', async () => {
             // Create category and set description
-            await createCategoryHandler({ config }, { path: 'project/preserve' });
+            await createCategoryHandler({ config }, { store: STORE, path: 'project/preserve' });
             await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/preserve', description: 'Preserved description' },
+                { store: STORE, path: 'project/preserve', description: 'Preserved description' }
             );
 
             // Call createCategory again
             const createResult = await createCategoryHandler(
                 { config },
-                { path: 'project/preserve' },
+                { store: STORE, path: 'project/preserve' }
             );
             const createOutput = JSON.parse(createResult.content[0]!.text);
             expect(createOutput.created).toBe(false);
@@ -395,15 +409,21 @@ describe('Category Descriptions Validation', () => {
             // (we can't directly read, but we can set and verify the response)
             const descResult = await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/preserve', description: 'New description' },
+                { store: STORE, path: 'project/preserve', description: 'New description' }
             );
             const descOutput = JSON.parse(descResult.content[0]!.text);
             expect(descOutput.description).toBe('New description');
         });
 
         it('createCategory with different paths creates different categories', async () => {
-            const result1 = await createCategoryHandler({ config }, { path: 'project/cat1' });
-            const result2 = await createCategoryHandler({ config }, { path: 'project/cat2' });
+            const result1 = await createCategoryHandler(
+                { config },
+                { store: STORE, path: 'project/cat1' }
+            );
+            const result2 = await createCategoryHandler(
+                { config },
+                { store: STORE, path: 'project/cat2' }
+            );
 
             const output1 = JSON.parse(result1.content[0]!.text);
             const output2 = JSON.parse(result2.content[0]!.text);
@@ -428,9 +448,12 @@ describe('Category Descriptions Validation', () => {
 
         it('should delete category with nested subcategories', async () => {
             // Create nested structure
-            await createCategoryHandler({ config }, { path: 'project/parent' });
-            await createCategoryHandler({ config }, { path: 'project/parent/child' });
-            await createCategoryHandler({ config }, { path: 'project/parent/child/grandchild' });
+            await createCategoryHandler({ config }, { store: STORE, path: 'project/parent' });
+            await createCategoryHandler({ config }, { store: STORE, path: 'project/parent/child' });
+            await createCategoryHandler(
+                { config },
+                { store: STORE, path: 'project/parent/child/grandchild' }
+            );
 
             const storeRoot = join(testDir, 'memory', 'default');
             const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
@@ -439,14 +462,17 @@ describe('Category Descriptions Validation', () => {
             const beforeParent = await adapter.categoryExists('project/parent');
             const beforeChild = await adapter.categoryExists('project/parent/child');
             const beforeGrandchild = await adapter.categoryExists(
-                'project/parent/child/grandchild',
+                'project/parent/child/grandchild'
             );
             expect(beforeParent.ok && beforeParent.value).toBe(true);
             expect(beforeChild.ok && beforeChild.value).toBe(true);
             expect(beforeGrandchild.ok && beforeGrandchild.value).toBe(true);
 
             // Delete parent - should delete all nested
-            const result = await deleteCategoryHandler({ config }, { path: 'project/parent' });
+            const result = await deleteCategoryHandler(
+                { config },
+                { store: STORE, path: 'project/parent' }
+            );
             const output = JSON.parse(result.content[0]!.text);
             expect(output.deleted).toBe(true);
 
@@ -461,14 +487,17 @@ describe('Category Descriptions Validation', () => {
 
         it('should delete category with memories', async () => {
             // Create category with memory
-            await createCategoryHandler({ config }, { path: 'project/with-memories' });
-            await addMemoryHandler(
+            await createCategoryHandler(
                 { config },
-                { path: 'project/with-memories/mem1', content: 'Memory 1' },
+                { store: STORE, path: 'project/with-memories' }
             );
             await addMemoryHandler(
                 { config },
-                { path: 'project/with-memories/mem2', content: 'Memory 2' },
+                { store: STORE, path: 'project/with-memories/mem1', content: 'Memory 1' }
+            );
+            await addMemoryHandler(
+                { config },
+                { store: STORE, path: 'project/with-memories/mem2', content: 'Memory 2' }
             );
 
             const storeRoot = join(testDir, 'memory', 'default');
@@ -481,7 +510,7 @@ describe('Category Descriptions Validation', () => {
             // Delete category
             const result = await deleteCategoryHandler(
                 { config },
-                { path: 'project/with-memories' },
+                { store: STORE, path: 'project/with-memories' }
             );
             const output = JSON.parse(result.content[0]!.text);
             expect(output.deleted).toBe(true);
@@ -499,21 +528,21 @@ describe('Category Descriptions Validation', () => {
 
         it('should delete category with nested subcategories and memories', async () => {
             // Create complex structure
-            await createCategoryHandler({ config }, { path: 'project/complex' });
-            await createCategoryHandler({ config }, { path: 'project/complex/sub1' });
-            await createCategoryHandler({ config }, { path: 'project/complex/sub2' });
+            await createCategoryHandler({ config }, { store: STORE, path: 'project/complex' });
+            await createCategoryHandler({ config }, { store: STORE, path: 'project/complex/sub1' });
+            await createCategoryHandler({ config }, { store: STORE, path: 'project/complex/sub2' });
 
             await addMemoryHandler(
                 { config },
-                { path: 'project/complex/mem1', content: 'Parent memory' },
+                { store: STORE, path: 'project/complex/mem1', content: 'Parent memory' }
             );
             await addMemoryHandler(
                 { config },
-                { path: 'project/complex/sub1/mem2', content: 'Child memory' },
+                { store: STORE, path: 'project/complex/sub1/mem2', content: 'Child memory' }
             );
             await addMemoryHandler(
                 { config },
-                { path: 'project/complex/sub2/mem3', content: 'Another child memory' },
+                { store: STORE, path: 'project/complex/sub2/mem3', content: 'Another child memory' }
             );
 
             const storeRoot = join(testDir, 'memory', 'default');
@@ -528,7 +557,10 @@ describe('Category Descriptions Validation', () => {
             expect(beforeSub2.ok && beforeSub2.value).toBe(true);
 
             // Delete parent
-            const result = await deleteCategoryHandler({ config }, { path: 'project/complex' });
+            const result = await deleteCategoryHandler(
+                { config },
+                { store: STORE, path: 'project/complex' }
+            );
             const output = JSON.parse(result.content[0]!.text);
             expect(output.deleted).toBe(true);
 
@@ -551,24 +583,30 @@ describe('Category Descriptions Validation', () => {
 
         it('should delete deeply nested category without affecting siblings', async () => {
             // Create sibling categories
-            await createCategoryHandler({ config }, { path: 'project/keep' });
-            await createCategoryHandler({ config }, { path: 'project/delete-me' });
-            await createCategoryHandler({ config }, { path: 'project/delete-me/nested' });
+            await createCategoryHandler({ config }, { store: STORE, path: 'project/keep' });
+            await createCategoryHandler({ config }, { store: STORE, path: 'project/delete-me' });
+            await createCategoryHandler(
+                { config },
+                { store: STORE, path: 'project/delete-me/nested' }
+            );
 
             await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/keep', description: 'I should stay' },
+                { store: STORE, path: 'project/keep', description: 'I should stay' }
             );
 
             // Delete one branch
-            const result = await deleteCategoryHandler({ config }, { path: 'project/delete-me' });
+            const result = await deleteCategoryHandler(
+                { config },
+                { store: STORE, path: 'project/delete-me' }
+            );
             const output = JSON.parse(result.content[0]!.text);
             expect(output.deleted).toBe(true);
 
             // Sibling should still exist
             const siblingResult = await setCategoryDescriptionHandler(
                 { config },
-                { path: 'project/keep', description: 'Still here!' },
+                { store: STORE, path: 'project/keep', description: 'Still here!' }
             );
             const siblingOutput = JSON.parse(siblingResult.content[0]!.text);
             expect(siblingOutput.description).toBe('Still here!');
@@ -576,8 +614,11 @@ describe('Category Descriptions Validation', () => {
 
         it('should verify directory is actually deleted from filesystem', async () => {
             // Create category
-            await createCategoryHandler({ config }, { path: 'project/todelete' });
-            await addMemoryHandler({ config }, { path: 'project/todelete/mem', content: 'test' });
+            await createCategoryHandler({ config }, { store: STORE, path: 'project/todelete' });
+            await addMemoryHandler(
+                { config },
+                { store: STORE, path: 'project/todelete/mem', content: 'test' }
+            );
 
             const storeRoot = join(testDir, 'memory', 'default');
             const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
@@ -590,7 +631,7 @@ describe('Category Descriptions Validation', () => {
             }
 
             // Delete it
-            await deleteCategoryHandler({ config }, { path: 'project/todelete' });
+            await deleteCategoryHandler({ config }, { store: STORE, path: 'project/todelete' });
 
             // Verify it's gone
             const afterResult = await adapter.categoryExists('project/todelete');

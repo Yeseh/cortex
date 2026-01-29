@@ -46,6 +46,7 @@ describe('cortex_create_category tool', () => {
 
     it('should create a new category', async () => {
         const input: CreateCategoryInput = {
+            store: 'default',
             path: 'project/cortex',
         };
 
@@ -57,7 +58,7 @@ describe('cortex_create_category tool', () => {
     });
 
     it('should return created: false for existing category', async () => {
-        const input: CreateCategoryInput = { path: 'project/cortex' };
+        const input: CreateCategoryInput = { store: 'default', path: 'project/cortex' };
 
         // Create first time
         await createCategoryHandler({ config }, input);
@@ -70,10 +71,10 @@ describe('cortex_create_category tool', () => {
     });
 
     it('should reject empty path', async () => {
-        const input = { path: '' };
+        const input = { store: 'default', path: '' };
 
         await expect(
-            createCategoryHandler({ config }, input as CreateCategoryInput),
+            createCategoryHandler({ config }, input as CreateCategoryInput)
         ).rejects.toThrow();
     });
 });
@@ -93,6 +94,7 @@ describe('cortex_set_category_description tool', () => {
 
     it('should set description and auto-create category', async () => {
         const input: SetCategoryDescriptionInput = {
+            store: 'default',
             path: 'project/cortex',
             description: 'Cortex memory system',
         };
@@ -105,12 +107,13 @@ describe('cortex_set_category_description tool', () => {
 
     it('should reject root category', async () => {
         const input: SetCategoryDescriptionInput = {
+            store: 'default',
             path: 'project',
             description: 'Test',
         };
 
         await expect(setCategoryDescriptionHandler({ config }, input)).rejects.toThrow(
-            /root category/i,
+            /root category/i
         );
     });
 
@@ -119,18 +122,20 @@ describe('cortex_set_category_description tool', () => {
         await setCategoryDescriptionHandler(
             { config },
             {
+                store: 'default',
                 path: 'project/cortex',
                 description: 'Initial',
-            },
+            }
         );
 
         // Then clear it
         const result = await setCategoryDescriptionHandler(
             { config },
             {
+                store: 'default',
                 path: 'project/cortex',
                 description: '',
-            },
+            }
         );
         const output = JSON.parse(result.content[0]!.text);
 
@@ -147,7 +152,7 @@ describe('cortex_delete_category tool', () => {
         config = createTestConfig(testDir);
 
         // Create a category to delete
-        await createCategoryHandler({ config }, { path: 'project/deleteme' });
+        await createCategoryHandler({ config }, { store: 'default', path: 'project/deleteme' });
     });
 
     afterEach(async () => {
@@ -156,6 +161,7 @@ describe('cortex_delete_category tool', () => {
 
     it('should delete existing category', async () => {
         const input: DeleteCategoryInput = {
+            store: 'default',
             path: 'project/deleteme',
         };
 
@@ -167,6 +173,7 @@ describe('cortex_delete_category tool', () => {
 
     it('should reject root category deletion', async () => {
         const input: DeleteCategoryInput = {
+            store: 'default',
             path: 'project',
         };
 
@@ -175,6 +182,7 @@ describe('cortex_delete_category tool', () => {
 
     it('should reject non-existent category', async () => {
         const input: DeleteCategoryInput = {
+            store: 'default',
             path: 'project/nonexistent',
         };
 
