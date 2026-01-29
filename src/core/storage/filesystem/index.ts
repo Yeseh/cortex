@@ -37,6 +37,7 @@ import type {
     MemoryStorage,
     IndexStorage,
     StoreStorage,
+    ReindexResult,
     StorageAdapterError,
     StorageIndexName,
 } from '../adapter.ts';
@@ -217,7 +218,7 @@ export class FilesystemStorageAdapter implements StorageAdapter, ComposedStorage
      * and rebuilds all index files from scratch.
      * @deprecated Use `adapter.indexes.reindex()` instead
      */
-    async reindexCategoryIndexes(): Promise<Result<void, StorageAdapterError>> {
+    async reindexCategoryIndexes(): Promise<Result<ReindexResult, StorageAdapterError>> {
         return this.indexes.reindex();
     }
 
