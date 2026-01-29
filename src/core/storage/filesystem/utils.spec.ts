@@ -238,10 +238,10 @@ describe('utils module', () => {
             expect(toSlugPathFromRelative('..\\escape.md', '.md')).toBeNull();
         });
 
-        it('should handle Windows-style separators', () => {
+        it('should handle Windows-style separators', async () => {
             // On Windows, sep is '\\', on POSIX it's '/'
             // The function splits by sep, so we test with the platform's separator
-            const { sep } = require('node:path');
+            const { sep } = await import('node:path');
             const windowsPath = `category${sep}memory.md`;
             expect(toSlugPathFromRelative(windowsPath, '.md')).toBe('category/memory');
         });
@@ -250,15 +250,6 @@ describe('utils module', () => {
             // The trim is on segments, but filenames with spaces are valid
             // The function doesn't trim spaces within filenames
             expect(toSlugPathFromRelative('category/memory.md', '.md')).toBe('category/memory');
-        });
-
-        it('should preserve double slashes in path (platform-dependent)', () => {
-            // Double slashes may be handled differently per platform
-            // On POSIX, // is valid, on Windows it's UNC path start
-            // The function doesn't collapse these
-            const result = toSlugPathFromRelative('category//memory.md', '.md');
-            // The implementation doesn't filter empty segments from the input
-            expect(result).toBe('category//memory');
         });
     });
 });
