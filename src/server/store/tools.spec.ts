@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { storeNameSchema, listStores, createStore } from './tools.ts';
+import { storeNameSchema, listStores, createStore, listStoresFromRegistry } from './tools.ts';
 
 describe(
     'storeNameSchema', () => {
@@ -559,6 +559,163 @@ describe(
                         }
                     },
                 );
+            },
+        );
+    },
+);
+
+describe(
+    'listStoresFromRegistry', () => {
+        let testDir: string;
+
+        beforeEach(async () => {
+            testDir = await fs.mkdtemp(path.join(
+                os.tmpdir(), 'cortex-store-tools-',
+            ));
+        });
+
+        afterEach(async () => {
+            if (testDir) {
+                await fs.rm(
+                    testDir, { recursive: true, force: true },
+                );
+            }
+        });
+
+        it(
+            'should list stores with descriptions', async () => {
+                const registryContent = [
+                    'stores:',
+                    '  default:',
+                    '    path: "/data/default"',
+                    '    description: "Default store for general memories"',
+                    '  project:',
+                    '    path: "/data/project"',
+                    '    description: "Project-specific memories"',
+                ].join('\n');
+
+                await fs.writeFile(
+                    path.join(
+                        testDir, 'stores.yaml',
+                    ), registryContent,
+                );
+
+                const result = await listStoresFromRegistry(path.join(
+                    testDir, 'stores.yaml',
+                ));
+
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value.stores).toHaveLength(2);
+                    const defaultStore = result.value.stores.find((s) => s.name === 'default');
+                    expect(defaultStore?.description).toBe('Default store for general memories');
+                    const projectStore = result.value.stores.find((s) => s.name === 'project');
+                    expect(projectStore?.description).toBe('Project-specific memories');
+                }
+            },
+        );
+
+        it(
+            'should list stores without descriptions', async () => {
+                const registryContent = [
+                    'stores:',
+                    '  default:',
+                    '    path: "/data/default"',
+                ].join('\n');
+
+                await fs.writeFile(
+                    path.join(
+                        testDir, 'stores.yaml',
+                    ), registryContent,
+                );
+
+                const result = await listStoresFromRegistry(path.join(
+                    testDir, 'stores.yaml',
+                ));
+
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value.stores).toHaveLength(1);
+                    expect(result.value.stores[0]?.description).toBeUndefined();
+                }
+            },
+        );
+
+        it(
+            'should return empty list when registry is missing', async () => {
+                const result = await listStoresFromRegistry(path.join(
+                    testDir, 'nonexistent.yaml',
+                ));
+
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value.stores).toEqual([]);
+                }
+            },
+        );
+
+        it(
+            'should return stores sorted alphabetically', async () => {
+                const registryContent = [
+                    'stores:',
+                    '  zebra:',
+                    '    path: "/data/zebra"',
+                    '  alpha:',
+                    '    path: "/data/alpha"',
+                    '  middle:',
+                    '    path: "/data/middle"',
+                ].join('\n');
+
+                await fs.writeFile(
+                    path.join(
+                        testDir, 'stores.yaml',
+                    ), registryContent,
+                );
+
+                const result = await listStoresFromRegistry(path.join(
+                    testDir, 'stores.yaml',
+                ));
+
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value.stores.map((s) => s.name)).toEqual([
+                        'alpha', 'middle', 'zebra',
+                    ]);
+                }
+            },
+        );
+
+        it(
+            'should handle mixed stores with and without descriptions', async () => {
+                const registryContent = [
+                    'stores:',
+                    '  with-desc:',
+                    '    path: "/data/with"',
+                    '    description: "Has description"',
+                    '  without-desc:',
+                    '    path: "/data/without"',
+                ].join('\n');
+
+                await fs.writeFile(
+                    path.join(
+                        testDir, 'stores.yaml',
+                    ), registryContent,
+                );
+
+                const result = await listStoresFromRegistry(path.join(
+                    testDir, 'stores.yaml',
+                ));
+
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    const withDesc = result.value.stores.find((s) => s.name === 'with-desc');
+                    const withoutDesc = result.value.stores.find((s) => s.name === 'without-desc');
+                    expect(withDesc?.description).toBe('Has description');
+                    expect(withoutDesc?.description).toBeUndefined();
+                    // Verify 'description' key is present vs absent (not undefined value)
+                    expect('description' in withDesc!).toBe(true);
+                    expect('description' in withoutDesc!).toBe(false);
+                }
             },
         );
     },
