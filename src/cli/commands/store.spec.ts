@@ -72,7 +72,11 @@ describe('store CLI commands', () => {
     });
 
     it('should add a store and persist the registry', async () => {
-        const result = await runStoreCommand(buildOptions(['add', 'primary', 'C:/Stores/Primary']));
+        const result = await runStoreCommand(buildOptions([
+            'add',
+            'primary',
+            'C:/Stores/Primary',
+        ]));
 
         expect(result.ok).toBe(true);
         if (!result.ok) {
@@ -102,7 +106,11 @@ describe('store CLI commands', () => {
         expect(saved.ok).toBe(true);
 
         const result = await runStoreCommand(
-            buildOptions(['add', 'primary', 'C:/Stores/Secondary'])
+            buildOptions([
+                'add',
+                'primary',
+                'C:/Stores/Secondary',
+            ]),
         );
 
         expect(result.ok).toBe(false);
@@ -118,7 +126,9 @@ describe('store CLI commands', () => {
         });
         expect(saved.ok).toBe(true);
 
-        const result = await runStoreCommand(buildOptions(['remove', 'primary']));
+        const result = await runStoreCommand(buildOptions([
+            'remove', 'primary',
+        ]));
 
         expect(result.ok).toBe(true);
         if (!result.ok) {
@@ -146,7 +156,9 @@ describe('store CLI commands', () => {
         });
         expect(saved.ok).toBe(true);
 
-        const result = await runStoreCommand(buildOptions(['remove', 'primary']));
+        const result = await runStoreCommand(buildOptions([
+            'remove', 'primary',
+        ]));
 
         expect(result.ok).toBe(true);
         if (!result.ok) {
@@ -188,12 +200,14 @@ describe('store CLI commands', () => {
     });
 
     it('should initialize a store at the provided path', async () => {
-        const result = await runStoreCommand(buildOptions([
-            'init',
-            'custom-store',
-            '--name',
-            'custom-store',
-        ]));
+        const result = await runStoreCommand(
+            buildOptions([
+                'init',
+                '--name',
+                'custom-store',
+                'custom-store',
+            ]),
+        );
 
         expect(result.ok).toBe(true);
         if (!result.ok) {
@@ -221,7 +235,9 @@ describe('store CLI commands', () => {
             expect(missingCommand.error.code).toBe('INVALID_COMMAND');
         }
 
-        const missingAddArgs = await runStoreCommand(buildOptions(['add', 'primary']));
+        const missingAddArgs = await runStoreCommand(buildOptions([
+            'add', 'primary',
+        ]));
         expect(missingAddArgs.ok).toBe(false);
         if (!missingAddArgs.ok) {
             expect(missingAddArgs.error.code).toBe('INVALID_COMMAND');
@@ -236,14 +252,22 @@ describe('store CLI commands', () => {
 
     it('should reject invalid store inputs', async () => {
         const invalidName = await runStoreCommand(
-            buildOptions(['add', 'Bad Name', 'C:/Stores/Primary'])
+            buildOptions([
+                'add',
+                'Bad Name',
+                'C:/Stores/Primary',
+            ]),
         );
         expect(invalidName.ok).toBe(false);
         if (!invalidName.ok) {
             expect(invalidName.error.code).toBe('INVALID_STORE_NAME');
         }
 
-        const invalidPath = await runStoreCommand(buildOptions(['add', 'primary', '   ']));
+        const invalidPath = await runStoreCommand(buildOptions([
+            'add',
+            'primary',
+            '   ',
+        ]));
         expect(invalidPath.ok).toBe(false);
         if (!invalidPath.ok) {
             expect(invalidPath.error.code).toBe('INVALID_STORE_PATH');
@@ -251,7 +275,11 @@ describe('store CLI commands', () => {
     });
 
     it('should resolve relative paths with dot prefix', async () => {
-        const result = await runStoreCommand(buildOptions(['add', 'relative-store', './my-store']));
+        const result = await runStoreCommand(buildOptions([
+            'add',
+            'relative-store',
+            './my-store',
+        ]));
 
         expect(result.ok).toBe(true);
         if (!result.ok) {
@@ -267,7 +295,11 @@ describe('store CLI commands', () => {
 
     it('should resolve relative paths with parent directory', async () => {
         const result = await runStoreCommand(
-            buildOptions(['add', 'parent-store', '../sibling-store'])
+            buildOptions([
+                'add',
+                'parent-store',
+                '../sibling-store',
+            ]),
         );
 
         expect(result.ok).toBe(true);
@@ -284,7 +316,11 @@ describe('store CLI commands', () => {
 
     it('should resolve implicit relative paths', async () => {
         const result = await runStoreCommand(
-            buildOptions(['add', 'implicit-store', 'path/without/slash'])
+            buildOptions([
+                'add',
+                'implicit-store',
+                'path/without/slash',
+            ]),
         );
 
         expect(result.ok).toBe(true);
@@ -300,7 +336,11 @@ describe('store CLI commands', () => {
     });
 
     it('should expand tilde to home directory', async () => {
-        const result = await runStoreCommand(buildOptions(['add', 'home-store', '~/my-memories']));
+        const result = await runStoreCommand(buildOptions([
+            'add',
+            'home-store',
+            '~/my-memories',
+        ]));
 
         expect(result.ok).toBe(true);
         if (!result.ok) {
@@ -315,7 +355,11 @@ describe('store CLI commands', () => {
     });
 
     it('should expand standalone tilde to home directory', async () => {
-        const result = await runStoreCommand(buildOptions(['add', 'home-root', '~']));
+        const result = await runStoreCommand(buildOptions([
+            'add',
+            'home-root',
+            '~',
+        ]));
 
         expect(result.ok).toBe(true);
         if (!result.ok) {
@@ -331,7 +375,11 @@ describe('store CLI commands', () => {
 
     it('should preserve Unix absolute paths unchanged', async () => {
         const result = await runStoreCommand(
-            buildOptions(['add', 'unix-store', '/absolute/unix/path'])
+            buildOptions([
+                'add',
+                'unix-store',
+                '/absolute/unix/path',
+            ]),
         );
 
         expect(result.ok).toBe(true);
@@ -348,7 +396,11 @@ describe('store CLI commands', () => {
 
     it('should preserve Windows absolute paths unchanged', async () => {
         const result = await runStoreCommand(
-            buildOptions(['add', 'windows-store', 'D:/Windows/Store'])
+            buildOptions([
+                'add',
+                'windows-store',
+                'D:/Windows/Store',
+            ]),
         );
 
         expect(result.ok).toBe(true);
