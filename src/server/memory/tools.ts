@@ -761,6 +761,21 @@ export const pruneMemoriesHandler = async (
         expires_at: m.expiresAt.toISOString(),
     }));
 
+    if (dryRun) {
+        const output = {
+            dry_run: true,
+            would_prune_count: prunedEntries.length,
+            would_prune: prunedEntries,
+        };
+
+        return {
+            content: [{
+                type: 'text',
+                text: JSON.stringify(output, null, 2),
+            }],
+        };
+    }
+
     const output = {
         pruned_count: prunedEntries.length,
         pruned: prunedEntries,
