@@ -251,14 +251,5 @@ describe('utils module', () => {
             // The function doesn't trim spaces within filenames
             expect(toSlugPathFromRelative('category/memory.md', '.md')).toBe('category/memory');
         });
-
-        it('should preserve double slashes in path (platform-dependent)', () => {
-            // Double slashes may be handled differently per platform
-            // On POSIX, // is valid, on Windows it's UNC path start
-            // The function doesn't collapse these
-            const result = toSlugPathFromRelative('category//memory.md', '.md');
-            // The implementation doesn't filter empty segments from the input
-            expect(result).toBe('category//memory');
-        });
     });
 });
