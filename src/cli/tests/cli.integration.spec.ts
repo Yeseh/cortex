@@ -9,8 +9,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import * as fs from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { FilesystemStorageAdapter } from '../src/core/storage/filesystem/index.ts';
-import { serializeMemoryFile, type MemoryFileContents } from '../src/core/memory/index.ts';
+import { FilesystemStorageAdapter } from '../../core/storage/filesystem/index.ts';
+import { serializeMemoryFile, type MemoryFileContents } from '../../core/memory/index.ts';
 
 /**
  * CLI runner that spawns cortex as a subprocess.
@@ -43,7 +43,7 @@ const runCortexCli = async (args: string[], options: CliOptions = {}): Promise<C
         : [];
 
     const allArgs = [...globalStoreFlag, ...args];
-    const scriptPath = join(import.meta.dir, '..', 'src', 'cli', 'run.ts');
+    const scriptPath = join(import.meta.dir, '..', 'run.ts');
 
     try {
         // Use Bun.spawn for cross-platform subprocess spawning
@@ -148,8 +148,8 @@ const createMemoryFile = async (
 const createCategoryIndex = async (
     storeRoot: string,
     categoryPath: string,
-    memories: Array<{ path: string; tokenEstimate: number; summary?: string }> = [],
-    subcategories: Array<{ path: string; memoryCount?: number }> = []
+    memories: { path: string; tokenEstimate: number; summary?: string }[] = [],
+    subcategories: { path: string; memoryCount?: number }[] = []
 ): Promise<void> => {
     const lines: string[] = [];
 
