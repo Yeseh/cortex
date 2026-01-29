@@ -1,12 +1,16 @@
 memories: []
 subcategories:
-  - path: global/projects/cortex/architecture
+  - path: architecture
+    memory_count: 3
+  - path: decisions
+    memory_count: 11
+  - path: notes
+    memory_count: 1
+  - path: standards
+    memory_count: 26
+  - path: testing
     memory_count: 2
-  - path: global/projects/cortex/decisions
-    memory_count: 6
-  - path: global/projects/cortex/standards
-    memory_count: 7
-  - path: global/projects/cortex/testing
-    memory_count: 2
-  - path: global/projects/cortex/todo
+  - path: todo
+    memory_count: 1
+  - path: updates
     memory_count: 1

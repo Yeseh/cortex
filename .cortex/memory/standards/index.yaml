@@ -1,14 +1,54 @@
 memories:
-  - path: projects/cortex/standards/ci-workflows
-    token_estimate: 136
-  - path: projects/cortex/standards/commits
-    token_estimate: 123
-  - path: projects/cortex/standards/error-translation
-    token_estimate: 136
-  - path: projects/cortex/standards/mcp-thin-wrapper
-    token_estimate: 144
-  - path: projects/cortex/standards/runtime
-    token_estimate: 108
-  - path: projects/cortex/standards/typescript
-    token_estimate: 109
+  - path: standards/barrel-exports
+    token_estimate: 229
+  - path: standards/ci-workflows
+    token_estimate: 140
+  - path: standards/cli-command-pattern
+    token_estimate: 328
+  - path: standards/cli-error-mapping
+    token_estimate: 268
+  - path: standards/cli-option-placement
+    token_estimate: 321
+  - path: standards/commits
+    token_estimate: 128
+  - path: standards/core-module-architecture
+    token_estimate: 573
+  - path: standards/cross-platform-paths
+    token_estimate: 372
+  - path: standards/documentation
+    token_estimate: 326
+  - path: standards/error-translation
+    token_estimate: 143
+  - path: standards/file-organization
+    token_estimate: 271
+  - path: standards/frontmatter-format
+    token_estimate: 208
+  - path: standards/function-signatures
+    token_estimate: 155
+  - path: standards/mcp-server-thin-wrapper
+    token_estimate: 468
+  - path: standards/mcp-thin-wrapper
+    token_estimate: 149
+  - path: standards/module-checklist
+    token_estimate: 221
+  - path: standards/operation-results
+    token_estimate: 173
+  - path: standards/registry-caches-loaded-data
+    token_estimate: 405
+  - path: standards/result-types
+    token_estimate: 254
+  - path: standards/runtime
+    token_estimate: 112
+  - path: standards/self-documenting-errors
+    token_estimate: 303
+  - path: standards/store-registry-paths
+    token_estimate: 258
+  - path: standards/test-failure-policy
+    token_estimate: 301
+  - path: standards/testing
+    token_estimate: 309
+  - path: standards/types-vs-interfaces
+    token_estimate: 377
+  - path: standards/typescript
+    token_estimate: 114
 subcategories: []

@@ -1,4 +1,24 @@
 memories:
-  - path: projects/cortex/decisions/mcp-store-parameter
-    token_estimate: 108
+  - path: decisions/cli-commander-refactor
+    token_estimate: 236
+  - path: decisions/default-store-rename
+    token_estimate: 169
+  - path: decisions/dynamic-root-category-discovery
+    token_estimate: 235
+  - path: decisions/mcp-store-parameter
+    token_estimate: 111
+  - path: decisions/mcp-store-required
+    token_estimate: 199
+  - path: decisions/registry-as-store-factory
+    token_estimate: 347
+  - path: decisions/registry-interface-rename
+    token_estimate: 340
+  - path: decisions/reindex-root-subcategories
+    token_estimate: 297
+  - path: decisions/scoped-storage-adapter
+    token_estimate: 288
+  - path: decisions/store-init-project-support
+    token_estimate: 340
+  - path: decisions/store-list-from-registry
+    token_estimate: 247
 subcategories: []

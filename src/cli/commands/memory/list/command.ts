@@ -5,6 +5,9 @@
  * if no category is specified. Expired memories are excluded by default
  * unless the `--include-expired` flag is provided.
  *
+ * When no category is specified, the command dynamically discovers all
+ * root categories from the store's index rather than using a hardcoded list.
+ *
  * @example
  * ```bash
  * # List all memories
@@ -19,8 +22,9 @@
  * # Output in JSON format
  * cortex memory list --format json
  *
- * # Use a specific store
- * cortex memory --store my-store list
+ * # Use a specific store (either placement works)
+ * cortex memory list -s my-store
+ * cortex memory -s my-store list
  * ```
  */
 
@@ -44,6 +48,8 @@ export interface ListCommandOptions {
     includeExpired?: boolean;
     /** Output format (yaml, json, toon) */
     format?: string;
+    /** Store name (can be specified on subcommand or parent) */
+    store?: string;
 }
 
 /**
@@ -83,7 +89,7 @@ const isExpired = (expiresAt: Date | undefined, now: Date): boolean => {
  */
 const loadMemoryExpiry = async (
     adapter: FilesystemStorageAdapter,
-    slugPath: string,
+    slugPath: string
 ): Promise<Date | undefined> => {
     const contents = await adapter.readMemoryFile(slugPath);
     if (!contents.ok) {
@@ -110,7 +116,7 @@ const loadMemoryExpiry = async (
  */
 const loadCategoryIndex = async (
     adapter: FilesystemStorageAdapter,
-    categoryPath: string,
+    categoryPath: string
 ): Promise<CategoryIndex | null> => {
     const indexContents = await adapter.readIndexFile(categoryPath);
     if (!indexContents.ok) {
@@ -140,7 +146,7 @@ const collectMemoriesFromCategory = async (
     categoryPath: string,
     includeExpired: boolean,
     now: Date,
-    visited: Set<string>,
+    visited: Set<string>
 ): Promise<ListMemoryEntry[]> => {
     if (visited.has(categoryPath)) {
         return [];
@@ -175,7 +181,7 @@ const collectMemoriesFromCategory = async (
             subcategory.path,
             includeExpired,
             now,
-            visited,
+            visited
         );
         entries.push(...subEntries);
     }
@@ -184,29 +190,50 @@ const collectMemoriesFromCategory = async (
 };
 
 /**
- * Collects all memories from the root categories.
+ * Collects all memories from the store by reading the root index.
+ *
+ * Dynamically discovers root categories from the store's root index file
+ * rather than using a hardcoded list. This allows stores to organize
+ * memories under any top-level category structure.
  */
 const collectAllCategories = async (
     adapter: FilesystemStorageAdapter,
     includeExpired: boolean,
-    now: Date,
+    now: Date
 ): Promise<ListMemoryEntry[]> => {
-    const rootCategories = [
-        'human',
-        'persona',
-        'project',
-        'domain',
-    ];
+    // Load root index to discover top-level categories dynamically
+    const rootIndex = await loadCategoryIndex(adapter, '');
+    if (!rootIndex) {
+        return [];
+    }
+
     const entries: ListMemoryEntry[] = [];
     const visited = new Set<string>();
 
-    for (const category of rootCategories) {
+    // Collect memories directly in root (if any)
+    for (const memory of rootIndex.memories) {
+        const expiresAt = await loadMemoryExpiry(adapter, memory.path);
+        const expired = isExpired(expiresAt, now);
+        if (!includeExpired && expired) {
+            continue;
+        }
+        entries.push({
+            path: memory.path,
+            tokenEstimate: memory.tokenEstimate,
+            summary: memory.summary,
+            expiresAt,
+            isExpired: expired,
+        });
+    }
+
+    // Collect from all discovered subcategories
+    for (const subcategory of rootIndex.subcategories) {
         const categoryEntries = await collectMemoriesFromCategory(
             adapter,
-            category,
+            subcategory.path,
             includeExpired,
             now,
-            visited,
+            visited
         );
         entries.push(...categoryEntries);
     }
@@ -276,7 +303,7 @@ export async function handleList(
     category: string | undefined,
     options: ListCommandOptions,
     storeName: string | undefined,
-    deps: ListHandlerDeps = {},
+    deps: ListHandlerDeps = {}
 ): Promise<void> {
     // 1. Resolve store context
     const contextResult = await resolveStoreContext(storeName);
@@ -298,19 +325,14 @@ export async function handleList(
             normalizedCategory,
             options.includeExpired ?? false,
             now,
-            new Set(),
+            new Set()
         );
-    }
-    else {
+    } else {
         memories = await collectAllCategories(adapter, options.includeExpired ?? false, now);
     }
 
     // 3. Format and output
-    const VALID_FORMATS: OutputFormat[] = [
-        'yaml',
-        'json',
-        'toon',
-    ];
+    const VALID_FORMATS: OutputFormat[] = ['yaml', 'json', 'toon'];
     const requestedFormat = options.format as OutputFormat;
     const format: OutputFormat = VALID_FORMATS.includes(requestedFormat) ? requestedFormat : 'yaml';
     const output = formatOutput(memories, format);
@@ -325,20 +347,28 @@ export async function handleList(
  * Lists memories in a category, or all memories across all root categories
  * if no category is specified. By default, expired memories are excluded.
  *
+ * The `--store` option can be specified either on this command or on the
+ * parent `memory` command for flexibility.
+ *
  * @example
  * ```bash
  * cortex memory list
  * cortex memory list project/cortex
  * cortex memory list --include-expired
  * cortex memory list --format json
+ * cortex memory list -s my-store
+ * cortex memory -s my-store list
  * ```
  */
 export const listCommand = new Command('list')
     .description('List memories in a category')
     .argument('[category]', 'Category path to list (lists all if omitted)')
+    .option('-s, --store <name>', 'Use a specific named store')
     .option('-x, --include-expired', 'Include expired memories')
     .option('-o, --format <format>', 'Output format (yaml, json, toon)', 'yaml')
     .action(async (category, options, command) => {
         const parentOpts = command.parent?.opts() as { store?: string } | undefined;
-        await handleList(category, options, parentOpts?.store);
+        // Allow store to be specified on either the subcommand or parent command
+        const storeName = options.store ?? parentOpts?.store;
+        await handleList(category, options, storeName);
     });

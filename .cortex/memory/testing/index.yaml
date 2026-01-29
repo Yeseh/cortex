@@ -1,6 +1,6 @@
 memories:
-  - path: global/projects/cortex/testing/isolation-patterns
+  - path: testing/isolation-patterns
     token_estimate: 432
-  - path: global/projects/cortex/testing/suite-status
+  - path: testing/suite-status
     token_estimate: 266
 subcategories: []
