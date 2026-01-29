@@ -4,7 +4,7 @@
  * Handles reading, writing, moving, and removing memory files
  * from the filesystem.
  *
- * @module core/storage/filesystem/files
+ * @module core/storage/filesystem/memories
  */
 
 import { access, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';

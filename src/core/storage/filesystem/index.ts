@@ -324,7 +324,38 @@ export class FilesystemStorageAdapter implements StorageAdapter, ComposedStorage
 // Re-export types for convenience
 export type { FilesystemStorageAdapterOptions, FilesystemContext } from './types.ts';
 
-// Export ISP-compliant storage implementations
+/**
+ * Focused storage implementations following the Interface Segregation Principle.
+ *
+ * These classes provide single-responsibility storage interfaces:
+ * - {@link FilesystemMemoryStorage} - Memory file I/O operations
+ * - {@link FilesystemIndexStorage} - Index file I/O and reindexing
+ * - {@link FilesystemCategoryStorage} - Category directory management
+ * - {@link FilesystemStoreStorage} - Store registry persistence
+ *
+ * New code should prefer these focused interfaces over the legacy
+ * {@link FilesystemStorageAdapter} methods for better testability
+ * and clearer dependencies.
+ *
+ * @example
+ * ```typescript
+ * // Prefer focused interfaces for new code
+ * import {
+ *     FilesystemMemoryStorage,
+ *     FilesystemIndexStorage
+ * } from './filesystem';
+ *
+ * function writeMemoryWithIndex(
+ *     memories: MemoryStorage,
+ *     indexes: IndexStorage,
+ *     path: string,
+ *     content: string
+ * ) {
+ *     await memories.write(path, content);
+ *     await indexes.updateAfterMemoryWrite(path, content);
+ * }
+ * ```
+ */
 export { FilesystemMemoryStorage } from './memory-storage.ts';
 export { FilesystemIndexStorage } from './index-storage.ts';
 export { FilesystemCategoryStorage } from './category-storage.ts';
