@@ -12,7 +12,7 @@
  */
 
 import type { MemorySlugPath, Result } from '../../types.ts';
-import type { IndexStorage, StorageAdapterError, StorageIndexName } from '../adapter.ts';
+import type { IndexStorage, ReindexResult, StorageAdapterError, StorageIndexName } from '../adapter.ts';
 import type { FilesystemContext } from './types.ts';
 import {
     readIndexFile,
@@ -127,9 +127,9 @@ export class FilesystemIndexStorage implements IndexStorage {
      * and regenerates their index files. Use sparingly, typically for
      * repair operations or initial setup.
      *
-     * @returns Result indicating success or failure
+     * @returns Result with warnings array, or error on failure
      */
-    async reindex(): Promise<Result<void, StorageAdapterError>> {
+    async reindex(): Promise<Result<ReindexResult, StorageAdapterError>> {
         return reindexCategoryIndexes(this.ctx);
     }
 

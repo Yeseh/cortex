@@ -651,7 +651,7 @@ describe('moveMemory', () => {
             indexes: {
                 reindex: async () => {
                     reindexCalled = true;
-                    return ok(undefined);
+                    return ok({ warnings: [] });
                 },
             },
         });
@@ -725,7 +725,7 @@ describe('removeMemory', () => {
             indexes: {
                 reindex: async () => {
                     reindexCalled = true;
-                    return ok(undefined);
+                    return ok({ warnings: [] });
                 },
             },
         });
@@ -1057,7 +1057,7 @@ subcategories: []`;
                 read: async (path) => (path === 'project' ? ok(indexContent) : ok(null)),
                 reindex: async () => {
                     reindexCalled = true;
-                    return ok(undefined);
+                    return ok({ warnings: [] });
                 },
             },
             memories: {
@@ -1078,7 +1078,7 @@ subcategories: []`;
                 read: async () => ok(null),
                 reindex: async () => {
                     reindexCalled = true;
-                    return ok(undefined);
+                    return ok({ warnings: [] });
                 },
             },
         });

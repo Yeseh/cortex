@@ -5,6 +5,7 @@ import {
     normalizeSlugSegments,
     buildMemorySlugPath,
     buildMemoryIdentity,
+    toSlug,
 } from './slug.ts';
 import type { MemoryCategoryPath, MemorySlug } from './types.ts';
 
@@ -87,6 +88,94 @@ describe(
                         expect(isValidMemorySlug('my@memory')).toBe(false);
                         expect(isValidMemorySlug('my/memory')).toBe(false);
                         expect(isValidMemorySlug('my#memory')).toBe(false);
+                    },
+                );
+            },
+        );
+
+        describe(
+            'toSlug', () => {
+                it(
+                    'should convert uppercase to lowercase', () => {
+                        expect(toSlug('MyMemory')).toBe('mymemory');
+                        expect(toSlug('UPPERCASE')).toBe('uppercase');
+                        expect(toSlug('MixedCase')).toBe('mixedcase');
+                    },
+                );
+
+                it(
+                    'should replace spaces with hyphens', () => {
+                        expect(toSlug('my memory')).toBe('my-memory');
+                        expect(toSlug('multiple   spaces')).toBe('multiple-spaces');
+                        expect(toSlug(' leading')).toBe('leading');
+                        expect(toSlug('trailing ')).toBe('trailing');
+                    },
+                );
+
+                it(
+                    'should replace underscores with hyphens', () => {
+                        expect(toSlug('my_memory')).toBe('my-memory');
+                        expect(toSlug('snake_case_name')).toBe('snake-case-name');
+                        expect(toSlug('multiple__underscores')).toBe('multiple-underscores');
+                    },
+                );
+
+                it(
+                    'should remove special characters', () => {
+                        expect(toSlug('special@chars')).toBe('specialchars');
+                        expect(toSlug('hello.world')).toBe('helloworld');
+                        expect(toSlug('test#value')).toBe('testvalue');
+                        expect(toSlug('path/segment')).toBe('pathsegment');
+                    },
+                );
+
+                it(
+                    'should collapse multiple hyphens', () => {
+                        expect(toSlug('my--memory')).toBe('my-memory');
+                        expect(toSlug('a---b')).toBe('a-b');
+                        expect(toSlug('test----value')).toBe('test-value');
+                    },
+                );
+
+                it(
+                    'should trim leading and trailing hyphens', () => {
+                        expect(toSlug('-memory')).toBe('memory');
+                        expect(toSlug('memory-')).toBe('memory');
+                        expect(toSlug('--memory--')).toBe('memory');
+                        expect(toSlug('---')).toBe('');
+                    },
+                );
+
+                it(
+                    'should handle mixed transformations', () => {
+                        expect(toSlug('My_Folder Name')).toBe('my-folder-name');
+                        expect(toSlug('  SPACED_Out  ')).toBe('spaced-out');
+                        expect(toSlug('Test@#$_Value 123')).toBe('test-value-123');
+                    },
+                );
+
+                it(
+                    'should return empty string for all-invalid input', () => {
+                        expect(toSlug('@#$%')).toBe('');
+                        expect(toSlug('   ')).toBe('');
+                        expect(toSlug('___')).toBe('');
+                        expect(toSlug('')).toBe('');
+                    },
+                );
+
+                it(
+                    'should preserve already valid slugs', () => {
+                        expect(toSlug('valid-slug')).toBe('valid-slug');
+                        expect(toSlug('abc123')).toBe('abc123');
+                        expect(toSlug('test-123-abc')).toBe('test-123-abc');
+                    },
+                );
+
+                it(
+                    'should handle numbers correctly', () => {
+                        expect(toSlug('123')).toBe('123');
+                        expect(toSlug('v2')).toBe('v2');
+                        expect(toSlug('2024-01-01')).toBe('2024-01-01');
                     },
                 );
             },
