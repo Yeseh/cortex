@@ -75,6 +75,23 @@ export interface ListMemoryEntry {
 }
 
 /**
+ * Entry representing a subcategory in the list output.
+ */
+export interface ListSubcategoryEntry {
+    path: string;
+    memoryCount: number;
+    description?: string;
+}
+
+/**
+ * Result of the list command containing memories and subcategories.
+ */
+export interface ListResult {
+    memories: ListMemoryEntry[];
+    subcategories: ListSubcategoryEntry[];
+}
+
+/**
  * Checks if a memory is expired based on its expiration date.
  */
 const isExpired = (expiresAt: Date | undefined, now: Date): boolean => {
@@ -190,6 +207,25 @@ const collectMemoriesFromCategory = async (
 };
 
 /**
+ * Gets direct subcategories from a category index.
+ */
+const getDirectSubcategories = async (
+    adapter: FilesystemStorageAdapter,
+    categoryPath: string
+): Promise<ListSubcategoryEntry[]> => {
+    const index = await loadCategoryIndex(adapter, categoryPath);
+    if (!index) {
+        return [];
+    }
+
+    return index.subcategories.map((subcategory) => ({
+        path: subcategory.path,
+        memoryCount: subcategory.memoryCount,
+        description: subcategory.description,
+    }));
+};
+
+/**
  * Collects all memories from the store by reading the root index.
  *
  * Dynamically discovers root categories from the store's root index file
@@ -200,14 +236,14 @@ const collectAllCategories = async (
     adapter: FilesystemStorageAdapter,
     includeExpired: boolean,
     now: Date
-): Promise<ListMemoryEntry[]> => {
+): Promise<ListResult> => {
     // Load root index to discover top-level categories dynamically
     const rootIndex = await loadCategoryIndex(adapter, '');
     if (!rootIndex) {
-        return [];
+        return { memories: [], subcategories: [] };
     }
 
-    const entries: ListMemoryEntry[] = [];
+    const memories: ListMemoryEntry[] = [];
     const visited = new Set<string>();
 
     // Collect memories directly in root (if any)
@@ -217,7 +253,7 @@ const collectAllCategories = async (
         if (!includeExpired && expired) {
             continue;
         }
-        entries.push({
+        memories.push({
             path: memory.path,
             tokenEstimate: memory.tokenEstimate,
             summary: memory.summary,
@@ -235,17 +271,24 @@ const collectAllCategories = async (
             now,
             visited
         );
-        entries.push(...categoryEntries);
+        memories.push(...categoryEntries);
     }
 
-    return entries;
+    // Return root-level subcategories
+    const subcategories: ListSubcategoryEntry[] = rootIndex.subcategories.map((subcategory) => ({
+        path: subcategory.path,
+        memoryCount: subcategory.memoryCount,
+        description: subcategory.description,
+    }));
+
+    return { memories, subcategories };
 };
 
 /**
  * Formats the output based on the specified format.
  */
-const formatOutput = (memories: ListMemoryEntry[], format: OutputFormat): string => {
-    const outputMemories = memories.map((memory) => ({
+const formatOutput = (result: ListResult, format: OutputFormat): string => {
+    const outputMemories = result.memories.map((memory) => ({
         path: memory.path,
         token_estimate: memory.tokenEstimate,
         summary: memory.summary,
@@ -253,33 +296,64 @@ const formatOutput = (memories: ListMemoryEntry[], format: OutputFormat): string
         expired: memory.isExpired || undefined,
     }));
 
+    const outputSubcategories = result.subcategories.map((subcategory) => ({
+        path: subcategory.path,
+        memory_count: subcategory.memoryCount,
+        description: subcategory.description,
+    }));
+
     if (format === 'json') {
-        return JSON.stringify({ memories: outputMemories }, null, 2);
+        return JSON.stringify(
+            { memories: outputMemories, subcategories: outputSubcategories },
+            null,
+            2
+        );
     }
 
     if (format === 'toon') {
-        return toonEncode({ memories: outputMemories }, toonOptions);
+        return toonEncode(
+            { memories: outputMemories, subcategories: outputSubcategories },
+            toonOptions
+        );
     }
 
     // YAML format (default)
-    if (memories.length === 0) {
-        return 'memories: []';
+    const lines: string[] = [];
+
+    // Memories section
+    if (result.memories.length === 0) {
+        lines.push('memories: []');
+    } else {
+        lines.push('memories:');
+        for (const memory of result.memories) {
+            lines.push(`  - path: ${memory.path}`);
+            lines.push(`    token_estimate: ${memory.tokenEstimate}`);
+            if (memory.summary) {
+                lines.push(`    summary: ${memory.summary}`);
+            }
+            if (memory.expiresAt) {
+                lines.push(`    expires_at: ${memory.expiresAt.toISOString()}`);
+            }
+            if (memory.isExpired) {
+                lines.push('    expired: true');
+            }
+        }
     }
 
-    const lines: string[] = ['memories:'];
-    for (const memory of memories) {
-        lines.push(`  - path: ${memory.path}`);
-        lines.push(`    token_estimate: ${memory.tokenEstimate}`);
-        if (memory.summary) {
-            lines.push(`    summary: ${memory.summary}`);
-        }
-        if (memory.expiresAt) {
-            lines.push(`    expires_at: ${memory.expiresAt.toISOString()}`);
-        }
-        if (memory.isExpired) {
-            lines.push('    expired: true');
+    // Subcategories section
+    if (result.subcategories.length === 0) {
+        lines.push('subcategories: []');
+    } else {
+        lines.push('subcategories:');
+        for (const subcategory of result.subcategories) {
+            lines.push(`  - path: ${subcategory.path}`);
+            lines.push(`    memory_count: ${subcategory.memoryCount}`);
+            if (subcategory.description) {
+                lines.push(`    description: ${subcategory.description}`);
+            }
         }
     }
+
     return lines.join('\n');
 };
 
@@ -289,7 +363,7 @@ const formatOutput = (memories: ListMemoryEntry[], format: OutputFormat): string
  * This function:
  * 1. Resolves the store context
  * 2. Loads category index (or all categories if none specified)
- * 3. Collects memories, filtering expired if needed
+ * 3. Collects memories and subcategories, filtering expired if needed
  * 4. Formats and outputs the result
  *
  * @param category - Optional category path to list (lists all if omitted)
@@ -314,28 +388,30 @@ export async function handleList(
     const now = deps.now ?? new Date();
     const adapter = new FilesystemStorageAdapter({ rootDirectory: contextResult.value.root });
 
-    // 2. Collect memories
-    let memories: ListMemoryEntry[];
+    // 2. Collect memories and subcategories
+    let result: ListResult;
 
     if (category) {
         // Normalize category path by stripping leading slashes
         const normalizedCategory = category.replace(/^\/+/, '');
-        memories = await collectMemoriesFromCategory(
+        const memories = await collectMemoriesFromCategory(
             adapter,
             normalizedCategory,
             options.includeExpired ?? false,
             now,
             new Set()
         );
+        const subcategories = await getDirectSubcategories(adapter, normalizedCategory);
+        result = { memories, subcategories };
     } else {
-        memories = await collectAllCategories(adapter, options.includeExpired ?? false, now);
+        result = await collectAllCategories(adapter, options.includeExpired ?? false, now);
     }
 
     // 3. Format and output
     const VALID_FORMATS: OutputFormat[] = ['yaml', 'json', 'toon'];
     const requestedFormat = options.format as OutputFormat;
     const format: OutputFormat = VALID_FORMATS.includes(requestedFormat) ? requestedFormat : 'yaml';
-    const output = formatOutput(memories, format);
+    const output = formatOutput(result, format);
 
     const out = deps.stdout ?? process.stdout;
     out.write(output + '\n');
