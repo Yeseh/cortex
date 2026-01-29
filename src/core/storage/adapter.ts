@@ -61,6 +61,18 @@ export interface StorageAdapterError {
     cause?: unknown;
 }
 
+/**
+ * Result of a reindex operation.
+ *
+ * Contains warnings about files that could not be indexed normally,
+ * such as files with paths that normalize to empty strings or
+ * collisions between normalized paths.
+ */
+export interface ReindexResult {
+    /** Warnings about files that were skipped or renamed during indexing */
+    warnings: string[];
+}
+
 // ============================================================================
 // Focused Storage Interfaces (ISP)
 // ============================================================================
@@ -168,9 +180,18 @@ export interface IndexStorage {
      * and regenerates their index files. Use sparingly, typically for
      * repair operations or initial setup.
      *
-     * @returns Result indicating success or failure
+     * During reindexing, file paths are normalized to valid slugs:
+     * - Uppercase letters are lowercased
+     * - Underscores and spaces become hyphens
+     * - Invalid characters are removed
+     *
+     * Files that normalize to empty paths are skipped with a warning.
+     * Collisions (multiple files normalizing to the same path) are
+     * resolved by appending numeric suffixes (-2, -3, etc.).
+     *
+     * @returns Result with warnings array, or error on failure
      */
-    reindex(): Promise<Result<void, StorageAdapterError>>;
+    reindex(): Promise<Result<ReindexResult, StorageAdapterError>>;
 
     /**
      * Updates indexes after a memory write operation.
@@ -363,9 +384,9 @@ export interface StorageAdapter {
     /**
      * Rebuilds all category indexes from the current filesystem state.
      *
-     * @returns Result indicating success or failure
+     * @returns Result with warnings array, or error on failure
      */
-    reindexCategoryIndexes(): Promise<Result<void, StorageAdapterError>>;
+    reindexCategoryIndexes(): Promise<Result<ReindexResult, StorageAdapterError>>;
 }
 
 /**

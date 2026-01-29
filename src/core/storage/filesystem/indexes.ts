@@ -9,11 +9,11 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, extname, relative, resolve } from 'node:path';
 import type { MemorySlugPath, Result } from '../../types.ts';
-import type { StorageAdapterError, StorageIndexName } from '../adapter.ts';
+import type { ReindexResult, StorageAdapterError, StorageIndexName } from '../adapter.ts';
 import type { CategoryIndex, IndexMemoryEntry } from '../../index/types.ts';
 import { parseIndex, serializeIndex } from '../../serialization.ts';
 import { defaultTokenizer } from '../../tokens.ts';
-import { validateMemorySlugPath } from '../../memory/validation.ts';
+import { toSlug } from '../../slug.ts';
 import type { DirEntriesResult, FilesystemContext, StringOrNullResult } from './types.ts';
 import { err, isNotFoundError, ok, resolveStoragePath, toSlugPathFromRelative } from './utils.ts';
 import { validateSlugPath } from './memories.ts';
@@ -24,9 +24,28 @@ import { validateSlugPath } from './memories.ts';
 interface IndexBuildState {
     indexes: Map<string, CategoryIndex>;
     parentSubcategories: Map<string, Set<string>>;
+    warnings: string[];
 }
 
 type IndexBuildResult = Result<IndexBuildState, StorageAdapterError>;
+
+/**
+ * Normalizes a raw slug path by applying toSlug to each segment.
+ *
+ * @param rawPath - The raw path string from the filesystem
+ * @returns Normalized slug path, or null if any segment normalizes to empty
+ */
+const normalizeSlugPath = (rawPath: string): string | null => {
+    const segments = rawPath.split('/').filter((s) => s.length > 0);
+    const normalized = segments.map(toSlug);
+
+    // If any segment normalizes to empty, skip this file
+    if (normalized.some((s) => s.length === 0)) {
+        return null;
+    }
+
+    return normalized.join('/');
+};
 
 /**
  * Resolves the filesystem path for an index file.
@@ -455,28 +474,43 @@ const applyParentSubcategories = (
 };
 
 /**
+ * Result of building an index entry from a memory file.
+ */
+type BuildIndexEntryResult = Result<
+    | { slugPath: MemorySlugPath; tokenEstimate: number }
+    | { skipped: true; reason: string }
+    | null,
+    StorageAdapterError
+>;
+
+/**
  * Builds an index entry from a memory file.
+ *
+ * Normalizes file paths to valid slugs. Returns a skipped result
+ * if the path normalizes to empty.
  */
 const buildIndexEntry = async (
     ctx: FilesystemContext,
     filePath: string,
-): Promise<
-    Result<{ slugPath: MemorySlugPath; tokenEstimate: number } | null, StorageAdapterError>
-> => {
+): Promise<BuildIndexEntryResult> => {
     const relativePath = relative(ctx.storeRoot, filePath);
-    const slugPath = toSlugPathFromRelative(relativePath, ctx.memoryExtension);
-    if (!slugPath) {
+    const rawSlugPath = toSlugPathFromRelative(relativePath, ctx.memoryExtension);
+    if (!rawSlugPath) {
         return ok(null);
     }
-    const identity = validateMemorySlugPath(slugPath);
-    if (!identity.ok) {
-        return err({
-            code: 'INDEX_UPDATE_FAILED',
-            message: `Invalid memory slug path for ${filePath}.`,
-            path: filePath,
-            cause: identity.error,
-        });
+
+    // Normalize the slug path (convert uppercase, underscores, etc. to valid slugs)
+    const normalizedPath = normalizeSlugPath(rawSlugPath);
+    if (!normalizedPath) {
+        return ok({ skipped: true, reason: `Skipped: ${filePath} (path segment normalizes to empty)` });
     }
+
+    // Ensure we have at least 2 segments (category + slug)
+    const segments = normalizedPath.split('/');
+    if (segments.length < 2) {
+        return ok({ skipped: true, reason: `Skipped: ${filePath} (path must have at least 2 segments)` });
+    }
+
     let contents: string;
     try {
         contents = await readFile(filePath, 'utf8');
@@ -489,20 +523,25 @@ const buildIndexEntry = async (
             cause: error,
         });
     }
+
     const tokenEstimate = defaultTokenizer.estimateTokens(contents);
     if (!tokenEstimate.ok) {
         return err({
             code: 'INDEX_UPDATE_FAILED',
             message: 'Failed to estimate tokens for memory content.',
-            path: identity.value.slugPath,
+            path: normalizedPath,
             cause: tokenEstimate.error,
         });
     }
-    return ok({ slugPath: identity.value.slugPath, tokenEstimate: tokenEstimate.value });
+
+    return ok({ slugPath: normalizedPath as MemorySlugPath, tokenEstimate: tokenEstimate.value });
 };
 
 /**
  * Builds index state from collected memory files.
+ *
+ * Handles collisions by appending numeric suffixes (-2, -3, etc.)
+ * and collects warnings for skipped files and collisions.
  */
 const buildIndexState = async (
     ctx: FilesystemContext,
@@ -510,6 +549,8 @@ const buildIndexState = async (
 ): Promise<IndexBuildResult> => {
     const indexes = new Map<string, CategoryIndex>();
     const parentSubcategories = new Map<string, Set<string>>();
+    const usedPaths = new Set<string>();
+    const warnings: string[] = [];
 
     for (const filePath of filePaths) {
         const entryResult = await buildIndexEntry(ctx, filePath);
@@ -519,11 +560,31 @@ const buildIndexState = async (
         if (!entryResult.value) {
             continue;
         }
-        addIndexEntry(indexes, entryResult.value.slugPath, entryResult.value.tokenEstimate);
-        recordParentSubcategory(parentSubcategories, entryResult.value.slugPath);
+
+        // Handle skipped entries
+        if ('skipped' in entryResult.value) {
+            warnings.push(entryResult.value.reason);
+            continue;
+        }
+
+        // Handle collisions by appending numeric suffix
+        let slugPath = entryResult.value.slugPath;
+        if (usedPaths.has(slugPath)) {
+            let suffix = 2;
+            while (usedPaths.has(`${slugPath}-${suffix}`)) {
+                suffix += 1;
+            }
+            const newSlugPath = `${slugPath}-${suffix}` as MemorySlugPath;
+            warnings.push(`Collision: ${filePath} indexed as ${newSlugPath}`);
+            slugPath = newSlugPath;
+        }
+        usedPaths.add(slugPath);
+
+        addIndexEntry(indexes, slugPath, entryResult.value.tokenEstimate);
+        recordParentSubcategory(parentSubcategories, slugPath);
     }
 
-    return ok({ indexes, parentSubcategories });
+    return ok({ indexes, parentSubcategories, warnings });
 };
 
 /**
@@ -579,14 +640,15 @@ const rebuildIndexFiles = async (
  * Reindexes all category indexes by scanning the filesystem.
  *
  * Walks the storage directory, collects all memory files,
- * and rebuilds all index files from scratch.
+ * and rebuilds all index files from scratch. File paths are
+ * normalized to valid slugs during indexing.
  *
  * @param ctx - Filesystem context with configuration
- * @returns Success or error
+ * @returns Result with warnings array, or error on failure
  */
 export const reindexCategoryIndexes = async (
     ctx: FilesystemContext,
-): Promise<Result<void, StorageAdapterError>> => {
+): Promise<Result<ReindexResult, StorageAdapterError>> => {
     const filesResult = await collectMemoryFiles(ctx, ctx.storeRoot);
     if (!filesResult.ok) {
         return filesResult;
@@ -604,5 +666,5 @@ export const reindexCategoryIndexes = async (
         return buildResult;
     }
 
-    return ok(undefined);
+    return ok({ warnings: buildState.value.warnings });
 };
