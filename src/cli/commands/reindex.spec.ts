@@ -232,14 +232,14 @@ describe('reindex CLI command', () => {
             ]);
         });
 
-        it('should return INVALID_ARGUMENTS for flag arguments', async () => {
-            const result = await runReindexCommand(buildOptions(['--verbose']));
+        it('should return INVALID_ARGUMENTS for unknown flag arguments', async () => {
+            const result = await runReindexCommand(buildOptions(['--unknown-flag']));
 
             expect(result.ok).toBe(false);
             if (result.ok) return;
 
             expect(result.error.code).toBe('INVALID_ARGUMENTS');
-            expect(result.error.message).toContain('--verbose');
+            expect(result.error.message).toContain('--unknown-flag');
         });
     });
 
@@ -295,6 +295,149 @@ describe('reindex CLI command', () => {
 
             const indexContent = await readIndexFile('my-project/sub-category');
             expect(indexContent).toContain('my-memory');
+        });
+    });
+
+    describe('slug normalization', () => {
+        // Helper to create memory file at a specific raw path
+        const createMemoryFileRaw = async (rawPath: string, content: string) => {
+            const memoryDir = join(tempDir, ...rawPath.split('/').slice(0, -1));
+            await mkdir(memoryDir, { recursive: true });
+            const filePath = join(tempDir, rawPath);
+            await writeFile(filePath, content, 'utf8');
+        };
+
+        it('should normalize uppercase paths', async () => {
+            await createMemoryFileRaw('Project/MyMemory.md', buildMemoryContent({}));
+
+            const result = await runReindexCommand(buildOptions([]));
+
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+
+            const indexContent = await readIndexFile('project');
+            expect(indexContent).toContain('project/mymemory');
+        });
+
+        it('should normalize underscore paths', async () => {
+            await createMemoryFileRaw('my_project/some_memory.md', buildMemoryContent({}));
+
+            const result = await runReindexCommand(buildOptions([]));
+
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+
+            const indexContent = await readIndexFile('my-project');
+            expect(indexContent).toContain('my-project/some-memory');
+        });
+
+        it('should normalize mixed invalid characters', async () => {
+            await createMemoryFileRaw('My Project/Some_Memory.md', buildMemoryContent({}));
+
+            const result = await runReindexCommand(buildOptions([]));
+
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+
+            const indexContent = await readIndexFile('my-project');
+            expect(indexContent).toContain('my-project/some-memory');
+        });
+
+        it('should handle collisions with numeric suffix', async () => {
+            // Create two files that normalize to the same slug
+            await createMemoryFileRaw('project/my_memory.md', buildMemoryContent({ content: 'First file' }));
+            await createMemoryFileRaw('project/my-memory.md', buildMemoryContent({ content: 'Second file' }));
+
+            const result = await runReindexCommand(buildOptions([]));
+
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+
+            // One should have suffix -2
+            expect(result.value.warnings.length).toBe(1);
+            expect(result.value.warnings[0]).toContain('Collision');
+            expect(result.value.warnings[0]).toContain('my-memory-2');
+        });
+
+        it('should skip paths that normalize to empty with warning', async () => {
+            // A path with only special characters
+            await createMemoryFileRaw('project/@#$.md', buildMemoryContent({}));
+            // A valid path too
+            await createMemoryFileRaw('project/valid-memory.md', buildMemoryContent({}));
+
+            const result = await runReindexCommand(buildOptions([]));
+
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+
+            // Should have warning about skipped file
+            expect(result.value.warnings.length).toBe(1);
+            expect(result.value.warnings[0]).toContain('Skipped');
+            expect(result.value.warnings[0]).toContain('normalizes to empty');
+
+            // Valid memory should still be indexed
+            const indexContent = await readIndexFile('project');
+            expect(indexContent).toContain('valid-memory');
+        });
+
+        it('should show warning count in message', async () => {
+            await createMemoryFileRaw('project/my_memory.md', buildMemoryContent({}));
+            await createMemoryFileRaw('project/my-memory.md', buildMemoryContent({}));
+
+            const result = await runReindexCommand(buildOptions([]));
+
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+
+            expect(result.value.message).toContain('1 warning');
+        });
+
+        it('should show warning details with --verbose flag', async () => {
+            await createMemoryFileRaw('project/my_memory.md', buildMemoryContent({}));
+            await createMemoryFileRaw('project/my-memory.md', buildMemoryContent({}));
+
+            const result = await runReindexCommand(buildOptions(['--verbose']));
+
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+
+            expect(result.value.message).toContain('Warnings:');
+            expect(result.value.message).toContain('Collision');
+        });
+
+        it('should not show warning details without --verbose flag', async () => {
+            await createMemoryFileRaw('project/my_memory.md', buildMemoryContent({}));
+            await createMemoryFileRaw('project/my-memory.md', buildMemoryContent({}));
+
+            const result = await runReindexCommand(buildOptions([]));
+
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+
+            expect(result.value.message).not.toContain('Warnings:');
+        });
+
+        it('should handle multiple collisions correctly', async () => {
+            // Use different filenames that all normalize to 'test-file' 
+            // (avoiding case variations due to Windows case-insensitivity)
+            await createMemoryFileRaw('project/test_file.md', buildMemoryContent({ content: 'File 1' }));
+            await createMemoryFileRaw('project/test-file.md', buildMemoryContent({ content: 'File 2' }));
+            await createMemoryFileRaw('project/test__file.md', buildMemoryContent({ content: 'File 3' }));
+
+            const result = await runReindexCommand(buildOptions([]));
+
+            expect(result.ok).toBe(true);
+            if (!result.ok) return;
+
+            // Should have 2 collision warnings (for -2 and -3)
+            expect(result.value.warnings.length).toBe(2);
+            expect(result.value.message).toContain('2 warnings');
+
+            // Verify the index has all three entries
+            const indexContent = await readIndexFile('project');
+            expect(indexContent).toContain('test-file');
+            expect(indexContent).toContain('test-file-2');
+            expect(indexContent).toContain('test-file-3');
         });
     });
 });
