@@ -237,13 +237,27 @@ SUBCOMMANDS
   remove <name>          Unregister a store (does not delete files)
   init [path]            Initialize a new store at path (default: ./.cortex)
 
+INIT OPTIONS
+  --name <name>          Explicit store name (overrides git detection)
+
+INIT BEHAVIOR
+  Store name is resolved in order:
+  1. --name flag value (if provided)
+  2. Git repository name (auto-detected, normalized to lowercase slug)
+  3. Error prompting for --name (if not in a git repository)
+
+  On success, a project entry is created in the default store for
+  discoverability (at projects/<store-name>).
+
 EXAMPLES
   cortex store list
   cortex store add work ~/work/.cortex
   cortex store add company-standards /shared/standards/.cortex
   cortex store remove work
-  cortex store init
-  cortex store init ./my-memories
+  cortex store init                          # Auto-detect name from git repo
+  cortex store init ./my-memories            # Custom path, git name
+  cortex store init --name my-store          # Explicit name, default path
+  cortex store init --name notes ~/notes     # Explicit name and path
 `,
 
     reindex: `cortex reindex - Rebuild store indexes

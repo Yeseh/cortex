@@ -358,9 +358,10 @@ describe('serializeStoreRegistryToon', () => {
 });
 
 describe('serializeStoreInitToon', () => {
-    test('encodes store init with path', () => {
+    test('encodes store init with path and name', () => {
         const storeInit: OutputStoreInit = {
             path: '/initialized/store/path',
+            name: 'my-store',
         };
         const result = toonSerialize('store-init', storeInit);
 
@@ -368,6 +369,7 @@ describe('serializeStoreInitToon', () => {
         if (result.ok) {
             // TOON outputs YAML-like format with spaces after colons
             expect(result.value).toContain('path: /initialized/store/path');
+            expect(result.value).toContain('name: my-store');
         }
     });
 
@@ -375,6 +377,7 @@ describe('serializeStoreInitToon', () => {
         // The output module does NOT validate - it just serializes
         const storeInit: OutputStoreInit = {
             path: '',
+            name: 'my-store',
         };
         const result = toonSerialize('store-init', storeInit);
 
