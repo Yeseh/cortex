@@ -44,7 +44,7 @@ const createTestConfig = (dataPath: string): ServerConfig => ({
 const createTestDir = async (): Promise<string> => {
     const testDir = join(
         tmpdir(),
-        `cortex-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        `cortex-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
     );
     await mkdir(testDir, { recursive: true });
     return testDir;
@@ -54,7 +54,7 @@ const createTestDir = async (): Promise<string> => {
 const createMemoryFile = async (
     storeRoot: string,
     slugPath: string,
-    contents: MemoryFileContents,
+    contents: MemoryFileContents
 ): Promise<void> => {
     const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
     const serialized = serializeMemoryFile(contents);
@@ -85,6 +85,7 @@ describe('cortex_add_memory tool', () => {
 
     it('should create a new memory', async () => {
         const input: AddMemoryInput = {
+            store: 'default',
             path: 'project/test-memory',
             content: 'Test content',
         };
@@ -98,11 +99,10 @@ describe('cortex_add_memory tool', () => {
 
     it('should create a memory with tags', async () => {
         const input: AddMemoryInput = {
+            store: 'default',
             path: 'project/tagged-memory',
             content: 'Content with tags',
-            tags: [
-                'test', 'example',
-            ],
+            tags: ['test', 'example'],
         };
 
         const result = await addMemoryHandler({ config }, input);
@@ -112,18 +112,18 @@ describe('cortex_add_memory tool', () => {
         const getResult = await getMemoryHandler(
             { config },
             {
+                store: 'default',
                 path: 'project/tagged-memory',
-            },
+            }
         );
         const output = JSON.parse(getResult.content[0]!.text);
-        expect(output.metadata.tags).toEqual([
-            'test', 'example',
-        ]);
+        expect(output.metadata.tags).toEqual(['test', 'example']);
     });
 
     it('should create a memory with expiration', async () => {
         const futureDate = new Date(Date.now() + 86400000).toISOString(); // 1 day from now
         const input: AddMemoryInput = {
+            store: 'default',
             path: 'project/expiring-memory',
             content: 'Expiring content',
             expires_at: futureDate,
@@ -136,8 +136,9 @@ describe('cortex_add_memory tool', () => {
         const getResult = await getMemoryHandler(
             { config },
             {
+                store: 'default',
                 path: 'project/expiring-memory',
-            },
+            }
         );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.expires_at).toBeDefined();
@@ -156,6 +157,7 @@ describe('cortex_add_memory tool', () => {
 
     it('should reject invalid paths', async () => {
         const input: AddMemoryInput = {
+            store: 'default',
             path: 'invalid', // Missing category
             content: 'Content',
         };
@@ -193,6 +195,7 @@ describe('cortex_get_memory tool', () => {
 
     it('should retrieve a memory', async () => {
         const input: GetMemoryInput = {
+            store: 'default',
             path: 'project/existing-memory',
         };
 
@@ -207,6 +210,7 @@ describe('cortex_get_memory tool', () => {
 
     it('should return error for non-existent memory', async () => {
         const input: GetMemoryInput = {
+            store: 'default',
             path: 'project/non-existent',
         };
 
@@ -227,6 +231,7 @@ describe('cortex_get_memory tool', () => {
         });
 
         const input: GetMemoryInput = {
+            store: 'default',
             path: 'project/expired-memory',
         };
 
@@ -247,6 +252,7 @@ describe('cortex_get_memory tool', () => {
         });
 
         const input: GetMemoryInput = {
+            store: 'default',
             path: 'project/expired-memory-2',
             include_expired: true,
         };
@@ -285,6 +291,7 @@ describe('cortex_update_memory tool', () => {
 
     it('should update memory content', async () => {
         const input: UpdateMemoryInput = {
+            store: 'default',
             path: 'project/update-target',
             content: 'Updated content',
         };
@@ -293,20 +300,27 @@ describe('cortex_update_memory tool', () => {
         expect(result.content[0]!.text).toContain('Memory updated');
 
         // Verify
-        const getResult = await getMemoryHandler({ config }, { path: 'project/update-target' });
+        const getResult = await getMemoryHandler(
+            { config },
+            { store: 'default', path: 'project/update-target' }
+        );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.content).toBe('Updated content');
     });
 
     it('should update memory tags', async () => {
         const input: UpdateMemoryInput = {
+            store: 'default',
             path: 'project/update-target',
             tags: ['new-tag'],
         };
 
         await updateMemoryHandler({ config }, input);
 
-        const getResult = await getMemoryHandler({ config }, { path: 'project/update-target' });
+        const getResult = await getMemoryHandler(
+            { config },
+            { store: 'default', path: 'project/update-target' }
+        );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.tags).toEqual(['new-tag']);
     });
@@ -314,13 +328,17 @@ describe('cortex_update_memory tool', () => {
     it('should update expiry', async () => {
         const futureDate = new Date(Date.now() + 86400000).toISOString();
         const input: UpdateMemoryInput = {
+            store: 'default',
             path: 'project/update-target',
             expires_at: futureDate,
         };
 
         await updateMemoryHandler({ config }, input);
 
-        const getResult = await getMemoryHandler({ config }, { path: 'project/update-target' });
+        const getResult = await getMemoryHandler(
+            { config },
+            { store: 'default', path: 'project/update-target' }
+        );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.expires_at).toBeDefined();
     });
@@ -340,19 +358,24 @@ describe('cortex_update_memory tool', () => {
         });
 
         const input: UpdateMemoryInput = {
+            store: 'default',
             path: 'project/with-expiry',
             clear_expiry: true,
         };
 
         await updateMemoryHandler({ config }, input);
 
-        const getResult = await getMemoryHandler({ config }, { path: 'project/with-expiry' });
+        const getResult = await getMemoryHandler(
+            { config },
+            { store: 'default', path: 'project/with-expiry' }
+        );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.expires_at).toBeUndefined();
     });
 
     it('should reject update with no changes', async () => {
         const input: UpdateMemoryInput = {
+            store: 'default',
             path: 'project/update-target',
         };
 
@@ -361,6 +384,7 @@ describe('cortex_update_memory tool', () => {
 
     it('should return error for non-existent memory', async () => {
         const input: UpdateMemoryInput = {
+            store: 'default',
             path: 'project/non-existent',
             content: 'New content',
         };
@@ -397,6 +421,7 @@ describe('cortex_remove_memory tool', () => {
 
     it('should remove a memory', async () => {
         const input: RemoveMemoryInput = {
+            store: 'default',
             path: 'project/remove-target',
         };
 
@@ -405,12 +430,13 @@ describe('cortex_remove_memory tool', () => {
 
         // Verify it's gone
         await expect(
-            getMemoryHandler({ config }, { path: 'project/remove-target' }),
+            getMemoryHandler({ config }, { store: 'default', path: 'project/remove-target' })
         ).rejects.toThrow('not found');
     });
 
     it('should return error for non-existent memory', async () => {
         const input: RemoveMemoryInput = {
+            store: 'default',
             path: 'project/non-existent',
         };
 
@@ -446,6 +472,7 @@ describe('cortex_move_memory tool', () => {
 
     it('should move a memory', async () => {
         const input: MoveMemoryInput = {
+            store: 'default',
             from_path: 'project/move-source',
             to_path: 'project/move-destination',
         };
@@ -454,18 +481,22 @@ describe('cortex_move_memory tool', () => {
         expect(result.content[0]!.text).toContain('Memory moved');
 
         // Verify source is gone
-        await expect(getMemoryHandler({ config }, { path: 'project/move-source' })).rejects.toThrow(
-            'not found',
-        );
+        await expect(
+            getMemoryHandler({ config }, { store: 'default', path: 'project/move-source' })
+        ).rejects.toThrow('not found');
 
         // Verify destination exists
-        const getResult = await getMemoryHandler({ config }, { path: 'project/move-destination' });
+        const getResult = await getMemoryHandler(
+            { config },
+            { store: 'default', path: 'project/move-destination' }
+        );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.content).toBe('Content to move');
     });
 
     it('should return error for non-existent source', async () => {
         const input: MoveMemoryInput = {
+            store: 'default',
             from_path: 'project/non-existent',
             to_path: 'project/destination',
         };
@@ -487,6 +518,7 @@ describe('cortex_move_memory tool', () => {
         });
 
         const input: MoveMemoryInput = {
+            store: 'default',
             from_path: 'project/move-source',
             to_path: 'project/existing-destination',
         };
@@ -544,6 +576,7 @@ describe('cortex_list_memories tool', () => {
 
     it('should list memories in a category', async () => {
         const input: ListMemoriesInput = {
+            store: 'default',
             category: 'project',
         };
 
@@ -556,7 +589,9 @@ describe('cortex_list_memories tool', () => {
     });
 
     it('should list all memories when no category specified', async () => {
-        const input: ListMemoriesInput = {};
+        const input: ListMemoriesInput = {
+            store: 'default',
+        };
 
         const result = await listMemoriesHandler({ config }, input);
         const output = JSON.parse(result.content[0]!.text);
@@ -579,6 +614,7 @@ describe('cortex_list_memories tool', () => {
         });
 
         const input: ListMemoriesInput = {
+            store: 'default',
             category: 'project',
         };
 
@@ -603,6 +639,7 @@ describe('cortex_list_memories tool', () => {
         });
 
         const input: ListMemoriesInput = {
+            store: 'default',
             category: 'project',
             include_expired: true,
         };
@@ -633,6 +670,7 @@ describe('cortex_list_memories tool', () => {
         }
 
         const input: ListMemoriesInput = {
+            store: 'default',
             category: 'project',
         };
 
@@ -643,13 +681,13 @@ describe('cortex_list_memories tool', () => {
         expect(output.subcategories).toHaveLength(2);
 
         const cortexSubcat = output.subcategories.find(
-            (s: { path: string }) => s.path === 'project/cortex',
+            (s: { path: string }) => s.path === 'project/cortex'
         );
         expect(cortexSubcat).toBeDefined();
         expect(cortexSubcat.description).toBe('Cortex memory system');
 
         const otherSubcat = output.subcategories.find(
-            (s: { path: string }) => s.path === 'project/other',
+            (s: { path: string }) => s.path === 'project/other'
         );
         expect(otherSubcat).toBeDefined();
         expect(otherSubcat.description).toBeUndefined();
@@ -706,7 +744,9 @@ describe('cortex_prune_memories tool', () => {
     });
 
     it('should prune expired memories', async () => {
-        const input: PruneMemoriesInput = {};
+        const input: PruneMemoriesInput = {
+            store: 'default',
+        };
 
         const result = await pruneMemoriesHandler({ config }, input);
         const output = JSON.parse(result.content[0]!.text);
@@ -715,13 +755,16 @@ describe('cortex_prune_memories tool', () => {
         expect(output.pruned).toHaveLength(2);
 
         // Verify active memory still exists
-        const getResult = await getMemoryHandler({ config }, { path: 'project/active' });
+        const getResult = await getMemoryHandler(
+            { config },
+            { store: 'default', path: 'project/active' }
+        );
         expect(getResult.content[0]!.text).toContain('Active memory');
 
         // Verify expired memories are gone
-        await expect(getMemoryHandler({ config }, { path: 'project/expired-1' })).rejects.toThrow(
-            'not found',
-        );
+        await expect(
+            getMemoryHandler({ config }, { store: 'default', path: 'project/expired-1' })
+        ).rejects.toThrow('not found');
     });
 
     it('should return zero when no memories are expired', async () => {
@@ -750,7 +793,7 @@ describe('cortex_prune_memories tool', () => {
     });
 });
 
-describe('default store parameter', () => {
+describe('explicit store parameter', () => {
     let testDir: string;
     let config: ServerConfig;
 
@@ -764,9 +807,10 @@ describe('default store parameter', () => {
         await rm(testDir, { recursive: true, force: true });
     });
 
-    it('should use configured default store when store param is omitted', async () => {
-        // Create memory without specifying store
+    it('should use explicit store from input', async () => {
+        // Create memory with explicit store
         const addInput: AddMemoryInput = {
+            store: 'my-default-store',
             path: 'project/test',
             content: 'Test',
         };

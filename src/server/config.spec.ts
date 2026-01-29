@@ -33,7 +33,7 @@ describe('server config loading', () => {
                 expect(result.value.dataPath).toBe(expectedDefaultDataPath);
                 expect(result.value.port).toBe(3000);
                 expect(result.value.host).toBe('0.0.0.0');
-                expect(result.value.defaultStore).toBe('global');
+                expect(result.value.defaultStore).toBe('default');
                 expect(result.value.logLevel).toBe('info');
                 expect(result.value.outputFormat).toBe('yaml');
                 expect(result.value.autoSummaryThreshold).toBe(500);
@@ -439,7 +439,7 @@ describe('serverConfigSchema', () => {
             expect(result.data.dataPath).toBe(expectedDefaultDataPath);
             expect(result.data.port).toBe(3000);
             expect(result.data.host).toBe('0.0.0.0');
-            expect(result.data.defaultStore).toBe('global');
+            expect(result.data.defaultStore).toBe('default');
             expect(result.data.logLevel).toBe('info');
             expect(result.data.outputFormat).toBe('yaml');
             expect(result.data.autoSummaryThreshold).toBe(500);

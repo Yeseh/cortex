@@ -35,8 +35,8 @@ import { getMemoryPath } from '../config.ts';
 // Schemas
 // ---------------------------------------------------------------------------
 
-/** Schema for optional store name parameter */
-const storeNameSchema = z.string().optional();
+/** Schema for required store name parameter */
+const storeNameSchema = z.string().min(1, 'Store name is required');
 
 /** Schema for required category path parameter */
 const categoryPathSchema = z.string().min(1, 'Category path is required');
@@ -47,13 +47,13 @@ const categoryPathSchema = z.string().min(1, 'Category path is required');
  * @example
  * ```json
  * {
- *   "store": "global",
+ *   "store": "default",
  *   "path": "project/cortex"
  * }
  * ```
  */
 export const createCategoryInputSchema = z.object({
-    store: storeNameSchema.describe('Store name (uses default if omitted)'),
+    store: storeNameSchema.describe('Store name (required)'),
     path: categoryPathSchema.describe('Category path (e.g., "project/cortex")'),
 });
 
@@ -63,20 +63,20 @@ export const createCategoryInputSchema = z.object({
  * @example
  * ```json
  * {
- *   "store": "global",
+ *   "store": "default",
  *   "path": "project/cortex",
  *   "description": "Memory system for AI agents"
  * }
  * ```
  */
 export const setCategoryDescriptionInputSchema = z.object({
-    store: storeNameSchema.describe('Store name (uses default if omitted)'),
+    store: storeNameSchema.describe('Store name (required)'),
     path: categoryPathSchema.describe('Category path (e.g., "project/cortex")'),
     description: z
         .string()
         .max(
             MAX_DESCRIPTION_LENGTH,
-            `Description must be ${MAX_DESCRIPTION_LENGTH} characters or less`,
+            `Description must be ${MAX_DESCRIPTION_LENGTH} characters or less`
         )
         .describe('Category description (empty string to clear)'),
 });
@@ -87,13 +87,13 @@ export const setCategoryDescriptionInputSchema = z.object({
  * @example
  * ```json
  * {
- *   "store": "global",
+ *   "store": "default",
  *   "path": "project/old-project"
  * }
  * ```
  */
 export const deleteCategoryInputSchema = z.object({
-    store: storeNameSchema.describe('Store name (uses default if omitted)'),
+    store: storeNameSchema.describe('Store name (required)'),
     path: categoryPathSchema.describe('Category path to delete'),
 });
 
@@ -103,16 +103,16 @@ export const deleteCategoryInputSchema = z.object({
 
 /** Input type for the createCategoryHandler */
 export interface CreateCategoryInput {
-    /** Store name (uses server default if omitted) */
-    store?: string;
+    /** Store name (required) */
+    store: string;
     /** Category path to create (e.g., "project/cortex") */
     path: string;
 }
 
 /** Input type for the setCategoryDescriptionHandler */
 export interface SetCategoryDescriptionInput {
-    /** Store name (uses server default if omitted) */
-    store?: string;
+    /** Store name (required) */
+    store: string;
     /** Category path to update (e.g., "project/cortex") */
     path: string;
     /** Description text (empty string to clear) */
@@ -121,8 +121,8 @@ export interface SetCategoryDescriptionInput {
 
 /** Input type for the deleteCategoryHandler */
 export interface DeleteCategoryInput {
-    /** Store name (uses server default if omitted) */
-    store?: string;
+    /** Store name (required) */
+    store: string;
     /** Category path to delete (e.g., "project/old-project") */
     path: string;
 }
@@ -150,30 +150,30 @@ const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 /**
  * Resolves the store root directory from configuration.
  *
- * Uses the provided store name or falls back to the server's default store.
  * Optionally creates the store directory if it doesn't exist.
  *
  * @param config - Server configuration
- * @param storeName - Optional store name override
+ * @param storeName - Required store name
  * @param autoCreate - If true, creates the store directory if missing
  * @returns Result with the resolved store root path or MCP error
  */
 const resolveStoreRoot = async (
     config: ServerConfig,
-    storeName: string | undefined,
-    autoCreate: boolean,
+    storeName: string,
+    autoCreate: boolean
 ): Promise<Result<string, McpError>> => {
-    const store = storeName ?? config.defaultStore;
     const memoryPath = getMemoryPath(config);
-    const storeRoot = resolve(memoryPath, store);
+    const storeRoot = resolve(memoryPath, storeName);
 
     if (autoCreate) {
         try {
             await mkdir(storeRoot, { recursive: true });
-        }
-        catch {
+        } catch {
             return err(
-                new McpError(ErrorCode.InternalError, `Failed to create store directory: ${store}`),
+                new McpError(
+                    ErrorCode.InternalError,
+                    `Failed to create store directory: ${storeName}`
+                )
             );
         }
     }
@@ -204,7 +204,7 @@ const createCategoryStoragePort = (storeRoot: string): CategoryStorage => {
         updateSubcategoryDescription: (
             parentPath: string,
             subcategoryPath: string,
-            description: string | null,
+            description: string | null
         ) => adapter.updateSubcategoryDescription(parentPath, subcategoryPath, description),
         removeSubcategoryEntry: (parentPath: string, subcategoryPath: string) =>
             adapter.removeSubcategoryEntry(parentPath, subcategoryPath),
@@ -257,7 +257,7 @@ const parseInput = <T>(schema: z.ZodSchema<T>, input: unknown): T => {
  */
 export const createCategoryHandler = async (
     ctx: ToolContext,
-    input: CreateCategoryInput,
+    input: CreateCategoryInput
 ): Promise<McpToolResponse> => {
     const storeRoot = await resolveStoreRoot(ctx.config, input.store, true);
     if (!storeRoot.ok) {
@@ -275,13 +275,15 @@ export const createCategoryHandler = async (
     }
 
     return {
-        content: [{
-            type: 'text',
-            text: JSON.stringify({
-                path: result.value.path,
-                created: result.value.created,
-            }),
-        }],
+        content: [
+            {
+                type: 'text',
+                text: JSON.stringify({
+                    path: result.value.path,
+                    created: result.value.created,
+                }),
+            },
+        ],
     };
 };
 
@@ -314,7 +316,7 @@ export const createCategoryHandler = async (
  */
 export const setCategoryDescriptionHandler = async (
     ctx: ToolContext,
-    input: SetCategoryDescriptionInput,
+    input: SetCategoryDescriptionInput
 ): Promise<McpToolResponse> => {
     const storeRoot = await resolveStoreRoot(ctx.config, input.store, true);
     if (!storeRoot.ok) {
@@ -345,13 +347,15 @@ export const setCategoryDescriptionHandler = async (
     }
 
     return {
-        content: [{
-            type: 'text',
-            text: JSON.stringify({
-                path: result.value.path,
-                description: result.value.description,
-            }),
-        }],
+        content: [
+            {
+                type: 'text',
+                text: JSON.stringify({
+                    path: result.value.path,
+                    description: result.value.description,
+                }),
+            },
+        ],
     };
 };
 
@@ -380,7 +384,7 @@ export const setCategoryDescriptionHandler = async (
  */
 export const deleteCategoryHandler = async (
     ctx: ToolContext,
-    input: DeleteCategoryInput,
+    input: DeleteCategoryInput
 ): Promise<McpToolResponse> => {
     const storeRoot = await resolveStoreRoot(ctx.config, input.store, false);
     if (!storeRoot.ok) {
@@ -401,13 +405,15 @@ export const deleteCategoryHandler = async (
     }
 
     return {
-        content: [{
-            type: 'text',
-            text: JSON.stringify({
-                path: result.value.path,
-                deleted: result.value.deleted,
-            }),
-        }],
+        content: [
+            {
+                type: 'text',
+                text: JSON.stringify({
+                    path: result.value.path,
+                    deleted: result.value.deleted,
+                }),
+            },
+        ],
     };
 };
 
@@ -448,7 +454,7 @@ export const registerCategoryTools = (server: McpServer, config: ServerConfig): 
         async (input) => {
             const parsed = parseInput(createCategoryInputSchema, input);
             return createCategoryHandler(ctx, parsed);
-        },
+        }
     );
 
     server.tool(
@@ -458,7 +464,7 @@ export const registerCategoryTools = (server: McpServer, config: ServerConfig): 
         async (input) => {
             const parsed = parseInput(setCategoryDescriptionInputSchema, input);
             return setCategoryDescriptionHandler(ctx, parsed);
-        },
+        }
     );
 
     server.tool(
@@ -468,6 +474,6 @@ export const registerCategoryTools = (server: McpServer, config: ServerConfig): 
         async (input) => {
             const parsed = parseInput(deleteCategoryInputSchema, input);
             return deleteCategoryHandler(ctx, parsed);
-        },
+        }
     );
 };

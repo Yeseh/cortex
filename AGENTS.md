@@ -21,3 +21,9 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 ## Using memory
 
 When interacting with the memory system use `projects/cortex` as the default category path to store and read memories from.
+
+### Categories of note
+- `global/human/identity`: Use this category to store user identity information
+- `global/human/coding-preferences`: Use this category to store user coding preferences
+- `projects/cortex/standards`: Use this category for architectural decisions 
+- `projects/cortex/decisions`: Use this category for recording specific decisions made during development

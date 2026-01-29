@@ -4,7 +4,7 @@
  * Creates the global config store at ~/.config/cortex/ with:
  * - config.yaml: Global configuration with default settings
  * - stores.yaml: Store registry with a 'default' store pointing to the memory directory
- * - memory/: Default global store with 'global' and 'projects' categories
+ * - memory/: Default store with 'global' and 'projects' categories
  */
 
 import { mkdir, writeFile, stat } from 'node:fs/promises';
@@ -42,9 +42,7 @@ const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
  * - 'global': For memories that apply across all projects
  * - 'projects': For project-specific memories
  */
-const DEFAULT_CATEGORIES = [
-    'global', 'projects',
-] as const;
+const DEFAULT_CATEGORIES = ['global', 'projects'] as const;
 
 /**
  * Default configuration content written to config.yaml.
@@ -64,7 +62,7 @@ const formatInit = (path: string, categories: readonly string[]): OutputInit => 
 });
 
 const buildEmptyRootIndex = (
-    subcategories: readonly string[],
+    subcategories: readonly string[]
 ): Result<string, InitCommandError> => {
     const serialized = serializeIndex({
         memories: [],
@@ -99,8 +97,7 @@ const pathExists = async (path: string): Promise<boolean> => {
     try {
         await stat(path);
         return true;
-    }
-    catch {
+    } catch {
         return false;
     }
 };
@@ -189,8 +186,7 @@ export const runInitCommand = async (options: InitCommandOptions): Promise<InitR
             return rootIndex;
         }
         await writeFile(indexPath, rootIndex.value, 'utf8');
-    }
-    catch (error) {
+    } catch (error) {
         return err({
             code: 'INIT_FAILED',
             message: `Failed to initialize global config store at ${globalStorePath}.`,

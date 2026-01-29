@@ -55,12 +55,7 @@ export const SERVER_VERSION = '1.0.0';
  * - `warn` - Warning conditions that should be reviewed
  * - `error` - Error conditions that need attention
  */
-export const logLevelSchema = z.enum([
-    'debug',
-    'info',
-    'warn',
-    'error',
-]);
+export const logLevelSchema = z.enum(['debug', 'info', 'warn', 'error']);
 
 /** Log verbosity level */
 export type LogLevel = z.infer<typeof logLevelSchema>;
@@ -71,11 +66,7 @@ export type LogLevel = z.infer<typeof logLevelSchema>;
  * - `json` - Machine-readable JSON format
  * - `toon` - Token-optimized format for LLM consumption (~40% token reduction)
  */
-export const outputFormatSchema = z.enum([
-    'yaml',
-    'json',
-    'toon',
-]);
+export const outputFormatSchema = z.enum(['yaml', 'json', 'toon']);
 
 /** Output format type */
 export type OutputFormat = z.infer<typeof outputFormatSchema>;
@@ -87,7 +78,7 @@ export type OutputFormat = z.infer<typeof outputFormatSchema>;
  * - `dataPath` ← `CORTEX_DATA_PATH` - Base cortex config directory (default: "~/.config/cortex/")
  * - `port` ← `CORTEX_PORT` - HTTP server port (default: 3000)
  * - `host` ← `CORTEX_HOST` - Network interface to bind (default: "0.0.0.0")
- * - `defaultStore` ← `CORTEX_DEFAULT_STORE` - Default memory store name (default: "global")
+ * - `defaultStore` ← `CORTEX_DEFAULT_STORE` - Default memory store name (default: "default")
  * - `logLevel` ← `CORTEX_LOG_LEVEL` - Logging verbosity (default: "info")
  * - `outputFormat` ← `CORTEX_OUTPUT_FORMAT` - Response format (default: "yaml")
  * - `autoSummaryThreshold` ← `CORTEX_AUTO_SUMMARY_THRESHOLD` - Token count triggering auto-summary (default: 500)
@@ -106,7 +97,7 @@ export const createServerConfigSchema = () =>
         /** Network interface to bind (use "127.0.0.1" for local-only access) */
         host: z.string().default('0.0.0.0'),
         /** Name of the default memory store (aligns with global config convention) */
-        defaultStore: z.string().default('global'),
+        defaultStore: z.string().default('default'),
         /** Logging verbosity level */
         logLevel: logLevelSchema.default('info'),
         /** Output format for responses */
@@ -174,7 +165,7 @@ export interface ConfigLoadError {
  * | `CORTEX_DATA_PATH` | `dataPath` | "~/.config/cortex/" |
  * | `CORTEX_PORT` | `port` | 3000 |
  * | `CORTEX_HOST` | `host` | "0.0.0.0" |
- * | `CORTEX_DEFAULT_STORE` | `defaultStore` | "global" |
+ * | `CORTEX_DEFAULT_STORE` | `defaultStore` | "default" |
  * | `CORTEX_LOG_LEVEL` | `logLevel` | "info" |
  * | `CORTEX_OUTPUT_FORMAT` | `outputFormat` | "yaml" |
  * | `CORTEX_AUTO_SUMMARY_THRESHOLD` | `autoSummaryThreshold` | 500 |
