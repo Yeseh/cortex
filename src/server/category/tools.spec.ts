@@ -88,7 +88,7 @@ describe('cortex_create_category tool', () => {
         const input = { store: 'default', path: '' };
 
         await expect(
-            createCategoryHandler({ config }, input as CreateCategoryInput)
+            createCategoryHandler({ config }, input as CreateCategoryInput),
         ).rejects.toThrow();
     });
 });
@@ -127,7 +127,7 @@ describe('cortex_set_category_description tool', () => {
         };
 
         await expect(setCategoryDescriptionHandler({ config }, input)).rejects.toThrow(
-            /root category/i
+            /root category/i,
         );
     });
 
@@ -139,7 +139,7 @@ describe('cortex_set_category_description tool', () => {
                 store: 'default',
                 path: 'project/cortex',
                 description: 'Initial',
-            }
+            },
         );
 
         // Then clear it
@@ -149,7 +149,7 @@ describe('cortex_set_category_description tool', () => {
                 store: 'default',
                 path: 'project/cortex',
                 description: '',
-            }
+            },
         );
         const output = JSON.parse(result.content[0]!.text);
 

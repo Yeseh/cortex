@@ -30,13 +30,11 @@ import {
 } from '../../core/category/index.ts';
 import { loadStoreRegistry, resolveStorePath } from '../../core/store/registry.ts';
 import type { ServerConfig } from '../config.ts';
+import { storeNameSchema } from '../store/tools.ts';
 
 // ---------------------------------------------------------------------------
 // Schemas
 // ---------------------------------------------------------------------------
-
-/** Schema for required store name parameter */
-const storeNameSchema = z.string().min(1, 'Store name is required');
 
 /** Schema for required category path parameter */
 const categoryPathSchema = z.string().min(1, 'Category path is required');

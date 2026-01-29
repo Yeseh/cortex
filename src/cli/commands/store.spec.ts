@@ -159,7 +159,11 @@ describe('store CLI commands', () => {
     });
 
     it('should initialize a store in the default path', async () => {
-        const result = await runStoreCommand(buildOptions(['init', '--name', 'test-store']));
+        const result = await runStoreCommand(buildOptions([
+            'init',
+            '--name',
+            'test-store',
+        ]));
 
         expect(result.ok).toBe(true);
         if (!result.ok) {
@@ -184,9 +188,12 @@ describe('store CLI commands', () => {
     });
 
     it('should initialize a store at the provided path', async () => {
-        const result = await runStoreCommand(
-            buildOptions(['init', '--name', 'custom-store', 'custom-store'])
-        );
+        const result = await runStoreCommand(buildOptions([
+            'init',
+            'custom-store',
+            '--name',
+            'custom-store',
+        ]));
 
         expect(result.ok).toBe(true);
         if (!result.ok) {

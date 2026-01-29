@@ -97,3 +97,25 @@ export const serializeMemoryFile = (contents: MemoryFileContents): Result<string
     };
     return serializeMemory(memory);
 };
+
+// Operations
+export {
+    createMemory,
+    getMemory,
+    updateMemory,
+    moveMemory,
+    removeMemory,
+    listMemories,
+    pruneExpiredMemories,
+    type CreateMemoryInput,
+    type UpdateMemoryInput,
+    type GetMemoryOptions,
+    type ListMemoriesOptions,
+    type PruneOptions,
+    type ListedMemory,
+    type ListedSubcategory,
+    type ListMemoriesResult,
+    type PrunedMemory,
+    type PruneResult,
+} from './operations.ts';
+

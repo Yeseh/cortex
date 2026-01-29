@@ -141,7 +141,7 @@ describe('categories module', () => {
                 ctx,
                 'parent',
                 'parent/child',
-                'Test description'
+                'Test description',
             );
 
             expect(result.ok).toBe(true);
@@ -166,7 +166,7 @@ describe('categories module', () => {
                 ctx,
                 'parent2',
                 'parent2/child',
-                'New description'
+                'New description',
             );
 
             expect(result.ok).toBe(true);
@@ -191,7 +191,7 @@ describe('categories module', () => {
                 ctx,
                 'parent3',
                 'parent3/child',
-                null
+                null,
             );
 
             expect(result.ok).toBe(true);
@@ -205,7 +205,7 @@ describe('categories module', () => {
                 ctx,
                 '',
                 'top-level',
-                'Root level category'
+                'Root level category',
             );
 
             expect(result.ok).toBe(true);

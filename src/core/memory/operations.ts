@@ -1,0 +1,865 @@
+/**
+ * Memory CRUD operations.
+ *
+ * This module provides business logic operations for memory management,
+ * abstracting away direct storage operations through the ComposedStorageAdapter.
+ *
+ * @module core/memory/operations
+ */
+
+import type { Result } from '../types.ts';
+import type { ComposedStorageAdapter } from '../storage/adapter.ts';
+import type { MemoryError, MemoryErrorCode } from './types.ts';
+import type { MemoryFileContents } from './index.ts';
+import type { CategoryIndex } from '../index/types.ts';
+import { parseMemoryFile, serializeMemoryFile } from './index.ts';
+import { validateMemorySlugPath } from './validation.ts';
+import { parseIndex } from '../serialization.ts';
+import { isExpired } from './expiration.ts';
+import { ROOT_CATEGORIES } from '../category/types.ts';
+
+// ============================================================================
+// Input Types
+// ============================================================================
+
+/** Input for creating a new memory */
+export interface CreateMemoryInput {
+    /** Memory content (markdown) */
+    content: string;
+    /** Tags for categorization */
+    tags?: string[];
+    /** Source identifier (e.g., "cli", "mcp", "user") */
+    source: string;
+    /** Optional expiration timestamp */
+    expiresAt?: Date;
+}
+
+/** Input for updating an existing memory */
+export interface UpdateMemoryInput {
+    /** New content (undefined = keep existing) */
+    content?: string;
+    /** New tags (undefined = keep existing) */
+    tags?: string[];
+    /** New expiration (undefined = keep existing) */
+    expiresAt?: Date;
+    /** If true, removes expiration */
+    clearExpiry?: boolean;
+}
+
+/** Options for retrieving a memory */
+export interface GetMemoryOptions {
+    /** Include expired memories (default: false) */
+    includeExpired?: boolean;
+    /** Current time for expiration check */
+    now?: Date;
+}
+
+/** Options for listing memories */
+export interface ListMemoriesOptions {
+    /** Category to list (undefined = all root categories) */
+    category?: string;
+    /** Include expired memories (default: false) */
+    includeExpired?: boolean;
+    /** Current time for expiration check */
+    now?: Date;
+}
+
+/** Options for pruning expired memories */
+export interface PruneOptions {
+    /** If true, return what would be pruned without deleting */
+    dryRun?: boolean;
+    /** Current time for expiration check */
+    now?: Date;
+}
+
+// ============================================================================
+// Result Types
+// ============================================================================
+
+/** A memory entry in list results */
+export interface ListedMemory {
+    /** Full path to the memory */
+    path: string;
+    /** Estimated token count */
+    tokenEstimate: number;
+    /** Brief summary if available */
+    summary?: string;
+    /** Expiration timestamp if set */
+    expiresAt?: Date;
+    /** Whether the memory is currently expired */
+    isExpired: boolean;
+}
+
+/** A subcategory entry in list results */
+export interface ListedSubcategory {
+    /** Full path to the subcategory */
+    path: string;
+    /** Total memories in this subcategory */
+    memoryCount: number;
+    /** Category description if set */
+    description?: string;
+}
+
+/** Result of listing memories */
+export interface ListMemoriesResult {
+    /** Category that was listed (empty string for root) */
+    category: string;
+    /** Memories found */
+    memories: ListedMemory[];
+    /** Direct subcategories */
+    subcategories: ListedSubcategory[];
+}
+
+/** A pruned memory entry */
+export interface PrunedMemory {
+    /** Path of the pruned memory */
+    path: string;
+    /** When it expired */
+    expiresAt: Date;
+}
+
+/** Result of prune operation */
+export interface PruneResult {
+    /** Memories that were (or would be) pruned */
+    pruned: PrunedMemory[];
+}
+
+// ============================================================================
+// Helper Functions (internal)
+// ============================================================================
+
+/**
+ * Creates a MemoryError with the given code and message.
+ */
+const memoryError = (
+    code: MemoryErrorCode,
+    message: string,
+    extras?: Partial<MemoryError>,
+): MemoryError => ({
+    code,
+    message,
+    ...extras,
+});
+
+/**
+ * Creates a successful Result.
+ */
+const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
+
+/**
+ * Creates a failed Result.
+ */
+const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
+
+/**
+ * Reads and parses a category index.
+ */
+const readCategoryIndex = async (
+    storage: ComposedStorageAdapter,
+    categoryPath: string,
+): Promise<Result<CategoryIndex | null, MemoryError>> => {
+    const result = await storage.indexes.read(categoryPath);
+    if (!result.ok) {
+        return err(
+            memoryError('STORAGE_ERROR', `Failed to read index: ${categoryPath}`, {
+                cause: result.error,
+            }),
+        );
+    }
+    if (!result.value) {
+        return ok(null);
+    }
+    const parsed = parseIndex(result.value);
+    if (!parsed.ok) {
+        return err(
+            memoryError('STORAGE_ERROR', `Failed to parse index: ${categoryPath}`, {
+                cause: parsed.error,
+            }),
+        );
+    }
+    return ok(parsed.value);
+};
+
+/**
+ * Collects memories recursively from a category.
+ */
+const collectMemoriesFromCategory = async (
+    storage: ComposedStorageAdapter,
+    categoryPath: string,
+    includeExpired: boolean,
+    now: Date,
+    visited: Set<string>,
+): Promise<Result<ListedMemory[], MemoryError>> => {
+    // Prevent cycles
+    if (visited.has(categoryPath)) return ok([]);
+    visited.add(categoryPath);
+
+    // Read index
+    const indexResult = await readCategoryIndex(storage, categoryPath);
+    if (!indexResult.ok) {
+        return indexResult;
+    }
+
+    const index = indexResult.value;
+    if (!index) {
+        return ok([]);
+    }
+
+    const memories: ListedMemory[] = [];
+
+    // Process memories in this category
+    for (const entry of index.memories) {
+        const readResult = await storage.memories.read(entry.path);
+        if (!readResult.ok) {
+            // Skip memories that can't be read
+            continue;
+        }
+        if (!readResult.value) {
+            // Memory file doesn't exist
+            continue;
+        }
+
+        const parsed = parseMemoryFile(readResult.value);
+        if (!parsed.ok) {
+            // Skip memories that can't be parsed
+            continue;
+        }
+
+        const memoryExpired = isExpired(parsed.value.frontmatter.expiresAt, now);
+
+        // Filter based on includeExpired
+        if (!includeExpired && memoryExpired) {
+            continue;
+        }
+
+        memories.push({
+            path: entry.path,
+            tokenEstimate: entry.tokenEstimate,
+            summary: entry.summary,
+            expiresAt: parsed.value.frontmatter.expiresAt,
+            isExpired: memoryExpired,
+        });
+    }
+
+    // Recurse into subcategories
+    for (const subcategory of index.subcategories) {
+        const subResult = await collectMemoriesFromCategory(
+            storage,
+            subcategory.path,
+            includeExpired,
+            now,
+            visited,
+        );
+        if (subResult.ok) {
+            memories.push(...subResult.value);
+        }
+    }
+
+    return ok(memories);
+};
+
+/**
+ * Collects direct subcategories from a category.
+ */
+const collectDirectSubcategories = async (
+    storage: ComposedStorageAdapter,
+    categoryPath: string,
+): Promise<Result<ListedSubcategory[], MemoryError>> => {
+    const indexResult = await readCategoryIndex(storage, categoryPath);
+    if (!indexResult.ok) {
+        return indexResult;
+    }
+
+    const index = indexResult.value;
+    if (!index) {
+        return ok([]);
+    }
+
+    return ok(
+        index.subcategories.map((s) => ({
+            path: s.path,
+            memoryCount: s.memoryCount,
+            description: s.description,
+        })),
+    );
+};
+
+/**
+ * Extracts the category path from a slug path.
+ */
+const getCategoryFromSlugPath = (slugPath: string): string => {
+    const parts = slugPath.split('/');
+    return parts.slice(0, -1).join('/');
+};
+
+// ============================================================================
+// Operations
+// ============================================================================
+
+/**
+ * Creates a new memory at the specified path.
+ * Auto-creates parent categories as needed.
+ *
+ * @param storage - The composed storage adapter
+ * @param slugPath - Memory path (e.g., "project/cortex/config")
+ * @param input - Memory creation input
+ * @param now - Current time (defaults to new Date())
+ * @returns Result indicating success or failure with MemoryError
+ */
+export const createMemory = async (
+    storage: ComposedStorageAdapter,
+    slugPath: string,
+    input: CreateMemoryInput,
+    now?: Date,
+): Promise<Result<void, MemoryError>> => {
+    // 1. Validate path
+    const pathResult = validateMemorySlugPath(slugPath);
+    if (!pathResult.ok) {
+        return err(
+            memoryError('INVALID_PATH', pathResult.error.message, {
+                path: slugPath,
+            }),
+        );
+    }
+
+    // 2. Build MemoryFileContents
+    const timestamp = now ?? new Date();
+    const contents: MemoryFileContents = {
+        frontmatter: {
+            createdAt: timestamp,
+            updatedAt: timestamp,
+            tags: input.tags ?? [],
+            source: input.source,
+            expiresAt: input.expiresAt,
+        },
+        content: input.content,
+    };
+
+    // 3. Serialize
+    const serializeResult = serializeMemoryFile(contents);
+    if (!serializeResult.ok) {
+        return err(
+            memoryError('STORAGE_ERROR', 'Failed to serialize memory', {
+                cause: serializeResult.error,
+            }),
+        );
+    }
+
+    // 4. Write using storage.memories.write()
+    const writeResult = await storage.memories.write(slugPath, serializeResult.value);
+    if (!writeResult.ok) {
+        return err(
+            memoryError('STORAGE_ERROR', `Failed to write memory: ${slugPath}`, {
+                path: slugPath,
+                cause: writeResult.error,
+            }),
+        );
+    }
+
+    // 5. Update indexes
+    const indexResult = await storage.indexes.updateAfterMemoryWrite(
+        slugPath,
+        serializeResult.value,
+    );
+    if (!indexResult.ok) {
+        return err(
+            memoryError('STORAGE_ERROR', 'Failed to update indexes', {
+                cause: indexResult.error,
+            }),
+        );
+    }
+
+    return ok(undefined);
+};
+
+/**
+ * Retrieves a memory with optional expiration filtering.
+ *
+ * @param storage - The composed storage adapter
+ * @param slugPath - Memory path (e.g., "project/cortex/config")
+ * @param options - Retrieval options (includeExpired, now)
+ * @returns Result containing MemoryFileContents or MemoryError
+ */
+export const getMemory = async (
+    storage: ComposedStorageAdapter,
+    slugPath: string,
+    options?: GetMemoryOptions,
+): Promise<Result<MemoryFileContents, MemoryError>> => {
+    // 1. Validate path
+    const pathResult = validateMemorySlugPath(slugPath);
+    if (!pathResult.ok) {
+        return err(
+            memoryError('INVALID_PATH', pathResult.error.message, {
+                path: slugPath,
+            }),
+        );
+    }
+
+    // 2. Read using storage.memories.read()
+    const readResult = await storage.memories.read(slugPath);
+    if (!readResult.ok) {
+        return err(
+            memoryError('STORAGE_ERROR', `Failed to read memory: ${slugPath}`, {
+                path: slugPath,
+                cause: readResult.error,
+            }),
+        );
+    }
+    if (!readResult.value) {
+        return err(
+            memoryError('MEMORY_NOT_FOUND', `Memory not found: ${slugPath}`, {
+                path: slugPath,
+            }),
+        );
+    }
+
+    // 3. Parse using parseMemoryFile
+    const parseResult = parseMemoryFile(readResult.value);
+    if (!parseResult.ok) {
+        return err(parseResult.error);
+    }
+
+    // 4. Check expiration
+    const now = options?.now ?? new Date();
+    const includeExpired = options?.includeExpired ?? false;
+    if (!includeExpired && isExpired(parseResult.value.frontmatter.expiresAt, now)) {
+        return err(
+            memoryError('MEMORY_EXPIRED', `Memory has expired: ${slugPath}`, {
+                path: slugPath,
+            }),
+        );
+    }
+
+    // 5. Return parsed contents
+    return ok(parseResult.value);
+};
+
+/**
+ * Updates an existing memory's content or metadata.
+ *
+ * @param storage - The composed storage adapter
+ * @param slugPath - Memory path (e.g., "project/cortex/config")
+ * @param updates - Update input (content, tags, expiresAt, clearExpiry)
+ * @param now - Current time (defaults to new Date())
+ * @returns Result containing updated MemoryFileContents or MemoryError
+ */
+export const updateMemory = async (
+    storage: ComposedStorageAdapter,
+    slugPath: string,
+    updates: UpdateMemoryInput,
+    now?: Date,
+): Promise<Result<MemoryFileContents, MemoryError>> => {
+    // 1. Validate path
+    const pathResult = validateMemorySlugPath(slugPath);
+    if (!pathResult.ok) {
+        return err(
+            memoryError('INVALID_PATH', pathResult.error.message, {
+                path: slugPath,
+            }),
+        );
+    }
+
+    // 2. Check if any updates provided
+    const hasUpdates =
+        updates.content !== undefined ||
+        updates.tags !== undefined ||
+        updates.expiresAt !== undefined ||
+        updates.clearExpiry === true;
+    if (!hasUpdates) {
+        return err(
+            memoryError('INVALID_INPUT', 'No updates provided', {
+                path: slugPath,
+            }),
+        );
+    }
+
+    // 3. Read existing memory
+    const readResult = await storage.memories.read(slugPath);
+    if (!readResult.ok) {
+        return err(
+            memoryError('STORAGE_ERROR', `Failed to read memory: ${slugPath}`, {
+                path: slugPath,
+                cause: readResult.error,
+            }),
+        );
+    }
+    if (!readResult.value) {
+        return err(
+            memoryError('MEMORY_NOT_FOUND', `Memory not found: ${slugPath}`, {
+                path: slugPath,
+            }),
+        );
+    }
+
+    const parseResult = parseMemoryFile(readResult.value);
+    if (!parseResult.ok) {
+        return err(parseResult.error);
+    }
+
+    const existing = parseResult.value;
+
+    // 4. Merge updates
+    const timestamp = now ?? new Date();
+    const updatedContents: MemoryFileContents = {
+        frontmatter: {
+            createdAt: existing.frontmatter.createdAt,
+            updatedAt: timestamp,
+            tags: updates.tags ?? existing.frontmatter.tags,
+            source: existing.frontmatter.source,
+            expiresAt: updates.clearExpiry
+                ? undefined
+                : (updates.expiresAt ?? existing.frontmatter.expiresAt),
+        },
+        content: updates.content ?? existing.content,
+    };
+
+    // 5. Serialize and write
+    const serializeResult = serializeMemoryFile(updatedContents);
+    if (!serializeResult.ok) {
+        return err(
+            memoryError('STORAGE_ERROR', 'Failed to serialize memory', {
+                cause: serializeResult.error,
+            }),
+        );
+    }
+
+    const writeResult = await storage.memories.write(slugPath, serializeResult.value);
+    if (!writeResult.ok) {
+        return err(
+            memoryError('STORAGE_ERROR', `Failed to write memory: ${slugPath}`, {
+                path: slugPath,
+                cause: writeResult.error,
+            }),
+        );
+    }
+
+    // 6. Update indexes
+    const indexResult = await storage.indexes.updateAfterMemoryWrite(
+        slugPath,
+        serializeResult.value,
+    );
+    if (!indexResult.ok) {
+        return err(
+            memoryError('STORAGE_ERROR', 'Failed to update indexes', {
+                cause: indexResult.error,
+            }),
+        );
+    }
+
+    // 7. Return updated contents
+    return ok(updatedContents);
+};
+
+/**
+ * Moves a memory to a new path with pre-flight checks.
+ *
+ * @param storage - The composed storage adapter
+ * @param fromPath - Source memory path
+ * @param toPath - Destination memory path
+ * @returns Result indicating success or failure with MemoryError
+ */
+export const moveMemory = async (
+    storage: ComposedStorageAdapter,
+    fromPath: string,
+    toPath: string,
+): Promise<Result<void, MemoryError>> => {
+    // 1. Validate both paths
+    const fromResult = validateMemorySlugPath(fromPath);
+    if (!fromResult.ok) {
+        return err(
+            memoryError('INVALID_PATH', fromResult.error.message, {
+                path: fromPath,
+            }),
+        );
+    }
+
+    const toResult = validateMemorySlugPath(toPath);
+    if (!toResult.ok) {
+        return err(
+            memoryError('INVALID_PATH', toResult.error.message, {
+                path: toPath,
+            }),
+        );
+    }
+
+    // Check for same-path move (no-op)
+    if (fromPath === toPath) {
+        return ok(undefined);
+    }
+
+    // 2. Check source exists
+    const sourceCheck = await storage.memories.read(fromPath);
+    if (!sourceCheck.ok) {
+        return err(
+            memoryError('STORAGE_ERROR', `Failed to read source memory: ${fromPath}`, {
+                path: fromPath,
+                cause: sourceCheck.error,
+            }),
+        );
+    }
+    if (!sourceCheck.value) {
+        return err(
+            memoryError('MEMORY_NOT_FOUND', `Source memory not found: ${fromPath}`, {
+                path: fromPath,
+            }),
+        );
+    }
+
+    // 3. Check destination doesn't exist
+    const destCheck = await storage.memories.read(toPath);
+    if (!destCheck.ok) {
+        return err(
+            memoryError('STORAGE_ERROR', `Failed to check destination: ${toPath}`, {
+                path: toPath,
+                cause: destCheck.error,
+            }),
+        );
+    }
+    if (destCheck.value) {
+        return err(
+            memoryError('DESTINATION_EXISTS', `Destination already exists: ${toPath}`, {
+                path: toPath,
+            }),
+        );
+    }
+
+    // 4. Create destination category
+    const destCategory = getCategoryFromSlugPath(toPath);
+    const ensureResult = await storage.categories.ensureCategoryDirectory(destCategory);
+    if (!ensureResult.ok) {
+        return err(
+            memoryError('STORAGE_ERROR', `Failed to create destination category: ${destCategory}`, {
+                cause: ensureResult.error,
+            }),
+        );
+    }
+
+    // 5. Move using storage.memories.move()
+    const moveResult = await storage.memories.move(fromPath, toPath);
+    if (!moveResult.ok) {
+        return err(
+            memoryError('STORAGE_ERROR', `Failed to move memory from ${fromPath} to ${toPath}`, {
+                cause: moveResult.error,
+            }),
+        );
+    }
+
+    // 6. Reindex using storage.indexes.reindex()
+    const reindexResult = await storage.indexes.reindex();
+    if (!reindexResult.ok) {
+        return err(
+            memoryError('STORAGE_ERROR', 'Failed to reindex after move', {
+                cause: reindexResult.error,
+            }),
+        );
+    }
+
+    return ok(undefined);
+};
+
+/**
+ * Removes a memory and updates indexes.
+ *
+ * @param storage - The composed storage adapter
+ * @param slugPath - Memory path to remove
+ * @returns Result indicating success or failure with MemoryError
+ */
+export const removeMemory = async (
+    storage: ComposedStorageAdapter,
+    slugPath: string,
+): Promise<Result<void, MemoryError>> => {
+    // 1. Validate path
+    const pathResult = validateMemorySlugPath(slugPath);
+    if (!pathResult.ok) {
+        return err(
+            memoryError('INVALID_PATH', pathResult.error.message, {
+                path: slugPath,
+            }),
+        );
+    }
+
+    // 2. Check memory exists
+    const checkResult = await storage.memories.read(slugPath);
+    if (!checkResult.ok) {
+        return err(
+            memoryError('STORAGE_ERROR', `Failed to read memory: ${slugPath}`, {
+                path: slugPath,
+                cause: checkResult.error,
+            }),
+        );
+    }
+    if (!checkResult.value) {
+        return err(
+            memoryError('MEMORY_NOT_FOUND', `Memory not found: ${slugPath}`, {
+                path: slugPath,
+            }),
+        );
+    }
+
+    // 3. Remove using storage.memories.remove()
+    const removeResult = await storage.memories.remove(slugPath);
+    if (!removeResult.ok) {
+        return err(
+            memoryError('STORAGE_ERROR', `Failed to remove memory: ${slugPath}`, {
+                path: slugPath,
+                cause: removeResult.error,
+            }),
+        );
+    }
+
+    // 4. Reindex using storage.indexes.reindex()
+    const reindexResult = await storage.indexes.reindex();
+    if (!reindexResult.ok) {
+        return err(
+            memoryError('STORAGE_ERROR', 'Failed to reindex after remove', {
+                cause: reindexResult.error,
+            }),
+        );
+    }
+
+    return ok(undefined);
+};
+
+/**
+ * Lists memories in a category or all root categories.
+ *
+ * @param storage - The composed storage adapter
+ * @param options - List options (category, includeExpired, now)
+ * @returns Result containing ListMemoriesResult or MemoryError
+ */
+export const listMemories = async (
+    storage: ComposedStorageAdapter,
+    options?: ListMemoriesOptions,
+): Promise<Result<ListMemoriesResult, MemoryError>> => {
+    const includeExpired = options?.includeExpired ?? false;
+    const now = options?.now ?? new Date();
+    const category = options?.category ?? '';
+
+    const visited = new Set<string>();
+    const memories: ListedMemory[] = [];
+    const subcategories: ListedSubcategory[] = [];
+
+    if (!category) {
+        // No category specified - iterate over ROOT_CATEGORIES
+        for (const rootCat of ROOT_CATEGORIES) {
+            const collectResult = await collectMemoriesFromCategory(
+                storage,
+                rootCat,
+                includeExpired,
+                now,
+                visited,
+            );
+            if (collectResult.ok) {
+                memories.push(...collectResult.value);
+            }
+
+            // Add root category itself as a discoverable subcategory
+            const indexResult = await readCategoryIndex(storage, rootCat);
+            if (indexResult.ok && indexResult.value) {
+                subcategories.push({
+                    path: rootCat,
+                    memoryCount: indexResult.value.memories.length,
+                    description: undefined,
+                });
+            }
+        }
+    }
+    else {
+        // Specific category requested
+        const collectResult = await collectMemoriesFromCategory(
+            storage,
+            category,
+            includeExpired,
+            now,
+            visited,
+        );
+        if (!collectResult.ok) {
+            return collectResult;
+        }
+        memories.push(...collectResult.value);
+
+        const subResult = await collectDirectSubcategories(storage, category);
+        if (!subResult.ok) {
+            return subResult;
+        }
+        subcategories.push(...subResult.value);
+    }
+
+    return ok({
+        category,
+        memories,
+        subcategories,
+    });
+};
+
+/**
+ * Finds and optionally deletes all expired memories.
+ *
+ * @param storage - The composed storage adapter
+ * @param options - Prune options (dryRun, now)
+ * @returns Result containing PruneResult or MemoryError
+ */
+export const pruneExpiredMemories = async (
+    storage: ComposedStorageAdapter,
+    options?: PruneOptions,
+): Promise<Result<PruneResult, MemoryError>> => {
+    const dryRun = options?.dryRun ?? false;
+    const now = options?.now ?? new Date();
+
+    // 1. Collect all expired memories
+    const expiredMemories: PrunedMemory[] = [];
+
+    for (const rootCat of ROOT_CATEGORIES) {
+        const visited = new Set<string>();
+        const collectResult = await collectMemoriesFromCategory(
+            storage,
+            rootCat,
+            true, // Include expired
+            now,
+            visited,
+        );
+        if (collectResult.ok) {
+            for (const memory of collectResult.value) {
+                if (memory.isExpired && memory.expiresAt) {
+                    expiredMemories.push({
+                        path: memory.path,
+                        expiresAt: memory.expiresAt,
+                    });
+                }
+            }
+        }
+    }
+
+    // 2. If dryRun, return list without deleting
+    if (dryRun) {
+        return ok({ pruned: expiredMemories });
+    }
+
+    // 3. Delete each expired memory
+    for (const memory of expiredMemories) {
+        const removeResult = await storage.memories.remove(memory.path);
+        if (!removeResult.ok) {
+            return err(
+                memoryError('STORAGE_ERROR', `Failed to remove expired memory: ${memory.path}`, {
+                    path: memory.path,
+                    cause: removeResult.error,
+                }),
+            );
+        }
+    }
+
+    // 4. Reindex if any were deleted
+    if (expiredMemories.length > 0) {
+        const reindexResult = await storage.indexes.reindex();
+        if (!reindexResult.ok) {
+            return err(
+                memoryError('STORAGE_ERROR', 'Failed to reindex after prune', {
+                    cause: reindexResult.error,
+                }),
+            );
+        }
+    }
+
+    // 5. Return list of pruned memories
+    return ok({ pruned: expiredMemories });
+};
