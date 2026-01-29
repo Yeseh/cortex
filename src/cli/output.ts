@@ -55,6 +55,7 @@ export interface OutputStoreRegistry {
 
 export interface OutputStoreInit {
     path: string;
+    name: string;
 }
 
 export interface OutputInit {

@@ -11,6 +11,7 @@
  * import {
  *     type Memory,
  *     type MemoryMetadata,
+ *     type MemoryFileContents,
  *     parseMemoryFile,
  *     serializeMemoryFile,
  *     validateMemorySlugPath,
