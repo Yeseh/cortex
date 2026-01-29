@@ -1,14 +1,4 @@
 memories:
-  - path: global/projects/cortex/decisions/cli-commander-refactor
-    token_estimate: 236
-  - path: global/projects/cortex/decisions/registry-as-store-factory
-    token_estimate: 347
-  - path: global/projects/cortex/decisions/registry-interface-rename
-    token_estimate: 340
-  - path: global/projects/cortex/decisions/scoped-storage-adapter
-    token_estimate: 288
-  - path: global/projects/cortex/decisions/store-init-project-support
-    token_estimate: 340
-  - path: global/projects/cortex/decisions/store-list-from-registry
-    token_estimate: 247
+  - path: projects/cortex/decisions/mcp-store-parameter
+    token_estimate: 108
 subcategories: []

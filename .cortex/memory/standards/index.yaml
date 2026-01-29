@@ -1,16 +1,14 @@
 memories:
-  - path: global/projects/cortex/standards/cli-command-pattern
-    token_estimate: 328
-  - path: global/projects/cortex/standards/cli-error-mapping
-    token_estimate: 268
-  - path: global/projects/cortex/standards/cross-platform-paths
-    token_estimate: 372
-  - path: global/projects/cortex/standards/frontmatter-format
-    token_estimate: 208
-  - path: global/projects/cortex/standards/mcp-server-thin-wrapper
-    token_estimate: 468
-  - path: global/projects/cortex/standards/registry-caches-loaded-data
-    token_estimate: 405
-  - path: global/projects/cortex/standards/test-failure-policy
-    token_estimate: 301
+  - path: projects/cortex/standards/ci-workflows
+    token_estimate: 136
+  - path: projects/cortex/standards/commits
+    token_estimate: 123
+  - path: projects/cortex/standards/error-translation
+    token_estimate: 136
+  - path: projects/cortex/standards/mcp-thin-wrapper
+    token_estimate: 144
+  - path: projects/cortex/standards/runtime
+    token_estimate: 108
+  - path: projects/cortex/standards/typescript
+    token_estimate: 109
 subcategories: []
