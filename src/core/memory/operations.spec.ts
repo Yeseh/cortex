@@ -3,7 +3,7 @@
  * @module core/memory/operations.spec
  */
 
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { describe, it, expect } from 'bun:test';
 import type { Result } from '../types.ts';
 import type {
     ComposedStorageAdapter,
@@ -12,8 +12,8 @@ import type {
     StoreStorage,
     StorageAdapterError,
 } from '../storage/adapter.ts';
-import type { CategoryStorage, CategoryError } from '../category/types.ts';
-import type { StoreRegistry, StoreRegistryLoadError, StoreRegistrySaveError } from '../store/registry.ts';
+import type { CategoryStorage } from '../category/types.ts';
+import type { StoreRegistry } from '../store/registry.ts';
 import {
     createMemory,
     getMemory,
@@ -364,12 +364,12 @@ describe('getMemory', () => {
 
 describe('updateMemory', () => {
     it('should update content only', async () => {
-        let writtenContent: string | undefined;
+        let _writtenContent: string | undefined;
         const storage = createMockStorage({
             memories: {
                 read: async () => ok(sampleMemoryContent),
                 write: async (_path, content) => {
-                    writtenContent = content;
+                    _writtenContent = content;
                     return ok(undefined);
                 },
             },

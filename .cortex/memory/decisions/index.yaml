@@ -1,6 +1,4 @@
 memories:
-  - path: projects/cortex/decisions/default-store-rename
-    token_estimate: 169
-  - path: projects/cortex/decisions/mcp-store-required
-    token_estimate: 199
+  - path: projects/cortex/decisions/mcp-store-parameter
+    token_estimate: 108
 subcategories: []
