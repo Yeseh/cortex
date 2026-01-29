@@ -238,10 +238,10 @@ describe('utils module', () => {
             expect(toSlugPathFromRelative('..\\escape.md', '.md')).toBeNull();
         });
 
-        it('should handle Windows-style separators', () => {
+        it('should handle Windows-style separators', async () => {
             // On Windows, sep is '\\', on POSIX it's '/'
             // The function splits by sep, so we test with the platform's separator
-            const { sep } = require('node:path');
+            const { sep } = await import('node:path');
             const windowsPath = `category${sep}memory.md`;
             expect(toSlugPathFromRelative(windowsPath, '.md')).toBe('category/memory');
         });
