@@ -8,6 +8,7 @@ import type { Result } from '../types.ts';
 
 export interface StoreDefinition {
     path: string;
+    description?: string;
 }
 
 export type StoreRegistry = Record<string, StoreDefinition>;
@@ -82,6 +83,11 @@ const isPathEntry = (content: string): string | null => {
     return pathMatch?.[1] ?? null;
 };
 
+const isDescriptionEntry = (content: string): string | null => {
+    const descMatch = /^description\s*:\s*(.*)$/.exec(content);
+    return descMatch?.[1] ?? null;
+};
+
 interface RegistryState {
     mode: 'unknown' | 'stores' | 'root';
     storesIndent: number;
@@ -90,6 +96,7 @@ interface RegistryState {
         indent: number;
         line: number;
         path?: string;
+        description?: string;
     } | null;
     hasStoreEntries: boolean;
     registry: StoreRegistry;
@@ -127,6 +134,24 @@ const finalizeStore = (state: RegistryState): Result<RegistryState, StoreRegistr
             store: state.currentStore.name,
         });
     }
+    // If store was finalized but description was provided after path,
+    // ensure it's in the registry
+    if (state.currentStore?.path && state.currentStore?.description !== undefined) {
+        const existingDef = state.registry[state.currentStore.name];
+        if (existingDef && existingDef.description === undefined) {
+            return ok({
+                ...state,
+                registry: {
+                    ...state.registry,
+                    [state.currentStore.name]: {
+                        ...existingDef,
+                        description: state.currentStore.description,
+                    },
+                },
+                currentStore: null,
+            });
+        }
+    }
     return ok({ ...state, currentStore: null });
 };
 
@@ -154,7 +179,7 @@ const handleStoreHeader = (
             line,
         });
     }
-    if (state.registry[storeName]) {
+    if (finalized.value.registry[storeName]) {
         return err({
             code: 'DUPLICATE_STORE_NAME',
             message: `Duplicate store name: ${storeName}.`,
@@ -163,7 +188,7 @@ const handleStoreHeader = (
         });
     }
     return ok({
-        ...state,
+        ...finalized.value,
         mode: nextMode,
         currentStore: { name: storeName, indent, line },
         hasStoreEntries: true,
@@ -217,8 +242,53 @@ const handlePathValue = (
     }
     return ok({
         ...state,
-        registry: { ...state.registry, [state.currentStore.name]: { path: parsedPath } },
+        registry: { 
+            ...state.registry, 
+            [state.currentStore.name]: { 
+                path: parsedPath,
+                ...(state.currentStore.description !== undefined && { 
+                    description: state.currentStore.description,
+                }),
+            }, 
+        },
         currentStore: { ...state.currentStore, path: parsedPath },
+    });
+};
+
+const handleDescriptionValue = (
+    state: RegistryState,
+    descValue: string,
+    indent: number,
+    line: number,
+): Result<RegistryState, StoreRegistryParseError> => {
+    if (!state.currentStore) {
+        return err({
+            code: 'UNEXPECTED_ENTRY',
+            message: 'Description entry must belong to a store definition.',
+            line,
+        });
+    }
+    if (indent <= state.currentStore.indent) {
+        return err({
+            code: 'UNEXPECTED_ENTRY',
+            message: 'Store description must be indented under the store name.',
+            line,
+            store: state.currentStore.name,
+        });
+    }
+    if (state.currentStore.description !== undefined) {
+        return err({
+            code: 'UNEXPECTED_ENTRY',
+            message: 'Store description is already defined.',
+            line,
+            store: state.currentStore.name,
+        });
+    }
+    const parsedDesc = parsePathValue(descValue); // Reuse parsePathValue for string parsing
+    // Description can be empty string (unlike path)
+    return ok({
+        ...state,
+        currentStore: { ...state.currentStore, description: parsedDesc },
     });
 };
 
@@ -275,6 +345,13 @@ const readRegistryLine = (
     if (pathValue !== null) {
         return handlePathValue(
             state, pathValue, indent, lineNumber,
+        );
+    }
+
+    const descValue = isDescriptionEntry(content);
+    if (descValue !== null) {
+        return handleDescriptionValue(
+            state, descValue, indent, lineNumber,
         );
     }
 
@@ -419,6 +496,9 @@ export const serializeStoreRegistry = (registry: StoreRegistry): SerializeRegist
         }
         lines.push(`  ${name}:`);
         lines.push(`    path: ${formatYamlScalar(path)}`);
+        if (definition.description !== undefined) {
+            lines.push(`    description: ${formatYamlScalar(definition.description)}`);
+        }
     }
 
     return ok(lines.join('\n'));

@@ -23,8 +23,9 @@
  */
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import * as path from 'node:path';
 import type { ServerConfig } from '../config.ts';
-import { listStores, createStore, storeNameSchema } from './tools.ts';
+import { listStoresFromRegistry, createStore, storeNameSchema } from './tools.ts';
 import { registerStoreResources } from './resources.ts';
 
 /**
@@ -56,7 +57,8 @@ export const registerStoreTools = (server: McpServer, config: ServerConfig): voi
             description: 'List all available memory stores',
         },
         async () => {
-            const result = await listStores(config.dataPath);
+            const registryPath = path.join(config.dataPath, 'stores.yaml');
+            const result = await listStoresFromRegistry(registryPath);
             if (!result.ok) {
                 return {
                     content: [{ type: 'text', text: `Error: ${result.error.message}` }],
@@ -64,7 +66,7 @@ export const registerStoreTools = (server: McpServer, config: ServerConfig): voi
                 };
             }
             return {
-                content: [{ type: 'text', text: JSON.stringify({ stores: result.value }, null, 2) }],
+                content: [{ type: 'text', text: JSON.stringify(result.value, null, 2) }],
             };
         },
     );
@@ -99,8 +101,8 @@ export const registerStoreTools = (server: McpServer, config: ServerConfig): voi
 };
 
 // Re-export tools for direct usage
-export { listStores, createStore, storeNameSchema, createStoreInputSchema } from './tools.ts';
-export type { StoreToolError, StoreToolErrorCode, CreateStoreInput } from './tools.ts';
+export { listStores, listStoresFromRegistry, createStore, storeNameSchema, createStoreInputSchema } from './tools.ts';
+export type { StoreToolError, StoreToolErrorCode, CreateStoreInput, StoreInfo, ListStoresResult } from './tools.ts';
 
 // Re-export resources
 export { registerStoreResources } from './resources.ts';

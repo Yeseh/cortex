@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
-import { parseStoreRegistry } from './registry.ts';
+import { parseStoreRegistry, serializeStoreRegistry } from './registry.ts';
 
 describe(
     'store registry parsing', () => {
@@ -169,6 +169,234 @@ describe(
                 if (!result.ok) {
                     expect(result.error.code).toBe('INVALID_STORE_PATH');
                     expect(result.error.store).toBe('primary');
+                }
+            },
+        );
+    },
+);
+
+describe(
+    'description field parsing', () => {
+        it(
+            'should parse description after path', () => {
+                const raw = [
+                    'stores:',
+                    '  default:',
+                    '    path: "/data/default"',
+                    '    description: "Default store for general memories"',
+                ].join('\n');
+
+                const result = parseStoreRegistry(raw);
+
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value.default?.description).toBe('Default store for general memories');
+                }
+            },
+        );
+
+        it(
+            'should parse description before path', () => {
+                const raw = [
+                    'stores:',
+                    '  default:',
+                    '    description: "Default store for general memories"',
+                    '    path: "/data/default"',
+                ].join('\n');
+
+                const result = parseStoreRegistry(raw);
+
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value.default?.description).toBe('Default store for general memories');
+                    expect(result.value.default?.path).toBe('/data/default');
+                }
+            },
+        );
+
+        it(
+            'should parse registry without description (backward compatibility)', () => {
+                const raw = [
+                    'stores:',
+                    '  default:',
+                    '    path: "/data/default"',
+                ].join('\n');
+
+                const result = parseStoreRegistry(raw);
+
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value.default?.path).toBe('/data/default');
+                    expect(result.value.default?.description).toBeUndefined();
+                }
+            },
+        );
+
+        it(
+            'should parse registry with empty description', () => {
+                const raw = [
+                    'stores:',
+                    '  default:',
+                    '    path: "/data/default"',
+                    '    description: ""',
+                ].join('\n');
+
+                const result = parseStoreRegistry(raw);
+
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value.default?.description).toBe('');
+                }
+            },
+        );
+
+        it(
+            'should parse registry with quoted description containing special chars', () => {
+                const raw = [
+                    'stores:',
+                    '  default:',
+                    '    path: "/data/default"',
+                    '    description: "A store with \\"special\\" chars"',
+                ].join('\n');
+
+                const result = parseStoreRegistry(raw);
+
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value.default?.description).toBe('A store with "special" chars');
+                }
+            },
+        );
+
+        it(
+            'should parse multiple stores with mixed descriptions', () => {
+                const raw = [
+                    'stores:',
+                    '  default:',
+                    '    path: "/data/default"',
+                    '    description: "The default store"',
+                    '  project:',
+                    '    path: "/data/project"',
+                ].join('\n');
+
+                const result = parseStoreRegistry(raw);
+
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value.default?.description).toBe('The default store');
+                    expect(result.value.project?.path).toBe('/data/project');
+                    expect(result.value.project?.description).toBeUndefined();
+                }
+            },
+        );
+
+        it(
+            'should reject duplicate description entries', () => {
+                const raw = [
+                    'stores:',
+                    '  default:',
+                    '    path: "/data/default"',
+                    '    description: "First description"',
+                    '    description: "Second description"',
+                ].join('\n');
+
+                const result = parseStoreRegistry(raw);
+
+                expect(result.ok).toBe(false);
+                if (!result.ok) {
+                    expect(result.error.code).toBe('UNEXPECTED_ENTRY');
+                    expect(result.error.store).toBe('default');
+                }
+            },
+        );
+
+        it(
+            'should reject description without store context', () => {
+                const raw = [
+                    'description: "Orphan description"',
+                    'stores:',
+                    '  default:',
+                    '    path: "/data/default"',
+                ].join('\n');
+
+                const result = parseStoreRegistry(raw);
+
+                expect(result.ok).toBe(false);
+                if (!result.ok) {
+                    expect(result.error.code).toBe('UNEXPECTED_ENTRY');
+                }
+            },
+        );
+    },
+);
+
+describe(
+    'description field serialization', () => {
+        it(
+            'should serialize registry with description', () => {
+                const registry = {
+                    default: { path: '/data/default', description: 'A test store' },
+                };
+
+                const result = serializeStoreRegistry(registry);
+
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value).toContain('description: "A test store"');
+                }
+            },
+        );
+
+        it(
+            'should serialize registry without description', () => {
+                const registry = {
+                    default: { path: '/data/default' },
+                };
+
+                const result = serializeStoreRegistry(registry);
+
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value).not.toContain('description');
+                }
+            },
+        );
+
+        it(
+            'should serialize empty description', () => {
+                const registry = {
+                    default: { path: '/data/default', description: '' },
+                };
+
+                const result = serializeStoreRegistry(registry);
+
+                expect(result.ok).toBe(true);
+                if (result.ok) {
+                    expect(result.value).toContain('description: ""');
+                }
+            },
+        );
+
+        it(
+            'should round-trip registry with descriptions', () => {
+                const original = {
+                    alpha: { path: '/data/alpha', description: 'Alpha store' },
+                    beta: { path: '/data/beta' },
+                };
+
+                const serialized = serializeStoreRegistry(original);
+                expect(serialized.ok).toBe(true);
+                if (!serialized.ok) {
+                    return;
+                }
+
+                const parsed = parseStoreRegistry(serialized.value);
+                expect(parsed.ok).toBe(true);
+                if (parsed.ok) {
+                    expect(parsed.value.alpha?.path).toBe('/data/alpha');
+                    expect(parsed.value.alpha?.description).toBe('Alpha store');
+                    expect(parsed.value.beta?.path).toBe('/data/beta');
+                    expect(parsed.value.beta?.description).toBeUndefined();
                 }
             },
         );

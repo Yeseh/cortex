@@ -184,9 +184,15 @@ describe('store tool registration', () => {
         });
 
         it('should execute list_stores tool and return stores when stores exist', async () => {
-            // Create some stores
-            await fs.mkdir(path.join(testDir, 'store-a'));
-            await fs.mkdir(path.join(testDir, 'store-b'));
+            // Create a stores.yaml registry with store entries
+            const registryContent = [
+                'stores:',
+                '  store-a:',
+                '    path: "/data/store-a"',
+                '  store-b:',
+                '    path: "/data/store-b"',
+            ].join('\n');
+            await fs.writeFile(path.join(testDir, 'stores.yaml'), registryContent);
 
             registerStoreTools(server, config);
 
@@ -197,8 +203,8 @@ describe('store tool registration', () => {
 
             const parsed = JSON.parse(result.content[0]!.text);
             expect(parsed.stores).toHaveLength(2);
-            expect(parsed.stores).toContain('store-a');
-            expect(parsed.stores).toContain('store-b');
+            expect(parsed.stores.map((s: { name: string }) => s.name)).toContain('store-a');
+            expect(parsed.stores.map((s: { name: string }) => s.name)).toContain('store-b');
         });
 
         it('should execute create_store tool with valid name and create store', async () => {
@@ -267,17 +273,11 @@ describe('store tool registration', () => {
             expect(result.content[0]?.text).toContain('already exists');
         });
 
-        it('should return error from list_stores when data path is a file', async () => {
-            // Create a file instead of a directory at the data path
-            const filePath = path.join(testDir, 'not-a-directory');
-            await fs.writeFile(filePath, 'content');
+        it('should return error from list_stores when registry is malformed', async () => {
+            // Create a malformed stores.yaml
+            await fs.writeFile(path.join(testDir, 'stores.yaml'), 'not valid yaml: [');
 
-            const fileConfig: ServerConfig = {
-                ...config,
-                dataPath: filePath,
-            };
-
-            registerStoreTools(server, fileConfig);
+            registerStoreTools(server, config);
 
             const registeredTools = getRegisteredTools(server);
             const listStoresTool = registeredTools['cortex_list_stores'];

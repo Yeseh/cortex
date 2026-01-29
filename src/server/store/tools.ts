@@ -12,6 +12,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { z } from 'zod';
 import type { Result } from '../../core/types.ts';
+import { loadStoreRegistry } from '../../core/store/registry.ts';
 
 /**
  * Error codes for store tool operations.
@@ -66,6 +67,26 @@ export const createStoreInputSchema = z.object({
 
 /** Type for create_store input */
 export type CreateStoreInput = z.infer<typeof createStoreInputSchema>;
+
+/**
+ * Information about a single store.
+ */
+export interface StoreInfo {
+    /** Name of the store */
+    name: string;
+    /** Path to the store directory */
+    path: string;
+    /** Optional description of the store */
+    description?: string;
+}
+
+/**
+ * Result of listing stores from the registry.
+ */
+export interface ListStoresResult {
+    /** List of stores with their metadata */
+    stores: StoreInfo[];
+}
 
 /**
  * Lists all available memory stores in the data directory.
@@ -194,4 +215,52 @@ export const createStore = async (
             },
         }; 
     }
+};
+
+/**
+ * Lists all stores from the registry with their metadata.
+ *
+ * Reads the store registry file and returns all registered stores
+ * with their names, paths, and optional descriptions. If the registry
+ * doesn't exist yet, returns an empty list.
+ *
+ * @param registryPath - Path to the stores.yaml registry file
+ * @returns Result with list of stores or error
+ *
+ * @example
+ * ```ts
+ * const result = await listStoresFromRegistry('/path/to/stores.yaml');
+ * if (result.ok) {
+ *   console.log('Stores:', result.value.stores);
+ *   // [{ name: 'default', path: '/path/to/default', description: 'Default store' }]
+ * }
+ * ```
+ */
+export const listStoresFromRegistry = async (
+    registryPath: string,
+): Promise<Result<ListStoresResult, StoreToolError>> => {
+    const registryResult = await loadStoreRegistry(registryPath, { allowMissing: true });
+
+    if (!registryResult.ok) {
+        return {
+            ok: false,
+            error: {
+                code: 'STORE_LIST_FAILED',
+                message: `Failed to load store registry: ${registryResult.error.message}`,
+                cause: registryResult.error,
+            },
+        };
+    }
+
+    const stores: StoreInfo[] = Object.entries(registryResult.value)
+        .map(([
+            name, definition,
+        ]) => ({
+            name,
+            path: definition.path,
+            ...(definition.description !== undefined && { description: definition.description }),
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+    return { ok: true, value: { stores } };
 };
