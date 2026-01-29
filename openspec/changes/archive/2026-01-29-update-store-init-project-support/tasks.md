@@ -31,4 +31,4 @@
 ## 5. Documentation
 
 - [x] 5.1 Update CLI help text for `store init`
-- [ ] 5.2 Update memory skill with project store usage guidance
+- [x] 5.2 Update memory skill with project store usage guidance
