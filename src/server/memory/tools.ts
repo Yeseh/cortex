@@ -93,6 +93,10 @@ export const listMemoriesInputSchema = z.object({
 /** Schema for prune_memories tool input */
 export const pruneMemoriesInputSchema = z.object({
     store: storeNameSchema.describe('Store name (required)'),
+    dry_run: z
+        .boolean()
+        .default(false)
+        .describe('Preview which memories would be pruned without deleting them'),
 });
 
 // ---------------------------------------------------------------------------
@@ -148,6 +152,7 @@ export interface ListMemoriesInput {
 /** Input type for prune_memories tool */
 export interface PruneMemoriesInput {
     store: string;
+    dry_run?: boolean;
 }
 
 interface ToolContext {
@@ -797,6 +802,25 @@ export const pruneMemoriesHandler = async (
     const visited = new Set<string>();
     for (const category of ROOT_CATEGORIES) {
         await collectExpired(category, visited);
+    }
+
+    // In dry_run mode, return what would be pruned without deleting
+    const dryRun = input.dry_run ?? false;
+    if (dryRun) {
+        const output = {
+            dry_run: true,
+            would_prune_count: pruned.length,
+            would_prune: pruned,
+        };
+
+        return {
+            content: [
+                {
+                    type: 'text',
+                    text: JSON.stringify(output, null, 2),
+                },
+            ],
+        };
     }
 
     // Delete expired memories

@@ -828,6 +828,61 @@ describe('cortex_prune_memories tool', () => {
         expect(output.pruned_count).toBe(0);
         expect(output.pruned).toHaveLength(0);
     });
+
+    it('should return what would be pruned in dry_run mode without deleting', async () => {
+        const input: PruneMemoriesInput = {
+            store: 'default',
+            dry_run: true,
+        };
+
+        const result = await pruneMemoriesHandler({ config }, input);
+        const output = JSON.parse(result.content[0]!.text);
+
+        expect(output.dry_run).toBe(true);
+        expect(output.would_prune_count).toBe(2);
+        expect(output.would_prune).toHaveLength(2);
+
+        // Verify memories still exist (not deleted)
+        const getResult1 = await getMemoryHandler(
+            { config },
+            { store: 'default', path: 'project/expired-1', include_expired: true }
+        );
+        expect(getResult1.content[0]!.text).toContain('Expired 1');
+
+        const getResult2 = await getMemoryHandler(
+            { config },
+            { store: 'default', path: 'human/expired-2', include_expired: true }
+        );
+        expect(getResult2.content[0]!.text).toContain('Expired 2');
+    });
+
+    it('should return zero in dry_run mode when no memories are expired', async () => {
+        // Register and create clean-store
+        const cleanStorePath = join(testDir, MEMORY_SUBDIR, 'clean');
+        await registerStore(testDir, 'dry-clean-store', cleanStorePath);
+
+        await createMemoryFile(cleanStorePath, 'project/active', {
+            frontmatter: {
+                createdAt: new Date('2024-01-01'),
+                updatedAt: new Date('2024-01-02'),
+                tags: [],
+                source: 'test',
+            },
+            content: 'Active',
+        });
+
+        const input: PruneMemoriesInput = {
+            store: 'dry-clean-store',
+            dry_run: true,
+        };
+
+        const result = await pruneMemoriesHandler({ config }, input);
+        const output = JSON.parse(result.content[0]!.text);
+
+        expect(output.dry_run).toBe(true);
+        expect(output.would_prune_count).toBe(0);
+        expect(output.would_prune).toHaveLength(0);
+    });
 });
 
 describe('explicit store parameter', () => {
@@ -947,7 +1002,11 @@ describe('memory tool schemas reject missing store parameter', () => {
         const removeInput = { store: 'default', path: 'project/test' };
         expect(removeMemoryInputSchema.safeParse(removeInput).success).toBe(true);
 
-        const moveInput = { store: 'default', from_path: 'project/source', to_path: 'project/dest' };
+        const moveInput = {
+            store: 'default',
+            from_path: 'project/source',
+            to_path: 'project/dest',
+        };
         expect(moveMemoryInputSchema.safeParse(moveInput).success).toBe(true);
 
         const listInput = { store: 'default', category: 'project' };
