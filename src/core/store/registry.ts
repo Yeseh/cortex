@@ -54,7 +54,8 @@ const parsePathValue = (raw: string): string => {
                 if (typeof parsed === 'string') {
                     return parsed;
                 }
-            } catch {
+            }
+            catch {
                 return rawValue;
             }
         }
@@ -105,7 +106,7 @@ const validateStoreIndent = (
     mode: RegistryState['mode'],
     indent: number,
     storesIndent: number,
-    line: number
+    line: number,
 ): Result<void, StoreRegistryParseError> => {
     if (mode === 'stores' && indent <= storesIndent) {
         return err({
@@ -158,7 +159,7 @@ const handleStoreHeader = (
     state: RegistryState,
     storeName: string,
     indent: number,
-    line: number
+    line: number,
 ): Result<RegistryState, StoreRegistryParseError> => {
     const nextMode = state.mode === 'unknown' ? 'root' : state.mode;
     const indentResult = validateStoreIndent(nextMode, indent, state.storesIndent, line);
@@ -196,7 +197,7 @@ const handlePathValue = (
     state: RegistryState,
     pathValue: string,
     indent: number,
-    line: number
+    line: number,
 ): Result<RegistryState, StoreRegistryParseError> => {
     if (!state.currentStore) {
         if (state.mode === 'unknown') {
@@ -256,7 +257,7 @@ const handleDescriptionValue = (
     state: RegistryState,
     descValue: string,
     indent: number,
-    line: number
+    line: number,
 ): Result<RegistryState, StoreRegistryParseError> => {
     if (!state.currentStore) {
         return err({
@@ -292,7 +293,7 @@ const handleDescriptionValue = (
 const handleStoresSection = (
     state: RegistryState,
     rawLine: string,
-    line: number
+    line: number,
 ): Result<{ handled: boolean; state: RegistryState }, StoreRegistryParseError> => {
     if (state.mode !== 'unknown') {
         return ok({ handled: false, state });
@@ -318,7 +319,7 @@ const handleStoresSection = (
 const readRegistryLine = (
     rawLine: string,
     lineNumber: number,
-    state: RegistryState
+    state: RegistryState,
 ): Result<RegistryState, StoreRegistryParseError> => {
     const storesResult = handleStoresSection(state, rawLine, lineNumber);
     if (!storesResult.ok) {
@@ -459,7 +460,9 @@ export const serializeStoreRegistry = (registry: StoreRegistry): SerializeRegist
     }
 
     const lines: string[] = ['stores:'];
-    for (const [name, definition] of entries) {
+    for (const [
+        name, definition,
+    ] of entries) {
         if (!isValidStoreName(name)) {
             return err({
                 code: 'INVALID_STORE_NAME',
@@ -487,12 +490,13 @@ export const serializeStoreRegistry = (registry: StoreRegistry): SerializeRegist
 
 export const loadStoreRegistry = async (
     path: string,
-    options: { allowMissing?: boolean } = {}
+    options: { allowMissing?: boolean } = {},
 ): Promise<Result<StoreRegistry, StoreRegistryLoadError>> => {
     let contents: string;
     try {
         contents = await readFile(path, 'utf8');
-    } catch (error) {
+    }
+    catch (error) {
         if (isNotFoundError(error)) {
             if (options.allowMissing) {
                 return ok({});
@@ -526,7 +530,7 @@ export const loadStoreRegistry = async (
 
 export const saveStoreRegistry = async (
     path: string,
-    registry: StoreRegistry
+    registry: StoreRegistry,
 ): Promise<Result<void, StoreRegistrySaveError>> => {
     const serialized = serializeStoreRegistry(registry);
     if (!serialized.ok) {
@@ -541,7 +545,8 @@ export const saveStoreRegistry = async (
         await mkdir(dirname(path), { recursive: true });
         await writeFile(path, serialized.value, 'utf8');
         return ok(undefined);
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'REGISTRY_WRITE_FAILED',
             message: `Failed to write store registry at ${path}.`,
@@ -555,7 +560,8 @@ export const removeStoreRegistry = async (path: string): Promise<RemoveRegistryR
     try {
         await rm(path, { force: true });
         return ok(undefined);
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'REGISTRY_WRITE_FAILED',
             message: `Failed to remove store registry at ${path}.`,
@@ -598,7 +604,7 @@ export interface StoreResolveError {
  */
 export const resolveStorePath = (
     registry: StoreRegistry,
-    storeName: string
+    storeName: string,
 ): Result<string, StoreResolveError> => {
     const definition = registry[storeName];
     if (!definition) {
