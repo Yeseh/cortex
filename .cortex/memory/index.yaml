@@ -11,6 +11,6 @@ subcategories:
   - path: testing
     memory_count: 2
   - path: todo
-    memory_count: 1
+    memory_count: 2
   - path: updates
     memory_count: 1
