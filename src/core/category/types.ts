@@ -203,3 +203,18 @@ export interface CategoryStorage {
  * browse the category hierarchy.
  */
 export const MAX_DESCRIPTION_LENGTH = 500;
+
+/**
+ * Root memory categories that organize the top-level structure.
+ * These categories cannot be deleted or have descriptions set.
+ */
+export const ROOT_CATEGORIES = [
+    'human',
+    'persona',
+    'project',
+    'domain',
+] as const;
+
+/** Type for root category names */
+export type RootCategory = (typeof ROOT_CATEGORIES)[number];
+

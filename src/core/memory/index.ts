@@ -46,6 +46,9 @@ export { validateCategoryPath, validateMemorySlugPath } from './validation.ts';
 
 export type { MemoryPathValidationError } from './validation.ts';
 
+// Expiration utilities
+export { isExpired, isExpiredNow } from './expiration.ts';
+
 /**
  * Contents of a memory file with frontmatter metadata and content.
  * This type uses `frontmatter` as the property name for API compatibility.

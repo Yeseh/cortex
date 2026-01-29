@@ -13,7 +13,7 @@ export type {
     CategoryStorage as CategoryStoragePort,
 } from './types.ts';
 
-export { MAX_DESCRIPTION_LENGTH } from './types.ts';
+export { MAX_DESCRIPTION_LENGTH, ROOT_CATEGORIES, type RootCategory } from './types.ts';
 
 export {
     isRootCategory,
