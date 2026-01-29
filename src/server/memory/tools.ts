@@ -17,6 +17,7 @@ import type { Result } from '../../core/types.ts';
 import {
     parseMemoryFile,
     serializeMemoryFile,
+    pruneExpiredMemories,
     type MemoryFileContents,
 } from '../../core/memory/index.ts';
 import { validateMemorySlugPath } from '../../core/memory/validation.ts';
@@ -737,6 +738,7 @@ export const listMemoriesHandler = async (
 
 /**
  * Deletes all expired memories.
+ * Delegates to core pruneExpiredMemories operation.
  */
 export const pruneMemoriesHandler = async (
     ctx: ToolContext,
@@ -748,69 +750,24 @@ export const pruneMemoriesHandler = async (
     }
 
     const adapter = createAdapter(storeRoot.value);
-    const now = new Date();
-
-    interface PrunedEntry {
-        path: string;
-        expires_at: string;
-    }
-
-    const pruned: PrunedEntry[] = [];
-
-    const collectExpired = async (catPath: string, visited: Set<string>): Promise<void> => {
-        if (visited.has(catPath)) {
-            return;
-        }
-        visited.add(catPath);
-
-        const indexResult = await adapter.readIndexFile(catPath);
-        if (!indexResult.ok || !indexResult.value) {
-            return;
-        }
-
-        const parsed = parseIndex(indexResult.value);
-        if (!parsed.ok) {
-            return;
-        }
-
-        for (const memory of parsed.value.memories) {
-            const memoryRead = await adapter.readMemoryFile(memory.path);
-            if (!memoryRead.ok || !memoryRead.value) {
-                continue;
-            }
-
-            const memoryParsed = parseMemoryFile(memoryRead.value);
-            if (!memoryParsed.ok) {
-                continue;
-            }
-
-            const expiresAt = memoryParsed.value.frontmatter.expiresAt;
-            if (expiresAt && isExpired(expiresAt, now)) {
-                pruned.push({
-                    path: memory.path,
-                    expires_at: expiresAt.toISOString(),
-                });
-            }
-        }
-
-        for (const subcategory of parsed.value.subcategories) {
-            await collectExpired(subcategory.path, visited);
-        }
-    };
-
-    // Collect all expired memories
-    const visited = new Set<string>();
-    for (const category of ROOT_CATEGORIES) {
-        await collectExpired(category, visited);
-    }
-
-    // In dry_run mode, return what would be pruned without deleting
     const dryRun = input.dry_run ?? false;
+
+    const result = await pruneExpiredMemories(adapter, { dryRun });
+    if (!result.ok) {
+        throw new McpError(ErrorCode.InternalError, result.error.message);
+    }
+
+    // Format output for MCP response
+    const prunedEntries = result.value.pruned.map((m) => ({
+        path: m.path,
+        expires_at: m.expiresAt.toISOString(),
+    }));
+
     if (dryRun) {
         const output = {
             dry_run: true,
-            would_prune_count: pruned.length,
-            would_prune: pruned,
+            would_prune_count: prunedEntries.length,
+            would_prune: prunedEntries,
         };
 
         return {
@@ -823,31 +780,9 @@ export const pruneMemoriesHandler = async (
         };
     }
 
-    // Delete expired memories
-    for (const entry of pruned) {
-        const result = await adapter.removeMemoryFile(entry.path);
-        if (!result.ok) {
-            throw new McpError(
-                ErrorCode.InternalError,
-                `Failed to prune memory ${entry.path}: ${result.error.message}`
-            );
-        }
-    }
-
-    // Reindex after pruning
-    if (pruned.length > 0) {
-        const reindexResult = await adapter.reindexCategoryIndexes();
-        if (!reindexResult.ok) {
-            throw new McpError(
-                ErrorCode.InternalError,
-                `Memories pruned but reindex failed: ${reindexResult.error.message}`
-            );
-        }
-    }
-
     const output = {
-        pruned_count: pruned.length,
-        pruned,
+        pruned_count: prunedEntries.length,
+        pruned: prunedEntries,
     };
 
     return {
