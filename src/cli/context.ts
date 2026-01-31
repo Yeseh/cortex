@@ -9,14 +9,15 @@
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import { loadConfig, type CortexConfig, type ConfigLoadError } from '../core/config.ts';
-import { resolveStore, type StoreResolutionError } from '../core/store/store.ts';
 import {
-    loadStoreRegistry,
+    resolveStore,
     resolveStorePath,
+    type StoreResolutionError,
     type StoreRegistry,
-    type StoreRegistryLoadError,
     type StoreResolveError,
-} from '../core/store/registry.ts';
+} from '../core/store/index.ts';
+import { FilesystemRegistry } from '../core/storage/filesystem/index.ts';
+import type { RegistryError } from '../core/storage/adapter.ts';
 import type { Result } from '../core/types.ts';
 
 /**
@@ -52,7 +53,7 @@ export type StoreContextErrorCode =
 export interface StoreContextError {
     code: StoreContextErrorCode;
     message: string;
-    cause?: ConfigLoadError | StoreResolutionError | StoreRegistryLoadError | StoreResolveError;
+    cause?: ConfigLoadError | StoreResolutionError | RegistryError | StoreResolveError;
 }
 
 const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
@@ -81,7 +82,8 @@ const resolveFromRegistry = async (
     storeName: string,
     registryPath: string,
 ): Promise<Result<StoreContext, StoreContextError>> => {
-    const registryResult = await loadStoreRegistry(registryPath, { allowMissing: false });
+    const registry = new FilesystemRegistry(registryPath);
+    const registryResult = await registry.load();
     if (!registryResult.ok) {
         return err({
             code: 'REGISTRY_LOAD_FAILED',
@@ -206,9 +208,14 @@ export const loadRegistry = async (
     registryPath?: string,
 ): Promise<Result<StoreRegistry, StoreContextError>> => {
     const path = registryPath ?? getDefaultRegistryPath();
-    const result = await loadStoreRegistry(path, { allowMissing: true });
+    const registry = new FilesystemRegistry(path);
+    const result = await registry.load();
 
     if (!result.ok) {
+        // For allowMissing: true behavior, return empty registry if missing
+        if (result.error.code === 'REGISTRY_MISSING') {
+            return ok({});
+        }
         return err({
             code: 'REGISTRY_LOAD_FAILED',
             message: `Failed to load store registry: ${result.error.message}`,
