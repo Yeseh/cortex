@@ -3,7 +3,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { mkdir, rm } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -14,8 +14,6 @@ import {
     listResources,
     buildResourceUri,
     parseUriVariables,
-    resolveStoreRoot,
-    createAdapter,
     ROOT_CATEGORIES,
     MEMORY_URI_SCHEME,
     type CategoryListing,
@@ -94,6 +92,13 @@ const getTextContent = (
         return content.text;
     }
     throw new Error('Content does not have text property');
+};
+
+// Helper to create a store registry file for listResources tests
+const createStoreRegistry = async (dataPath: string, storeName: string): Promise<void> => {
+    const storeRoot = join(dataPath, storeName);
+    const registryContent = `stores:\n  ${storeName}:\n    path: "${storeRoot}"\n`;
+    await writeFile(join(dataPath, 'stores.yaml'), registryContent);
 };
 
 // ---------------------------------------------------------------------------
@@ -188,20 +193,6 @@ describe('parseUriVariables', () => {
     });
 });
 
-describe('resolveStoreRoot', () => {
-    it('should resolve store root with provided store name', () => {
-        const config = createTestConfig('/data/cortex');
-        const result = resolveStoreRoot(config, 'my-store');
-        expect(result).toContain('my-store');
-    });
-
-    it('should use default store when store name is undefined', () => {
-        const config = createTestConfig('/data/cortex');
-        const result = resolveStoreRoot(config, undefined);
-        expect(result).toContain('default');
-    });
-});
-
 // ---------------------------------------------------------------------------
 // Memory Content Resource Tests
 // ---------------------------------------------------------------------------
@@ -215,7 +206,7 @@ describe('readMemoryContent', () => {
         testDir = await createTestDir();
         storeRoot = join(testDir, 'default');
         await mkdir(storeRoot, { recursive: true });
-        adapter = createAdapter(storeRoot);
+        adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
     });
 
     afterEach(async () => {
@@ -344,7 +335,7 @@ describe('readCategoryListing', () => {
         testDir = await createTestDir();
         storeRoot = join(testDir, 'default');
         await mkdir(storeRoot, { recursive: true });
-        adapter = createAdapter(storeRoot);
+        adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
     });
 
     afterEach(async () => {
@@ -579,6 +570,8 @@ describe('listResources', () => {
     beforeEach(async () => {
         testDir = await createTestDir();
         config = createTestConfig(testDir);
+        // Create the store registry file needed by listResources
+        await createStoreRegistry(testDir, 'default');
     });
 
     afterEach(async () => {
@@ -808,7 +801,7 @@ describe('error handling', () => {
         testDir = await createTestDir();
         storeRoot = join(testDir, 'default');
         await mkdir(storeRoot, { recursive: true });
-        adapter = createAdapter(storeRoot);
+        adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
     });
 
     afterEach(async () => {
@@ -854,6 +847,8 @@ describe('resource workflow', () => {
         config = createTestConfig(testDir);
         storeRoot = join(testDir, 'default');
         await mkdir(storeRoot, { recursive: true });
+        // Create the store registry file needed by listResources
+        await createStoreRegistry(testDir, 'default');
     });
 
     afterEach(async () => {
@@ -877,7 +872,7 @@ describe('resource workflow', () => {
         expect(listResult.ok).toBe(true);
 
         // Step 2: Browse category listing
-        const adapter = createAdapter(storeRoot);
+        const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
         const categoryResult = await readCategoryListing(adapter, 'default', 'project');
         expect(categoryResult.ok).toBe(true);
         if (categoryResult.ok) {
@@ -909,7 +904,7 @@ describe('resource workflow', () => {
             content: 'Deep nested content',
         });
 
-        const adapter = createAdapter(storeRoot);
+        const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
 
         // Check each level
         const level1Result = await readCategoryListing(adapter, 'default', 'project');

@@ -15,13 +15,15 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { mapCoreError } from '../../../errors.ts';
-import { resolveStoreContext } from '../../../context.ts';
+import { resolveStoreAdapter } from '../../../context.ts';
 import { validateMemorySlugPath } from '../../../../core/memory/validation.ts';
-import { FilesystemStorageAdapter } from '../../../../core/storage/filesystem/index.ts';
+import type { ScopedStorageAdapter } from '../../../../core/storage/adapter.ts';
 
 /** Dependencies injected into the handler for testability */
 export interface MoveHandlerDeps {
     stdout?: NodeJS.WritableStream;
+    /** Pre-resolved adapter for testing */
+    adapter?: ScopedStorageAdapter;
 }
 
 /**
@@ -40,9 +42,9 @@ export async function handleMove(
     deps: MoveHandlerDeps = {},
 ): Promise<void> {
     // 1. Resolve store context
-    const contextResult = await resolveStoreContext(storeName);
-    if (!contextResult.ok) {
-        mapCoreError(contextResult.error);
+    const storeResult = await resolveStoreAdapter(storeName);
+    if (!storeResult.ok) {
+        mapCoreError(storeResult.error);
     }
 
     // 2. Validate source path
@@ -58,8 +60,8 @@ export async function handleMove(
     }
 
     // 4. Move the memory file
-    const adapter = new FilesystemStorageAdapter({ rootDirectory: contextResult.value.root });
-    const moveResult = await adapter.moveMemoryFile(
+    const adapter = deps.adapter ?? storeResult.value.adapter;
+    const moveResult = await adapter.memories.move(
         sourceResult.value.slugPath,
         destResult.value.slugPath,
     );

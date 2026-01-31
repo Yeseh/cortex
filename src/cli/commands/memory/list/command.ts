@@ -30,12 +30,12 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { mapCoreError } from '../../../errors.ts';
-import { resolveStoreContext } from '../../../context.ts';
+import { resolveStoreAdapter } from '../../../context.ts';
 
 import type { CategoryIndex } from '../../../../core/index/types.ts';
 import { parseIndex } from '../../../../core/serialization.ts';
 import { parseMemoryFile } from '../../../../core/memory/index.ts';
-import { FilesystemStorageAdapter } from '../../../../core/storage/filesystem/index.ts';
+import type { ScopedStorageAdapter } from '../../../../core/storage/adapter.ts';
 import type { OutputFormat } from '../../../output.ts';
 import { toonOptions } from '../../../output.ts';
 import { encode as toonEncode } from '@toon-format/toon';
@@ -61,6 +61,8 @@ export interface ListHandlerDeps {
     stdout?: NodeJS.WritableStream;
     /** Current time for expiration checks */
     now?: Date;
+    /** Pre-resolved adapter for testing */
+    adapter?: ScopedStorageAdapter;
 }
 
 /**
@@ -105,10 +107,10 @@ const isExpired = (expiresAt: Date | undefined, now: Date): boolean => {
  * Loads the expiration date from a memory file.
  */
 const loadMemoryExpiry = async (
-    adapter: FilesystemStorageAdapter,
+    adapter: ScopedStorageAdapter,
     slugPath: string
 ): Promise<Date | undefined> => {
-    const contents = await adapter.readMemoryFile(slugPath);
+    const contents = await adapter.memories.read(slugPath);
     if (!contents.ok) {
         mapCoreError({
             code: 'READ_FAILED',
@@ -132,10 +134,10 @@ const loadMemoryExpiry = async (
  * Loads a category index from the specified path.
  */
 const loadCategoryIndex = async (
-    adapter: FilesystemStorageAdapter,
+    adapter: ScopedStorageAdapter,
     categoryPath: string
 ): Promise<CategoryIndex | null> => {
-    const indexContents = await adapter.readIndexFile(categoryPath);
+    const indexContents = await adapter.indexes.read(categoryPath);
     if (!indexContents.ok) {
         mapCoreError({
             code: 'READ_FAILED',
@@ -159,7 +161,7 @@ const loadCategoryIndex = async (
  * Recursively collects memories from a category and its subcategories.
  */
 const collectMemoriesFromCategory = async (
-    adapter: FilesystemStorageAdapter,
+    adapter: ScopedStorageAdapter,
     categoryPath: string,
     includeExpired: boolean,
     now: Date,
@@ -210,7 +212,7 @@ const collectMemoriesFromCategory = async (
  * Gets direct subcategories from a category index.
  */
 const getDirectSubcategories = async (
-    adapter: FilesystemStorageAdapter,
+    adapter: ScopedStorageAdapter,
     categoryPath: string
 ): Promise<ListSubcategoryEntry[]> => {
     const index = await loadCategoryIndex(adapter, categoryPath);
@@ -233,7 +235,7 @@ const getDirectSubcategories = async (
  * memories under any top-level category structure.
  */
 const collectAllCategories = async (
-    adapter: FilesystemStorageAdapter,
+    adapter: ScopedStorageAdapter,
     includeExpired: boolean,
     now: Date
 ): Promise<ListResult> => {
@@ -380,13 +382,13 @@ export async function handleList(
     deps: ListHandlerDeps = {}
 ): Promise<void> {
     // 1. Resolve store context
-    const contextResult = await resolveStoreContext(storeName);
-    if (!contextResult.ok) {
-        mapCoreError(contextResult.error);
+    const storeResult = await resolveStoreAdapter(storeName);
+    if (!storeResult.ok) {
+        mapCoreError(storeResult.error);
     }
 
     const now = deps.now ?? new Date();
-    const adapter = new FilesystemStorageAdapter({ rootDirectory: contextResult.value.root });
+    const adapter = deps.adapter ?? storeResult.value.adapter;
 
     // 2. Collect memories and subcategories
     let result: ListResult;

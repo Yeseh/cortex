@@ -23,11 +23,11 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { mapCoreError } from '../../../errors.ts';
-import { resolveStoreContext } from '../../../context.ts';
+import { resolveStoreAdapter } from '../../../context.ts';
 
 import { parseMemoryFile } from '../../../../core/memory/index.ts';
 import { validateMemorySlugPath } from '../../../../core/memory/validation.ts';
-import { FilesystemStorageAdapter } from '../../../../core/storage/filesystem/index.ts';
+import type { ScopedStorageAdapter } from '../../../../core/storage/adapter.ts';
 import { defaultTokenizer } from '../../../../core/tokens.ts';
 import { serializeOutput, type OutputMemory, type OutputFormat } from '../../../output.ts';
 
@@ -48,6 +48,8 @@ export interface ShowCommandOptions {
 export interface ShowHandlerDeps {
     /** Output stream for writing results (defaults to process.stdout) */
     stdout?: NodeJS.WritableStream;
+    /** Pre-resolved adapter for testing */
+    adapter?: ScopedStorageAdapter;
 }
 
 /**
@@ -75,9 +77,9 @@ export async function handleShow(
     deps: ShowHandlerDeps = {},
 ): Promise<void> {
     // 1. Resolve store context
-    const contextResult = await resolveStoreContext(storeName);
-    if (!contextResult.ok) {
-        mapCoreError(contextResult.error);
+    const storeResult = await resolveStoreAdapter(storeName);
+    if (!storeResult.ok) {
+        mapCoreError(storeResult.error);
     }
 
     // 2. Validate the memory path
@@ -87,8 +89,8 @@ export async function handleShow(
     }
 
     // 3. Read the memory file
-    const adapter = new FilesystemStorageAdapter({ rootDirectory: contextResult.value.root });
-    const readResult = await adapter.readMemoryFile(pathResult.value.slugPath);
+    const adapter = deps.adapter ?? storeResult.value.adapter;
+    const readResult = await adapter.memories.read(pathResult.value.slugPath);
     if (!readResult.ok) {
         mapCoreError({ code: 'READ_FAILED', message: readResult.error.message });
     }

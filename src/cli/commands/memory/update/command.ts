@@ -28,14 +28,14 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { mapCoreError } from '../../../errors.ts';
-import { resolveStoreContext } from '../../../context.ts';
+import { resolveStoreAdapter } from '../../../context.ts';
 import {
     parseMemoryFile,
     serializeMemoryFile,
     type MemoryFileContents,
 } from '../../../../core/memory/index.ts';
 import { validateMemorySlugPath } from '../../../../core/memory/validation.ts';
-import { FilesystemStorageAdapter } from '../../../../core/storage/filesystem/index.ts';
+import type { ScopedStorageAdapter } from '../../../../core/storage/adapter.ts';
 import { resolveMemoryContentInput } from '../../../input.ts';
 
 /** Options parsed by Commander for the update command */
@@ -52,6 +52,8 @@ export interface UpdateHandlerDeps {
     stdin?: NodeJS.ReadableStream;
     stdout?: NodeJS.WritableStream;
     now?: Date;
+    /** Pre-resolved adapter for testing */
+    adapter?: ScopedStorageAdapter;
 }
 
 /**
@@ -78,9 +80,9 @@ export async function handleUpdate(
     }
 
     // 2. Resolve store context
-    const contextResult = await resolveStoreContext(storeName);
-    if (!contextResult.ok) {
-        mapCoreError(contextResult.error);
+    const storeResult = await resolveStoreAdapter(storeName);
+    if (!storeResult.ok) {
+        mapCoreError(storeResult.error);
     }
 
     // 3. Validate the memory path
@@ -144,8 +146,8 @@ export async function handleUpdate(
     }
 
     // 8. Read existing memory
-    const adapter = new FilesystemStorageAdapter({ rootDirectory: contextResult.value.root });
-    const readResult = await adapter.readMemoryFile(pathResult.value.slugPath);
+    const adapter = deps.adapter ?? storeResult.value.adapter;
+    const readResult = await adapter.memories.read(pathResult.value.slugPath);
     if (!readResult.ok) {
         mapCoreError({ code: 'READ_FAILED', message: readResult.error.message });
     }
@@ -182,9 +184,7 @@ export async function handleUpdate(
         mapCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
     }
 
-    const writeResult = await adapter.writeMemoryFile(pathResult.value.slugPath, serialized.value, {
-        allowIndexUpdate: false,
-    });
+    const writeResult = await adapter.memories.write(pathResult.value.slugPath, serialized.value);
     if (!writeResult.ok) {
         mapCoreError({ code: 'WRITE_FAILED', message: writeResult.error.message });
     }

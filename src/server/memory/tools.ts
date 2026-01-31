@@ -26,7 +26,7 @@ import {
     moveMemory,
     listMemories,
 } from '../../core/memory/operations.ts';
-import { FilesystemStorageAdapter } from '../../core/storage/filesystem/index.ts';
+import type { ScopedStorageAdapter } from '../../core/storage/adapter.ts';
 import { resolveStorePath } from '../../core/store/registry.ts';
 import { FilesystemRegistry } from '../../core/storage/filesystem/index.ts';
 import type { ServerConfig } from '../config.ts';
@@ -195,7 +195,7 @@ const resolveStoreAdapter = async (
     config: ServerConfig,
     storeName: string,
     autoCreate: boolean,
-): Promise<Result<FilesystemStorageAdapter, McpError>> => {
+): Promise<Result<ScopedStorageAdapter, McpError>> => {
     const registryPath = join(config.dataPath, 'stores.yaml');
     const registry = new FilesystemRegistry(registryPath);
     const registryResult = await registry.load();
@@ -218,32 +218,32 @@ const resolveStoreAdapter = async (
         );
     }
 
-    const storePathResult = resolveStorePath(registryResult.value, storeName);
-    if (!storePathResult.ok) {
-        return err(
-            new McpError(ErrorCode.InvalidParams, storePathResult.error.message),
-        );
+    // Use registry.getStore() to get scoped adapter
+    const storeResult = registry.getStore(storeName);
+    if (!storeResult.ok) {
+        return err(new McpError(ErrorCode.InvalidParams, storeResult.error.message));
     }
 
-    const storeRoot = storePathResult.value;
-
+    // Handle autoCreate for directory creation
     if (autoCreate) {
-        try {
-            await mkdir(storeRoot, { recursive: true });
-        }
-        catch (e) {
-            const message = e instanceof Error ? e.message : String(e);
-            return err(
-                new McpError(
-                    ErrorCode.InternalError,
-                    `Failed to create store directory '${storeName}': ${message}`,
-                ),
-            );
+        const storePathResult = resolveStorePath(registryResult.value, storeName);
+        if (storePathResult.ok) {
+            try {
+                await mkdir(storePathResult.value, { recursive: true });
+            }
+            catch (e) {
+                const message = e instanceof Error ? e.message : String(e);
+                return err(
+                    new McpError(
+                        ErrorCode.InternalError,
+                        `Failed to create store directory '${storeName}': ${message}`,
+                    ),
+                );
+            }
         }
     }
 
-    const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
-    return ok(adapter);
+    return ok(storeResult.value);
 };
 
 /**
