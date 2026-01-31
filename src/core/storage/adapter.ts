@@ -412,3 +412,238 @@ export interface StorageAdapter {
  * ```
  */
 export interface LegacyStorageAdapter extends StorageAdapter, ComposedStorageAdapter {}
+
+// ============================================================================
+// Registry Interface (New Abstraction)
+// ============================================================================
+
+/**
+ * Error codes for registry operations.
+ *
+ * - `REGISTRY_MISSING` - Registry file does not exist at the expected path
+ * - `REGISTRY_READ_FAILED` - Unable to read registry file (permissions, I/O error)
+ * - `REGISTRY_WRITE_FAILED` - Unable to write registry file (permissions, disk full)
+ * - `REGISTRY_PARSE_FAILED` - Registry file exists but contains invalid YAML/data
+ */
+export type RegistryErrorCode =
+    | 'REGISTRY_MISSING'
+    | 'REGISTRY_READ_FAILED'
+    | 'REGISTRY_WRITE_FAILED'
+    | 'REGISTRY_PARSE_FAILED';
+
+/**
+ * Error details for registry operations.
+ *
+ * Provides structured error information including an error code for
+ * programmatic handling, a human-readable message, and optional
+ * context about the failing path or underlying cause.
+ *
+ * @example
+ * ```typescript
+ * const result = await registry.load();
+ * if (!result.ok) {
+ *   switch (result.error.code) {
+ *     case 'REGISTRY_MISSING':
+ *       console.log('Run "cortex init" to create a registry');
+ *       break;
+ *     case 'REGISTRY_PARSE_FAILED':
+ *       console.log('Registry file is corrupted:', result.error.cause);
+ *       break;
+ *   }
+ * }
+ * ```
+ */
+export interface RegistryError {
+    /** Machine-readable error code for programmatic handling */
+    code: RegistryErrorCode;
+    /** Human-readable error message describing what went wrong */
+    message: string;
+    /** Filesystem path to the registry file (when applicable) */
+    path?: string;
+    /** Underlying error that caused this failure (for debugging) */
+    cause?: unknown;
+}
+
+/**
+ * Error returned when a store is not found in the registry.
+ *
+ * This error is returned by {@link Registry.getStore} when the requested
+ * store name does not exist in the loaded registry data.
+ *
+ * @example
+ * ```typescript
+ * const result = registry.getStore('nonexistent');
+ * if (!result.ok && result.error.code === 'STORE_NOT_FOUND') {
+ *   console.log(`Store '${result.error.store}' not found`);
+ * }
+ * ```
+ */
+export interface StoreNotFoundError {
+    /** Error code, always `'STORE_NOT_FOUND'` for this error type */
+    code: 'STORE_NOT_FOUND';
+    /** Human-readable error message */
+    message: string;
+    /** The store name that was not found */
+    store: string;
+}
+
+/**
+ * Storage adapter scoped to a specific store.
+ *
+ * Provides access to memory, index, and category operations within a single
+ * store's context. Does not include store/registry operations since those
+ * are handled at the registry level.
+ *
+ * This interface is returned by {@link Registry.getStore} for performing
+ * store-specific operations.
+ *
+ * @example
+ * ```typescript
+ * const adapter = registry.getStore('my-project');
+ * if (adapter.ok) {
+ *   // Read a memory
+ *   const result = await adapter.value.memories.read('category/my-memory');
+ *
+ *   // Reindex the store
+ *   await adapter.value.indexes.reindex();
+ *
+ *   // List categories
+ *   const categories = await adapter.value.categories.list('');
+ * }
+ * ```
+ */
+export interface ScopedStorageAdapter {
+    /** Memory file operations (read, write, remove, move) */
+    memories: MemoryStorage;
+    /** Index file operations and reindexing */
+    indexes: IndexStorage;
+    /** Category operations (list, create, delete) */
+    categories: CategoryStorage;
+}
+
+/**
+ * Registry interface for managing store configurations.
+ *
+ * The registry is a central configuration file that maps store names to their
+ * filesystem paths. Implementations cache loaded data internally, enabling
+ * synchronous {@link getStore} calls after {@link load}.
+ *
+ * The registry serves as a factory for obtaining storage adapters scoped to
+ * specific stores, ensuring each store's operations are isolated.
+ *
+ * **Typical usage pattern:**
+ * 1. Call {@link initialize} once during first-time setup
+ * 2. Call {@link load} to read and cache registry data
+ * 3. Call {@link getStore} synchronously to get store-specific adapters
+ * 4. Call {@link save} when registry changes (e.g., adding new stores)
+ *
+ * @example
+ * ```typescript
+ * // Setup and usage
+ * const registry = new FilesystemRegistry('/path/to/stores.yaml');
+ * await registry.load();
+ *
+ * const adapter = registry.getStore('my-project');
+ * if (adapter.ok) {
+ *   const content = await adapter.value.memories.read('category/memory');
+ *   console.log(content.value);
+ * }
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // First-time initialization
+ * const registry = new FilesystemRegistry('/path/to/stores.yaml');
+ * await registry.initialize();  // Creates file if missing
+ * const result = await registry.load();
+ * if (result.ok) {
+ *   console.log('Registered stores:', Object.keys(result.value));
+ * }
+ * ```
+ */
+export interface Registry {
+    /**
+     * First-time registry setup.
+     *
+     * Creates the registry file and any necessary parent directories.
+     * Safe to call if registry already exists (no-op in that case).
+     *
+     * @returns Result with void on success, or {@link RegistryError} on failure
+     *
+     * @example
+     * ```typescript
+     * const result = await registry.initialize();
+     * if (!result.ok) {
+     *   console.error('Failed to initialize:', result.error.message);
+     * }
+     * ```
+     */
+    initialize(): Promise<Result<void, RegistryError>>;
+
+    /**
+     * Load registry data from storage and cache internally.
+     *
+     * Must be called before {@link getStore} can be used. Subsequent calls
+     * refresh the internal cache, which is useful when the registry file
+     * may have been modified externally.
+     *
+     * @returns Result with the parsed {@link StoreRegistry}, or {@link RegistryError} on failure
+     *
+     * @example
+     * ```typescript
+     * const result = await registry.load();
+     * if (result.ok) {
+     *   for (const [name, config] of Object.entries(result.value)) {
+     *     console.log(`${name}: ${config.path}`);
+     *   }
+     * }
+     * ```
+     */
+    load(): Promise<Result<StoreRegistry, RegistryError>>;
+
+    /**
+     * Persist registry data to storage.
+     *
+     * Writes the provided registry data and updates the internal cache.
+     * Creates parent directories as needed.
+     *
+     * @param registry - The complete registry data to persist
+     * @returns Result with void on success, or {@link RegistryError} on failure
+     *
+     * @example
+     * ```typescript
+     * // Add a new store to the registry
+     * const current = await registry.load();
+     * if (current.ok) {
+     *   const updated = {
+     *     ...current.value,
+     *     'new-store': { path: '/path/to/store' }
+     *   };
+     *   await registry.save(updated);
+     * }
+     * ```
+     */
+    save(registry: StoreRegistry): Promise<Result<void, RegistryError>>;
+
+    /**
+     * Synchronous factory returning a storage adapter scoped to a specific store.
+     *
+     * Uses the cached registry data from the last {@link load} call.
+     * Returns an error if the store is not found in the registry.
+     *
+     * @param name - The store name to get an adapter for
+     * @returns Result with {@link ScopedStorageAdapter} on success, or {@link StoreNotFoundError} if not found
+     * @throws Error if {@link load} has not been called
+     *
+     * @example
+     * ```typescript
+     * const adapter = registry.getStore('my-project');
+     * if (adapter.ok) {
+     *   const memory = await adapter.value.memories.read('notes/todo');
+     * } else {
+     *   console.error(`Store not found: ${adapter.error.store}`);
+     * }
+     * ```
+     */
+    getStore(name: string): Result<ScopedStorageAdapter, StoreNotFoundError>;
+}
