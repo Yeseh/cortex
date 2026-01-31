@@ -2,6 +2,15 @@
   "name": "@yeseh/cortex-cli",
   "version": "0.1.0",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Yeseh/cortex.git",
+    "directory": "packages/cli"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "public"
+  },
   "bin": {
     "cortex": "./src/run.ts"
   },
