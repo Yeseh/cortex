@@ -259,7 +259,9 @@ export const listStoresFromRegistry = async (
 
     const stores: StoreInfo[] = Object.entries(loadResult.value)
         .map((
-            [name, definition],
+            [
+                name, definition,
+            ],
         ) => ({
             name,
             path: definition.path,

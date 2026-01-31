@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { FilesystemRegistry } from '../storage/filesystem/filesystem-registry.ts';
-import { initializeStore, type InitStoreError } from './operations.ts';
+import { initializeStore } from './operations.ts';
 
 describe('initializeStore', () => {
     let tempDir: string;
@@ -45,7 +45,9 @@ describe('initializeStore', () => {
             const storePath = join(tempDir, 'categorized-store');
 
             const result = await initializeStore(registry, 'categorized-store', storePath, {
-                categories: ['global', 'projects'],
+                categories: [
+                    'global', 'projects',
+                ],
             });
 
             expect(result.ok).toBe(true);
@@ -75,7 +77,9 @@ describe('initializeStore', () => {
             const storePath = join(tempDir, 'indexed-store');
 
             await initializeStore(registry, 'indexed-store', storePath, {
-                categories: ['alpha', 'beta'],
+                categories: [
+                    'alpha', 'beta',
+                ],
             });
 
             const rootIndex = await fs.readFile(join(storePath, 'index.yaml'), 'utf8');
@@ -430,7 +434,11 @@ describe('initializeStore', () => {
             const storePath = join(tempDir, 'multi-cat-store');
 
             await initializeStore(registry, 'multi-cat-store', storePath, {
-                categories: ['alpha', 'beta', 'gamma'],
+                categories: [
+                    'alpha',
+                    'beta',
+                    'gamma',
+                ],
             });
 
             const rootIndex = await fs.readFile(join(storePath, 'index.yaml'), 'utf8');
