@@ -3,7 +3,9 @@
 ## Purpose
 
 Defines the CLI commands for managing memory stores, including listing, adding, removing, and initializing stores.
+
 ## Requirements
+
 ### Requirement: Store management commands
 
 The CLI SHALL provide commands to list, add, remove, and initialize stores.
@@ -13,14 +15,28 @@ The CLI SHALL provide commands to list, add, remove, and initialize stores.
 - **WHEN** a user runs `cortex store list`
 - **THEN** the CLI returns all registered stores
 
-### Requirement: Store initialization
+### Requirement: Store Init Command
 
-The `cortex store init` command SHALL create a store root directory with:
+The `store init` command SHALL use the `initializeStore` domain operation to create new stores. The command SHALL:
 
-- An `index.yaml` file at the root
-- Category directories with their own `index.yaml` files
+1. Resolve store name (explicit or from git repo)
+2. Resolve target path (explicit or default to `.cortex`)
+3. Call `initializeStore(registry, name, path)` domain operation
+4. Create project entry in default store (best effort)
 
-The command SHALL auto-detect the git repository name as the store name, accept a `--name` flag to override, and register the store in the global registry.
+#### Scenario: Initialize store via domain operation
+
+- **GIVEN** a valid store name and path
+- **WHEN** `cortex store init` is executed
+- **THEN** it calls `initializeStore` domain operation
+- **AND** the store is created and registered
+
+#### Scenario: Initialize store with git auto-detection
+
+- **GIVEN** the current directory is a git repository "my-project"
+- **WHEN** `cortex store init` is executed without `--name`
+- **THEN** the store name is derived from git repo name
+- **AND** `initializeStore` is called with the derived name
 
 #### Scenario: Initializing a store creates canonical layout
 
@@ -36,11 +52,6 @@ The command SHALL auto-detect the git repository name as the store name, accept 
 
 - **WHEN** a user runs `cortex store init`
 - **THEN** no `indexes/` subdirectory is created
-
-#### Scenario: Auto-detect git repository name
-
-- **WHEN** a user runs `cortex store init` in a git repository without `--name`
-- **THEN** the store is named after the git repository directory name
 
 #### Scenario: Name flag overrides auto-detection
 
@@ -90,3 +101,21 @@ When a project store is initialized, the CLI SHALL create a project entry memory
 - **WHEN** the default store does not exist during project entry creation
 - **THEN** the default store is created before adding the project entry
 
+### Requirement: Global Init Command
+
+The `cortex init` command SHALL use the `initializeStore` domain operation for store creation while keeping CLI-specific concerns (config.yaml) in the CLI layer.
+
+#### Scenario: Global init uses domain operation
+
+- **GIVEN** no global config exists
+- **WHEN** `cortex init` is executed
+- **THEN** it calls `initializeStore` with name "default" and categories `["global", "projects"]`
+- **AND** creates `config.yaml` in CLI layer
+- **AND** creates `stores.yaml` via registry
+
+#### Scenario: Global init with --force
+
+- **GIVEN** global config already exists
+- **WHEN** `cortex init --force` is executed
+- **THEN** it reinitializes the store via `initializeStore`
+- **AND** overwrites existing configuration

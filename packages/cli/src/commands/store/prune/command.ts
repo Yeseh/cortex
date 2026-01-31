@@ -19,10 +19,11 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { mapCoreError } from '../../../errors.ts';
-import { resolveStoreContext } from '../../../context.ts';
+import { resolveStoreAdapter } from '../../../context.ts';
 import type { CategoryIndex } from '@yeseh/cortex-core/index';
 import { parseIndex } from '@yeseh/cortex-core';
-import { FilesystemStorageAdapter, parseMemory } from '@yeseh/cortex-storage-fs';
+import { parseMemory } from '@yeseh/cortex-storage-fs';
+import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 
 /**
  * Options for the prune command.
@@ -41,6 +42,8 @@ export interface PruneHandlerDeps {
     stdout?: NodeJS.WritableStream;
     /** Current time for expiry checks (defaults to new Date()) */
     now?: Date;
+    /** Pre-resolved adapter for testing */
+    adapter?: ScopedStorageAdapter;
 }
 
 interface PrunedMemoryEntry {
@@ -63,10 +66,10 @@ const isExpired = (expiresAt: Date | undefined, now: Date): boolean => {
 };
 
 const loadCategoryIndex = async (
-    adapter: FilesystemStorageAdapter,
+    adapter: ScopedStorageAdapter,
     categoryPath: string,
 ): Promise<PruneResult<CategoryIndex | null>> => {
-    const indexContents = await adapter.readIndexFile(categoryPath);
+    const indexContents = await adapter.indexes.read(categoryPath);
     if (!indexContents.ok) {
         return {
             ok: false,
@@ -93,11 +96,11 @@ const loadCategoryIndex = async (
 };
 
 const checkMemoryExpiry = async (
-    adapter: FilesystemStorageAdapter,
+    adapter: ScopedStorageAdapter,
     slugPath: string,
     now: Date,
 ): Promise<PruneResult<{ expired: boolean; expiresAt?: Date }>> => {
-    const contents = await adapter.readMemoryFile(slugPath);
+    const contents = await adapter.memories.read(slugPath);
     if (!contents.ok) {
         return {
             ok: false,
@@ -125,7 +128,7 @@ const checkMemoryExpiry = async (
 };
 
 const collectExpiredFromCategory = async (
-    adapter: FilesystemStorageAdapter,
+    adapter: ScopedStorageAdapter,
     categoryPath: string,
     now: Date,
     visited: Set<string>,
@@ -175,7 +178,7 @@ const collectExpiredFromCategory = async (
 };
 
 const collectAllExpired = async (
-    adapter: FilesystemStorageAdapter,
+    adapter: ScopedStorageAdapter,
     now: Date,
 ): Promise<PruneResult<PrunedMemoryEntry[]>> => {
     const rootCategories = [
@@ -199,11 +202,11 @@ const collectAllExpired = async (
 };
 
 const deleteExpiredMemories = async (
-    adapter: FilesystemStorageAdapter,
+    adapter: ScopedStorageAdapter,
     entries: PrunedMemoryEntry[],
 ): Promise<PruneResult<void>> => {
     for (const entry of entries) {
-        const removeResult = await adapter.removeMemoryFile(entry.path);
+        const removeResult = await adapter.memories.remove(entry.path);
         if (!removeResult.ok) {
             return {
                 ok: false,
@@ -237,14 +240,19 @@ export async function handlePrune(
     storeName: string | undefined,
     deps: PruneHandlerDeps = {},
 ): Promise<void> {
-    // 1. Resolve store context
-    const contextResult = await resolveStoreContext(storeName);
-    if (!contextResult.ok) {
-        mapCoreError(contextResult.error);
-    }
-
+    // 1. Resolve store adapter
     const now = deps.now ?? new Date();
-    const adapter = new FilesystemStorageAdapter({ rootDirectory: contextResult.value.root });
+    let adapter: ScopedStorageAdapter;
+
+    if (deps.adapter) {
+        adapter = deps.adapter;
+    } else {
+        const storeResult = await resolveStoreAdapter(storeName);
+        if (!storeResult.ok) {
+            mapCoreError(storeResult.error);
+        }
+        adapter = storeResult.value.adapter;
+    }
 
     // 2. Collect all expired memories
     const expiredResult = await collectAllExpired(adapter, now);
@@ -275,7 +283,7 @@ export async function handlePrune(
     }
 
     // 6. Reindex after deletion
-    const reindexResult = await adapter.reindexCategoryIndexes();
+    const reindexResult = await adapter.indexes.reindex();
     if (!reindexResult.ok) {
         mapCoreError({ code: 'REINDEX_FAILED', message: 'Failed to reindex after pruning.' });
     }

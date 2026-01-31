@@ -15,13 +15,15 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { mapCoreError } from '../../../errors.ts';
-import { resolveStoreContext } from '../../../context.ts';
+import { resolveStoreAdapter } from '../../../context.ts';
 import { validateMemorySlugPath } from '@yeseh/cortex-core/memory';
-import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
+import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 
 /** Dependencies injected into the handler for testability */
 export interface RemoveHandlerDeps {
     stdout?: NodeJS.WritableStream;
+    /** Pre-resolved adapter for testing */
+    adapter?: ScopedStorageAdapter;
 }
 
 /**
@@ -38,9 +40,9 @@ export async function handleRemove(
     deps: RemoveHandlerDeps = {},
 ): Promise<void> {
     // 1. Resolve store context
-    const contextResult = await resolveStoreContext(storeName);
-    if (!contextResult.ok) {
-        mapCoreError(contextResult.error);
+    const storeResult = await resolveStoreAdapter(storeName);
+    if (!storeResult.ok) {
+        mapCoreError(storeResult.error);
     }
 
     // 2. Validate the memory path
@@ -50,8 +52,8 @@ export async function handleRemove(
     }
 
     // 3. Remove the memory file
-    const adapter = new FilesystemStorageAdapter({ rootDirectory: contextResult.value.root });
-    const removeResult = await adapter.removeMemoryFile(pathResult.value.slugPath);
+    const adapter = deps.adapter ?? storeResult.value.adapter;
+    const removeResult = await adapter.memories.remove(pathResult.value.slugPath);
     if (!removeResult.ok) {
         mapCoreError({ code: 'REMOVE_FAILED', message: removeResult.error.message });
     }

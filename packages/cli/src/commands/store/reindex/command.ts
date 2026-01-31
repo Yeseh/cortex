@@ -16,8 +16,8 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { mapCoreError } from '../../../errors.ts';
-import { resolveStoreContext } from '../../../context.ts';
-import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
+import { resolveStoreAdapter } from '../../../context.ts';
+import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 
 /**
  * Dependencies for the reindex command handler.
@@ -26,6 +26,8 @@ import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 export interface ReindexHandlerDeps {
     /** Output stream for writing results (defaults to process.stdout) */
     stdout?: NodeJS.WritableStream;
+    /** Pre-resolved adapter for testing */
+    adapter?: ScopedStorageAdapter;
 }
 
 /**
@@ -46,21 +48,21 @@ export async function handleReindex(
     deps: ReindexHandlerDeps = {},
 ): Promise<void> {
     // 1. Resolve store context
-    const contextResult = await resolveStoreContext(storeName);
-    if (!contextResult.ok) {
-        mapCoreError(contextResult.error);
+    const storeResult = await resolveStoreAdapter(storeName);
+    if (!storeResult.ok) {
+        mapCoreError(storeResult.error);
     }
 
     // 2. Create adapter and reindex
-    const adapter = new FilesystemStorageAdapter({ rootDirectory: contextResult.value.root });
-    const reindexResult = await adapter.reindexCategoryIndexes();
+    const adapter = deps.adapter ?? storeResult.value.adapter;
+    const reindexResult = await adapter.indexes.reindex();
     if (!reindexResult.ok) {
         mapCoreError({ code: 'REINDEX_FAILED', message: reindexResult.error.message });
     }
 
     // 3. Output result
     const out = deps.stdout ?? process.stdout;
-    out.write(`Reindexed category indexes for ${contextResult.value.root}.\n`);
+    out.write(`Reindexed category indexes for ${storeResult.value.context.root}.\n`);
 }
 
 /**

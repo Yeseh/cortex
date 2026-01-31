@@ -23,10 +23,11 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { mapCoreError } from '../../../errors.ts';
-import { resolveStoreContext } from '../../../context.ts';
+import { resolveStoreAdapter } from '../../../context.ts';
 
 import { validateMemorySlugPath, type Memory } from '@yeseh/cortex-core/memory';
-import { FilesystemStorageAdapter, serializeMemory } from '@yeseh/cortex-storage-fs';
+import { serializeMemory } from '@yeseh/cortex-storage-fs';
+import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 import { resolveMemoryContentInput } from '../../../input.ts';
 
 /** Options parsed by Commander for the add command */
@@ -42,6 +43,8 @@ export interface AddHandlerDeps {
     stdin?: NodeJS.ReadableStream;
     stdout?: NodeJS.WritableStream;
     now?: Date;
+    /** Pre-resolved adapter for testing */
+    adapter?: ScopedStorageAdapter;
 }
 
 /**
@@ -59,10 +62,10 @@ export async function handleAdd(
     storeName: string | undefined,
     deps: AddHandlerDeps = {},
 ): Promise<void> {
-    // 1. Resolve store context
-    const contextResult = await resolveStoreContext(storeName);
-    if (!contextResult.ok) {
-        mapCoreError(contextResult.error);
+    // 1. Resolve store context and adapter
+    const storeResult = await resolveStoreAdapter(storeName);
+    if (!storeResult.ok) {
+        mapCoreError(storeResult.error);
     }
 
     // 2. Validate the memory path
@@ -114,13 +117,23 @@ export async function handleAdd(
         mapCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
     }
 
-    const adapter = new FilesystemStorageAdapter({ rootDirectory: contextResult.value.root });
-    const writeResult = await adapter.writeMemoryFile(pathResult.value.slugPath, serialized.value, {
-        allowIndexCreate: true,
-        allowIndexUpdate: true,
-    });
+    // Use injected adapter or resolved one
+    const adapter = deps.adapter ?? storeResult.value.adapter;
+
+    // Write memory using ScopedStorageAdapter interface
+    const writeResult = await adapter.memories.write(pathResult.value.slugPath, serialized.value);
     if (!writeResult.ok) {
         mapCoreError({ code: 'WRITE_FAILED', message: writeResult.error.message });
+    }
+
+    // Update indexes after memory write
+    const indexResult = await adapter.indexes.updateAfterMemoryWrite(
+        pathResult.value.slugPath,
+        serialized.value,
+        { createWhenMissing: true },
+    );
+    if (!indexResult.ok) {
+        mapCoreError({ code: 'WRITE_FAILED', message: indexResult.error.message });
     }
 
     // 7. Output success message

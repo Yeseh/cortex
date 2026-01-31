@@ -16,8 +16,18 @@ import {
     type StoreRegistry,
     type StoreResolveError,
 } from '@yeseh/cortex-core/store';
-import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
-import type { RegistryError } from '@yeseh/cortex-core/storage';
+import { FilesystemRegistry, FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
+import type { RegistryError, ScopedStorageAdapter, StoreNotFoundError } from '@yeseh/cortex-core/storage';
+
+/**
+ * Result of resolving a store with its adapter.
+ */
+export interface ResolvedStore {
+    /** The resolved store context with path information */
+    context: StoreContext;
+    /** Scoped storage adapter for store operations */
+    adapter: ScopedStorageAdapter;
+}
 
 /**
  * Resolved store context containing the root path and optional store name.
@@ -52,7 +62,7 @@ export type StoreContextErrorCode =
 export interface StoreContextError {
     code: StoreContextErrorCode;
     message: string;
-    cause?: ConfigLoadError | StoreResolutionError | RegistryError | StoreResolveError;
+    cause?: ConfigLoadError | StoreResolutionError | RegistryError | StoreResolveError | StoreNotFoundError;
 }
 
 const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
@@ -223,4 +233,81 @@ export const loadRegistry = async (
     }
 
     return ok(result.value);
+};
+
+/**
+ * Resolves store context and returns a scoped storage adapter.
+ *
+ * Uses the Registry pattern to get a storage adapter scoped to the resolved store.
+ * For named stores, uses registry.getStore(). For local/global stores, creates
+ * adapter directly.
+ *
+ * @param storeName - Optional store name to look up in the registry
+ * @param options - Resolution options
+ * @returns Result with resolved store and adapter, or error
+ */
+export const resolveStoreAdapter = async (
+    storeName: string | undefined,
+    options: StoreContextOptions = {},
+): Promise<Result<ResolvedStore, StoreContextError>> => {
+    const registryPath = options.registryPath ?? getDefaultRegistryPath();
+
+    // If a store name is provided, use registry.getStore() for the adapter
+    if (storeName) {
+        const registry = new FilesystemRegistry(registryPath);
+        const registryResult = await registry.load();
+        if (!registryResult.ok) {
+            return err({
+                code: 'REGISTRY_LOAD_FAILED',
+                message: `Failed to load store registry: ${registryResult.error.message}`,
+                cause: registryResult.error,
+            });
+        }
+
+        const adapterResult = registry.getStore(storeName);
+        if (!adapterResult.ok) {
+            return err({
+                code: 'STORE_NOT_FOUND',
+                message: `Store '${storeName}' not found in registry`,
+                cause: adapterResult.error,
+            });
+        }
+
+        const pathResult = resolveStorePath(registryResult.value, storeName);
+        if (!pathResult.ok) {
+            return err({
+                code: 'STORE_NOT_FOUND',
+                message: pathResult.error.message,
+                cause: pathResult.error,
+            });
+        }
+
+        return ok({
+            context: {
+                root: pathResult.value,
+                name: storeName,
+                scope: 'registry',
+            },
+            adapter: adapterResult.value,
+        });
+    }
+
+    // Otherwise, resolve default context and create adapter directly
+    const contextResult = await resolveStoreContext(undefined, options);
+    if (!contextResult.ok) {
+        return contextResult;
+    }
+
+    const fsAdapter = new FilesystemStorageAdapter({
+        rootDirectory: contextResult.value.root,
+    });
+
+    return ok({
+        context: contextResult.value,
+        adapter: {
+            memories: fsAdapter.memories,
+            indexes: fsAdapter.indexes,
+            categories: fsAdapter.categories,
+        },
+    });
 };
