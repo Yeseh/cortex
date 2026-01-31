@@ -27,7 +27,6 @@ import {
     deleteCategory,
     MAX_DESCRIPTION_LENGTH,
 } from '@yeseh/cortex-core/category';
-import { resolveStorePath } from '@yeseh/cortex-core/store';
 import type { ServerConfig } from '../config.ts';
 import { storeNameSchema } from '../store/tools.ts';
 

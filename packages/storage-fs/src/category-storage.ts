@@ -13,7 +13,7 @@
  */
 
 import type { Result } from '@yeseh/cortex-core';
-import type { CategoryError, CategoryStorage } from '@yeseh/cortex-core/category';
+import type { CategoryError, CategoryStoragePort } from '@yeseh/cortex-core/category';
 import type { CategoryIndex } from '@yeseh/cortex-core/index';
 import type { FilesystemContext } from './types.ts';
 import {
@@ -69,7 +69,7 @@ import {
  * @see {@link CategoryStorage} - The interface this class implements
  * @see {@link FilesystemMemoryStorage} - For memory file operations
  */
-export class FilesystemCategoryStorage implements CategoryStorage {
+export class FilesystemCategoryStorage implements CategoryStoragePort {
     /**
      * Creates a new FilesystemCategoryStorage instance.
      *

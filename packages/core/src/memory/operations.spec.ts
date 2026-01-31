@@ -73,11 +73,13 @@ const createMockSerializer = (): MemorySerializer => ({
                     const value = match[2]!;
                     if (key === 'created_at' || key === 'updated_at' || key === 'expires_at') {
                         metadata[key] = new Date(value);
-                    } else if (key === 'tags') {
+                    }
+                    else if (key === 'tags') {
                         // Parse [tag1, tag2] format
                         const tagMatch = value.match(/^\[(.*)\]$/);
-                        metadata[key] = tagMatch?.[1]?.split(',').map(t => t.trim()).filter(Boolean) ?? [];
-                    } else {
+                        metadata[key] = tagMatch?.[1]?.split(',').map((t) => t.trim()).filter(Boolean) ?? [];
+                    }
+                    else {
                         metadata[key] = value;
                     }
                 }
@@ -93,7 +95,8 @@ const createMockSerializer = (): MemorySerializer => ({
                 },
                 content,
             });
-        } catch {
+        }
+        catch {
             return err({ code: 'INVALID_FRONTMATTER', message: 'Failed to parse' });
         }
     },

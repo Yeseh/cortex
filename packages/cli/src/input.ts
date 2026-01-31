@@ -3,7 +3,7 @@
  */
 
 import { readFile } from 'node:fs/promises';
-import type { Result } from '../core/types.ts';
+import type { Result } from '@yeseh/cortex-core';
 
 export type MemoryContentSource = 'flag' | 'file' | 'stdin' | 'none';
 

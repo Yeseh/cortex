@@ -18,7 +18,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { $ } from 'bun';
-import { FilesystemStorageAdapter } from '../src/core/storage/filesystem/index.ts';
+import { FilesystemStorageAdapter } from '../packages/storage-fs/src/index.ts';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types

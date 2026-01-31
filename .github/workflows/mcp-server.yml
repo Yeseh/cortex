@@ -4,8 +4,9 @@ on:
     push:
         branches: [main]
         paths:
-            - 'src/server/**'
-            - 'src/core/**'
+            - 'packages/server/**'
+            - 'packages/core/**'
+            - 'packages/storage-fs/**'
             - 'package.json'
             - 'bun.lock'
             - 'tsconfig.json'
@@ -14,8 +15,9 @@ on:
     pull_request:
         branches: [main]
         paths:
-            - 'src/server/**'
-            - 'src/core/**'
+            - 'packages/server/**'
+            - 'packages/core/**'
+            - 'packages/storage-fs/**'
             - 'package.json'
             - 'bun.lock'
             - 'tsconfig.json'
@@ -40,7 +42,7 @@ jobs:
               run: bun install --frozen-lockfile
 
             - name: Run ESLint
-              run: bun run eslint src/server/**/*.ts
+              run: bun run lint
 
     typecheck:
         name: Type Check
@@ -58,7 +60,7 @@ jobs:
               run: bun install --frozen-lockfile
 
             - name: Run TypeScript type check
-              run: bun run tsc --noEmit
+              run: bun run typecheck
 
     test:
         name: Test
@@ -76,7 +78,7 @@ jobs:
               run: bun install --frozen-lockfile
 
             - name: Run tests
-              run: bun test src/server/
+              run: bun test packages/server/
 
     build:
         name: Build
@@ -95,7 +97,7 @@ jobs:
               run: bun install --frozen-lockfile
 
             - name: Compile MCP server binary
-              run: bun build --compile --minify --sourcemap --bytecode ./src/server/index.ts --outfile ./bin/cortex-mcp
+              run: bun build --compile --minify --sourcemap --bytecode ./packages/server/src/index.ts --outfile ./bin/cortex-mcp
 
             - name: Verify binary exists
               run: test -f ./bin/cortex-mcp

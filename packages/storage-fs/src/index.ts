@@ -39,7 +39,7 @@ import type {
     StorageAdapterError,
     StorageIndexName,
 } from '@yeseh/cortex-core/storage';
-import type { CategoryError, CategoryStorage } from '@yeseh/cortex-core/category';
+import type { CategoryError, CategoryStoragePort } from '@yeseh/cortex-core/category';
 import type { CategoryIndex } from '@yeseh/cortex-core/index';
 import type {
     FilesystemStorageAdapterOptions,
@@ -96,7 +96,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
     /** Index file operations and reindexing */
     public readonly indexes: IndexStorage;
     /** Category operations */
-    public readonly categories: CategoryStorage;
+    public readonly categories: CategoryStoragePort;
 
     constructor(options: FilesystemStorageAdapterOptions) {
         this.ctx = {
