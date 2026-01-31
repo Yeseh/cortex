@@ -11,22 +11,22 @@
  * @module server/memory/resources
  */
 
-import { join } from "node:path";
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { Variables } from "@modelcontextprotocol/sdk/shared/uriTemplate.js";
+import { join } from 'node:path';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { Variables } from '@modelcontextprotocol/sdk/shared/uriTemplate.js';
 import type {
-	ReadResourceResult,
-	Resource,
-} from "@modelcontextprotocol/sdk/types.js";
-import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
-import { parseMemoryFile } from "../../core/memory/index.ts";
-import { validateMemorySlugPath } from "../../core/memory/validation.ts";
-import { parseIndex } from "../../core/serialization.ts";
-import type { ScopedStorageAdapter } from "../../core/storage/adapter.ts";
-import { FilesystemRegistry } from "../../core/storage/filesystem/index.ts";
-import type { Result } from "../../core/types.ts";
-import type { ServerConfig } from "../config.ts";
+    ReadResourceResult,
+    Resource,
+} from '@modelcontextprotocol/sdk/types.js';
+import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
+import { parseMemoryFile } from '../../core/memory/index.ts';
+import { validateMemorySlugPath } from '../../core/memory/validation.ts';
+import { parseIndex } from '../../core/serialization.ts';
+import type { ScopedStorageAdapter } from '../../core/storage/adapter.ts';
+import { FilesystemRegistry } from '../../core/storage/filesystem/index.ts';
+import type { Result } from '../../core/types.ts';
+import type { ServerConfig } from '../config.ts';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -38,14 +38,19 @@ import type { ServerConfig } from "../config.ts";
  * These are the top-level categories in the memory hierarchy that are
  * enumerated when listing resources or providing path completions.
  */
-const ROOT_CATEGORIES = ["human", "persona", "project", "domain"] as const;
+const ROOT_CATEGORIES = [
+    'human',
+    'persona',
+    'project',
+    'domain',
+] as const;
 
 /**
  * URI scheme prefix for memory resources.
  *
  * All memory resource URIs follow the pattern: `cortex://memory/{store}/{path}`
  */
-const MEMORY_URI_SCHEME = "cortex://memory";
+const MEMORY_URI_SCHEME = 'cortex://memory';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -74,39 +79,39 @@ const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
  * ```
  */
 const resolveAdapter = async (
-	config: ServerConfig,
-	storeName: string | undefined,
+    config: ServerConfig,
+    storeName: string | undefined,
 ): Promise<Result<ScopedStorageAdapter, McpError>> => {
-	const store = storeName ?? config.defaultStore;
-	const registryPath = join(config.dataPath, "stores.yaml");
-	const registry = new FilesystemRegistry(registryPath);
+    const store = storeName ?? config.defaultStore;
+    const registryPath = join(config.dataPath, 'stores.yaml');
+    const registry = new FilesystemRegistry(registryPath);
 
-	const loadResult = await registry.load();
-	if (!loadResult.ok) {
-		if (loadResult.error.code === "REGISTRY_MISSING") {
-			return err(
-				new McpError(
-					ErrorCode.InternalError,
-					`Store registry not found at ${registryPath}`,
-				),
-			);
-		}
-		return err(
-			new McpError(
-				ErrorCode.InternalError,
-				`Failed to load store registry: ${loadResult.error.message}`,
-			),
-		);
-	}
+    const loadResult = await registry.load();
+    if (!loadResult.ok) {
+        if (loadResult.error.code === 'REGISTRY_MISSING') {
+            return err(
+                new McpError(
+                    ErrorCode.InternalError,
+                    `Store registry not found at ${registryPath}`,
+                ),
+            );
+        }
+        return err(
+            new McpError(
+                ErrorCode.InternalError,
+                `Failed to load store registry: ${loadResult.error.message}`,
+            ),
+        );
+    }
 
-	const storeResult = registry.getStore(store);
-	if (!storeResult.ok) {
-		return err(
-			new McpError(ErrorCode.InvalidParams, storeResult.error.message),
-		);
-	}
+    const storeResult = registry.getStore(store);
+    if (!storeResult.ok) {
+        return err(
+            new McpError(ErrorCode.InvalidParams, storeResult.error.message),
+        );
+    }
 
-	return ok(storeResult.value);
+    return ok(storeResult.value);
 };
 
 /**
@@ -137,19 +142,19 @@ const resolveAdapter = async (
  * ```
  */
 const buildResourceUri = (
-	store: string,
-	path: string,
-	isCategory: boolean,
+    store: string,
+    path: string,
+    isCategory: boolean,
 ): string => {
-	if (!path) {
-		return `${MEMORY_URI_SCHEME}/${store}/`;
-	}
-	const suffix = isCategory && !path.endsWith("/") ? "/" : "";
-	return `${MEMORY_URI_SCHEME}/${store}/${path}${suffix}`;
+    if (!path) {
+        return `${MEMORY_URI_SCHEME}/${store}/`;
+    }
+    const suffix = isCategory && !path.endsWith('/') ? '/' : '';
+    return `${MEMORY_URI_SCHEME}/${store}/${path}${suffix}`;
 };
 
 type ListResourcesOutput = {
-	resources: Resource[];
+    resources: Resource[];
 };
 
 type ListResourcesResult = Result<ListResourcesOutput, McpError>;
@@ -161,12 +166,12 @@ type ListResourcesResult = Result<ListResourcesOutput, McpError>;
  * is for a category listing (trailing slash) or memory content.
  */
 interface ParsedUriVariables {
-	/** Store name resolved from URI or default config */
-	store: string;
-	/** Memory or category path with trailing slash removed */
-	path: string;
-	/** True if original URI had trailing slash (category listing request) */
-	isCategory: boolean;
+    /** Store name resolved from URI or default config */
+    store: string;
+    /** Memory or category path with trailing slash removed */
+    path: string;
+    /** True if original URI had trailing slash (category listing request) */
+    isCategory: boolean;
 }
 
 /**
@@ -179,10 +184,10 @@ interface ParsedUriVariables {
  * @returns Extracted string value, or empty string if undefined
  */
 const getVariableString = (value: string | string[] | undefined): string => {
-	if (Array.isArray(value)) {
-		return value.join("/");
-	}
-	return value ?? "";
+    if (Array.isArray(value)) {
+        return value.join('/');
+    }
+    return value ?? '';
 };
 
 /**
@@ -207,17 +212,17 @@ const getVariableString = (value: string | string[] | undefined): string => {
  * ```
  */
 const parseUriVariables = (
-	variables: Variables,
-	config: ServerConfig,
+    variables: Variables,
+    config: ServerConfig,
 ): Result<ParsedUriVariables, McpError> => {
-	const store = getVariableString(variables.store) || config.defaultStore;
-	const rawPath = getVariableString(variables["path*"]);
+    const store = getVariableString(variables.store) || config.defaultStore;
+    const rawPath = getVariableString(variables['path*']);
 
-	// Trailing slash indicates category listing
-	const isCategory = rawPath.endsWith("/") || rawPath === "";
-	const path = rawPath.replace(/\/$/, "");
+    // Trailing slash indicates category listing
+    const isCategory = rawPath.endsWith('/') || rawPath === '';
+    const path = rawPath.replace(/\/$/, '');
 
-	return ok({ store, path, isCategory });
+    return ok({ store, path, isCategory });
 };
 
 // ---------------------------------------------------------------------------
@@ -254,28 +259,28 @@ const parseUriVariables = (
  * ```
  */
 interface CategoryListing {
-	/** Category path being listed (empty string for root) */
-	category: string;
-	/** Memories directly within this category */
-	memories: {
-		/** Full memory path (category/slug) */
-		path: string;
-		/** Resource URI for retrieving memory content */
-		uri: string;
-		/** Estimated token count for the memory content */
-		tokenEstimate: number;
-		/** Optional summary extracted from memory */
-		summary?: string;
-	}[];
-	/** Subcategories within this category */
-	subcategories: {
-		/** Full subcategory path */
-		path: string;
-		/** Resource URI for listing subcategory contents */
-		uri: string;
-		/** Total number of memories in this subcategory */
-		memoryCount: number;
-	}[];
+    /** Category path being listed (empty string for root) */
+    category: string;
+    /** Memories directly within this category */
+    memories: {
+        /** Full memory path (category/slug) */
+        path: string;
+        /** Resource URI for retrieving memory content */
+        uri: string;
+        /** Estimated token count for the memory content */
+        tokenEstimate: number;
+        /** Optional summary extracted from memory */
+        summary?: string;
+    }[];
+    /** Subcategories within this category */
+    subcategories: {
+        /** Full subcategory path */
+        path: string;
+        /** Resource URI for listing subcategory contents */
+        uri: string;
+        /** Total number of memories in this subcategory */
+        memoryCount: number;
+    }[];
 }
 
 /**
@@ -302,60 +307,58 @@ interface CategoryListing {
  * ```
  */
 const readMemoryContent = async (
-	adapter: ScopedStorageAdapter,
-	store: string,
-	memoryPath: string,
+    adapter: ScopedStorageAdapter,
+    store: string,
+    memoryPath: string,
 ): Promise<Result<ReadResourceResult, McpError>> => {
-	// Validate the memory path
-	const identity = validateMemorySlugPath(memoryPath);
-	if (!identity.ok) {
-		return err(
-			new McpError(
-				ErrorCode.InvalidParams,
-				`Invalid memory path: ${identity.error.message}`,
-			),
-		);
-	}
+    // Validate the memory path
+    const identity = validateMemorySlugPath(memoryPath);
+    if (!identity.ok) {
+        return err(
+            new McpError(
+                ErrorCode.InvalidParams,
+                `Invalid memory path: ${identity.error.message}`,
+            ),
+        );
+    }
 
-	// Read the memory file
-	const readResult = await adapter.memories.read(identity.value.slugPath);
-	if (!readResult.ok) {
-		return err(
-			new McpError(
-				ErrorCode.InternalError,
-				`Failed to read memory: ${readResult.error.message}`,
-			),
-		);
-	}
+    // Read the memory file
+    const readResult = await adapter.memories.read(identity.value.slugPath);
+    if (!readResult.ok) {
+        return err(
+            new McpError(
+                ErrorCode.InternalError,
+                `Failed to read memory: ${readResult.error.message}`,
+            ),
+        );
+    }
 
-	if (!readResult.value) {
-		return err(
-			new McpError(ErrorCode.InvalidParams, `Memory not found: ${memoryPath}`),
-		);
-	}
+    if (!readResult.value) {
+        return err(
+            new McpError(ErrorCode.InvalidParams, `Memory not found: ${memoryPath}`),
+        );
+    }
 
-	// Parse the memory file to get content
-	const parsed = parseMemoryFile(readResult.value);
-	if (!parsed.ok) {
-		return err(
-			new McpError(
-				ErrorCode.InternalError,
-				`Failed to parse memory: ${parsed.error.message}`,
-			),
-		);
-	}
+    // Parse the memory file to get content
+    const parsed = parseMemoryFile(readResult.value);
+    if (!parsed.ok) {
+        return err(
+            new McpError(
+                ErrorCode.InternalError,
+                `Failed to parse memory: ${parsed.error.message}`,
+            ),
+        );
+    }
 
-	const uri = buildResourceUri(store, memoryPath, false);
+    const uri = buildResourceUri(store, memoryPath, false);
 
-	return ok({
-		contents: [
-			{
-				uri,
-				mimeType: "text/plain",
-				text: parsed.value.content,
-			},
-		],
-	});
+    return ok({
+        contents: [{
+            uri,
+            mimeType: 'text/plain',
+            text: parsed.value.content,
+        }],
+    });
 };
 
 /**
@@ -384,72 +387,70 @@ const readMemoryContent = async (
  * ```
  */
 const readCategoryListing = async (
-	adapter: ScopedStorageAdapter,
-	store: string,
-	categoryPath: string,
+    adapter: ScopedStorageAdapter,
+    store: string,
+    categoryPath: string,
 ): Promise<Result<ReadResourceResult, McpError>> => {
-	// Handle root listing (empty path)
-	if (!categoryPath) {
-		return readRootCategoryListing(adapter, store);
-	}
+    // Handle root listing (empty path)
+    if (!categoryPath) {
+        return readRootCategoryListing(adapter, store);
+    }
 
-	// Read the category index
-	const indexResult = await adapter.indexes.read(categoryPath);
-	if (!indexResult.ok) {
-		return err(
-			new McpError(
-				ErrorCode.InternalError,
-				`Failed to read category index: ${indexResult.error.message}`,
-			),
-		);
-	}
+    // Read the category index
+    const indexResult = await adapter.indexes.read(categoryPath);
+    if (!indexResult.ok) {
+        return err(
+            new McpError(
+                ErrorCode.InternalError,
+                `Failed to read category index: ${indexResult.error.message}`,
+            ),
+        );
+    }
 
-	if (!indexResult.value) {
-		return err(
-			new McpError(
-				ErrorCode.InvalidParams,
-				`Category not found: ${categoryPath}`,
-			),
-		);
-	}
+    if (!indexResult.value) {
+        return err(
+            new McpError(
+                ErrorCode.InvalidParams,
+                `Category not found: ${categoryPath}`,
+            ),
+        );
+    }
 
-	// Parse the category index
-	const parsed = parseIndex(indexResult.value);
-	if (!parsed.ok) {
-		return err(
-			new McpError(
-				ErrorCode.InternalError,
-				`Failed to parse category index: ${parsed.error.message}`,
-			),
-		);
-	}
+    // Parse the category index
+    const parsed = parseIndex(indexResult.value);
+    if (!parsed.ok) {
+        return err(
+            new McpError(
+                ErrorCode.InternalError,
+                `Failed to parse category index: ${parsed.error.message}`,
+            ),
+        );
+    }
 
-	const listing: CategoryListing = {
-		category: categoryPath,
-		memories: parsed.value.memories.map((memory) => ({
-			path: memory.path,
-			uri: buildResourceUri(store, memory.path, false),
-			tokenEstimate: memory.tokenEstimate,
-			summary: memory.summary,
-		})),
-		subcategories: parsed.value.subcategories.map((sub) => ({
-			path: sub.path,
-			uri: buildResourceUri(store, sub.path, true),
-			memoryCount: sub.memoryCount,
-		})),
-	};
+    const listing: CategoryListing = {
+        category: categoryPath,
+        memories: parsed.value.memories.map((memory) => ({
+            path: memory.path,
+            uri: buildResourceUri(store, memory.path, false),
+            tokenEstimate: memory.tokenEstimate,
+            summary: memory.summary,
+        })),
+        subcategories: parsed.value.subcategories.map((sub) => ({
+            path: sub.path,
+            uri: buildResourceUri(store, sub.path, true),
+            memoryCount: sub.memoryCount,
+        })),
+    };
 
-	const uri = buildResourceUri(store, categoryPath, true);
+    const uri = buildResourceUri(store, categoryPath, true);
 
-	return ok({
-		contents: [
-			{
-				uri,
-				mimeType: "application/json",
-				text: JSON.stringify(listing, null, 2),
-			},
-		],
-	});
+    return ok({
+        contents: [{
+            uri,
+            mimeType: 'application/json',
+            text: JSON.stringify(listing, null, 2),
+        }],
+    });
 };
 
 /**
@@ -463,47 +464,45 @@ const readCategoryListing = async (
  * @returns Result containing ReadResourceResult with root category listing
  */
 const readRootCategoryListing = async (
-	adapter: ScopedStorageAdapter,
-	store: string,
+    adapter: ScopedStorageAdapter,
+    store: string,
 ): Promise<Result<ReadResourceResult, McpError>> => {
-	const subcategories: CategoryListing["subcategories"] = [];
+    const subcategories: CategoryListing['subcategories'] = [];
 
-	for (const category of ROOT_CATEGORIES) {
-		const indexResult = await adapter.indexes.read(category);
-		if (!indexResult.ok || !indexResult.value) {
-			// Category doesn't exist, skip it
-			continue;
-		}
+    for (const category of ROOT_CATEGORIES) {
+        const indexResult = await adapter.indexes.read(category);
+        if (!indexResult.ok || !indexResult.value) {
+            // Category doesn't exist, skip it
+            continue;
+        }
 
-		const parsed = parseIndex(indexResult.value);
-		if (!parsed.ok) {
-			continue;
-		}
+        const parsed = parseIndex(indexResult.value);
+        if (!parsed.ok) {
+            continue;
+        }
 
-		subcategories.push({
-			path: category,
-			uri: buildResourceUri(store, category, true),
-			memoryCount: parsed.value.memories.length,
-		});
-	}
+        subcategories.push({
+            path: category,
+            uri: buildResourceUri(store, category, true),
+            memoryCount: parsed.value.memories.length,
+        });
+    }
 
-	const listing: CategoryListing = {
-		category: "",
-		memories: [],
-		subcategories,
-	};
+    const listing: CategoryListing = {
+        category: '',
+        memories: [],
+        subcategories,
+    };
 
-	const uri = buildResourceUri(store, "", true);
+    const uri = buildResourceUri(store, '', true);
 
-	return ok({
-		contents: [
-			{
-				uri,
-				mimeType: "application/json",
-				text: JSON.stringify(listing, null, 2),
-			},
-		],
-	});
+    return ok({
+        contents: [{
+            uri,
+            mimeType: 'application/json',
+            text: JSON.stringify(listing, null, 2),
+        }],
+    });
 };
 
 /**
@@ -527,68 +526,68 @@ const readRootCategoryListing = async (
  * ```
  */
 const listResources = async (
-	config: ServerConfig,
+    config: ServerConfig,
 ): Promise<ListResourcesResult> => {
-	const resources: Resource[] = [];
-	const store = config.defaultStore;
+    const resources: Resource[] = [];
+    const store = config.defaultStore;
 
-	// Resolve the adapter for this store
-	const adapterResult = await resolveAdapter(config, store);
-	if (!adapterResult.ok) {
-		return err(adapterResult.error);
-	}
-	const adapter = adapterResult.value;
+    // Resolve the adapter for this store
+    const adapterResult = await resolveAdapter(config, store);
+    if (!adapterResult.ok) {
+        return err(adapterResult.error);
+    }
+    const adapter = adapterResult.value;
 
-	// Add root category resource
-	resources.push({
-		uri: buildResourceUri(store, "", true),
-		name: `Memory Store: ${store}`,
-		description: "Root category listing for the memory store",
-		mimeType: "application/json",
-	});
+    // Add root category resource
+    resources.push({
+        uri: buildResourceUri(store, '', true),
+        name: `Memory Store: ${store}`,
+        description: 'Root category listing for the memory store',
+        mimeType: 'application/json',
+    });
 
-	// Collect resources from all root categories
-	for (const category of ROOT_CATEGORIES) {
-		const indexResult = await adapter.indexes.read(category);
-		if (!indexResult.ok || !indexResult.value) {
-			continue;
-		}
+    // Collect resources from all root categories
+    for (const category of ROOT_CATEGORIES) {
+        const indexResult = await adapter.indexes.read(category);
+        if (!indexResult.ok || !indexResult.value) {
+            continue;
+        }
 
-		const parsed = parseIndex(indexResult.value);
-		if (!parsed.ok) {
-			continue;
-		}
+        const parsed = parseIndex(indexResult.value);
+        if (!parsed.ok) {
+            continue;
+        }
 
-		// Add category resource
-		resources.push({
-			uri: buildResourceUri(store, category, true),
-			name: `Category: ${category}`,
-			description: `Memory category listing for ${category}`,
-			mimeType: "application/json",
-		});
+        // Add category resource
+        resources.push({
+            uri: buildResourceUri(store, category, true),
+            name: `Category: ${category}`,
+            description: `Memory category listing for ${category}`,
+            mimeType: 'application/json',
+        });
 
-		// Add memory resources
-		for (const memory of parsed.value.memories) {
-			resources.push({
-				uri: buildResourceUri(store, memory.path, false),
-				name: `Memory: ${memory.path}`,
-				description: memory.summary ?? `Memory at ${memory.path}`,
-				mimeType: "text/plain",
-			});
-		}
+        // Add memory resources
+        for (const memory of parsed.value.memories) {
+            resources.push({
+                uri: buildResourceUri(store, memory.path, false),
+                name: `Memory: ${memory.path}`,
+                description: memory.summary ?? `Memory at ${memory.path}`,
+                mimeType: 'text/plain',
+            });
+        }
 
-		// Add subcategory resources
-		for (const sub of parsed.value.subcategories) {
-			resources.push({
-				uri: buildResourceUri(store, sub.path, true),
-				name: `Category: ${sub.path}`,
-				description: `Memory category listing for ${sub.path} (${sub.memoryCount} memories)`,
-				mimeType: "application/json",
-			});
-		}
-	}
+        // Add subcategory resources
+        for (const sub of parsed.value.subcategories) {
+            resources.push({
+                uri: buildResourceUri(store, sub.path, true),
+                name: `Category: ${sub.path}`,
+                description: `Memory category listing for ${sub.path} (${sub.memoryCount} memories)`,
+                mimeType: 'application/json',
+            });
+        }
+    }
 
-	return ok({ resources });
+    return ok({ resources });
 };
 
 // ---------------------------------------------------------------------------
@@ -596,14 +595,14 @@ const listResources = async (
 // ---------------------------------------------------------------------------
 
 export {
-	readMemoryContent,
-	readCategoryListing,
-	listResources,
-	buildResourceUri,
-	parseUriVariables,
-	resolveAdapter,
-	ROOT_CATEGORIES,
-	MEMORY_URI_SCHEME,
+    readMemoryContent,
+    readCategoryListing,
+    listResources,
+    buildResourceUri,
+    parseUriVariables,
+    resolveAdapter,
+    ROOT_CATEGORIES,
+    MEMORY_URI_SCHEME,
 };
 
 // Export types for testing
@@ -645,118 +644,120 @@ export type { CategoryListing, ParsedUriVariables };
  * ```
  */
 export const registerMemoryResources = (
-	server: McpServer,
-	config: ServerConfig,
+    server: McpServer,
+    config: ServerConfig,
 ): void => {
-	// Create resource template for dynamic URIs
-	const template = new ResourceTemplate("cortex://memory/{store}/{path*}", {
-		list: async () => {
-			const result = await listResources(config);
-			// MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
-			if (!result.ok) {
-				throw result.error;
-			}
-			return result.value;
-		},
-		complete: {
-			store: (): string[] => {
-				// Return known store names (currently just default)
-				return [config.defaultStore];
-			},
-			"path*": async (value: string): Promise<string[]> => {
-				// Autocomplete for paths within store
-				const adapterResult = await resolveAdapter(config, config.defaultStore);
-				if (!adapterResult.ok) {
-					// Return empty completions on failure - don't throw in autocomplete
-					return [];
-				}
-				const adapter = adapterResult.value;
-				const completions: string[] = [];
+    // Create resource template for dynamic URIs
+    const template = new ResourceTemplate('cortex://memory/{store}/{path*}', {
+        list: async () => {
+            const result = await listResources(config);
+            // MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
+            if (!result.ok) {
+                throw result.error;
+            }
+            return result.value;
+        },
+        complete: {
+            store: (): string[] => {
+                // Return known store names (currently just default)
+                return [config.defaultStore];
+            },
+            'path*': async (value: string): Promise<string[]> => {
+                // Autocomplete for paths within store
+                const adapterResult = await resolveAdapter(config, config.defaultStore);
+                if (!adapterResult.ok) {
+                    // Return empty completions on failure - don't throw in autocomplete
+                    return [];
+                }
+                const adapter = adapterResult.value;
+                const completions: string[] = [];
 
-				// If empty or just started, suggest root categories
-				if (!value || value === "") {
-					return [...ROOT_CATEGORIES];
-				}
+                // If empty or just started, suggest root categories
+                if (!value || value === '') {
+                    return [...ROOT_CATEGORIES];
+                }
 
-				// Try to find matching categories/memories
-				const parts = value.split("/");
-				const categoryPath = parts.slice(0, -1).join("/");
-				const prefix = parts[parts.length - 1] ?? "";
+                // Try to find matching categories/memories
+                const parts = value.split('/');
+                const categoryPath = parts.slice(0, -1).join('/');
+                const prefix = parts[parts.length - 1] ?? '';
 
-				// Check root categories if at root level
-				if (categoryPath === "") {
-					const matches = ROOT_CATEGORIES.filter((cat) =>
-						cat.startsWith(prefix),
-					);
-					completions.push(...matches);
-				} else {
-					// Read the parent category index
-					const indexResult = await adapter.indexes.read(categoryPath);
-					if (indexResult.ok && indexResult.value) {
-						const parsed = parseIndex(indexResult.value);
-						if (parsed.ok) {
-							// Add matching subcategories
-							for (const sub of parsed.value.subcategories) {
-								const subName = sub.path.split("/").pop() ?? "";
-								if (subName.startsWith(prefix)) {
-									completions.push(sub.path);
-								}
-							}
-							// Add matching memories
-							for (const mem of parsed.value.memories) {
-								const memName = mem.path.split("/").pop() ?? "";
-								if (memName.startsWith(prefix)) {
-									completions.push(mem.path);
-								}
-							}
-						}
-					}
-				}
+                // Check root categories if at root level
+                if (categoryPath === '') {
+                    const matches = ROOT_CATEGORIES.filter((cat) =>
+                        cat.startsWith(prefix),
+                    );
+                    completions.push(...matches);
+                }
+                else {
+                    // Read the parent category index
+                    const indexResult = await adapter.indexes.read(categoryPath);
+                    if (indexResult.ok && indexResult.value) {
+                        const parsed = parseIndex(indexResult.value);
+                        if (parsed.ok) {
+                            // Add matching subcategories
+                            for (const sub of parsed.value.subcategories) {
+                                const subName = sub.path.split('/').pop() ?? '';
+                                if (subName.startsWith(prefix)) {
+                                    completions.push(sub.path);
+                                }
+                            }
+                            // Add matching memories
+                            for (const mem of parsed.value.memories) {
+                                const memName = mem.path.split('/').pop() ?? '';
+                                if (memName.startsWith(prefix)) {
+                                    completions.push(mem.path);
+                                }
+                            }
+                        }
+                    }
+                }
 
-				return completions;
-			},
-		},
-	});
+                return completions;
+            },
+        },
+    });
 
-	server.registerResource(
-		"memory",
-		template,
-		{
-			description:
-				"Access memory content or category listings. Use trailing slash for category listings",
-			mimeType: "text/plain",
-		},
-		async (_uri: URL, variables: Variables): Promise<ReadResourceResult> => {
-			const parsed = parseUriVariables(variables, config);
-			// MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
-			if (!parsed.ok) {
-				throw parsed.error;
-			}
+    server.registerResource(
+        'memory',
+        template,
+        {
+            description:
+				'Access memory content or category listings. Use trailing slash for category listings',
+            mimeType: 'text/plain',
+        },
+        async (_uri: URL, variables: Variables): Promise<ReadResourceResult> => {
+            const parsed = parseUriVariables(variables, config);
+            // MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
+            if (!parsed.ok) {
+                throw parsed.error;
+            }
 
-			const { store, path, isCategory } = parsed.value;
+            const { store, path, isCategory } = parsed.value;
 
-			// Resolve adapter for the requested store
-			const adapterResult = await resolveAdapter(config, store);
-			if (!adapterResult.ok) {
-				throw adapterResult.error;
-			}
-			const adapter = adapterResult.value;
+            // Resolve adapter for the requested store
+            const adapterResult = await resolveAdapter(config, store);
+            if (!adapterResult.ok) {
+                throw adapterResult.error;
+            }
+            const adapter = adapterResult.value;
 
-			if (isCategory) {
-				const result = await readCategoryListing(adapter, store, path);
-				// MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
-				if (!result.ok) {
-					throw result.error;
-				}
-				return result.value;
-			} else {
-				const result = await readMemoryContent(adapter, store, path);
-				// MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
-				if (!result.ok) {
-					throw result.error;
-				}
-				return result.value;
-			}
-		},
-	);
+            if (isCategory) {
+                const result = await readCategoryListing(adapter, store, path);
+                // MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
+                if (!result.ok) {
+                    throw result.error;
+                }
+                return result.value;
+            }
+            else {
+                const result = await readMemoryContent(adapter, store, path);
+                // MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
+                if (!result.ok) {
+                    throw result.error;
+                }
+                return result.value;
+            }
+        },
+    );
 };
