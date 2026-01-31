@@ -2,6 +2,15 @@
   "name": "@yeseh/cortex-storage-fs",
   "version": "0.1.0",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Yeseh/cortex.git",
+    "directory": "packages/storage-fs"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "public"
+  },
   "exports": {
     ".": {
       "import": "./src/index.ts",
