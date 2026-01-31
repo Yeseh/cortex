@@ -27,8 +27,8 @@ import {
     listMemories,
 } from '../../core/memory/operations.ts';
 import { FilesystemStorageAdapter } from '../../core/storage/filesystem/index.ts';
-import type { ComposedStorageAdapter } from '../../core/storage/adapter.ts';
-import { loadStoreRegistry, resolveStorePath } from '../../core/store/registry.ts';
+import { resolveStorePath } from '../../core/store/registry.ts';
+import { FilesystemRegistry } from '../../core/storage/filesystem/index.ts';
 import type { ServerConfig } from '../config.ts';
 import { storeNameSchema } from '../store/tools.ts';
 
@@ -195,13 +195,21 @@ const resolveStoreAdapter = async (
     config: ServerConfig,
     storeName: string,
     autoCreate: boolean,
-): Promise<Result<ComposedStorageAdapter, McpError>> => {
+): Promise<Result<FilesystemStorageAdapter, McpError>> => {
     const registryPath = join(config.dataPath, 'stores.yaml');
-    const registryResult = await loadStoreRegistry(registryPath, {
-        allowMissing: false,
-    });
+    const registry = new FilesystemRegistry(registryPath);
+    const registryResult = await registry.load();
 
     if (!registryResult.ok) {
+        // Map REGISTRY_MISSING to appropriate error (like allowMissing: false did)
+        if (registryResult.error.code === 'REGISTRY_MISSING') {
+            return err(
+                new McpError(
+                    ErrorCode.InternalError,
+                    `Store registry not found at ${registryPath}`,
+                ),
+            );
+        }
         return err(
             new McpError(
                 ErrorCode.InternalError,
@@ -234,7 +242,8 @@ const resolveStoreAdapter = async (
         }
     }
 
-    return ok(new FilesystemStorageAdapter({ rootDirectory: storeRoot }));
+    const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
+    return ok(adapter);
 };
 
 /**
