@@ -2,8 +2,11 @@
     "name": "cortex",
     "type": "module",
     "private": true,
-    "workspaces": ["packages/*"],
+    "workspaces": [
+        "packages/*"
+    ],
     "devDependencies": {
+        "@changesets/cli": "^2.29.8",
         "@eslint/js": "^9.39.2",
         "@stylistic/eslint-plugin": "5.7.1",
         "@types/bun": "latest",
@@ -42,6 +45,9 @@
         "typecheck": "bunx tsc --build",
         "clean": "rm -rf packages/*/dist",
         "compile:mcp": "bun build --compile --minify --sourcemap --bytecode ./packages/server/src/index.ts --outfile ./bin/cortex-mcp",
-        "compile:cli": "bun build --compile --minify --sourcemap --bytecode ./packages/cli/src/run.ts --outfile ./bin/cortex"
+        "compile:cli": "bun build --compile --minify --sourcemap --bytecode ./packages/cli/src/run.ts --outfile ./bin/cortex",
+        "changeset": "changeset",
+        "version": "changeset version",
+        "release": "changeset publish"
     }
 }
