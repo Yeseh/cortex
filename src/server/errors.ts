@@ -194,7 +194,8 @@ export const zodErrorToMcpError = (error: z.ZodError): McpError => {
  *
  * @example
  * ```ts
- * const result = await loadStoreRegistry(path);
+ * const registry = new FilesystemRegistry(path);
+ * const result = await registry.load();
  * if (!result.ok) {
  *   throw handleDomainError(result.error);
  * }

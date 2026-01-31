@@ -24,16 +24,12 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { spawn } from 'node:child_process';
-import { mkdir, writeFile } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
 import { mapCoreError } from '../../../errors.ts';
 import { getDefaultRegistryPath } from '../../../context.ts';
-import {
-    loadStoreRegistry,
-    saveStoreRegistry,
-    isValidStoreName,
-} from '../../../../core/store/registry.ts';
-import { serializeIndex } from '../../../../core/serialization.ts';
+import { isValidStoreName } from '../../../../core/store/registry.ts';
+import { FilesystemRegistry } from '../../../../core/storage/filesystem/index.ts';
+import { initializeStore } from '../../../../core/store/operations.ts';
 import { serializeOutput, type OutputStoreInit, type OutputFormat } from '../../../output.ts';
 import { resolveUserPath } from '../../../paths.ts';
 
@@ -156,20 +152,6 @@ async function resolveStoreName(
 }
 
 /**
- * Builds an empty root index for the store.
- *
- * @returns The serialized empty index YAML string
- * @throws {CommanderError} When serialization fails
- */
-function buildEmptyRootIndex(): string {
-    const serialized = serializeIndex({ memories: [], subcategories: [] });
-    if (!serialized.ok) {
-        mapCoreError({ code: 'STORE_INIT_FAILED', message: 'Failed to serialize root index.' });
-    }
-    return serialized.value;
-}
-
-/**
  * Writes the serialized output to the output stream.
  *
  * @param output - The store init output payload
@@ -189,77 +171,13 @@ function writeOutput(
 }
 
 /**
- * Loads the registry and checks for name collision.
- *
- * @param registryPath - Path to the store registry
- * @param storeName - The store name to check
- * @returns The loaded registry
- * @throws {CommanderError} When registry load fails or name already exists
- */
-async function loadRegistryAndCheckCollision(
-    registryPath: string,
-    storeName: string,
-): Promise<Record<string, { path: string }>> {
-    const registryResult = await loadStoreRegistry(registryPath, { allowMissing: true });
-    if (!registryResult.ok) {
-        mapCoreError({ code: 'STORE_REGISTRY_FAILED', message: registryResult.error.message });
-    }
-    if (registryResult.value[storeName]) {
-        mapCoreError({ code: 'STORE_ALREADY_EXISTS', message: `Store '${storeName}' is already registered.` });
-    }
-    return registryResult.value;
-}
-
-/**
- * Creates the store directory and root index file.
- *
- * @param rootPath - The path to create the store at
- * @throws {CommanderError} When store creation fails
- */
-async function createStoreDirectory(rootPath: string): Promise<void> {
-    try {
-        await mkdir(rootPath, { recursive: true });
-        const serializedIndex = buildEmptyRootIndex();
-        await writeFile(resolve(rootPath, 'index.yaml'), serializedIndex, 'utf8');
-    }
-    catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        mapCoreError({ code: 'STORE_INIT_FAILED', message: `Failed to initialize store at ${rootPath}: ${message}` });
-    }
-}
-
-/**
- * Registers the store in the global registry.
- *
- * @param registryPath - Path to the store registry
- * @param registry - The current registry contents
- * @param storeName - The store name to register
- * @param rootPath - The store path to register
- * @throws {CommanderError} When registry save fails
- */
-async function registerStore(
-    registryPath: string,
-    registry: Record<string, { path: string }>,
-    storeName: string,
-    rootPath: string,
-): Promise<void> {
-    registry[storeName] = { path: rootPath };
-    const saved = await saveStoreRegistry(registryPath, registry);
-    if (!saved.ok) {
-        mapCoreError({ code: 'STORE_REGISTRY_FAILED', message: saved.error.message });
-    }
-}
-
-/**
  * Handles the init command execution.
  *
  * This function:
  * 1. Resolves the store name (explicit or git detection)
- * 2. Checks for name collision in registry
- * 3. Resolves target path (default to .cortex in cwd)
- * 4. Creates store directory and empty root index
- * 5. Registers in global registry
- * 6. Outputs the result
+ * 2. Resolves target path (default to .cortex in cwd)
+ * 3. Uses initializeStore to create directory, index, and register
+ * 4. Outputs the result
  *
  * @param targetPath - Optional path for the store (defaults to .cortex in cwd)
  * @param options - Command options (name, format)
@@ -278,21 +196,25 @@ export async function handleInit(
     // 1. Resolve store name (explicit or git detection)
     const storeName = await resolveStoreName(cwd, options.name);
 
-    // 2. Check for name collision in registry
-    const registry = await loadRegistryAndCheckCollision(registryPath, storeName);
-
-    // 3. Resolve target path (default to .cortex in cwd)
+    // 2. Resolve target path (default to .cortex in cwd)
     const rootPath = targetPath
         ? resolveUserPath(targetPath.trim(), cwd)
         : resolve(cwd, '.cortex');
 
-    // 4. Create store directory and empty root index
-    await createStoreDirectory(rootPath);
+    // 3. Use initializeStore to handle directory creation, index, and registration
+    const registry = new FilesystemRegistry(registryPath);
+    const result = await initializeStore(registry, storeName, rootPath);
+    if (!result.ok) {
+        // Map InitStoreError to CLI error
+        const errorCode = result.error.code === 'STORE_ALREADY_EXISTS'
+            ? 'STORE_ALREADY_EXISTS'
+            : result.error.code === 'INVALID_STORE_NAME'
+                ? 'INVALID_STORE_NAME'
+                : 'STORE_INIT_FAILED';
+        mapCoreError({ code: errorCode, message: result.error.message });
+    }
 
-    // 5. Register in global registry
-    await registerStore(registryPath, registry, storeName, rootPath);
-
-    // 6. Output result
+    // 4. Output result
     const output: OutputStoreInit = { path: rootPath, name: storeName };
     const format: OutputFormat = (options.format as OutputFormat) ?? 'yaml';
     writeOutput(output, format, deps.stdout ?? process.stdout);

@@ -33,10 +33,8 @@ import { resolve } from 'node:path';
 import type { MemorySlugPath, Result } from '../../types.ts';
 import type {
     StorageAdapter,
-    ComposedStorageAdapter,
     MemoryStorage,
     IndexStorage,
-    StoreStorage,
     ReindexResult,
     StorageAdapterError,
     StorageIndexName,
@@ -54,7 +52,9 @@ import { normalizeExtension, ok } from './utils.ts';
 import { FilesystemMemoryStorage } from './memory-storage.ts';
 import { FilesystemIndexStorage } from './index-storage.ts';
 import { FilesystemCategoryStorage } from './category-storage.ts';
-import { FilesystemStoreStorage } from './store-storage.ts';
+
+// Export FilesystemRegistry for the new Registry pattern
+export { FilesystemRegistry } from './filesystem-registry.ts';
 
 // Import legacy operations needed for backward-compatible port methods
 import {
@@ -84,7 +84,7 @@ import {
  * await adapter.reindexCategoryIndexes();
  * ```
  */
-export class FilesystemStorageAdapter implements StorageAdapter, ComposedStorageAdapter {
+export class FilesystemStorageAdapter implements StorageAdapter {
     private readonly ctx: FilesystemContext;
 
     // ========================================================================
@@ -97,8 +97,6 @@ export class FilesystemStorageAdapter implements StorageAdapter, ComposedStorage
     public readonly indexes: IndexStorage;
     /** Category operations */
     public readonly categories: CategoryStorage;
-    /** Store registry persistence */
-    public readonly stores: StoreStorage;
 
     constructor(options: FilesystemStorageAdapterOptions) {
         this.ctx = {
@@ -111,7 +109,6 @@ export class FilesystemStorageAdapter implements StorageAdapter, ComposedStorage
         this.memories = new FilesystemMemoryStorage(this.ctx);
         this.indexes = new FilesystemIndexStorage(this.ctx);
         this.categories = new FilesystemCategoryStorage(this.ctx);
-        this.stores = new FilesystemStoreStorage(this.ctx);
     }
 
     // ========================================================================
@@ -332,7 +329,7 @@ export type { FilesystemStorageAdapterOptions, FilesystemContext } from './types
  * - {@link FilesystemMemoryStorage} - Memory file I/O operations
  * - {@link FilesystemIndexStorage} - Index file I/O and reindexing
  * - {@link FilesystemCategoryStorage} - Category directory management
- * - {@link FilesystemStoreStorage} - Store registry persistence
+ * - {@link FilesystemRegistry} - Store registry management (implements Registry interface)
  *
  * New code should prefer these focused interfaces over the legacy
  * {@link FilesystemStorageAdapter} methods for better testability
@@ -360,4 +357,3 @@ export type { FilesystemStorageAdapterOptions, FilesystemContext } from './types
 export { FilesystemMemoryStorage } from './memory-storage.ts';
 export { FilesystemIndexStorage } from './index-storage.ts';
 export { FilesystemCategoryStorage } from './category-storage.ts';
-export { FilesystemStoreStorage } from './store-storage.ts';

@@ -21,7 +21,7 @@
 import { Router, type Request, type Response } from 'express';
 import { resolve } from 'node:path';
 import { SERVER_VERSION, type ServerConfig } from './config.ts';
-import { loadStoreRegistry } from '../core/store/registry.ts';
+import { FilesystemRegistry } from '../core/storage/filesystem/index.ts';
 
 /**
  * Health check response structure.
@@ -88,11 +88,9 @@ export const createHealthRouter = (config: ServerConfig): Router => {
             const registryPath = resolve(
                 config.dataPath, 'stores.yaml',
             );
-            const registryResult = await loadStoreRegistry(
-                registryPath, {
-                    allowMissing: true,
-                },
-            );
+            const registry = new FilesystemRegistry(registryPath);
+            const registryResult = await registry.load();
+            // Treat REGISTRY_MISSING as 0 stores (like allowMissing: true did)
             const storeCount = registryResult.ok ? Object.keys(registryResult.value).length : 0;
 
             const response: HealthResponse = {

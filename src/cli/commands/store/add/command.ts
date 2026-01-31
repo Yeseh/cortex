@@ -21,11 +21,8 @@
 import { Command } from '@commander-js/extra-typings';
 import { mapCoreError } from '../../../errors.ts';
 import { getDefaultRegistryPath } from '../../../context.ts';
-import {
-    loadStoreRegistry,
-    saveStoreRegistry,
-    isValidStoreName,
-} from '../../../../core/store/registry.ts';
+import { isValidStoreName } from '../../../../core/store/registry.ts';
+import { FilesystemRegistry } from '../../../../core/storage/filesystem/index.ts';
 import { serializeOutput, type OutputStore, type OutputFormat } from '../../../output.ts';
 import { resolveUserPath } from '../../../paths.ts';
 
@@ -133,19 +130,26 @@ export async function handleAdd(
     const resolvedPath = validateAndResolvePath(storePath, cwd);
 
     // 2. Load existing registry
-    const registryResult = await loadStoreRegistry(registryPath, { allowMissing: true });
-    if (!registryResult.ok) {
+    const registry = new FilesystemRegistry(registryPath);
+    const registryResult = await registry.load();
+    // Handle REGISTRY_MISSING as empty registry (like allowMissing: true did)
+    let currentRegistry: Record<string, { path: string }>;
+    if (registryResult.ok) {
+        currentRegistry = registryResult.value;
+    } else if (registryResult.error.code === 'REGISTRY_MISSING') {
+        currentRegistry = {};
+    } else {
         mapCoreError({ code: 'STORE_REGISTRY_FAILED', message: registryResult.error.message });
     }
 
     // 3. Check for existing store
-    if (registryResult.value[trimmedName]) {
+    if (currentRegistry[trimmedName]) {
         mapCoreError({ code: 'STORE_ALREADY_EXISTS', message: `Store '${trimmedName}' is already registered.` });
     }
 
     // 4. Add to registry and save
-    registryResult.value[trimmedName] = { path: resolvedPath };
-    const saved = await saveStoreRegistry(registryPath, registryResult.value);
+    currentRegistry[trimmedName] = { path: resolvedPath };
+    const saved = await registry.save(currentRegistry);
     if (!saved.ok) {
         mapCoreError({ code: 'STORE_REGISTRY_FAILED', message: saved.error.message });
     }

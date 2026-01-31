@@ -14,12 +14,8 @@
 import { Command } from '@commander-js/extra-typings';
 import { mapCoreError } from '../../../errors.ts';
 import { getDefaultRegistryPath } from '../../../context.ts';
-import {
-    loadStoreRegistry,
-    saveStoreRegistry,
-    removeStoreRegistry,
-    isValidStoreName,
-} from '../../../../core/store/registry.ts';
+import { isValidStoreName } from '../../../../core/store/registry.ts';
+import { FilesystemRegistry } from '../../../../core/storage/filesystem/index.ts';
 import { serializeOutput, type OutputStore, type OutputFormat } from '../../../output.ts';
 
 /**
@@ -83,9 +79,8 @@ function writeOutput(
  * 1. Validates the store name format
  * 2. Loads the existing registry
  * 3. Checks that the store exists
- * 4. Removes the store from the registry
- * 5. If registry would be empty, deletes the file; otherwise saves
- * 6. Outputs the result
+ * 4. Removes the store from the registry and saves
+ * 5. Outputs the result
  *
  * @param name - The store name to unregister
  * @param options - Command options (format)
@@ -104,36 +99,30 @@ export async function handleRemove(
     const trimmedName = validateStoreName(name);
 
     // 2. Load existing registry
-    const registryResult = await loadStoreRegistry(registryPath, { allowMissing: true });
-    if (!registryResult.ok) {
-        mapCoreError({ code: 'STORE_REGISTRY_FAILED', message: registryResult.error.message });
+    const registry = new FilesystemRegistry(registryPath);
+    const loadResult = await registry.load();
+    // Handle REGISTRY_MISSING - if registry doesn't exist, nothing to remove
+    if (!loadResult.ok) {
+        if (loadResult.error.code === 'REGISTRY_MISSING') {
+            mapCoreError({ code: 'STORE_NOT_FOUND', message: `Store '${trimmedName}' is not registered.` });
+        }
+        mapCoreError({ code: 'STORE_REGISTRY_FAILED', message: loadResult.error.message });
     }
 
     // 3. Check store exists
-    const existingStore = registryResult.value[trimmedName];
+    const existingStore = loadResult.value[trimmedName];
     if (!existingStore) {
         mapCoreError({ code: 'STORE_NOT_FOUND', message: `Store '${trimmedName}' is not registered.` });
     }
 
-    // 4. Remove from registry
-    const { [trimmedName]: _removed, ...rest } = registryResult.value;
-
-    // 5. If registry would be empty, delete the file; otherwise save
-    const remainingCount = Object.keys(rest).length;
-    if (remainingCount === 0) {
-        const removeResult = await removeStoreRegistry(registryPath);
-        if (!removeResult.ok) {
-            mapCoreError({ code: 'STORE_REGISTRY_FAILED', message: removeResult.error.message });
-        }
-    }
-    else {
-        const saved = await saveStoreRegistry(registryPath, rest);
-        if (!saved.ok) {
-            mapCoreError({ code: 'STORE_REGISTRY_FAILED', message: saved.error.message });
-        }
+    // 4. Remove from registry and save (even if registry would be empty, just save empty registry)
+    const { [trimmedName]: _removed, ...rest } = loadResult.value;
+    const saveResult = await registry.save(rest);
+    if (!saveResult.ok) {
+        mapCoreError({ code: 'STORE_REGISTRY_FAILED', message: saveResult.error.message });
     }
 
-    // 6. Output result
+    // 5. Output result
     const output: OutputStore = { name: trimmedName, path: existingStore.path };
     const format: OutputFormat = (options.format as OutputFormat) ?? 'yaml';
     writeOutput(output, format, deps.stdout ?? process.stdout);

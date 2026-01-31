@@ -28,7 +28,8 @@ import {
     deleteCategory,
     MAX_DESCRIPTION_LENGTH,
 } from '../../core/category/index.ts';
-import { loadStoreRegistry, resolveStorePath } from '../../core/store/registry.ts';
+import { resolveStorePath } from '../../core/store/registry.ts';
+import { FilesystemRegistry } from '../../core/storage/filesystem/index.ts';
 import type { ServerConfig } from '../config.ts';
 import { storeNameSchema } from '../store/tools.ts';
 
@@ -161,9 +162,19 @@ const resolveStoreRoot = async (
     autoCreate: boolean,
 ): Promise<Result<string, McpError>> => {
     const registryPath = join(config.dataPath, 'stores.yaml');
-    const registryResult = await loadStoreRegistry(registryPath, { allowMissing: false });
+    const registry = new FilesystemRegistry(registryPath);
+    const registryResult = await registry.load();
 
     if (!registryResult.ok) {
+        // Map REGISTRY_MISSING to appropriate error (like allowMissing: false did)
+        if (registryResult.error.code === 'REGISTRY_MISSING') {
+            return err(
+                new McpError(
+                    ErrorCode.InternalError,
+                    `Store registry not found at ${registryPath}`,
+                ),
+            );
+        }
         return err(
             new McpError(
                 ErrorCode.InternalError,

@@ -12,7 +12,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { z } from 'zod';
 import type { Result } from '../../core/types.ts';
-import { loadStoreRegistry } from '../../core/store/registry.ts';
+import { FilesystemRegistry } from '../../core/storage/filesystem/index.ts';
 
 /**
  * Error codes for store tool operations.
@@ -239,23 +239,30 @@ export const createStore = async (
 export const listStoresFromRegistry = async (
     registryPath: string,
 ): Promise<Result<ListStoresResult, StoreToolError>> => {
-    const registryResult = await loadStoreRegistry(registryPath, { allowMissing: true });
+    const registry = new FilesystemRegistry(registryPath);
+    const loadResult = await registry.load();
 
-    if (!registryResult.ok) {
+    if (!loadResult.ok) {
+        // Handle REGISTRY_MISSING as empty list (like allowMissing: true did)
+        if (loadResult.error.code === 'REGISTRY_MISSING') {
+            return { ok: true, value: { stores: [] } };
+        }
         return {
             ok: false,
             error: {
                 code: 'STORE_LIST_FAILED',
-                message: `Failed to load store registry: ${registryResult.error.message}`,
-                cause: registryResult.error,
+                message: `Failed to load store registry: ${loadResult.error.message}`,
+                cause: loadResult.error,
             },
         };
     }
 
-    const stores: StoreInfo[] = Object.entries(registryResult.value)
-        .map(([
-            name, definition,
-        ]) => ({
+    const stores: StoreInfo[] = Object.entries(loadResult.value)
+        .map((
+            [
+                name, definition,
+            ],
+        ) => ({
             name,
             path: definition.path,
             ...(definition.description !== undefined && { description: definition.description }),

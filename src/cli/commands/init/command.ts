@@ -22,8 +22,8 @@ import { resolve } from 'node:path';
 import { Command } from '@commander-js/extra-typings';
 import { mapCoreError } from '../../errors.ts';
 import { serializeOutput, type OutputFormat, type OutputInit, type OutputPayload } from '../../output.ts';
-import { serializeIndex } from '../../../core/serialization.ts';
-import { serializeStoreRegistry } from '../../../core/store/registry.ts';
+import { FilesystemRegistry } from '../../../core/storage/filesystem/index.ts';
+import { initializeStore } from '../../../core/store/operations.ts';
 
 /**
  * Options for the init command.
@@ -70,52 +70,6 @@ const formatInit = (path: string, categories: readonly string[]): OutputInit => 
     categories: [...categories],
 });
 
-interface InitError {
-    code: string;
-    message: string;
-    cause?: unknown;
-}
-
-const buildEmptyRootIndex = (
-    subcategories: readonly string[],
-): { ok: true; value: string } | { ok: false; error: InitError } => {
-    const serialized = serializeIndex({
-        memories: [],
-        subcategories: subcategories.map((name) => ({ path: name, memoryCount: 0 })),
-    });
-    if (!serialized.ok) {
-        return {
-            ok: false,
-            error: {
-                code: 'INIT_FAILED',
-                message: 'Failed to serialize root index.',
-                cause: serialized.error,
-            },
-        };
-    }
-    return { ok: true, value: serialized.value };
-};
-
-type IndexResult = { ok: true; value: string } | { ok: false; error: InitError };
-
-const buildEmptyCategoryIndex = (): IndexResult => {
-    const serialized = serializeIndex({
-        memories: [],
-        subcategories: [],
-    });
-    if (!serialized.ok) {
-        return {
-            ok: false,
-            error: {
-                code: 'INIT_FAILED',
-                message: 'Failed to serialize category index.',
-                cause: serialized.error,
-            },
-        };
-    }
-    return { ok: true, value: serialized.value };
-};
-
 const pathExists = async (path: string): Promise<boolean> => {
     try {
         await stat(path);
@@ -159,44 +113,37 @@ export async function handleInit(
     }
 
     try {
-        // Create the main store directory
-        await mkdir(globalStorePath, { recursive: true });
+        // Create config directory first
+        await mkdir(cortexConfigDir, { recursive: true });
 
-        // Create category directories and their indexes
-        for (const category of DEFAULT_CATEGORIES) {
-            const categoryPath = resolve(globalStorePath, category);
-            await mkdir(categoryPath, { recursive: true });
-
-            const categoryIndexPath = resolve(categoryPath, 'index.yaml');
-            const categoryIndex = buildEmptyCategoryIndex();
-            if (!categoryIndex.ok) {
-                mapCoreError(categoryIndex.error);
-                return;
-            }
-            await writeFile(categoryIndexPath, categoryIndex.value, 'utf8');
-        }
-
-        // Create root config files at cortexConfigDir level
+        // Write config.yaml (CLI-specific, not part of domain operation)
         await writeFile(configPath, DEFAULT_CONFIG_CONTENT, 'utf8');
 
-        // Serialize and write stores registry
-        const serialized = serializeStoreRegistry({ default: { path: globalStorePath } });
-        if (!serialized.ok) {
-            mapCoreError({
-                code: 'INIT_FAILED',
-                message: 'Failed to serialize store registry.',
-            });
-            return;
-        }
-        await writeFile(storesPath, serialized.value + '\n', 'utf8');
+        // Use initializeStore for the actual store setup
+        const registry = new FilesystemRegistry(storesPath);
+        // Initialize registry first if needed
+        await registry.initialize();
 
-        // Create root index
-        const rootIndex = buildEmptyRootIndex(DEFAULT_CATEGORIES);
-        if (!rootIndex.ok) {
-            mapCoreError(rootIndex.error);
-            return;
+        const result = await initializeStore(
+            registry,
+            'default',
+            globalStorePath,
+            { categories: [...DEFAULT_CATEGORIES] }
+        );
+
+        if (!result.ok) {
+            // Handle STORE_ALREADY_EXISTS during --force scenario
+            if (result.error.code === 'STORE_ALREADY_EXISTS' && options.force) {
+                // Store exists, that's okay with --force
+                // The store already has proper structure, nothing more to do
+            } else {
+                mapCoreError({
+                    code: 'INIT_FAILED',
+                    message: result.error.message,
+                });
+                return;
+            }
         }
-        await writeFile(indexPath, rootIndex.value, 'utf8');
     }
     catch {
         mapCoreError({
