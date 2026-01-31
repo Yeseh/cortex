@@ -1,19 +1,21 @@
 {
     "name": "cortex",
-    "module": "index.ts",
     "type": "module",
     "private": true,
+    "workspaces": ["packages/*"],
     "devDependencies": {
+        "@eslint/js": "^9.39.2",
+        "@stylistic/eslint-plugin": "5.7.1",
         "@types/bun": "latest",
         "@types/express": "^5.0.6",
-        "@stylistic/eslint-plugin": "5.7.1",
-        "eslint-config-prettier": "^10.1.8",
-        "eslint-plugin-prettier": "^5.5.5",
-        "typescript-eslint": "^8.53.1",
         "@typescript-eslint/eslint-plugin": "^8.53.1",
         "@typescript-eslint/parser": "^8.53.1",
+        "eslint": "^9.39.2",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-prettier": "^5.5.5",
         "prettier": "^3.8.1",
-        "typescript": "^5.9.3"
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.53.1"
     },
     "peerDependencies": {
         "typescript": "^5"
@@ -28,10 +30,18 @@
         "zod": "^4.3.6"
     },
     "scripts": {
-        "lint": "eslint src/**/*.ts --fix",
-        "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
-        "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
-        "compile:mcp": "bun build --compile --minify --sourcemap --bytecode ./src/server/index.ts --outfile ./bin/cortex-mcp",
-        "compile:cli": "bun build --compile --minify --sourcemap --bytecode ./src/cli/run.ts --outfile ./bin/cortex"
+        "build": "bun run --filter '*' build",
+        "test": "bun test packages",
+        "test:core": "bun test packages/core",
+        "test:cli": "bun test packages/cli",
+        "test:server": "bun test packages/server",
+        "test:storage-fs": "bun test packages/storage-fs",
+        "lint": "bunx eslint packages/*/src/**/*.ts --fix",
+        "format": "prettier --write \"packages/*/src/**/*.{ts,json,md}\"",
+        "format:check": "prettier --check \"packages/*/src/**/*.{ts,json,md}\"",
+        "typecheck": "bunx tsc --build",
+        "clean": "rm -rf packages/*/dist",
+        "compile:mcp": "bun build --compile --minify --sourcemap --bytecode ./packages/server/src/index.ts --outfile ./bin/cortex-mcp",
+        "compile:cli": "bun build --compile --minify --sourcemap --bytecode ./packages/cli/src/run.ts --outfile ./bin/cortex"
     }
 }
