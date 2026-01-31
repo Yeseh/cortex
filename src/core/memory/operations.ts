@@ -2,13 +2,13 @@
  * Memory CRUD operations.
  *
  * This module provides business logic operations for memory management,
- * abstracting away direct storage operations through the ComposedStorageAdapter.
+ * abstracting away direct storage operations through the ScopedStorageAdapter.
  *
  * @module core/memory/operations
  */
 
 import type { Result } from '../types.ts';
-import type { ComposedStorageAdapter } from '../storage/adapter.ts';
+import type { ScopedStorageAdapter } from '../storage/adapter.ts';
 import type { MemoryError, MemoryErrorCode } from './types.ts';
 import type { MemoryFileContents } from './index.ts';
 import type { CategoryIndex } from '../index/types.ts';
@@ -155,7 +155,7 @@ const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
  * Reads and parses a category index.
  */
 const readCategoryIndex = async (
-    storage: ComposedStorageAdapter,
+    storage: ScopedStorageAdapter,
     categoryPath: string,
 ): Promise<Result<CategoryIndex | null, MemoryError>> => {
     const result = await storage.indexes.read(categoryPath);
@@ -184,7 +184,7 @@ const readCategoryIndex = async (
  * Collects memories recursively from a category.
  */
 const collectMemoriesFromCategory = async (
-    storage: ComposedStorageAdapter,
+    storage: ScopedStorageAdapter,
     categoryPath: string,
     includeExpired: boolean,
     now: Date,
@@ -262,7 +262,7 @@ const collectMemoriesFromCategory = async (
  * Collects direct subcategories from a category.
  */
 const collectDirectSubcategories = async (
-    storage: ComposedStorageAdapter,
+    storage: ScopedStorageAdapter,
     categoryPath: string,
 ): Promise<Result<ListedSubcategory[], MemoryError>> => {
     const indexResult = await readCategoryIndex(storage, categoryPath);
@@ -307,7 +307,7 @@ const getCategoryFromSlugPath = (slugPath: string): string => {
  * @returns Result indicating success or failure with MemoryError
  */
 export const createMemory = async (
-    storage: ComposedStorageAdapter,
+    storage: ScopedStorageAdapter,
     slugPath: string,
     input: CreateMemoryInput,
     now?: Date,
@@ -381,7 +381,7 @@ export const createMemory = async (
  * @returns Result containing MemoryFileContents or MemoryError
  */
 export const getMemory = async (
-    storage: ComposedStorageAdapter,
+    storage: ScopedStorageAdapter,
     slugPath: string,
     options?: GetMemoryOptions,
 ): Promise<Result<MemoryFileContents, MemoryError>> => {
@@ -444,7 +444,7 @@ export const getMemory = async (
  * @returns Result containing updated MemoryFileContents or MemoryError
  */
 export const updateMemory = async (
-    storage: ComposedStorageAdapter,
+    storage: ScopedStorageAdapter,
     slugPath: string,
     updates: UpdateMemoryInput,
     now?: Date,
@@ -559,7 +559,7 @@ export const updateMemory = async (
  * @returns Result indicating success or failure with MemoryError
  */
 export const moveMemory = async (
-    storage: ComposedStorageAdapter,
+    storage: ScopedStorageAdapter,
     fromPath: string,
     toPath: string,
 ): Promise<Result<void, MemoryError>> => {
@@ -665,7 +665,7 @@ export const moveMemory = async (
  * @returns Result indicating success or failure with MemoryError
  */
 export const removeMemory = async (
-    storage: ComposedStorageAdapter,
+    storage: ScopedStorageAdapter,
     slugPath: string,
 ): Promise<Result<void, MemoryError>> => {
     // 1. Validate path
@@ -728,7 +728,7 @@ export const removeMemory = async (
  * @returns Result containing ListMemoriesResult or MemoryError
  */
 export const listMemories = async (
-    storage: ComposedStorageAdapter,
+    storage: ScopedStorageAdapter,
     options?: ListMemoriesOptions,
 ): Promise<Result<ListMemoriesResult, MemoryError>> => {
     const includeExpired = options?.includeExpired ?? false;
@@ -800,7 +800,7 @@ export const listMemories = async (
  * @returns Result containing PruneResult or MemoryError
  */
 export const pruneExpiredMemories = async (
-    storage: ComposedStorageAdapter,
+    storage: ScopedStorageAdapter,
     options?: PruneOptions,
 ): Promise<Result<PruneResult, MemoryError>> => {
     const dryRun = options?.dryRun ?? false;
