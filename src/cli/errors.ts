@@ -46,6 +46,9 @@ export interface CoreError {
 const ARGUMENT_ERROR_CODES = new Set([
     // Path validation
     'INVALID_PATH',
+    'INVALID_FILE_PATH',
+    'INVALID_SOURCE_PATH',
+    'INVALID_DESTINATION_PATH',
 
     // Argument parsing
     'INVALID_ARGUMENTS',
