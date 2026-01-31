@@ -2,8 +2,6 @@
  * Store registry parsing and validation
  */
 
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { dirname } from 'node:path';
 import type { Result } from '../types.ts';
 
 export interface StoreDefinition {
@@ -30,7 +28,6 @@ export interface StoreRegistryParseError {
 }
 
 type SerializeRegistryResult = Result<string, StoreRegistrySerializeError>;
-type RemoveRegistryResult = Result<void, StoreRegistrySaveError>;
 
 const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
 const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
@@ -438,16 +435,6 @@ export interface StoreRegistrySerializeError {
     store?: string;
 }
 
-const isNotFoundError = (error: unknown): boolean => {
-    if (!error || typeof error !== 'object') {
-        return false;
-    }
-    if (!('code' in error)) {
-        return false;
-    }
-    return (error as { code?: string }).code === 'ENOENT';
-};
-
 const formatYamlScalar = (value: string): string => JSON.stringify(value);
 
 export const serializeStoreRegistry = (registry: StoreRegistry): SerializeRegistryResult => {
@@ -486,89 +473,6 @@ export const serializeStoreRegistry = (registry: StoreRegistry): SerializeRegist
     }
 
     return ok(lines.join('\n'));
-};
-
-export const loadStoreRegistry = async (
-    path: string,
-    options: { allowMissing?: boolean } = {},
-): Promise<Result<StoreRegistry, StoreRegistryLoadError>> => {
-    let contents: string;
-    try {
-        contents = await readFile(path, 'utf8');
-    }
-    catch (error) {
-        if (isNotFoundError(error)) {
-            if (options.allowMissing) {
-                return ok({});
-            }
-            return err({
-                code: 'REGISTRY_MISSING',
-                message: `Store registry not found at ${path}.`,
-                path,
-            });
-        }
-        return err({
-            code: 'REGISTRY_READ_FAILED',
-            message: `Failed to read store registry at ${path}.`,
-            path,
-            cause: error,
-        });
-    }
-
-    const parsed = parseStoreRegistry(contents);
-    if (!parsed.ok) {
-        return err({
-            code: 'REGISTRY_PARSE_FAILED',
-            message: `Failed to parse store registry at ${path}.`,
-            path,
-            cause: parsed.error,
-        });
-    }
-
-    return ok(parsed.value);
-};
-
-export const saveStoreRegistry = async (
-    path: string,
-    registry: StoreRegistry,
-): Promise<Result<void, StoreRegistrySaveError>> => {
-    const serialized = serializeStoreRegistry(registry);
-    if (!serialized.ok) {
-        return err({
-            code: 'REGISTRY_SERIALIZE_FAILED',
-            message: 'Failed to serialize store registry.',
-            cause: serialized.error,
-        });
-    }
-
-    try {
-        await mkdir(dirname(path), { recursive: true });
-        await writeFile(path, serialized.value, 'utf8');
-        return ok(undefined);
-    }
-    catch (error) {
-        return err({
-            code: 'REGISTRY_WRITE_FAILED',
-            message: `Failed to write store registry at ${path}.`,
-            path,
-            cause: error,
-        });
-    }
-};
-
-export const removeStoreRegistry = async (path: string): Promise<RemoveRegistryResult> => {
-    try {
-        await rm(path, { force: true });
-        return ok(undefined);
-    }
-    catch (error) {
-        return err({
-            code: 'REGISTRY_WRITE_FAILED',
-            message: `Failed to remove store registry at ${path}.`,
-            path,
-            cause: error,
-        });
-    }
 };
 
 // ---------------------------------------------------------------------------
