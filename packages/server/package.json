@@ -1,0 +1,34 @@
+{
+  "name": "@yeseh/cortex-server",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "cortex-mcp": "./src/index.ts"
+  },
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "files": ["src", "dist", "bin"],
+  "scripts": {
+    "build": "tsc",
+    "test": "bun test",
+    "start": "bun run src/index.ts"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@yeseh/cortex-core": "workspace:*",
+    "@yeseh/cortex-storage-fs": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.25.3",
+    "express": "^5.2.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6"
+  },
+  "sideEffects": false
+}

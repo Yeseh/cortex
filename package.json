@@ -1,8 +1,8 @@
 {
     "name": "cortex",
-    "module": "index.ts",
     "type": "module",
     "private": true,
+    "workspaces": ["packages/*"],
     "devDependencies": {
         "@types/bun": "latest",
         "@types/express": "^5.0.6",
@@ -28,10 +28,18 @@
         "zod": "^4.3.6"
     },
     "scripts": {
-        "lint": "eslint src/**/*.ts --fix",
-        "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
-        "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
-        "compile:mcp": "bun build --compile --minify --sourcemap --bytecode ./src/server/index.ts --outfile ./bin/cortex-mcp",
-        "compile:cli": "bun build --compile --minify --sourcemap --bytecode ./src/cli/run.ts --outfile ./bin/cortex"
+        "build": "bun run --filter '*' build",
+        "test": "bun test packages",
+        "test:core": "bun test packages/core",
+        "test:cli": "bun test packages/cli",
+        "test:server": "bun test packages/server",
+        "test:storage-fs": "bun test packages/storage-fs",
+        "lint": "eslint packages/*/src/**/*.ts --fix",
+        "format": "prettier --write \"packages/*/src/**/*.{ts,json,md}\"",
+        "format:check": "prettier --check \"packages/*/src/**/*.{ts,json,md}\"",
+        "typecheck": "tsc --build",
+        "clean": "rm -rf packages/*/dist",
+        "compile:mcp": "bun build --compile --minify --sourcemap --bytecode ./packages/server/src/index.ts --outfile ./bin/cortex-mcp",
+        "compile:cli": "bun build --compile --minify --sourcemap --bytecode ./packages/cli/src/run.ts --outfile ./bin/cortex"
     }
 }

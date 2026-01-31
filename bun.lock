@@ -29,6 +29,66 @@
         "typescript": "^5",
       },
     },
+    "packages/cli": {
+      "name": "@yeseh/cortex-cli",
+      "version": "0.1.0",
+      "bin": {
+        "cortex": "./src/run.ts",
+      },
+      "dependencies": {
+        "@commander-js/extra-typings": "^14.0.0",
+        "@toon-format/toon": "^1.0.0",
+        "@yeseh/cortex-core": "workspace:*",
+        "@yeseh/cortex-storage-fs": "workspace:*",
+        "commander": "^14.0.0",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
+    "packages/core": {
+      "name": "@yeseh/cortex-core",
+      "version": "0.1.0",
+      "dependencies": {
+        "@toon-format/toon": "^1.0.0",
+        "yaml": "^2.8.2",
+        "zod": "^4.3.6",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
+    "packages/server": {
+      "name": "@yeseh/cortex-server",
+      "version": "0.1.0",
+      "bin": {
+        "cortex-mcp": "./src/index.ts",
+      },
+      "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.25.3",
+        "@yeseh/cortex-core": "workspace:*",
+        "@yeseh/cortex-storage-fs": "workspace:*",
+        "express": "^5.2.1",
+        "zod": "^4.3.6",
+      },
+      "devDependencies": {
+        "@types/express": "^5.0.6",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
+    "packages/storage-fs": {
+      "name": "@yeseh/cortex-storage-fs",
+      "version": "0.1.0",
+      "dependencies": {
+        "@yeseh/cortex-core": "workspace:*",
+        "yaml": "^2.8.2",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
   },
   "packages": {
     "@commander-js/extra-typings": ["@commander-js/extra-typings@14.0.0", "", { "peerDependencies": { "commander": "~14.0.0" } }, "sha512-hIn0ncNaJRLkZrxBIp5AsW/eXEHNKYQBh0aPdoUqNgD+Io3NIykQqpKFyKcuasZhicGaEZJX/JBSIkZ4e5x8Dg=="],
@@ -114,6 +174,14 @@
     "@typescript-eslint/utils": ["@typescript-eslint/utils@8.53.1", "", { "dependencies": { "@eslint-community/eslint-utils": "^4.9.1", "@typescript-eslint/scope-manager": "8.53.1", "@typescript-eslint/types": "8.53.1", "@typescript-eslint/typescript-estree": "8.53.1" }, "peerDependencies": { "eslint": "^8.57.0 || ^9.0.0", "typescript": ">=4.8.4 <6.0.0" } }, "sha512-c4bMvGVWW4hv6JmDUEG7fSYlWOl3II2I4ylt0NM+seinYQlZMQIaKaXIIVJWt9Ofh6whrpM+EdDQXKXjNovvrg=="],
 
     "@typescript-eslint/visitor-keys": ["@typescript-eslint/visitor-keys@8.53.1", "", { "dependencies": { "@typescript-eslint/types": "8.53.1", "eslint-visitor-keys": "^4.2.1" } }, "sha512-oy+wV7xDKFPRyNggmXuZQSBzvoLnpmJs+GhzRhPjrxl2b/jIlyjVokzm47CZCDUdXKr2zd7ZLodPfOBpOPyPlg=="],
+
+    "@yeseh/cortex-cli": ["@yeseh/cortex-cli@workspace:packages/cli"],
+
+    "@yeseh/cortex-core": ["@yeseh/cortex-core@workspace:packages/core"],
+
+    "@yeseh/cortex-server": ["@yeseh/cortex-server@workspace:packages/server"],
+
+    "@yeseh/cortex-storage-fs": ["@yeseh/cortex-storage-fs@workspace:packages/storage-fs"],
 
     "accepts": ["accepts@2.0.0", "", { "dependencies": { "mime-types": "^3.0.0", "negotiator": "^1.0.0" } }, "sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng=="],
 
