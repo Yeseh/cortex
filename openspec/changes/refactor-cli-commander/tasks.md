@@ -37,12 +37,12 @@
 
 ## 6. Testing
 
-- [ ] 6.1 Create unit tests for error mapping utilities
-- [ ] 6.2 Create unit tests for context/store resolution
+- [x] 6.1 Create unit tests for error mapping utilities
+- [x] 6.2 Create unit tests for context/store resolution
 - [x] 6.3 Create integration tests for memory commands (rewritten for new structure)
 - [x] 6.4 Create integration tests for store commands (rewritten for new structure)
 - [x] 6.5 Create integration tests for init command (rewritten for new structure)
-- [x] 6.6 Verify all existing test scenarios pass with new structure (741 tests passing)
+- [x] 6.6 Verify all existing test scenarios pass with new structure (829 tests passing)
 
 ## 7. Cleanup
 
@@ -54,5 +54,5 @@
 
 ## 8. Documentation
 
-- [ ] 8.1 Update README with new command syntax
-- [ ] 8.2 Add migration notes for users upgrading from previous versions
+- [x] 8.1 Update README with new command syntax
+- [x] 8.2 Add migration notes for users upgrading from previous versions
