@@ -16,19 +16,16 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Result } from '../../core/types.ts';
-import { FilesystemStorageAdapter } from '../../core/storage/filesystem/index.ts';
+import type { ScopedStorageAdapter } from '../../core/storage/adapter.ts';
 import type { CategoryStorage } from '../../core/category/types.ts';
-import type { CategoryIndex } from '../../core/index/types.ts';
 import {
     createCategory,
     setDescription,
     deleteCategory,
     MAX_DESCRIPTION_LENGTH,
 } from '../../core/category/index.ts';
-import { resolveStorePath } from '../../core/store/registry.ts';
 import { FilesystemRegistry } from '../../core/storage/filesystem/index.ts';
 import type { ServerConfig } from '../config.ts';
 import { storeNameSchema } from '../store/tools.ts';
@@ -147,26 +144,26 @@ const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
 const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 /**
- * Resolves the store root directory from the registry.
+ * Resolves the store adapter from the registry.
  *
- * Optionally creates the store directory if it doesn't exist.
+ * Loads the registry, resolves the store, and returns a scoped storage adapter.
+ * For operations that require auto-creation (like createCategory), the adapter
+ * is returned even if the store directory doesn't exist yet.
  *
  * @param config - Server configuration
  * @param storeName - Required store name
- * @param autoCreate - If true, creates the store directory if missing
- * @returns Result with the resolved store root path or MCP error
+ * @returns Result with the ScopedStorageAdapter or MCP error
  */
-const resolveStoreRoot = async (
+const resolveStoreAdapter = async (
     config: ServerConfig,
     storeName: string,
-    autoCreate: boolean,
-): Promise<Result<string, McpError>> => {
+): Promise<Result<ScopedStorageAdapter, McpError>> => {
     const registryPath = join(config.dataPath, 'stores.yaml');
     const registry = new FilesystemRegistry(registryPath);
     const registryResult = await registry.load();
 
     if (!registryResult.ok) {
-        // Map REGISTRY_MISSING to appropriate error (like allowMissing: false did)
+        // Map REGISTRY_MISSING to appropriate error
         if (registryResult.error.code === 'REGISTRY_MISSING') {
             return err(
                 new McpError(
@@ -183,58 +180,25 @@ const resolveStoreRoot = async (
         );
     }
 
-    const storePathResult = resolveStorePath(registryResult.value, storeName);
-    if (!storePathResult.ok) {
-        return err(new McpError(ErrorCode.InvalidParams, storePathResult.error.message));
+    const storeResult = registry.getStore(storeName);
+    if (!storeResult.ok) {
+        return err(new McpError(ErrorCode.InvalidParams, storeResult.error.message));
     }
 
-    const storeRoot = storePathResult.value;
-
-    if (autoCreate) {
-        try {
-            await mkdir(storeRoot, { recursive: true });
-        }
-        catch {
-            return err(
-                new McpError(
-                    ErrorCode.InternalError,
-                    `Failed to create store directory: ${storeName}`,
-                ),
-            );
-        }
-    }
-
-    return ok(storeRoot);
+    return ok(storeResult.value);
 };
 
 /**
- * Creates a CategoryStoragePort adapter from a FilesystemStorageAdapter.
+ * Creates a CategoryStorage adapter from a ScopedStorageAdapter.
  *
- * This bridges the gap between the adapter's internal methods and the
- * port interface expected by category operations. The adapter pattern
- * allows the core category logic to remain storage-agnostic.
+ * The ScopedStorageAdapter already provides a categories interface that
+ * implements CategoryStorage, so this simply returns that interface.
  *
- * @param storeRoot - Absolute path to the store root directory
- * @returns CategoryStoragePort implementation backed by filesystem
+ * @param adapter - Scoped storage adapter from registry.getStore()
+ * @returns CategoryStorage implementation
  */
-const createCategoryStoragePort = (storeRoot: string): CategoryStorage => {
-    const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
-
-    return {
-        categoryExists: (path: string) => adapter.categoryExists(path),
-        readCategoryIndex: (path: string) => adapter.readCategoryIndexForPort(path),
-        writeCategoryIndex: (path: string, index: CategoryIndex) =>
-            adapter.writeCategoryIndexForPort(path, index),
-        ensureCategoryDirectory: (path: string) => adapter.ensureCategoryDirectory(path),
-        deleteCategoryDirectory: (path: string) => adapter.deleteCategoryDirectory(path),
-        updateSubcategoryDescription: (
-            parentPath: string,
-            subcategoryPath: string,
-            description: string | null,
-        ) => adapter.updateSubcategoryDescription(parentPath, subcategoryPath, description),
-        removeSubcategoryEntry: (parentPath: string, subcategoryPath: string) =>
-            adapter.removeSubcategoryEntry(parentPath, subcategoryPath),
-    };
+const createCategoryStoragePort = (adapter: ScopedStorageAdapter): CategoryStorage => {
+    return adapter.categories;
 };
 
 /**
@@ -285,12 +249,12 @@ export const createCategoryHandler = async (
     ctx: ToolContext,
     input: CreateCategoryInput,
 ): Promise<McpToolResponse> => {
-    const storeRoot = await resolveStoreRoot(ctx.config, input.store, true);
-    if (!storeRoot.ok) {
-        throw storeRoot.error;
+    const adapterResult = await resolveStoreAdapter(ctx.config, input.store);
+    if (!adapterResult.ok) {
+        throw adapterResult.error;
     }
 
-    const port = createCategoryStoragePort(storeRoot.value);
+    const port = createCategoryStoragePort(adapterResult.value);
     const result = await createCategory(port, input.path);
 
     if (!result.ok) {
@@ -342,12 +306,12 @@ export const setCategoryDescriptionHandler = async (
     ctx: ToolContext,
     input: SetCategoryDescriptionInput,
 ): Promise<McpToolResponse> => {
-    const storeRoot = await resolveStoreRoot(ctx.config, input.store, true);
-    if (!storeRoot.ok) {
-        throw storeRoot.error;
+    const adapterResult = await resolveStoreAdapter(ctx.config, input.store);
+    if (!adapterResult.ok) {
+        throw adapterResult.error;
     }
 
-    const port = createCategoryStoragePort(storeRoot.value);
+    const port = createCategoryStoragePort(adapterResult.value);
 
     // MCP convenience: auto-create category if it doesn't exist
     const createResult = await createCategory(port, input.path);
@@ -408,12 +372,12 @@ export const deleteCategoryHandler = async (
     ctx: ToolContext,
     input: DeleteCategoryInput,
 ): Promise<McpToolResponse> => {
-    const storeRoot = await resolveStoreRoot(ctx.config, input.store, false);
-    if (!storeRoot.ok) {
-        throw storeRoot.error;
+    const adapterResult = await resolveStoreAdapter(ctx.config, input.store);
+    if (!adapterResult.ok) {
+        throw adapterResult.error;
     }
 
-    const port = createCategoryStoragePort(storeRoot.value);
+    const port = createCategoryStoragePort(adapterResult.value);
     const result = await deleteCategory(port, input.path);
 
     if (!result.ok) {
