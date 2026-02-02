@@ -46,11 +46,11 @@ export interface InitHandlerDeps {
 
 /**
  * Default category directories created in the global store.
- * - 'global': For memories that apply across all projects
- * - 'projects': For project-specific memories
+ * - 'persona': For persona-related memories
+ * - 'human': For human-related memories
  */
 const DEFAULT_CATEGORIES = [
-    'global', 'projects',
+    'persona', 'human',
 ] as const;
 
 /**

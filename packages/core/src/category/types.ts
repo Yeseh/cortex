@@ -211,8 +211,6 @@ export const MAX_DESCRIPTION_LENGTH = 500;
 export const ROOT_CATEGORIES = [
     'human',
     'persona',
-    'project',
-    'domain',
 ] as const;
 
 /** Type for root category names */
