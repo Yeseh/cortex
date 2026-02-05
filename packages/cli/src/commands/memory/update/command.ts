@@ -65,7 +65,7 @@ export async function handleUpdate(
     path: string,
     options: UpdateCommandOptions,
     storeName: string | undefined,
-    deps: UpdateHandlerDeps = {},
+    deps: UpdateHandlerDeps = {}
 ): Promise<void> {
     // 1. Validate mutually exclusive options
     if (options.expiresAt && options.clearExpiry) {
@@ -103,9 +103,9 @@ export async function handleUpdate(
     const tags =
         options.tags !== undefined
             ? options.tags
-                .split(',')
-                .map((t) => t.trim())
-                .filter(Boolean)
+                  .split(',')
+                  .map((t) => t.trim())
+                  .filter(Boolean)
             : undefined;
 
     // Validate tags are non-empty if provided
@@ -145,7 +145,7 @@ export async function handleUpdate(
     const adapter = deps.adapter ?? storeResult.value.adapter;
     const readResult = await adapter.memories.read(pathResult.value.slugPath);
     if (!readResult.ok) {
-        mapCoreError({ code: 'READ_FAILED', message: readResult.error.message });
+        mapCoreError({ code: 'STORAGE_ERROR', message: readResult.error.message });
     }
     if (!readResult.value) {
         mapCoreError({
@@ -182,7 +182,7 @@ export async function handleUpdate(
 
     const writeResult = await adapter.memories.write(pathResult.value.slugPath, serialized.value);
     if (!writeResult.ok) {
-        mapCoreError({ code: 'WRITE_FAILED', message: writeResult.error.message });
+        mapCoreError({ code: 'STORAGE_ERROR', message: writeResult.error.message });
     }
 
     // 12. Output success message

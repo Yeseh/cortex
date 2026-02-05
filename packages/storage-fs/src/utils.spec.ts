@@ -24,15 +24,7 @@ describe('utils module', () => {
             expect(ok(42)).toEqual({ ok: true, value: 42 });
             expect(ok(null)).toEqual({ ok: true, value: null });
             expect(ok({ key: 'value' })).toEqual({ ok: true, value: { key: 'value' } });
-            expect(ok([
-                1,
-                2,
-                3,
-            ])).toEqual({ ok: true, value: [
-                1,
-                2,
-                3,
-            ] });
+            expect(ok([1, 2, 3])).toEqual({ ok: true, value: [1, 2, 3] });
         });
     });
 
@@ -121,14 +113,13 @@ describe('utils module', () => {
 
             const tempDir = await mkdtemp(join(tmpdir(), 'cortex-utils-'));
             try {
-                const result = resolveStoragePath(tempDir, 'category/memory', 'READ_FAILED');
+                const result = resolveStoragePath(tempDir, 'category/memory', 'IO_READ_ERROR');
 
                 expect(result.ok).toBe(true);
                 if (result.ok) {
                     expect(result.value).toBe(resolve(tempDir, 'category/memory'));
                 }
-            }
-            finally {
+            } finally {
                 await rm(tempDir, { recursive: true, force: true });
             }
         });
@@ -140,14 +131,13 @@ describe('utils module', () => {
 
             const tempDir = await mkdtemp(join(tmpdir(), 'cortex-utils-'));
             try {
-                const result = resolveStoragePath(tempDir, 'a/b/c/d', 'READ_FAILED');
+                const result = resolveStoragePath(tempDir, 'a/b/c/d', 'IO_READ_ERROR');
 
                 expect(result.ok).toBe(true);
                 if (result.ok) {
                     expect(result.value).toBe(resolve(tempDir, 'a/b/c/d'));
                 }
-            }
-            finally {
+            } finally {
                 await rm(tempDir, { recursive: true, force: true });
             }
         });
@@ -159,15 +149,14 @@ describe('utils module', () => {
 
             const tempDir = await mkdtemp(join(tmpdir(), 'cortex-utils-'));
             try {
-                const result = resolveStoragePath(tempDir, '../escape', 'READ_FAILED');
+                const result = resolveStoragePath(tempDir, '../escape', 'IO_READ_ERROR');
 
                 expect(result.ok).toBe(false);
                 if (!result.ok) {
-                    expect(result.error.code).toBe('READ_FAILED');
+                    expect(result.error.code).toBe('IO_READ_ERROR');
                     expect(result.error.message).toContain('Path escapes storage root');
                 }
-            }
-            finally {
+            } finally {
                 await rm(tempDir, { recursive: true, force: true });
             }
         });
@@ -179,14 +168,17 @@ describe('utils module', () => {
 
             const tempDir = await mkdtemp(join(tmpdir(), 'cortex-utils-'));
             try {
-                const result = resolveStoragePath(tempDir, 'valid/../../../escape', 'WRITE_FAILED');
+                const result = resolveStoragePath(
+                    tempDir,
+                    'valid/../../../escape',
+                    'IO_WRITE_ERROR'
+                );
 
                 expect(result.ok).toBe(false);
                 if (!result.ok) {
-                    expect(result.error.code).toBe('WRITE_FAILED');
+                    expect(result.error.code).toBe('IO_WRITE_ERROR');
                 }
-            }
-            finally {
+            } finally {
                 await rm(tempDir, { recursive: true, force: true });
             }
         });
@@ -198,14 +190,13 @@ describe('utils module', () => {
 
             const tempDir = await mkdtemp(join(tmpdir(), 'cortex-utils-'));
             try {
-                const result = resolveStoragePath(tempDir, '../bad', 'WRITE_FAILED');
+                const result = resolveStoragePath(tempDir, '../bad', 'IO_WRITE_ERROR');
 
                 expect(result.ok).toBe(false);
                 if (!result.ok) {
-                    expect(result.error.code).toBe('WRITE_FAILED');
+                    expect(result.error.code).toBe('IO_WRITE_ERROR');
                 }
-            }
-            finally {
+            } finally {
                 await rm(tempDir, { recursive: true, force: true });
             }
         });

@@ -36,10 +36,7 @@ describe('filesystem storage adapter', () => {
         const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
         const content = createMemoryContent('Filesystem payload');
 
-        const writeResult = await adapter.writeMemoryFile(
-            'working/storage-test',
-            content,
-        );
+        const writeResult = await adapter.writeMemoryFile('working/storage-test', content);
 
         expect(writeResult.ok).toBe(true);
 
@@ -85,7 +82,7 @@ describe('filesystem storage adapter', () => {
 
         expect(readResult.ok).toBe(false);
         if (!readResult.ok) {
-            expect(readResult.error.code).toBe('READ_FAILED');
+            expect(readResult.error.code).toBe('IO_READ_ERROR');
             expect(readResult.error.message).toContain('Path escapes storage root');
         }
 
@@ -94,7 +91,7 @@ describe('filesystem storage adapter', () => {
 
         expect(writeResult.ok).toBe(false);
         if (!writeResult.ok) {
-            expect(writeResult.error.code).toBe('WRITE_FAILED');
+            expect(writeResult.error.code).toBe('IO_WRITE_ERROR');
             expect(writeResult.error.message).toContain('Invalid memory slug path');
         }
     });
@@ -175,7 +172,7 @@ describe('filesystem storage adapter', () => {
 
         expect(readResult.ok).toBe(false);
         if (!readResult.ok) {
-            expect(readResult.error.code).toBe('READ_FAILED');
+            expect(readResult.error.code).toBe('IO_READ_ERROR');
             expect(readResult.error.message).toContain('Path escapes storage root');
         }
     });
@@ -214,7 +211,7 @@ describe('CategoryStoragePort implementation', () => {
         index: {
             memories: { path: string; tokenEstimate: number }[];
             subcategories: { path: string; memoryCount: number; description?: string }[];
-        },
+        }
     ) => {
         const serialized = serializeIndex(index);
         if (!serialized.ok) throw new Error('Failed to serialize index');
@@ -283,7 +280,7 @@ describe('CategoryStoragePort implementation', () => {
         const result = await adapter.updateSubcategoryDescription(
             'project',
             'project/test',
-            'Test description',
+            'Test description'
         );
 
         expect(result.ok).toBe(true);
@@ -338,7 +335,7 @@ describe('CategoryStoragePort implementation', () => {
         const result = await adapter.updateSubcategoryDescription(
             'project',
             'project/new',
-            'New description',
+            'New description'
         );
 
         expect(result.ok).toBe(true);

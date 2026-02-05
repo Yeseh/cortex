@@ -12,13 +12,17 @@ import { dirname } from 'node:path';
 import type { MemoryIdentity, MemorySlugPath, Result } from '@yeseh/cortex-core';
 import type { StorageAdapterError } from '@yeseh/cortex-core/storage';
 import { validateMemorySlugPath } from '@yeseh/cortex-core/memory';
-import type { Memory, MemoryError, MemoryErrorCode, MemoryMetadata } from '@yeseh/cortex-core/memory';
+import type {
+    Memory,
+    MemoryError,
+    MemoryErrorCode,
+    MemoryMetadata,
+} from '@yeseh/cortex-core/memory';
 import { dateSchema, nonEmptyStringSchema, tagsSchema } from '@yeseh/cortex-core';
 import z from 'zod';
 import * as yaml from 'yaml';
 import type { FilesystemContext, StringOrNullResult } from './types.ts';
 import { err, isNotFoundError, ok, resolveStoragePath } from './utils.ts';
-
 
 export type ParseMetadataResult = Result<MemoryMetadata, MemoryError>;
 export type SerializeMemoryResult = Result<string, MemoryError>;
@@ -41,7 +45,7 @@ const FrontmatterSchema = z.object({
  */
 export const validateSlugPath = (
     slugPath: string,
-    failure: { code: StorageAdapterError['code']; message: string; path: string },
+    failure: { code: StorageAdapterError['code']; message: string; path: string }
 ): Result<MemoryIdentity, StorageAdapterError> => {
     const identity = validateMemorySlugPath(slugPath);
     if (!identity.ok) {
@@ -105,7 +109,6 @@ const mapZodErrorCode = (field: string | undefined, fieldExists: boolean): Memor
     return 'INVALID_FRONTMATTER';
 };
 
-
 /**
  * Parses YAML frontmatter lines into MemoryMetadata.
  *
@@ -119,10 +122,8 @@ const parseMetadata = (frontmatterLines: string[]): ParseMetadataResult => {
     try {
         const doc = yaml.parseDocument(frontmatterText, { uniqueKeys: true });
 
-        const hasDuplicateKeyIssue = [
-            ...doc.errors, ...doc.warnings,
-        ].some((issue) =>
-            /duplicate key/i.test(issue.message),
+        const hasDuplicateKeyIssue = [...doc.errors, ...doc.warnings].some((issue) =>
+            /duplicate key/i.test(issue.message)
         );
 
         if (hasDuplicateKeyIssue) {
@@ -140,8 +141,7 @@ const parseMetadata = (frontmatterLines: string[]): ParseMetadataResult => {
         }
 
         data = doc.toJS();
-    }
-    catch {
+    } catch {
         return err({
             code: 'INVALID_FRONTMATTER',
             message: 'Invalid YAML frontmatter.',
@@ -179,14 +179,13 @@ const parseMetadata = (frontmatterLines: string[]): ParseMetadataResult => {
     });
 };
 
-
 /**
  * Resolves the filesystem path for a memory file.
  */
 export const resolveMemoryPath = (
     ctx: FilesystemContext,
     slugPath: MemorySlugPath,
-    errorCode: StorageAdapterError['code'],
+    errorCode: StorageAdapterError['code']
 ): Result<string, StorageAdapterError> => {
     return resolveStoragePath(ctx.storeRoot, `${slugPath}${ctx.memoryExtension}`, errorCode);
 };
@@ -257,7 +256,6 @@ export const serializeMemory = (memory: Memory): SerializeMemoryResult => {
         ...(expires_at ? { expires_at: expires_at.toISOString() } : {}),
     };
 
-
     const frontmatterBody = yaml.stringify(frontmatterData).trimEnd();
     const frontmatter = `---\n${frontmatterBody}\n---`;
     const content = memory.content ?? '';
@@ -275,9 +273,9 @@ export const serializeMemory = (memory: Memory): SerializeMemoryResult => {
  */
 export const readMemory = async (
     ctx: FilesystemContext,
-    slugPath: MemorySlugPath,
+    slugPath: MemorySlugPath
 ): Promise<StringOrNullResult> => {
-    const filePathResult = resolveMemoryPath(ctx, slugPath, 'READ_FAILED');
+    const filePathResult = resolveMemoryPath(ctx, slugPath, 'IO_READ_ERROR');
     if (!filePathResult.ok) {
         return filePathResult;
     }
@@ -285,13 +283,12 @@ export const readMemory = async (
     try {
         const contents = await readFile(filePath, 'utf8');
         return ok(contents);
-    }
-    catch (error) {
+    } catch (error) {
         if (isNotFoundError(error)) {
             return ok(null);
         }
         return err({
-            code: 'READ_FAILED',
+            code: 'IO_READ_ERROR',
             message: `Failed to read memory file at ${filePath}.`,
             path: filePath,
             cause: error,
@@ -312,19 +309,19 @@ export const readMemory = async (
 export const writeMemory = async (
     ctx: FilesystemContext,
     slugPath: MemorySlugPath,
-    memory: string,
+    memory: string
 ): Promise<Result<void, StorageAdapterError>> => {
     const parsed = parseMemory(memory);
     if (!parsed.ok) {
         return err({
-            code: 'WRITE_FAILED',
+            code: 'IO_WRITE_ERROR',
             message: 'Failed to parse memory for writing.',
             cause: parsed.error,
         });
     }
 
     const identityResult = validateSlugPath(slugPath, {
-        code: 'WRITE_FAILED',
+        code: 'IO_WRITE_ERROR',
         message: 'Invalid memory slug path.',
         path: slugPath,
     });
@@ -332,16 +329,16 @@ export const writeMemory = async (
         return identityResult;
     }
 
-    const filePathResult = resolveMemoryPath(ctx, slugPath, 'WRITE_FAILED');
+    const filePathResult = resolveMemoryPath(ctx, slugPath, 'IO_WRITE_ERROR');
     if (!filePathResult.ok) {
         return filePathResult;
     }
 
     const filePath = filePathResult.value;
-    const serializedResult = serializeMemory(parsed.value); 
+    const serializedResult = serializeMemory(parsed.value);
     if (!serializedResult.ok) {
         return err({
-            code: 'WRITE_FAILED',
+            code: 'IO_WRITE_ERROR',
             message: 'Failed to serialize memory for writing.',
         });
     }
@@ -349,10 +346,9 @@ export const writeMemory = async (
     try {
         await mkdir(dirname(filePath), { recursive: true });
         await writeFile(filePath, serializedResult.value, 'utf8');
-    }
-    catch (error) {
+    } catch (error) {
         return err({
-            code: 'WRITE_FAILED',
+            code: 'IO_WRITE_ERROR',
             message: `Failed to write memory file at ${filePath}.`,
             path: filePath,
             cause: error,
@@ -371,10 +367,10 @@ export const writeMemory = async (
  */
 export const removeMemory = async (
     ctx: FilesystemContext,
-    slugPath: MemorySlugPath,
+    slugPath: MemorySlugPath
 ): Promise<Result<void, StorageAdapterError>> => {
     const identityResult = validateSlugPath(slugPath, {
-        code: 'WRITE_FAILED',
+        code: 'IO_WRITE_ERROR',
         message: 'Invalid memory slug path.',
         path: slugPath,
     });
@@ -382,7 +378,7 @@ export const removeMemory = async (
         return identityResult;
     }
 
-    const filePathResult = resolveMemoryPath(ctx, slugPath, 'WRITE_FAILED');
+    const filePathResult = resolveMemoryPath(ctx, slugPath, 'IO_WRITE_ERROR');
     if (!filePathResult.ok) {
         return filePathResult;
     }
@@ -390,13 +386,12 @@ export const removeMemory = async (
     try {
         await rm(filePath);
         return ok(undefined);
-    }
-    catch (error) {
+    } catch (error) {
         if (isNotFoundError(error)) {
             return ok(undefined);
         }
         return err({
-            code: 'WRITE_FAILED',
+            code: 'IO_WRITE_ERROR',
             message: `Failed to remove memory file at ${filePath}.`,
             path: filePath,
             cause: error,
@@ -417,10 +412,10 @@ export const removeMemory = async (
 export const moveMemory = async (
     ctx: FilesystemContext,
     sourceSlugPath: MemorySlugPath,
-    destinationSlugPath: MemorySlugPath,
+    destinationSlugPath: MemorySlugPath
 ): Promise<Result<void, StorageAdapterError>> => {
     const sourceIdentityResult = validateSlugPath(sourceSlugPath, {
-        code: 'WRITE_FAILED',
+        code: 'IO_WRITE_ERROR',
         message: 'Invalid source memory slug path.',
         path: sourceSlugPath,
     });
@@ -429,7 +424,7 @@ export const moveMemory = async (
     }
 
     const destinationIdentityResult = validateSlugPath(destinationSlugPath, {
-        code: 'WRITE_FAILED',
+        code: 'IO_WRITE_ERROR',
         message: 'Invalid destination memory slug path.',
         path: destinationSlugPath,
     });
@@ -437,12 +432,12 @@ export const moveMemory = async (
         return destinationIdentityResult;
     }
 
-    const sourcePathResult = resolveMemoryPath(ctx, sourceSlugPath, 'WRITE_FAILED');
+    const sourcePathResult = resolveMemoryPath(ctx, sourceSlugPath, 'IO_WRITE_ERROR');
     if (!sourcePathResult.ok) {
         return sourcePathResult;
     }
 
-    const destinationPathResult = resolveMemoryPath(ctx, destinationSlugPath, 'WRITE_FAILED');
+    const destinationPathResult = resolveMemoryPath(ctx, destinationSlugPath, 'IO_WRITE_ERROR');
     if (!destinationPathResult.ok) {
         return destinationPathResult;
     }
@@ -450,10 +445,9 @@ export const moveMemory = async (
     const destinationDirectory = dirname(destinationPathResult.value);
     try {
         await access(destinationDirectory);
-    }
-    catch (error) {
+    } catch (error) {
         return err({
-            code: 'WRITE_FAILED',
+            code: 'IO_WRITE_ERROR',
             message: `Destination category does not exist for ${destinationSlugPath}.`,
             path: destinationDirectory,
             cause: error,
@@ -463,10 +457,9 @@ export const moveMemory = async (
     try {
         await rename(sourcePathResult.value, destinationPathResult.value);
         return ok(undefined);
-    }
-    catch (error) {
+    } catch (error) {
         return err({
-            code: 'WRITE_FAILED',
+            code: 'IO_WRITE_ERROR',
             message: `Failed to move memory from ${sourceSlugPath} to ${destinationSlugPath}.`,
             path: destinationPathResult.value,
             cause: error,
@@ -546,4 +539,3 @@ export const parseMemory = (raw: string): Result<Memory, MemoryError> => {
 
     return ok({ metadata: parsedMetadata.value, content });
 };
-

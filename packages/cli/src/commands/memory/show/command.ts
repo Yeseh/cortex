@@ -74,7 +74,7 @@ export async function handleShow(
     path: string,
     options: ShowCommandOptions,
     storeName: string | undefined,
-    deps: ShowHandlerDeps = {},
+    deps: ShowHandlerDeps = {}
 ): Promise<void> {
     // 1. Resolve store context
     const storeResult = await resolveStoreAdapter(storeName);
@@ -92,10 +92,13 @@ export async function handleShow(
     const adapter = deps.adapter ?? storeResult.value.adapter;
     const readResult = await adapter.memories.read(pathResult.value.slugPath);
     if (!readResult.ok) {
-        mapCoreError({ code: 'READ_FAILED', message: readResult.error.message });
+        mapCoreError({ code: 'STORAGE_ERROR', message: readResult.error.message });
     }
     if (!readResult.value) {
-        mapCoreError({ code: 'MEMORY_NOT_FOUND', message: `Memory not found at ${pathResult.value.slugPath}` });
+        mapCoreError({
+            code: 'MEMORY_NOT_FOUND',
+            message: `Memory not found at ${pathResult.value.slugPath}`,
+        });
     }
 
     // 4. Parse the memory file
@@ -108,7 +111,10 @@ export async function handleShow(
     if (!options.includeExpired && parsed.value.metadata.expiresAt) {
         const now = new Date();
         if (parsed.value.metadata.expiresAt.getTime() <= now.getTime()) {
-            mapCoreError({ code: 'MEMORY_NOT_FOUND', message: `Memory at ${pathResult.value.slugPath} has expired` });
+            mapCoreError({
+                code: 'MEMORY_NOT_FOUND',
+                message: `Memory at ${pathResult.value.slugPath} has expired`,
+            });
         }
     }
 
@@ -130,11 +136,7 @@ export async function handleShow(
     };
 
     // 7. Serialize and output
-    const VALID_FORMATS: OutputFormat[] = [
-        'yaml',
-        'json',
-        'toon',
-    ];
+    const VALID_FORMATS: OutputFormat[] = ['yaml', 'json', 'toon'];
     const requestedFormat = options.format as OutputFormat;
     const format: OutputFormat = VALID_FORMATS.includes(requestedFormat) ? requestedFormat : 'yaml';
     const serialized = serializeOutput({ kind: 'memory', value: outputMemory }, format);

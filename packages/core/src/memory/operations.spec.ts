@@ -283,7 +283,7 @@ describe('createMemory', () => {
         const storage = createMockStorage({
             memories: {
                 write: async () =>
-                    err({ code: 'WRITE_FAILED', message: 'Disk full' } as StorageAdapterError),
+                    err({ code: 'IO_WRITE_ERROR', message: 'Disk full' } as StorageAdapterError),
             },
         });
         const result = await createMemory(storage, mockSerializer, 'project/test/memory', {
@@ -301,7 +301,7 @@ describe('createMemory', () => {
             indexes: {
                 updateAfterMemoryWrite: async () =>
                     err({
-                        code: 'INDEX_UPDATE_FAILED',
+                        code: 'INDEX_ERROR',
                         message: 'Index error',
                     } as StorageAdapterError),
             },
@@ -427,7 +427,7 @@ describe('getMemory', () => {
         const storage = createMockStorage({
             memories: {
                 read: async () =>
-                    err({ code: 'READ_FAILED', message: 'IO error' } as StorageAdapterError),
+                    err({ code: 'IO_READ_ERROR', message: 'IO error' } as StorageAdapterError),
             },
         });
         const result = await getMemory(storage, mockSerializer, 'project/test/memory');
@@ -601,7 +601,7 @@ describe('updateMemory', () => {
         const storage = createMockStorage({
             memories: {
                 read: async () =>
-                    err({ code: 'READ_FAILED', message: 'IO error' } as StorageAdapterError),
+                    err({ code: 'IO_READ_ERROR', message: 'IO error' } as StorageAdapterError),
             },
         });
         const result = await updateMemory(storage, mockSerializer, 'project/test/memory', {
@@ -618,7 +618,7 @@ describe('updateMemory', () => {
             memories: {
                 read: async () => ok(sampleMemoryContent),
                 write: async () =>
-                    err({ code: 'WRITE_FAILED', message: 'Disk full' } as StorageAdapterError),
+                    err({ code: 'IO_WRITE_ERROR', message: 'Disk full' } as StorageAdapterError),
             },
         });
         const result = await updateMemory(storage, mockSerializer, 'project/test/memory', {
@@ -761,7 +761,7 @@ describe('moveMemory', () => {
                 read: async (path) =>
                     path === 'project/src/memory' ? ok(sampleMemoryContent) : ok(null),
                 move: async () =>
-                    err({ code: 'WRITE_FAILED', message: 'Move failed' } as StorageAdapterError),
+                    err({ code: 'IO_WRITE_ERROR', message: 'Move failed' } as StorageAdapterError),
             },
         });
         const result = await moveMemory(storage, 'project/src/memory', 'project/dest/memory');
@@ -780,7 +780,7 @@ describe('moveMemory', () => {
             indexes: {
                 reindex: async () =>
                     err({
-                        code: 'INDEX_UPDATE_FAILED',
+                        code: 'INDEX_ERROR',
                         message: 'Reindex failed',
                     } as StorageAdapterError),
             },
@@ -854,7 +854,7 @@ describe('removeMemory', () => {
         const storage = createMockStorage({
             memories: {
                 read: async () =>
-                    err({ code: 'READ_FAILED', message: 'IO error' } as StorageAdapterError),
+                    err({ code: 'IO_READ_ERROR', message: 'IO error' } as StorageAdapterError),
             },
         });
         const result = await removeMemory(storage, 'project/test/memory');
@@ -869,7 +869,10 @@ describe('removeMemory', () => {
             memories: {
                 read: async () => ok(sampleMemoryContent),
                 remove: async () =>
-                    err({ code: 'WRITE_FAILED', message: 'Delete failed' } as StorageAdapterError),
+                    err({
+                        code: 'IO_WRITE_ERROR',
+                        message: 'Delete failed',
+                    } as StorageAdapterError),
             },
         });
         const result = await removeMemory(storage, 'project/test/memory');
@@ -887,7 +890,7 @@ describe('removeMemory', () => {
             indexes: {
                 reindex: async () =>
                     err({
-                        code: 'INDEX_UPDATE_FAILED',
+                        code: 'INDEX_ERROR',
                         message: 'Reindex failed',
                     } as StorageAdapterError),
             },
@@ -1271,7 +1274,10 @@ subcategories: []`;
             memories: {
                 read: async () => ok(expiredMemoryContent),
                 remove: async () =>
-                    err({ code: 'WRITE_FAILED', message: 'Delete failed' } as StorageAdapterError),
+                    err({
+                        code: 'IO_WRITE_ERROR',
+                        message: 'Delete failed',
+                    } as StorageAdapterError),
             },
         });
 
