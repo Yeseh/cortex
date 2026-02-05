@@ -3,6 +3,8 @@ subcategories:
   - path: decisions
     memory_count: 13
     description: Architectural and implementation decisions made during development
+  - path: features
+    memory_count: 1
   - path: investigations
     memory_count: 1
   - path: issues
