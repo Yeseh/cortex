@@ -67,7 +67,7 @@ const isExpired = (expiresAt: Date | undefined, now: Date): boolean => {
 
 const loadCategoryIndex = async (
     adapter: ScopedStorageAdapter,
-    categoryPath: string,
+    categoryPath: string
 ): Promise<PruneResult<CategoryIndex | null>> => {
     const indexContents = await adapter.indexes.read(categoryPath);
     if (!indexContents.ok) {
@@ -98,7 +98,7 @@ const loadCategoryIndex = async (
 const checkMemoryExpiry = async (
     adapter: ScopedStorageAdapter,
     slugPath: string,
-    now: Date,
+    now: Date
 ): Promise<PruneResult<{ expired: boolean; expiresAt?: Date }>> => {
     const contents = await adapter.memories.read(slugPath);
     if (!contents.ok) {
@@ -131,7 +131,7 @@ const collectExpiredFromCategory = async (
     adapter: ScopedStorageAdapter,
     categoryPath: string,
     now: Date,
-    visited: Set<string>,
+    visited: Set<string>
 ): Promise<PruneResult<PrunedMemoryEntry[]>> => {
     if (visited.has(categoryPath)) {
         return { ok: true, value: [] };
@@ -162,12 +162,7 @@ const collectExpiredFromCategory = async (
     }
 
     for (const subcategory of indexResult.value.subcategories) {
-        const subResult = await collectExpiredFromCategory(
-            adapter,
-            subcategory.path,
-            now,
-            visited,
-        );
+        const subResult = await collectExpiredFromCategory(adapter, subcategory.path, now, visited);
         if (!subResult.ok) {
             return subResult;
         }
@@ -179,14 +174,20 @@ const collectExpiredFromCategory = async (
 
 const collectAllExpired = async (
     adapter: ScopedStorageAdapter,
-    now: Date,
+    now: Date
 ): Promise<PruneResult<PrunedMemoryEntry[]>> => {
-    const rootCategories = [
-        'human',
-        'persona',
-        'project',
-        'domain',
-    ];
+    // Dynamically discover root categories from the store's root index
+    const rootIndexResult = await loadCategoryIndex(adapter, '');
+    if (!rootIndexResult.ok) {
+        return rootIndexResult;
+    }
+
+    // If no root index, there are no categories to scan
+    if (!rootIndexResult.value) {
+        return { ok: true, value: [] };
+    }
+
+    const rootCategories = rootIndexResult.value.subcategories.map((sub) => sub.path);
     const entries: PrunedMemoryEntry[] = [];
     const visited = new Set<string>();
 
@@ -203,7 +204,7 @@ const collectAllExpired = async (
 
 const deleteExpiredMemories = async (
     adapter: ScopedStorageAdapter,
-    entries: PrunedMemoryEntry[],
+    entries: PrunedMemoryEntry[]
 ): Promise<PruneResult<void>> => {
     for (const entry of entries) {
         const removeResult = await adapter.memories.remove(entry.path);
@@ -238,7 +239,7 @@ const deleteExpiredMemories = async (
 export async function handlePrune(
     options: PruneCommandOptions,
     storeName: string | undefined,
-    deps: PruneHandlerDeps = {},
+    deps: PruneHandlerDeps = {}
 ): Promise<void> {
     // 1. Resolve store adapter
     const now = deps.now ?? new Date();
@@ -246,8 +247,7 @@ export async function handlePrune(
 
     if (deps.adapter) {
         adapter = deps.adapter;
-    }
-    else {
+    } else {
         const storeResult = await resolveStoreAdapter(storeName);
         if (!storeResult.ok) {
             mapCoreError(storeResult.error);

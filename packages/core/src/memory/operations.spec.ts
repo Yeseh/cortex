@@ -48,7 +48,7 @@ const createMockSerializer = (): MemorySerializer => ({
             if (lines[0] !== '---') {
                 return err({ code: 'MISSING_FRONTMATTER', message: 'Missing frontmatter' });
             }
-            
+
             let endIndex = -1;
             for (let i = 1; i < lines.length; i++) {
                 if (lines[i] === '---') {
@@ -56,14 +56,14 @@ const createMockSerializer = (): MemorySerializer => ({
                     break;
                 }
             }
-            
+
             if (endIndex === -1) {
                 return err({ code: 'MISSING_FRONTMATTER', message: 'Unclosed frontmatter' });
             }
-            
+
             const frontmatterLines = lines.slice(1, endIndex);
             const content = lines.slice(endIndex + 1).join('\n');
-            
+
             // Parse simple YAML frontmatter
             const metadata: Record<string, unknown> = {};
             for (const line of frontmatterLines) {
@@ -73,30 +73,31 @@ const createMockSerializer = (): MemorySerializer => ({
                     const value = match[2]!;
                     if (key === 'created_at' || key === 'updated_at' || key === 'expires_at') {
                         metadata[key] = new Date(value);
-                    }
-                    else if (key === 'tags') {
+                    } else if (key === 'tags') {
                         // Parse [tag1, tag2] format
                         const tagMatch = value.match(/^\[(.*)\]$/);
-                        metadata[key] = tagMatch?.[1]?.split(',').map((t) => t.trim()).filter(Boolean) ?? [];
-                    }
-                    else {
+                        metadata[key] =
+                            tagMatch?.[1]
+                                ?.split(',')
+                                .map((t) => t.trim())
+                                .filter(Boolean) ?? [];
+                    } else {
                         metadata[key] = value;
                     }
                 }
             }
-            
+
             return ok({
                 metadata: {
-                    createdAt: metadata.created_at as Date || new Date(),
-                    updatedAt: metadata.updated_at as Date || new Date(),
+                    createdAt: (metadata.created_at as Date) || new Date(),
+                    updatedAt: (metadata.updated_at as Date) || new Date(),
                     tags: (metadata.tags as string[]) || [],
                     source: (metadata.source as string) || 'unknown',
                     expiresAt: metadata.expires_at as Date | undefined,
                 },
                 content,
             });
-        }
-        catch {
+        } catch {
             return err({ code: 'INVALID_FRONTMATTER', message: 'Failed to parse' });
         }
     },
@@ -128,7 +129,7 @@ const createMockStorage = (
         indexes: Partial<IndexStorage>;
         categories: Partial<CategoryStorage>;
         stores: Partial<StoreStorage>;
-    }> = {},
+    }> = {}
 ): ComposedStorageAdapter => ({
     memories: {
         read: async () => ok(null),
@@ -213,9 +214,7 @@ describe('createMemory', () => {
 
         const result = await createMemory(storage, mockSerializer, 'project/test/memory', {
             content: 'Test content',
-            tags: [
-                'tag1', 'tag2',
-            ],
+            tags: ['tag1', 'tag2'],
             source: 'test',
         });
 
@@ -283,7 +282,8 @@ describe('createMemory', () => {
     it('should return STORAGE_ERROR when write fails', async () => {
         const storage = createMockStorage({
             memories: {
-                write: async () => err({ code: 'WRITE_FAILED', message: 'Disk full' } as StorageAdapterError),
+                write: async () =>
+                    err({ code: 'WRITE_FAILED', message: 'Disk full' } as StorageAdapterError),
             },
         });
         const result = await createMemory(storage, mockSerializer, 'project/test/memory', {
@@ -300,7 +300,10 @@ describe('createMemory', () => {
         const storage = createMockStorage({
             indexes: {
                 updateAfterMemoryWrite: async () =>
-                    err({ code: 'INDEX_UPDATE_FAILED', message: 'Index error' } as StorageAdapterError),
+                    err({
+                        code: 'INDEX_UPDATE_FAILED',
+                        message: 'Index error',
+                    } as StorageAdapterError),
             },
         });
         const result = await createMemory(storage, mockSerializer, 'project/test/memory', {
@@ -330,7 +333,7 @@ describe('createMemory', () => {
             mockSerializer,
             'project/test/memory',
             { content: 'Test', source: 'test' },
-            customTime,
+            customTime
         );
 
         expect(result.ok).toBe(true);
@@ -354,9 +357,7 @@ describe('getMemory', () => {
         expect(result.ok).toBe(true);
         if (result.ok) {
             expect(result.value.content).toContain('Sample memory content');
-            expect(result.value.metadata.tags).toEqual([
-                'test', 'sample',
-            ]);
+            expect(result.value.metadata.tags).toEqual(['test', 'sample']);
             expect(result.value.metadata.source).toBe('test');
         }
     });
@@ -392,7 +393,10 @@ describe('getMemory', () => {
             },
         });
         const now = new Date('2025-06-15T12:00:00Z');
-        const result = await getMemory(storage, mockSerializer, 'project/test/memory', { includeExpired: true, now });
+        const result = await getMemory(storage, mockSerializer, 'project/test/memory', {
+            includeExpired: true,
+            now,
+        });
         expect(result.ok).toBe(true);
         if (result.ok) {
             expect(result.value.content).toContain('Expired content');
@@ -422,7 +426,8 @@ describe('getMemory', () => {
     it('should return STORAGE_ERROR when read fails', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async () => err({ code: 'READ_FAILED', message: 'IO error' } as StorageAdapterError),
+                read: async () =>
+                    err({ code: 'READ_FAILED', message: 'IO error' } as StorageAdapterError),
             },
         });
         const result = await getMemory(storage, mockSerializer, 'project/test/memory');
@@ -469,9 +474,7 @@ describe('updateMemory', () => {
         if (result.ok) {
             expect(result.value.content).toBe('Updated content');
             // Original tags preserved
-            expect(result.value.metadata.tags).toEqual([
-                'test', 'sample',
-            ]);
+            expect(result.value.metadata.tags).toEqual(['test', 'sample']);
         }
     });
 
@@ -482,15 +485,11 @@ describe('updateMemory', () => {
             },
         });
         const result = await updateMemory(storage, mockSerializer, 'project/test/memory', {
-            tags: [
-                'new', 'tags',
-            ],
+            tags: ['new', 'tags'],
         });
         expect(result.ok).toBe(true);
         if (result.ok) {
-            expect(result.value.metadata.tags).toEqual([
-                'new', 'tags',
-            ]);
+            expect(result.value.metadata.tags).toEqual(['new', 'tags']);
             // Original content preserved
             expect(result.value.content).toContain('Sample memory content');
         }
@@ -556,7 +555,7 @@ describe('updateMemory', () => {
             mockSerializer,
             'project/test/memory',
             { content: 'Updated' },
-            updateTime,
+            updateTime
         );
         expect(result.ok).toBe(true);
         if (result.ok) {
@@ -601,10 +600,13 @@ describe('updateMemory', () => {
     it('should return STORAGE_ERROR when read fails', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async () => err({ code: 'READ_FAILED', message: 'IO error' } as StorageAdapterError),
+                read: async () =>
+                    err({ code: 'READ_FAILED', message: 'IO error' } as StorageAdapterError),
             },
         });
-        const result = await updateMemory(storage, mockSerializer, 'project/test/memory', { content: 'Updated' });
+        const result = await updateMemory(storage, mockSerializer, 'project/test/memory', {
+            content: 'Updated',
+        });
         expect(result.ok).toBe(false);
         if (!result.ok) {
             expect(result.error.code).toBe('STORAGE_ERROR');
@@ -615,10 +617,13 @@ describe('updateMemory', () => {
         const storage = createMockStorage({
             memories: {
                 read: async () => ok(sampleMemoryContent),
-                write: async () => err({ code: 'WRITE_FAILED', message: 'Disk full' } as StorageAdapterError),
+                write: async () =>
+                    err({ code: 'WRITE_FAILED', message: 'Disk full' } as StorageAdapterError),
             },
         });
-        const result = await updateMemory(storage, mockSerializer, 'project/test/memory', { content: 'Updated' });
+        const result = await updateMemory(storage, mockSerializer, 'project/test/memory', {
+            content: 'Updated',
+        });
         expect(result.ok).toBe(false);
         if (!result.ok) {
             expect(result.error.code).toBe('STORAGE_ERROR');
@@ -755,7 +760,8 @@ describe('moveMemory', () => {
             memories: {
                 read: async (path) =>
                     path === 'project/src/memory' ? ok(sampleMemoryContent) : ok(null),
-                move: async () => err({ code: 'WRITE_FAILED', message: 'Move failed' } as StorageAdapterError),
+                move: async () =>
+                    err({ code: 'WRITE_FAILED', message: 'Move failed' } as StorageAdapterError),
             },
         });
         const result = await moveMemory(storage, 'project/src/memory', 'project/dest/memory');
@@ -773,7 +779,10 @@ describe('moveMemory', () => {
             },
             indexes: {
                 reindex: async () =>
-                    err({ code: 'INDEX_UPDATE_FAILED', message: 'Reindex failed' } as StorageAdapterError),
+                    err({
+                        code: 'INDEX_UPDATE_FAILED',
+                        message: 'Reindex failed',
+                    } as StorageAdapterError),
             },
         });
         const result = await moveMemory(storage, 'project/src/memory', 'project/dest/memory');
@@ -844,7 +853,8 @@ describe('removeMemory', () => {
     it('should return STORAGE_ERROR when read fails', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async () => err({ code: 'READ_FAILED', message: 'IO error' } as StorageAdapterError),
+                read: async () =>
+                    err({ code: 'READ_FAILED', message: 'IO error' } as StorageAdapterError),
             },
         });
         const result = await removeMemory(storage, 'project/test/memory');
@@ -858,7 +868,8 @@ describe('removeMemory', () => {
         const storage = createMockStorage({
             memories: {
                 read: async () => ok(sampleMemoryContent),
-                remove: async () => err({ code: 'WRITE_FAILED', message: 'Delete failed' } as StorageAdapterError),
+                remove: async () =>
+                    err({ code: 'WRITE_FAILED', message: 'Delete failed' } as StorageAdapterError),
             },
         });
         const result = await removeMemory(storage, 'project/test/memory');
@@ -875,7 +886,10 @@ describe('removeMemory', () => {
             },
             indexes: {
                 reindex: async () =>
-                    err({ code: 'INDEX_UPDATE_FAILED', message: 'Reindex failed' } as StorageAdapterError),
+                    err({
+                        code: 'INDEX_UPDATE_FAILED',
+                        message: 'Reindex failed',
+                    } as StorageAdapterError),
             },
         });
         const result = await removeMemory(storage, 'project/test/memory');
@@ -951,7 +965,10 @@ subcategories: []`),
             },
         });
         const now = new Date('2025-06-15T12:00:00Z');
-        const result = await listMemories(storage, mockSerializer, { category: 'project/test', now });
+        const result = await listMemories(storage, mockSerializer, {
+            category: 'project/test',
+            now,
+        });
         expect(result.ok).toBe(true);
         if (result.ok) {
             expect(result.value.memories).toEqual([]);
@@ -972,7 +989,11 @@ subcategories: []`),
             },
         });
         const now = new Date('2025-06-15T12:00:00Z');
-        const result = await listMemories(storage, mockSerializer, { category: 'project/test', includeExpired: true, now });
+        const result = await listMemories(storage, mockSerializer, {
+            category: 'project/test',
+            includeExpired: true,
+            now,
+        });
         expect(result.ok).toBe(true);
         if (result.ok) {
             expect(result.value.memories.length).toBe(1);
@@ -981,10 +1002,22 @@ subcategories: []`),
     });
 
     it('should list root categories when no category specified', async () => {
+        const rootIndex = `memories: []
+subcategories:
+  - path: project
+    memory_count: 0
+  - path: human
+    memory_count: 0`;
+
         const storage = createMockStorage({
             indexes: {
                 read: async (name) => {
+                    if (name === '') return ok(rootIndex);
                     if (name === 'project') {
+                        return ok(`memories: []
+subcategories: []`);
+                    }
+                    if (name === 'human') {
                         return ok(`memories: []
 subcategories: []`);
                     }
@@ -996,6 +1029,10 @@ subcategories: []`);
         expect(result.ok).toBe(true);
         if (result.ok) {
             expect(result.value.category).toBe('');
+            // Should list the discovered root categories
+            expect(result.value.subcategories.length).toBe(2);
+            expect(result.value.subcategories.map((s) => s.path)).toContain('project');
+            expect(result.value.subcategories.map((s) => s.path)).toContain('human');
         }
     });
 
@@ -1066,7 +1103,13 @@ describe('pruneExpiredMemories', () => {
     it('should return empty list when no expired memories', async () => {
         const storage = createMockStorage({
             indexes: {
-                read: async () => ok(null), // No indexes
+                read: async (path) => {
+                    if (path === '') {
+                        // Root index with no subcategories
+                        return ok('memories: []\nsubcategories: []');
+                    }
+                    return ok(null);
+                },
             },
         });
         const result = await pruneExpiredMemories(storage, mockSerializer);
@@ -1077,7 +1120,11 @@ describe('pruneExpiredMemories', () => {
     });
 
     it('should return candidates without deleting in dry run mode', async () => {
-        const indexContent = `memories:
+        const rootIndex = `memories: []
+subcategories:
+  - path: project
+    memory_count: 1`;
+        const projectIndex = `memories:
   - path: project/test/expired
     token_estimate: 100
 subcategories: []`;
@@ -1085,7 +1132,11 @@ subcategories: []`;
         let deleteCalled = false;
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => (path === 'project' ? ok(indexContent) : ok(null)),
+                read: async (path) => {
+                    if (path === '') return ok(rootIndex);
+                    if (path === 'project') return ok(projectIndex);
+                    return ok(null);
+                },
             },
             memories: {
                 read: async () => ok(expiredMemoryContent),
@@ -1106,7 +1157,11 @@ subcategories: []`;
     });
 
     it('should delete expired memories when not in dry run mode', async () => {
-        const indexContent = `memories:
+        const rootIndex = `memories: []
+subcategories:
+  - path: project
+    memory_count: 1`;
+        const projectIndex = `memories:
   - path: project/test/expired
     token_estimate: 100
 subcategories: []`;
@@ -1114,7 +1169,11 @@ subcategories: []`;
         const deletedPaths: string[] = [];
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => (path === 'project' ? ok(indexContent) : ok(null)),
+                read: async (path) => {
+                    if (path === '') return ok(rootIndex);
+                    if (path === 'project') return ok(projectIndex);
+                    return ok(null);
+                },
             },
             memories: {
                 read: async () => ok(expiredMemoryContent),
@@ -1135,7 +1194,11 @@ subcategories: []`;
     });
 
     it('should reindex after pruning when memories were deleted', async () => {
-        const indexContent = `memories:
+        const rootIndex = `memories: []
+subcategories:
+  - path: project
+    memory_count: 1`;
+        const projectIndex = `memories:
   - path: project/test/expired
     token_estimate: 100
 subcategories: []`;
@@ -1143,7 +1206,11 @@ subcategories: []`;
         let reindexCalled = false;
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => (path === 'project' ? ok(indexContent) : ok(null)),
+                read: async (path) => {
+                    if (path === '') return ok(rootIndex);
+                    if (path === 'project') return ok(projectIndex);
+                    return ok(null);
+                },
                 reindex: async () => {
                     reindexCalled = true;
                     return ok({ warnings: [] });
@@ -1164,7 +1231,13 @@ subcategories: []`;
         let reindexCalled = false;
         const storage = createMockStorage({
             indexes: {
-                read: async () => ok(null),
+                read: async (path) => {
+                    if (path === '') {
+                        // Root index with no subcategories
+                        return ok('memories: []\nsubcategories: []');
+                    }
+                    return ok(null);
+                },
                 reindex: async () => {
                     reindexCalled = true;
                     return ok({ warnings: [] });
@@ -1178,14 +1251,22 @@ subcategories: []`;
     });
 
     it('should return STORAGE_ERROR when delete fails', async () => {
-        const indexContent = `memories:
+        const rootIndex = `memories: []
+subcategories:
+  - path: project
+    memory_count: 1`;
+        const projectIndex = `memories:
   - path: project/test/expired
     token_estimate: 100
 subcategories: []`;
 
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => (path === 'project' ? ok(indexContent) : ok(null)),
+                read: async (path) => {
+                    if (path === '') return ok(rootIndex);
+                    if (path === 'project') return ok(projectIndex);
+                    return ok(null);
+                },
             },
             memories: {
                 read: async () => ok(expiredMemoryContent),
@@ -1203,7 +1284,11 @@ subcategories: []`;
     });
 
     it('should skip non-expired memories', async () => {
-        const indexContent = `memories:
+        const rootIndex = `memories: []
+subcategories:
+  - path: project
+    memory_count: 1`;
+        const projectIndex = `memories:
   - path: project/test/active
     token_estimate: 100
 subcategories: []`;
@@ -1211,7 +1296,11 @@ subcategories: []`;
         const deletedPaths: string[] = [];
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => (path === 'project' ? ok(indexContent) : ok(null)),
+                read: async (path) => {
+                    if (path === '') return ok(rootIndex);
+                    if (path === 'project') return ok(projectIndex);
+                    return ok(null);
+                },
             },
             memories: {
                 read: async () => ok(memoryWithExpiry), // Not expired
@@ -1232,10 +1321,18 @@ subcategories: []`;
     });
 
     it('should prune across multiple root categories', async () => {
+        const rootIndex = `memories: []
+subcategories:
+  - path: project
+    memory_count: 1
+  - path: human
+    memory_count: 1`;
+
         const deletedPaths: string[] = [];
         const storage = createMockStorage({
             indexes: {
                 read: async (path) => {
+                    if (path === '') return ok(rootIndex);
                     if (path === 'project') {
                         return ok(`memories:
   - path: project/expired1
@@ -1267,6 +1364,54 @@ subcategories: []`);
             expect(result.value.pruned.length).toBe(2);
             expect(deletedPaths).toContain('project/expired1');
             expect(deletedPaths).toContain('human/expired2');
+        }
+    });
+
+    it('should prune memories in non-standard root categories', async () => {
+        // Test that dynamic discovery finds memories in any root category, not just human/persona
+        const rootIndex = `memories: []
+subcategories:
+  - path: todo
+    memory_count: 1
+  - path: issues
+    memory_count: 1`;
+
+        const deletedPaths: string[] = [];
+        const storage = createMockStorage({
+            indexes: {
+                read: async (path) => {
+                    if (path === '') return ok(rootIndex);
+                    if (path === 'todo') {
+                        return ok(`memories:
+  - path: todo/expired-task
+    token_estimate: 50
+subcategories: []`);
+                    }
+                    if (path === 'issues') {
+                        return ok(`memories:
+  - path: issues/old-issue
+    token_estimate: 75
+subcategories: []`);
+                    }
+                    return ok(null);
+                },
+            },
+            memories: {
+                read: async () => ok(expiredMemoryContent),
+                remove: async (path) => {
+                    deletedPaths.push(path);
+                    return ok(undefined);
+                },
+            },
+        });
+
+        const now = new Date('2025-06-15T12:00:00Z');
+        const result = await pruneExpiredMemories(storage, mockSerializer, { now });
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value.pruned.length).toBe(2);
+            expect(deletedPaths).toContain('todo/expired-task');
+            expect(deletedPaths).toContain('issues/old-issue');
         }
     });
 });
