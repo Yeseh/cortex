@@ -116,6 +116,11 @@ export const pruneMemoriesInputSchema = z.object({
         .describe('Preview which memories would be pruned without deleting them'),
 });
 
+/** Schema for reindex_store tool input */
+export const reindexStoreInputSchema = z.object({
+    store: storeNameSchema.describe('Store name (required)'),
+});
+
 // ---------------------------------------------------------------------------
 // Helper Types
 // ---------------------------------------------------------------------------
@@ -170,6 +175,11 @@ export interface ListMemoriesInput {
 export interface PruneMemoriesInput {
     store: string;
     dry_run?: boolean;
+}
+
+/** Input type for reindex_store tool */
+export interface ReindexStoreInput {
+    store: string;
 }
 
 interface ToolContext {
@@ -574,6 +584,48 @@ export const pruneMemoriesHandler = async (
     };
 };
 
+/**
+ * Rebuilds all category indexes for a store from the filesystem state.
+ *
+ * This is a repair operation that scans all categories and regenerates
+ * their index files. Use when indexes may be out of sync with actual
+ * memory files on disk, such as after manual file modifications or
+ * corruption recovery.
+ *
+ * The operation returns any warnings about files that could not be
+ * indexed normally, such as files with paths that normalize to empty
+ * strings or collisions between normalized paths.
+ *
+ * @param ctx - Tool context containing server configuration
+ * @param input - Input containing the store name to reindex
+ * @returns MCP response with store name and any reindex warnings
+ * @throws {McpError} When store resolution fails (InvalidParams) or
+ *                    reindex operation errors (InternalError)
+ */
+export const reindexStoreHandler = async (
+    ctx: ToolContext,
+    input: ReindexStoreInput,
+): Promise<McpToolResponse> => {
+    const adapterResult = await resolveStoreAdapter(ctx.config, input.store, false);
+    if (!adapterResult.ok) {
+        throw adapterResult.error;
+    }
+
+    const result = await adapterResult.value.indexes.reindex();
+    if (!result.ok) {
+        throw new McpError(ErrorCode.InternalError, result.error.message);
+    }
+
+    const output = {
+        store: input.store,
+        warnings: result.value.warnings,
+    };
+
+    return {
+        content: [{ type: 'text', text: JSON.stringify(output, null, 2) }],
+    };
+};
+
 // ---------------------------------------------------------------------------
 // Tool Registration
 // ---------------------------------------------------------------------------
@@ -658,6 +710,17 @@ export const registerMemoryTools = (server: McpServer, config: ServerConfig): vo
         async (input) => {
             const parsed = parseInput(pruneMemoriesInputSchema, input);
             return pruneMemoriesHandler(ctx, parsed);
+        },
+    );
+
+    // cortex_reindex_store
+    server.tool(
+        'cortex_reindex_store',
+        'Rebuild category indexes for a store',
+        reindexStoreInputSchema.shape,
+        async (input) => {
+            const parsed = parseInput(reindexStoreInputSchema, input);
+            return reindexStoreHandler(ctx, parsed);
         },
     );
 };
