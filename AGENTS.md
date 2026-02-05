@@ -31,3 +31,13 @@ When interacting with the memory system use `cortex` as the project store
 ## Rules
 
 - Preexisting failing tests should be fixed before implementing new features. If a test is failing, it indicates a problem that needs to be addressed before moving forward.
+
+## Conventional commit
+When writing conventional commits use the following areas:
+
+- `core`: For changes related to the core functionality of the project
+- `mcp`: For changes related to the MCP server
+- `cli`: For changes related to the command-line interface 
+- `storage-fs`: For changes related to the filesystem storage adapter
+
+Example commit message: `feat(core): add new caching mechanism for improved performance`
