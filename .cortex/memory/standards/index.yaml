@@ -25,8 +25,6 @@ memories:
     token_estimate: 155
   - path: standards/mcp-server-thin-wrapper
     token_estimate: 468
-  - path: standards/mcp-thin-wrapper
-    token_estimate: 149
   - path: standards/module-checklist
     token_estimate: 221
   - path: standards/operation-results
@@ -39,6 +37,8 @@ memories:
     token_estimate: 112
   - path: standards/self-documenting-errors
     token_estimate: 303
+  - path: standards/server-lint
+    token_estimate: 196
   - path: standards/store-registry-paths
     token_estimate: 258
   - path: standards/test-failure-policy

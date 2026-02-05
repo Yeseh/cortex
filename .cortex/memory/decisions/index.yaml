@@ -9,6 +9,8 @@ memories:
     token_estimate: 111
   - path: decisions/mcp-store-required
     token_estimate: 199
+  - path: decisions/registry-abstraction
+    token_estimate: 342
   - path: decisions/registry-as-store-factory
     token_estimate: 347
   - path: decisions/registry-interface-rename
@@ -17,6 +19,10 @@ memories:
     token_estimate: 297
   - path: decisions/scoped-storage-adapter
     token_estimate: 288
+  - path: decisions/split-operations-test-file
+    token_estimate: 340
+  - path: decisions/storage-abstraction-cli-server
+    token_estimate: 366
   - path: decisions/store-init-project-support
     token_estimate: 340
   - path: decisions/store-list-from-registry

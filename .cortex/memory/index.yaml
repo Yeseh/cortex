@@ -3,11 +3,7 @@ subcategories:
   - path: architecture
     memory_count: 3
   - path: decisions
-    memory_count: 11
-  - path: issues
-    memory_count: 1
-  - path: notes
-    memory_count: 1
+    memory_count: 14
   - path: runbooks
     memory_count: 1
   - path: standards
@@ -15,6 +11,4 @@ subcategories:
   - path: testing
     memory_count: 2
   - path: todo
-    memory_count: 2
-  - path: updates
-    memory_count: 1
+    memory_count: 4
