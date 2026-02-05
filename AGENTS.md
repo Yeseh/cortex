@@ -20,10 +20,14 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 ## Using memory
 
-When interacting with the memory system use `projects/cortex` as the default category path to store and read memories from.
+When interacting with the memory system use `cortex` as the project store 
 
 ### Categories of note
-- `global/human/identity`: Use this category to store user identity information
-- `global/human/coding-preferences`: Use this category to store user coding preferences
-- `projects/cortex/standards`: Use this category for architectural decisions 
-- `projects/cortex/decisions`: Use this category for recording specific decisions made during development
+- `default:human/identity`: Use this category to store user identity information
+- `default:human/coding-preferences`: Use this category to store user coding preferences
+- `cortex:standards`: Use this category for architectural decisions 
+- `cortex:decisions`: Use this category for recording specific decisions made during development
+
+## Rules
+
+- Preexisting failing tests should be fixed before implementing new features. If a test is failing, it indicates a problem that needs to be addressed before moving forward.
