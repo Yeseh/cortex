@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import * as fs from 'node:fs/promises';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
+import { isAbsolute, join } from 'node:path';
 
 import {
     getDefaultGlobalStorePath,
@@ -25,7 +24,7 @@ describe('context', () => {
 
         it('should return absolute path', () => {
             const path = getDefaultGlobalStorePath();
-            expect(path.startsWith('/')).toBe(true);
+            expect(isAbsolute(path)).toBe(true);
         });
 
         it('should return consistent value on multiple calls', () => {
@@ -48,7 +47,7 @@ describe('context', () => {
 
         it('should return absolute path', () => {
             const path = getDefaultRegistryPath();
-            expect(path.startsWith('/')).toBe(true);
+            expect(isAbsolute(path)).toBe(true);
         });
 
         it('should return consistent value on multiple calls', () => {
@@ -161,7 +160,7 @@ describe('context', () => {
                 await fs.mkdir(storePathInRegistry, { recursive: true });
                 await fs.writeFile(
                     registryPath,
-                    `stores:\n  my-store:\n    path: "${storePathInRegistry}"\n`,
+                    `stores:\n  my-store:\n    path: "${storePathInRegistry}"\n`
                 );
 
                 const result = await resolveStoreContext('my-store', {
@@ -180,7 +179,7 @@ describe('context', () => {
             it('should return STORE_NOT_FOUND error when store not in registry', async () => {
                 await fs.writeFile(
                     registryPath,
-                    'stores:\n  other-store:\n    path: "/some/path"\n',
+                    'stores:\n  other-store:\n    path: "/some/path"\n'
                 );
 
                 const result = await resolveStoreContext('nonexistent-store', {
@@ -228,7 +227,7 @@ describe('context', () => {
                 await fs.mkdir(store2Path, { recursive: true });
                 await fs.writeFile(
                     registryPath,
-                    `stores:\n  first-store:\n    path: "${store1Path}"\n  second-store:\n    path: "${store2Path}"\n`,
+                    `stores:\n  first-store:\n    path: "${store1Path}"\n  second-store:\n    path: "${store2Path}"\n`
                 );
 
                 const result1 = await resolveStoreContext('first-store', {
@@ -281,7 +280,7 @@ describe('context', () => {
                 await fs.mkdir(registryStorePath, { recursive: true });
                 await fs.writeFile(
                     registryPath,
-                    `stores:\n  reg-store:\n    path: "${registryStorePath}"\n`,
+                    `stores:\n  reg-store:\n    path: "${registryStorePath}"\n`
                 );
 
                 const result = await resolveStoreContext('reg-store', {
@@ -319,7 +318,7 @@ describe('context', () => {
                 // Create an invalid YAML that will fail parsing
                 await fs.writeFile(
                     join(configDir, 'config.yaml'),
-                    'invalid: yaml: content: here\n  bad indentation',
+                    'invalid: yaml: content: here\n  bad indentation'
                 );
 
                 const result = await resolveStoreContext(undefined, {
@@ -384,10 +383,7 @@ describe('context', () => {
 
         it('should load valid registry file', async () => {
             const storePath = join(tempDir, 'my-store');
-            await fs.writeFile(
-                registryPath,
-                `stores:\n  test-store:\n    path: "${storePath}"\n`,
-            );
+            await fs.writeFile(registryPath, `stores:\n  test-store:\n    path: "${storePath}"\n`);
 
             const result = await loadRegistry(registryPath);
 
@@ -428,7 +424,7 @@ describe('context', () => {
     path: "/path/to/beta"
   gamma-store:
     path: "/path/to/gamma"
-`,
+`
             );
 
             const result = await loadRegistry(registryPath);
@@ -449,7 +445,7 @@ describe('context', () => {
   described-store:
     path: "/path/to/store"
     description: "A store with a description"
-`,
+`
             );
 
             const result = await loadRegistry(registryPath);
@@ -457,7 +453,7 @@ describe('context', () => {
             expect(result.ok).toBe(true);
             if (result.ok) {
                 expect(result.value['described-store']?.description).toBe(
-                    'A store with a description',
+                    'A store with a description'
                 );
             }
         });
@@ -479,7 +475,7 @@ stores:
   # Another comment
   commented-store:
     path: "/path/to/store"  # inline comment
-`,
+`
             );
 
             const result = await loadRegistry(registryPath);
@@ -496,7 +492,7 @@ stores:
                 `stores:
   quoted-store:
     path: "/path/with spaces/to/store"
-`,
+`
             );
 
             const result = await loadRegistry(registryPath);
@@ -524,7 +520,7 @@ stores:
                 `stores:
   missing-path-store:
     description: "Has no path"
-`,
+`
             );
 
             const result = await loadRegistry(registryPath);
@@ -541,7 +537,7 @@ stores:
                 `stores:
   Invalid_Store_Name:
     path: "/some/path"
-`,
+`
             );
 
             const result = await loadRegistry(registryPath);
