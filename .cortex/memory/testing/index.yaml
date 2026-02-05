@@ -1,6 +1,4 @@
 memories:
-  - path: testing/isolation-patterns
-    token_estimate: 432
   - path: testing/suite-status
     token_estimate: 266
 subcategories: []

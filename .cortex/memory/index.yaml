@@ -1,14 +1,14 @@
 memories: []
 subcategories:
-  - path: architecture
-    memory_count: 3
   - path: decisions
-    memory_count: 14
+    memory_count: 13
+  - path: issues
+    memory_count: 1
+  - path: map
+    memory_count: 5
   - path: runbooks
     memory_count: 1
   - path: standards
-    memory_count: 25
-  - path: testing
-    memory_count: 2
+    memory_count: 9
   - path: todo
-    memory_count: 4
+    memory_count: 3

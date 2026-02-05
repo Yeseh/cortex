@@ -1,8 +1,4 @@
 memories:
-  - path: architecture/domain-operations
-    token_estimate: 137
   - path: architecture/patterns
     token_estimate: 267
-  - path: architecture/storage-adapter-composition
-    token_estimate: 344
 subcategories: []

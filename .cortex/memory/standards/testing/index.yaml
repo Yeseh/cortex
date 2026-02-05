@@ -1,0 +1,10 @@
+memories:
+  - path: standards/testing/failure-policy
+    token_estimate: 301
+  - path: standards/testing/isolation
+    token_estimate: 171
+  - path: standards/testing/mock-factory
+    token_estimate: 166
+  - path: standards/testing/organization
+    token_estimate: 167
+subcategories: []

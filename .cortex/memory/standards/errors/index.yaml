@@ -1,0 +1,12 @@
+memories:
+  - path: standards/errors/cli-mapping
+    token_estimate: 268
+  - path: standards/errors/error-handling
+    token_estimate: 557
+  - path: standards/errors/mcp-translation
+    token_estimate: 143
+  - path: standards/errors/operation-results
+    token_estimate: 173
+  - path: standards/errors/result-types
+    token_estimate: 388
+subcategories: []

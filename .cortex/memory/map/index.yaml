@@ -1,0 +1,20 @@
+memories:
+  - path: map/cli
+    token_estimate: 177
+  - path: map/core
+    token_estimate: 195
+  - path: map/overview
+    token_estimate: 227
+  - path: map/server
+    token_estimate: 206
+  - path: map/storage-fs
+    token_estimate: 209
+subcategories:
+  - path: map/cli
+    memory_count: 2
+  - path: map/core
+    memory_count: 3
+  - path: map/server
+    memory_count: 2
+  - path: map/storage-fs
+    memory_count: 2

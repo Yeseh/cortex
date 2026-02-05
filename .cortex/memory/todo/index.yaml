@@ -2,9 +2,7 @@ memories:
   - path: todo/add-mcp-reindex-tool
     token_estimate: 83
   - path: todo/check-list-filesystem-deps
-    token_estimate: 52
-  - path: todo/investigate-empty-list-memories
-    token_estimate: 98
+    token_estimate: 164
   - path: todo/rename-storage-error-codes
     token_estimate: 299
 subcategories: []

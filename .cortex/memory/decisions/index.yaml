@@ -1,14 +1,10 @@
 memories:
   - path: decisions/cli-commander-refactor
     token_estimate: 236
-  - path: decisions/default-store-rename
-    token_estimate: 169
   - path: decisions/dynamic-root-category-discovery
     token_estimate: 235
   - path: decisions/mcp-store-parameter
     token_estimate: 111
-  - path: decisions/mcp-store-required
-    token_estimate: 199
   - path: decisions/registry-abstraction
     token_estimate: 342
   - path: decisions/registry-as-store-factory
@@ -17,6 +13,8 @@ memories:
     token_estimate: 340
   - path: decisions/reindex-root-subcategories
     token_estimate: 297
+  - path: decisions/root-category-descriptions
+    token_estimate: 320
   - path: decisions/scoped-storage-adapter
     token_estimate: 288
   - path: decisions/split-operations-test-file

@@ -1,10 +1,28 @@
 ---
 created_at: 2026-01-27T20:21:08.036Z
-updated_at: 2026-01-27T20:21:08.036Z
-tags: [exports, modules, barrel]
+updated_at: 2026-02-05T19:20:25.537Z
+tags:
+  - exports
+  - modules
+  - barrel
+  - patterns
 source: mcp
 ---
-The `index.ts` barrel file should:
+# Barrel Export Pattern
+
+Each module has an `index.ts` that selectively re-exports public API.
+
+## Module Structure
+```
+memory/
+├── index.ts      # Selective re-exports (public API)
+├── types.ts      # Type definitions
+├── operations.ts # Business logic
+├── validation.ts # Input validation
+└── expiration.ts # Utilities
+```
+
+## Export Guidelines
 
 1. Re-export types explicitly with `export type {}`
 2. Re-export values with `export {}`
@@ -12,25 +30,34 @@ The `index.ts` barrel file should:
 4. Export constants directly
 5. Group exports logically (types first, then functions, then constants)
 
-**Example:**
+## Example (memory/index.ts)
 ```typescript
 export type {
-    CategoryErrorCode,
-    CategoryError,
-    CreateCategoryResult,
-    SetDescriptionResult,
-    DeleteCategoryResult,
+    MemoryMetadata,
+    Memory,
+    MemoryError,
     CategoryStorage as CategoryStoragePort,  // Renamed for clarity
 } from './types.ts';
 
 export { MAX_DESCRIPTION_LENGTH } from './types.ts';
 
-export {
-    isRootCategory,
-    getParentPath,
-    getAncestorPaths,
-    createCategory,
-    setDescription,
-    deleteCategory,
-} from './operations.ts';
+export { validateCategoryPath, validateMemorySlugPath } from './validation.ts';
+export { isExpired, isExpiredNow } from './expiration.ts';
+export { createMemory, getMemory, updateMemory } from './operations.ts';
 ```
+
+## Subpath Exports (package.json)
+```json
+{
+    "exports": {
+        ".": "./src/index.ts",
+        "./memory": "./src/memory/index.ts",
+        "./category": "./src/category/index.ts"
+    }
+}
+```
+
+## Benefits
+- Clear public API surface
+- Implementation details hidden
+- Import paths are clean: `import { Memory } from '@yeseh/cortex-core/memory'`

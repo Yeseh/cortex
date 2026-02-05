@@ -1,0 +1,10 @@
+memories:
+  - path: standards/entrypoints/cli-command
+    token_estimate: 486
+  - path: standards/entrypoints/mcp-thin-wrapper
+    token_estimate: 468
+  - path: standards/entrypoints/mcp-tool-pattern
+    token_estimate: 331
+  - path: standards/entrypoints/server-lint
+    token_estimate: 196
+subcategories: []
