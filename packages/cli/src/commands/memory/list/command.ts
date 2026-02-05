@@ -108,7 +108,7 @@ const isExpired = (expiresAt: Date | undefined, now: Date): boolean => {
  */
 const loadMemoryExpiry = async (
     adapter: ScopedStorageAdapter,
-    slugPath: string
+    slugPath: string,
 ): Promise<Date | undefined> => {
     const contents = await adapter.memories.read(slugPath);
     if (!contents.ok) {
@@ -135,7 +135,7 @@ const loadMemoryExpiry = async (
  */
 const loadCategoryIndex = async (
     adapter: ScopedStorageAdapter,
-    categoryPath: string
+    categoryPath: string,
 ): Promise<CategoryIndex | null> => {
     const indexContents = await adapter.indexes.read(categoryPath);
     if (!indexContents.ok) {
@@ -165,7 +165,7 @@ const collectMemoriesFromCategory = async (
     categoryPath: string,
     includeExpired: boolean,
     now: Date,
-    visited: Set<string>
+    visited: Set<string>,
 ): Promise<ListMemoryEntry[]> => {
     if (visited.has(categoryPath)) {
         return [];
@@ -200,7 +200,7 @@ const collectMemoriesFromCategory = async (
             subcategory.path,
             includeExpired,
             now,
-            visited
+            visited,
         );
         entries.push(...subEntries);
     }
@@ -213,7 +213,7 @@ const collectMemoriesFromCategory = async (
  */
 const getDirectSubcategories = async (
     adapter: ScopedStorageAdapter,
-    categoryPath: string
+    categoryPath: string,
 ): Promise<ListSubcategoryEntry[]> => {
     const index = await loadCategoryIndex(adapter, categoryPath);
     if (!index) {
@@ -237,7 +237,7 @@ const getDirectSubcategories = async (
 const collectAllCategories = async (
     adapter: ScopedStorageAdapter,
     includeExpired: boolean,
-    now: Date
+    now: Date,
 ): Promise<ListResult> => {
     // Load root index to discover top-level categories dynamically
     const rootIndex = await loadCategoryIndex(adapter, '');
@@ -271,7 +271,7 @@ const collectAllCategories = async (
             subcategory.path,
             includeExpired,
             now,
-            visited
+            visited,
         );
         memories.push(...categoryEntries);
     }
@@ -308,14 +308,14 @@ const formatOutput = (result: ListResult, format: OutputFormat): string => {
         return JSON.stringify(
             { memories: outputMemories, subcategories: outputSubcategories },
             null,
-            2
+            2,
         );
     }
 
     if (format === 'toon') {
         return toonEncode(
             { memories: outputMemories, subcategories: outputSubcategories },
-            toonOptions
+            toonOptions,
         );
     }
 
@@ -325,7 +325,8 @@ const formatOutput = (result: ListResult, format: OutputFormat): string => {
     // Memories section
     if (result.memories.length === 0) {
         lines.push('memories: []');
-    } else {
+    }
+    else {
         lines.push('memories:');
         for (const memory of result.memories) {
             lines.push(`  - path: ${memory.path}`);
@@ -345,7 +346,8 @@ const formatOutput = (result: ListResult, format: OutputFormat): string => {
     // Subcategories section
     if (result.subcategories.length === 0) {
         lines.push('subcategories: []');
-    } else {
+    }
+    else {
         lines.push('subcategories:');
         for (const subcategory of result.subcategories) {
             lines.push(`  - path: ${subcategory.path}`);
@@ -379,7 +381,7 @@ export async function handleList(
     category: string | undefined,
     options: ListCommandOptions,
     storeName: string | undefined,
-    deps: ListHandlerDeps = {}
+    deps: ListHandlerDeps = {},
 ): Promise<void> {
     // 1. Resolve store context
     const storeResult = await resolveStoreAdapter(storeName);
@@ -401,16 +403,21 @@ export async function handleList(
             normalizedCategory,
             options.includeExpired ?? false,
             now,
-            new Set()
+            new Set(),
         );
         const subcategories = await getDirectSubcategories(adapter, normalizedCategory);
         result = { memories, subcategories };
-    } else {
+    }
+    else {
         result = await collectAllCategories(adapter, options.includeExpired ?? false, now);
     }
 
     // 3. Format and output
-    const VALID_FORMATS: OutputFormat[] = ['yaml', 'json', 'toon'];
+    const VALID_FORMATS: OutputFormat[] = [
+        'yaml',
+        'json',
+        'toon',
+    ];
     const requestedFormat = options.format as OutputFormat;
     const format: OutputFormat = VALID_FORMATS.includes(requestedFormat) ? requestedFormat : 'yaml';
     const output = formatOutput(result, format);

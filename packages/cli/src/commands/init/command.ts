@@ -128,7 +128,7 @@ export async function handleInit(
             registry,
             'default',
             globalStorePath,
-            { categories: [...DEFAULT_CATEGORIES] }
+            { categories: [...DEFAULT_CATEGORIES] },
         );
 
         if (!result.ok) {
@@ -136,7 +136,8 @@ export async function handleInit(
             if (result.error.code === 'STORE_ALREADY_EXISTS' && options.force) {
                 // Store exists, that's okay with --force
                 // The store already has proper structure, nothing more to do
-            } else {
+            }
+            else {
                 mapCoreError({
                     code: 'INIT_FAILED',
                     message: result.error.message,

@@ -62,7 +62,11 @@ export type StoreContextErrorCode =
 export interface StoreContextError {
     code: StoreContextErrorCode;
     message: string;
-    cause?: ConfigLoadError | StoreResolutionError | RegistryError | StoreResolveError | StoreNotFoundError;
+    cause?: ConfigLoadError 
+        | StoreResolutionError 
+        | RegistryError 
+        | StoreResolveError 
+        | StoreNotFoundError;
 }
 
 const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });

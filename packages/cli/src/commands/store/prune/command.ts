@@ -246,7 +246,8 @@ export async function handlePrune(
 
     if (deps.adapter) {
         adapter = deps.adapter;
-    } else {
+    }
+    else {
         const storeResult = await resolveStoreAdapter(storeName);
         if (!storeResult.ok) {
             mapCoreError(storeResult.error);

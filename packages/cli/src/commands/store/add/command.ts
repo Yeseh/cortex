@@ -136,9 +136,11 @@ export async function handleAdd(
     let currentRegistry: Record<string, { path: string }>;
     if (registryResult.ok) {
         currentRegistry = registryResult.value;
-    } else if (registryResult.error.code === 'REGISTRY_MISSING') {
+    }
+    else if (registryResult.error.code === 'REGISTRY_MISSING') {
         currentRegistry = {};
-    } else {
+    }
+    else {
         mapCoreError({ code: 'STORE_REGISTRY_FAILED', message: registryResult.error.message });
     }
 

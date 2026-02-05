@@ -127,7 +127,8 @@ export class FilesystemRegistry implements Registry {
                 await readFile(this.registryPath, 'utf8');
                 // File exists, nothing to do
                 return ok(undefined);
-            } catch (error) {
+            }
+            catch (error) {
                 if (!isNotFoundError(error)) {
                     return err({
                         code: 'REGISTRY_READ_FAILED',
@@ -149,7 +150,8 @@ export class FilesystemRegistry implements Registry {
             await writeFile(this.registryPath, minimalYaml, 'utf8');
 
             return ok(undefined);
-        } catch (error) {
+        }
+        catch (error) {
             return err({
                 code: 'REGISTRY_WRITE_FAILED',
                 message: `Failed to initialize registry at ${this.registryPath}`,
@@ -188,7 +190,8 @@ export class FilesystemRegistry implements Registry {
         let contents: string;
         try {
             contents = await readFile(this.registryPath, 'utf8');
-        } catch (error) {
+        }
+        catch (error) {
             if (isNotFoundError(error)) {
                 return err({
                     code: 'REGISTRY_MISSING',
@@ -254,7 +257,8 @@ export class FilesystemRegistry implements Registry {
             await writeFile(this.registryPath, serialized.value, 'utf8');
             this.cache = registry;
             return ok(undefined);
-        } catch (error) {
+        }
+        catch (error) {
             return err({
                 code: 'REGISTRY_WRITE_FAILED',
                 message: `Failed to write store registry at ${this.registryPath}`,
