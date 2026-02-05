@@ -20,17 +20,14 @@ describe('mapCoreError', () => {
             'GIT_REPO_REQUIRED',
         ];
 
-        it.each(argumentErrorCodes)(
-            'should throw InvalidArgumentError for %s',
-            (code) => {
-                const error: CoreError = {
-                    code,
-                    message: `Test message for ${code}`,
-                };
+        it.each(argumentErrorCodes)('should throw InvalidArgumentError for %s', (code) => {
+            const error: CoreError = {
+                code,
+                message: `Test message for ${code}`,
+            };
 
-                expect(() => mapCoreError(error)).toThrow(InvalidArgumentError);
-            },
-        );
+            expect(() => mapCoreError(error)).toThrow(InvalidArgumentError);
+        });
 
         it('should preserve error message in InvalidArgumentError', () => {
             const error: CoreError = {
@@ -41,8 +38,7 @@ describe('mapCoreError', () => {
             try {
                 mapCoreError(error);
                 expect.unreachable('mapCoreError should have thrown');
-            }
-            catch (e) {
+            } catch (e) {
                 expect(e).toBeInstanceOf(InvalidArgumentError);
                 expect((e as InvalidArgumentError).message).toBe('Path must not be empty');
             }
@@ -57,8 +53,7 @@ describe('mapCoreError', () => {
             try {
                 mapCoreError(error);
                 expect.unreachable('mapCoreError should have thrown');
-            }
-            catch (e) {
+            } catch (e) {
                 expect(e).toBeInstanceOf(InvalidArgumentError);
                 expect((e as InvalidArgumentError).message).toBe('');
             }
@@ -77,25 +72,23 @@ describe('mapCoreError', () => {
             'STORE_INIT_FAILED',
             'STORE_REGISTRY_FAILED',
             'STORE_ALREADY_EXISTS',
-            'READ_FAILED',
-            'WRITE_FAILED',
+            'STORAGE_ERROR',
+            'IO_READ_ERROR',
+            'IO_WRITE_ERROR',
             'PARSE_FAILED',
             'MOVE_FAILED',
             'REMOVE_FAILED',
             'REINDEX_FAILED',
         ];
 
-        it.each(nonArgumentErrorCodes)(
-            'should throw CommanderError for %s',
-            (code) => {
-                const error: CoreError = {
-                    code,
-                    message: `Test message for ${code}`,
-                };
+        it.each(nonArgumentErrorCodes)('should throw CommanderError for %s', (code) => {
+            const error: CoreError = {
+                code,
+                message: `Test message for ${code}`,
+            };
 
-                expect(() => mapCoreError(error)).toThrow(CommanderError);
-            },
-        );
+            expect(() => mapCoreError(error)).toThrow(CommanderError);
+        });
 
         it('should set exitCode to 1 for CommanderError', () => {
             const error: CoreError = {
@@ -106,8 +99,7 @@ describe('mapCoreError', () => {
             try {
                 mapCoreError(error);
                 expect.unreachable('mapCoreError should have thrown');
-            }
-            catch (e) {
+            } catch (e) {
                 expect(e).toBeInstanceOf(CommanderError);
                 expect((e as CommanderError).exitCode).toBe(1);
             }
@@ -122,8 +114,7 @@ describe('mapCoreError', () => {
             try {
                 mapCoreError(error);
                 expect.unreachable('mapCoreError should have thrown');
-            }
-            catch (e) {
+            } catch (e) {
                 expect(e).toBeInstanceOf(CommanderError);
                 expect((e as CommanderError).code).toBe('STORE_NOT_FOUND');
             }
@@ -138,11 +129,10 @@ describe('mapCoreError', () => {
             try {
                 mapCoreError(error);
                 expect.unreachable('mapCoreError should have thrown');
-            }
-            catch (e) {
+            } catch (e) {
                 expect(e).toBeInstanceOf(CommanderError);
                 expect((e as CommanderError).message).toBe(
-                    'Could not read file: /path/to/file.txt',
+                    'Could not read file: /path/to/file.txt'
                 );
             }
         });
@@ -156,8 +146,7 @@ describe('mapCoreError', () => {
             try {
                 mapCoreError(error);
                 expect.unreachable('mapCoreError should have thrown');
-            }
-            catch (e) {
+            } catch (e) {
                 expect(e).toBeInstanceOf(CommanderError);
                 expect((e as CommanderError).message).toBe('');
             }
@@ -174,8 +163,7 @@ describe('mapCoreError', () => {
             try {
                 mapCoreError(error);
                 expect.unreachable('mapCoreError should have thrown');
-            }
-            catch (e) {
+            } catch (e) {
                 expect(e).toBeInstanceOf(CommanderError);
                 expect((e as CommanderError).code).toBe('COMPLETELY_UNKNOWN_CODE');
             }
@@ -190,8 +178,7 @@ describe('mapCoreError', () => {
             try {
                 mapCoreError(error);
                 expect.unreachable('mapCoreError should have thrown');
-            }
-            catch (e) {
+            } catch (e) {
                 expect(e).toBeInstanceOf(CommanderError);
             }
         });
@@ -205,8 +192,7 @@ describe('mapCoreError', () => {
             try {
                 mapCoreError(error);
                 expect.unreachable('mapCoreError should have thrown');
-            }
-            catch (e) {
+            } catch (e) {
                 expect(e).toBeInstanceOf(CommanderError);
             }
         });
@@ -220,11 +206,10 @@ describe('mapCoreError', () => {
             try {
                 mapCoreError(error);
                 expect.unreachable('mapCoreError should have thrown');
-            }
-            catch (e) {
+            } catch (e) {
                 expect(e).toBeInstanceOf(InvalidArgumentError);
                 expect((e as InvalidArgumentError).message).toBe(
-                    'Path contains invalid chars: <>&"\'\n\t',
+                    'Path contains invalid chars: <>&"\'\n\t'
                 );
             }
         });
@@ -239,8 +224,7 @@ describe('mapCoreError', () => {
             try {
                 mapCoreError(error);
                 expect.unreachable('mapCoreError should have thrown');
-            }
-            catch (e) {
+            } catch (e) {
                 expect(e).toBeInstanceOf(CommanderError);
                 expect((e as CommanderError).message).toBe(longMessage);
             }
@@ -258,8 +242,7 @@ describe('mapCoreError', () => {
             try {
                 mapCoreError(error);
                 didReturn = true;
-            }
-            catch {
+            } catch {
                 // Expected
             }
 

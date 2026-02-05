@@ -23,6 +23,8 @@ import {
     moveMemoryInputSchema,
     listMemoriesInputSchema,
     pruneMemoriesInputSchema,
+    reindexStoreHandler,
+    reindexStoreInputSchema,
     type AddMemoryInput,
     type GetMemoryInput,
     type UpdateMemoryInput,
@@ -30,6 +32,7 @@ import {
     type MoveMemoryInput,
     type ListMemoriesInput,
     type PruneMemoriesInput,
+    type ReindexStoreInput,
 } from './tools.ts';
 import { FilesystemStorageAdapter, serializeMemory } from '@yeseh/cortex-storage-fs';
 import type { Memory } from '@yeseh/cortex-core/memory';
@@ -889,6 +892,66 @@ describe('cortex_prune_memories tool', () => {
     });
 });
 
+describe('cortex_reindex_store tool', () => {
+    let testDir: string;
+    let config: ServerConfig;
+
+    beforeEach(async () => {
+        testDir = await createTestDir();
+        config = createTestConfig(testDir);
+    });
+
+    afterEach(async () => {
+        await rm(testDir, { recursive: true, force: true });
+    });
+
+    it('should rebuild category indexes successfully', async () => {
+        // Create a memory to have something to index
+        const storeRoot = join(testDir, MEMORY_SUBDIR);
+        await createMemoryFile(storeRoot, 'project/test-memory', {
+            metadata: {
+                createdAt: new Date('2024-01-01'),
+                updatedAt: new Date('2024-01-02'),
+                tags: [],
+                source: 'test',
+            },
+            content: 'Test content',
+        });
+
+        const input: ReindexStoreInput = {
+            store: 'default',
+        };
+
+        const result = await reindexStoreHandler({ config }, input);
+        const output = JSON.parse(result.content[0]!.text);
+
+        expect(output.store).toBe('default');
+        expect(output.warnings).toBeDefined();
+        expect(Array.isArray(output.warnings)).toBe(true);
+    });
+
+    it('should return error for non-existent store', async () => {
+        const input: ReindexStoreInput = {
+            store: 'non-existent-store',
+        };
+
+        await expect(reindexStoreHandler({ config }, input)).rejects.toThrow('not registered');
+    });
+
+    it('should work with empty store', async () => {
+        const input: ReindexStoreInput = {
+            store: 'default',
+        };
+
+        // Store exists but is empty - should still succeed
+        const result = await reindexStoreHandler({ config }, input);
+        const output = JSON.parse(result.content[0]!.text);
+
+        expect(output.store).toBe('default');
+        expect(output.warnings).toEqual([]);
+    });
+});
+
 describe('explicit store parameter', () => {
     let testDir: string;
     let config: ServerConfig;
@@ -993,6 +1056,15 @@ describe('memory tool schemas reject missing store parameter', () => {
         }
     });
 
+    it('should reject reindex_store without store parameter', () => {
+        const input = {};
+        const result = reindexStoreInputSchema.safeParse(input);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+            expect(result.error.issues.some((i) => i.path.includes('store'))).toBe(true);
+        }
+    });
+
     it('should accept valid input with store parameter', () => {
         const addInput = { store: 'default', path: 'project/test', content: 'test' };
         expect(addMemoryInputSchema.safeParse(addInput).success).toBe(true);
@@ -1018,5 +1090,8 @@ describe('memory tool schemas reject missing store parameter', () => {
 
         const pruneInput = { store: 'default' };
         expect(pruneMemoriesInputSchema.safeParse(pruneInput).success).toBe(true);
+
+        const reindexInput = { store: 'default' };
+        expect(reindexStoreInputSchema.safeParse(reindexInput).success).toBe(true);
     });
 });

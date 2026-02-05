@@ -37,11 +37,11 @@ export type StorageIndexName = string;
 /**
  * Error codes for storage adapter operations.
  *
- * - `READ_FAILED` - Unable to read from storage
- * - `WRITE_FAILED` - Unable to write to storage
- * - `INDEX_UPDATE_FAILED` - Index update operation failed
+ * - `IO_READ_ERROR` - Unable to read from storage
+ * - `IO_WRITE_ERROR` - Unable to write to storage
+ * - `INDEX_ERROR` - Index operation failed
  */
-export type StorageAdapterErrorCode = 'READ_FAILED' | 'WRITE_FAILED' | 'INDEX_UPDATE_FAILED';
+export type StorageAdapterErrorCode = 'IO_READ_ERROR' | 'IO_WRITE_ERROR' | 'INDEX_ERROR';
 
 /**
  * Error details for storage operations.

@@ -74,7 +74,7 @@ const loadCategoryIndex = async (
         return {
             ok: false,
             error: {
-                code: 'READ_FAILED',
+                code: 'STORAGE_ERROR',
                 message: `Failed to read index for category ${categoryPath}.`,
             },
         };
@@ -105,7 +105,7 @@ const checkMemoryExpiry = async (
         return {
             ok: false,
             error: {
-                code: 'READ_FAILED',
+                code: 'STORAGE_ERROR',
                 message: `Failed to read memory file ${slugPath}.`,
             },
         };
