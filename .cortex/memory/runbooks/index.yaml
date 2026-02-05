@@ -1,4 +1,6 @@
 memories:
+  - path: runbooks/debug-mcp-tools
+    token_estimate: 292
   - path: runbooks/verify-memory-tools
     token_estimate: 122
 subcategories: []

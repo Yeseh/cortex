@@ -6,7 +6,7 @@ memories:
   - path: standards/commits
     token_estimate: 128
   - path: standards/cross-platform-paths
-    token_estimate: 372
+    token_estimate: 479
   - path: standards/documentation
     token_estimate: 326
   - path: standards/frontmatter-format
@@ -19,12 +19,19 @@ memories:
     token_estimate: 258
 subcategories:
   - path: standards/architecture
-    memory_count: 6
+    memory_count: 7
+    description: Architectural patterns including ports/adapters, interface
+      segregation, and module design
   - path: standards/entrypoints
     memory_count: 4
+    description: Standards for CLI commands and MCP server tool implementations
   - path: standards/errors
-    memory_count: 5
+    memory_count: 6
+    description: Error handling patterns, result types, and error translation between layers
   - path: standards/testing
     memory_count: 4
+    description: Testing standards including isolation, mocking, organization, and
+      failure handling
   - path: standards/typescript
     memory_count: 3
+    description: TypeScript conventions for types, interfaces, and function signatures

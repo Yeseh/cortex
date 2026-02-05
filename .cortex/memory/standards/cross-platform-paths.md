@@ -1,7 +1,13 @@
 ---
 created_at: 2026-01-28T18:58:52.610Z
-updated_at: 2026-01-28T18:58:52.610Z
-tags: [policy, paths, cross-platform, testing, windows]
+updated_at: 2026-02-05T20:12:34.075Z
+tags:
+  - policy
+  - paths
+  - cross-platform
+  - testing
+  - windows
+  - isAbsolute
 source: mcp
 ---
 # Cross-Platform Path Handling
@@ -11,7 +17,7 @@ Always use `node:os` and `node:path` modules to create cross-platform paths. NEV
 
 ## Correct Patterns
 ```typescript
-import { join, resolve } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 
 // Good: Use path.join() for combining path segments
@@ -22,6 +28,9 @@ const absolutePath = resolve(baseDir, relativePath);
 
 // Good: Use os.tmpdir() for temp directories
 const tempPath = join(tmpdir(), 'cortex-test');
+
+// Good: Use isAbsolute() for path validation
+expect(isAbsolute(path)).toBe(true);
 ```
 
 ## Incorrect Patterns
@@ -34,13 +43,18 @@ const path = 'C:\\Users\\user\\.config\\cortex';
 
 // Bad: String concatenation with slashes
 const path = baseDir + '/' + fileName;
+
+// Bad: Unix-specific absolute path check (breaks on Windows)
+expect(path.startsWith('/')).toBe(true);
 ```
 
 ## Testing Considerations
-When writing tests that compare paths:
-1. Use a `normalizePath()` helper to convert backslashes to forward slashes
-2. Strip Windows drive letters (e.g., `F:`) when comparing against expected values
-3. Or use `path.normalize()` on both expected and actual values
+When writing tests that validate or compare paths:
+1. Use `path.isAbsolute()` to check if a path is absolute (works on all platforms)
+2. Use a `normalizePath()` helper to convert backslashes to forward slashes when comparing
+3. Strip Windows drive letters (e.g., `F:`) when comparing against expected values
+4. Or use `path.normalize()` on both expected and actual values
 
 ## Reference
-This rule was established after fixing cross-platform test failures in the store resolution tests (2026-01-28).
+- Original rule established after fixing cross-platform test failures in store resolution tests (2026-01-28)
+- Extended with `isAbsolute()` guidance after fixing context.spec.ts failures (2026-02-05)
