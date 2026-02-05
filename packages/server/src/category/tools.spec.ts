@@ -88,7 +88,7 @@ describe('cortex_create_category tool', () => {
         const input = { store: 'default', path: '' };
 
         await expect(
-            createCategoryHandler({ config }, input as CreateCategoryInput),
+            createCategoryHandler({ config }, input as CreateCategoryInput)
         ).rejects.toThrow();
     });
 });
@@ -119,16 +119,17 @@ describe('cortex_set_category_description tool', () => {
         expect(output.description).toBe('Cortex memory system');
     });
 
-    it('should reject root category', async () => {
+    it('should set description on root category', async () => {
         const input: SetCategoryDescriptionInput = {
             store: 'default',
             path: 'project',
-            description: 'Test',
+            description: 'Root category description',
         };
 
-        await expect(setCategoryDescriptionHandler({ config }, input)).rejects.toThrow(
-            /root category/i,
-        );
+        const result = await setCategoryDescriptionHandler({ config }, input);
+        const output = JSON.parse(result.content[0]!.text);
+
+        expect(output.description).toBe('Root category description');
     });
 
     it('should clear description with empty string', async () => {
@@ -139,7 +140,7 @@ describe('cortex_set_category_description tool', () => {
                 store: 'default',
                 path: 'project/cortex',
                 description: 'Initial',
-            },
+            }
         );
 
         // Then clear it
@@ -149,7 +150,7 @@ describe('cortex_set_category_description tool', () => {
                 store: 'default',
                 path: 'project/cortex',
                 description: '',
-            },
+            }
         );
         const output = JSON.parse(result.content[0]!.text);
 
