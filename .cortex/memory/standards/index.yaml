@@ -7,8 +7,6 @@ memories:
     token_estimate: 328
   - path: standards/cli-error-mapping
     token_estimate: 268
-  - path: standards/cli-option-placement
-    token_estimate: 321
   - path: standards/commits
     token_estimate: 128
   - path: standards/core-module-architecture
