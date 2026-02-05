@@ -209,7 +209,6 @@ export const MAX_DESCRIPTION_LENGTH = 500;
  *
  * These categories have special protection:
  * - Cannot be deleted via the category delete operation
- * - Cannot have descriptions set via the set-description operation
  *
  * NOTE: This list is NOT used for traversal operations (list, prune).
  * Those operations discover root categories dynamically by reading the

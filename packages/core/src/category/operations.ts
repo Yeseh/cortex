@@ -141,7 +141,7 @@ export const getAncestorPaths = (path: string): string[] => {
  */
 export const createCategory = async (
     storage: CategoryStorage,
-    path: string,
+    path: string
 ): Promise<Result<CreateCategoryResult, CategoryError>> => {
     // Validate path
     const segments = path.split('/').filter((s) => s.length > 0);
@@ -208,26 +208,29 @@ export const createCategory = async (
  *
  * Descriptions provide human-readable context for what a category contains.
  * They are stored in the parent category's index file and displayed
- * when listing categories.
+ * when listing categories. For root categories, descriptions are stored
+ * in the store's root index file.
  *
  * Constraints:
- * - Root categories cannot have descriptions (returns ROOT_CATEGORY_REJECTED)
  * - Descriptions are trimmed; empty strings clear the description
  * - Maximum length is {@link MAX_DESCRIPTION_LENGTH} characters
  * - Category must exist (returns CATEGORY_NOT_FOUND if not)
  *
  * @param storage - Storage port for persistence operations
- * @param path - Category path (must not be a root category)
+ * @param path - Category path (can be root or nested)
  * @param description - Description text (empty string to clear)
  * @returns Result with the final description value or error
  *
  * @example
  * ```typescript
- * // Set a description
+ * // Set a description on a subcategory
  * const result = await setDescription(storage, 'project/cortex', 'Memory system core');
  * if (result.ok) {
  *   console.log(`Description set: ${result.value.description}`);
  * }
+ *
+ * // Set a description on a root category
+ * await setDescription(storage, 'project', 'Project-related memories');
  *
  * // Clear a description
  * await setDescription(storage, 'project/cortex', '');
@@ -237,17 +240,8 @@ export const createCategory = async (
 export const setDescription = async (
     storage: CategoryStorage,
     path: string,
-    description: string,
+    description: string
 ): Promise<Result<SetDescriptionResult, CategoryError>> => {
-    // Reject root categories
-    if (isRootCategory(path)) {
-        return err({
-            code: 'ROOT_CATEGORY_REJECTED',
-            message: 'Cannot set description on root category',
-            path,
-        });
-    }
-
     // Trim and validate length
     const trimmed = description.trim();
     if (trimmed.length > MAX_DESCRIPTION_LENGTH) {
@@ -278,7 +272,7 @@ export const setDescription = async (
     const updateResult = await storage.updateSubcategoryDescription(
         parentPath,
         path,
-        finalDescription,
+        finalDescription
     );
     if (!updateResult.ok) {
         return updateResult;
@@ -316,7 +310,7 @@ export const setDescription = async (
  */
 export const deleteCategory = async (
     storage: CategoryStorage,
-    path: string,
+    path: string
 ): Promise<Result<DeleteCategoryResult, CategoryError>> => {
     // Reject root categories
     if (isRootCategory(path)) {

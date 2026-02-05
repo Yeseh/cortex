@@ -4,7 +4,7 @@
 
 import { describe, expect, it, mock } from 'bun:test';
 import type { CategoryStorage, CategoryError } from './types.ts';
-import {ok, err} from '../result.ts';
+import { ok, err } from '../result.ts';
 import {
     isRootCategory,
     getParentPath,
@@ -60,9 +60,7 @@ describe('getAncestorPaths', () => {
 
     it('should return ancestor paths for deeply nested', () => {
         expect(getAncestorPaths('project/cortex/arch')).toEqual(['project/cortex']);
-        expect(getAncestorPaths('a/b/c/d')).toEqual([
-            'a/b', 'a/b/c',
-        ]);
+        expect(getAncestorPaths('a/b/c/d')).toEqual(['a/b', 'a/b/c']);
     });
 });
 
@@ -131,14 +129,28 @@ describe('setDescription', () => {
         }
     });
 
-    it('should reject root categories', async () => {
-        const storage = createMockStorage();
-        const result = await setDescription(storage, 'project', 'Test');
+    it('should set description on root categories', async () => {
+        let capturedParent: string | null = null;
+        let capturedDesc: string | null = null;
+        const storage = createMockStorage({
+            categoryExists: mock(async () => ok(true)),
+            updateSubcategoryDescription: mock(
+                async (parent: string, _path: string, desc: string | null) => {
+                    capturedParent = parent;
+                    capturedDesc = desc;
+                    return ok(undefined);
+                }
+            ),
+        });
+        const result = await setDescription(storage, 'project', 'Root category description');
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
-            expect(result.error.code).toBe('ROOT_CATEGORY_REJECTED');
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value.description).toBe('Root category description');
         }
+        // Root category's parent is empty string (store root)
+        expect(capturedParent as string | null).toBe('');
+        expect(capturedDesc as string | null).toBe('Root category description');
     });
 
     it('should reject descriptions over 500 characters', async () => {
@@ -163,7 +175,7 @@ describe('setDescription', () => {
                 async (_parent: string, _path: string, desc: string | null) => {
                     capturedDesc = desc;
                     return ok(undefined);
-                },
+                }
             ),
         });
 
@@ -180,7 +192,7 @@ describe('setDescription', () => {
                 async (_parent: string, _path: string, desc: string | null) => {
                     capturedDesc = desc;
                     return ok(undefined);
-                },
+                }
             ),
         });
 
@@ -210,7 +222,7 @@ describe('setDescription', () => {
                 async (_parent: string, _path: string, desc: string | null) => {
                     capturedDesc = desc;
                     return ok(undefined);
-                },
+                }
             ),
         });
 
@@ -227,7 +239,7 @@ describe('setDescription', () => {
                 async (_parent: string, _path: string, desc: string | null) => {
                     capturedDesc = desc;
                     return ok(undefined);
-                },
+                }
             ),
         });
         const exactlyMaxDesc = 'a'.repeat(500);
