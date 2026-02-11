@@ -1,4 +1,8 @@
 memories:
+  - path: features/citations
+    token_estimate: 342
   - path: features/dashboard
     token_estimate: 378
+  - path: features/get-recent-memories
+    token_estimate: 174
 subcategories: []

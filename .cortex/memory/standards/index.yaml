@@ -18,6 +18,8 @@ memories:
   - path: standards/store-registry-paths
     token_estimate: 258
 subcategories:
+  - path: standards/api
+    memory_count: 1
   - path: standards/architecture
     memory_count: 7
     description: Architectural patterns including ports/adapters, interface

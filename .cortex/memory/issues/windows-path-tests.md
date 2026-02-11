@@ -1,10 +1,13 @@
 ---
+created_at: 2026-01-29T21:07:46.931Z
+updated_at: 2026-01-29T21:07:46.931Z
+source: mcp
 tags:
     - bug
     - windows
     - path
     - test
-expires: 2026-02-12
+expires_at: 2026-02-10
 ---
 
 # Windows Path Tests Failing
