@@ -2,7 +2,7 @@ memories:
   - path: standards/errors/cli-mapping
     token_estimate: 268
   - path: standards/errors/cli-storage-errors
-    token_estimate: 336
+    token_estimate: 346
   - path: standards/errors/error-handling
     token_estimate: 557
   - path: standards/errors/mcp-translation

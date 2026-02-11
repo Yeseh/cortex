@@ -1,6 +1,6 @@
 memories:
-  - path: todo/add-mcp-reindex-tool
-    token_estimate: 83
+  - path: todo/fix-prune-reindex-consistency
+    token_estimate: 109
   - path: todo/remove-clear-expiry-flag
     token_estimate: 158
 subcategories: []

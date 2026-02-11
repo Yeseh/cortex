@@ -16,7 +16,7 @@ memories:
   - path: decisions/reindex-root-subcategories
     token_estimate: 297
   - path: decisions/root-category-descriptions
-    token_estimate: 320
+    token_estimate: 341
   - path: decisions/scoped-storage-adapter
     token_estimate: 288
   - path: decisions/simple-first-optimization

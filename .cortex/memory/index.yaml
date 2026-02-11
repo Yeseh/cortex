@@ -2,25 +2,17 @@ memories: []
 subcategories:
   - path: decisions
     memory_count: 15
-    description: Architectural and implementation decisions made during development
   - path: features
     memory_count: 3
   - path: investigations
     memory_count: 1
-  - path: issues
-    memory_count: 1
-    description: Known issues and bugs being tracked or investigated
   - path: map
     memory_count: 5
-    description: Codebase maps showing module structure, files, and concepts
   - path: runbooks
     memory_count: 2
-    description: Step-by-step procedures for common verification and maintenance tasks
   - path: standards
     memory_count: 9
-    description: Coding standards, patterns, and conventions for the project
   - path: standup
     memory_count: 2
-    description: Daily standup notes and progress updates
   - path: todo
     memory_count: 2

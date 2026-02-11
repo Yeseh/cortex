@@ -12,13 +12,9 @@ memories:
 subcategories:
   - path: map/cli
     memory_count: 2
-    description: CLI package structure, files, and command concepts
   - path: map/core
     memory_count: 3
-    description: Core package structure, domain operations, and memory management concepts
   - path: map/server
     memory_count: 2
-    description: MCP server package structure, tools, and server concepts
   - path: map/storage-fs
     memory_count: 2
-    description: Filesystem storage adapter structure, files, and concepts

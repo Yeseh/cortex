@@ -1,6 +1,6 @@
 memories:
   - path: standards/architecture/category-description-storage
-    token_estimate: 341
+    token_estimate: 352
   - path: standards/architecture/core-module
     token_estimate: 573
   - path: standards/architecture/file-organization
