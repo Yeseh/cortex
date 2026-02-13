@@ -33,7 +33,6 @@ import { mapCoreError } from '../../../errors.ts';
 import { resolveStoreAdapter } from '../../../context.ts';
 
 import type { CategoryIndex } from '@yeseh/cortex-core/index';
-import { parseIndex } from '@yeseh/cortex-core';
 import { parseMemory } from '@yeseh/cortex-storage-fs';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 import type { OutputFormat } from '../../../output.ts';
@@ -137,24 +136,17 @@ const loadCategoryIndex = async (
     adapter: ScopedStorageAdapter,
     categoryPath: string,
 ): Promise<CategoryIndex | null> => {
-    const indexContents = await adapter.indexes.read(categoryPath);
-    if (!indexContents.ok) {
+    const indexResult = await adapter.indexes.read(categoryPath);
+    if (!indexResult.ok) {
         mapCoreError({
             code: 'STORAGE_ERROR',
             message: `Failed to read index for category ${categoryPath}.`,
         });
     }
-    if (!indexContents.value) {
+    if (!indexResult.value) {
         return null;
     }
-    const parsed = parseIndex(indexContents.value);
-    if (!parsed.ok) {
-        mapCoreError({
-            code: 'PARSE_FAILED',
-            message: `Failed to parse index for category ${categoryPath}.`,
-        });
-    }
-    return parsed.value;
+    return indexResult.value;
 };
 
 /**
