@@ -235,6 +235,7 @@ describe('cortex_get_memory tool', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: ['existing'],
                 source: 'test',
+                citations: [],
             },
             content: 'Existing content',
         });
@@ -277,6 +278,7 @@ describe('cortex_get_memory tool', () => {
                 tags: [],
                 source: 'test',
                 expiresAt: new Date('2020-01-01'), // Already expired
+                citations: [],
             },
             content: 'Expired content',
         });
@@ -298,6 +300,7 @@ describe('cortex_get_memory tool', () => {
                 tags: [],
                 source: 'test',
                 expiresAt: new Date('2020-01-01'),
+                citations: [],
             },
             content: 'Expired content',
         });
@@ -330,6 +333,7 @@ describe('cortex_update_memory tool', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: ['original'],
                 source: 'test',
+                citations: [],
             },
             content: 'Original content',
         });
@@ -403,6 +407,7 @@ describe('cortex_update_memory tool', () => {
                 tags: [],
                 source: 'test',
                 expiresAt: new Date(Date.now() + 86400000),
+                citations: [],
             },
             content: 'Content with expiry',
         });
@@ -433,6 +438,7 @@ describe('cortex_update_memory tool', () => {
                 tags: [],
                 source: 'test',
                 expiresAt: expiryDate,
+                citations: [],
             },
             content: 'Has expiry',
         });
@@ -490,6 +496,7 @@ describe('cortex_remove_memory tool', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Content to remove',
         });
@@ -540,6 +547,7 @@ describe('cortex_move_memory tool', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: ['movable'],
                 source: 'test',
+                citations: [],
             },
             content: 'Content to move',
         });
@@ -592,6 +600,7 @@ describe('cortex_move_memory tool', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Existing at destination',
         });
@@ -623,6 +632,7 @@ describe('cortex_list_memories tool', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Memory 1',
         });
@@ -633,6 +643,7 @@ describe('cortex_list_memories tool', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Memory 2',
         });
@@ -643,6 +654,7 @@ describe('cortex_list_memories tool', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Human preference',
         });
@@ -687,6 +699,7 @@ describe('cortex_list_memories tool', () => {
                 tags: [],
                 source: 'test',
                 expiresAt: new Date('2020-01-01'),
+                citations: [],
             },
             content: 'Expired',
         });
@@ -712,6 +725,7 @@ describe('cortex_list_memories tool', () => {
                 tags: [],
                 source: 'test',
                 expiresAt: new Date('2020-01-01'),
+                citations: [],
             },
             content: 'Expired',
         });
@@ -815,6 +829,7 @@ describe('cortex_prune_memories tool', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Active memory',
         });
@@ -826,6 +841,7 @@ describe('cortex_prune_memories tool', () => {
                 tags: [],
                 source: 'test',
                 expiresAt: new Date('2020-01-01'),
+                citations: [],
             },
             content: 'Expired 1',
         });
@@ -837,6 +853,7 @@ describe('cortex_prune_memories tool', () => {
                 tags: [],
                 source: 'test',
                 expiresAt: new Date('2020-01-01'),
+                citations: [],
             },
             content: 'Expired 2',
         });
@@ -881,6 +898,7 @@ describe('cortex_prune_memories tool', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Active',
         });
@@ -934,6 +952,7 @@ describe('cortex_prune_memories tool', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Active',
         });
@@ -974,6 +993,7 @@ describe('cortex_reindex_store tool', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Test content',
         });
@@ -1009,6 +1029,130 @@ describe('cortex_reindex_store tool', () => {
 
         expect(output.store).toBe('default');
         expect(output.warnings).toEqual([]);
+    });
+});
+
+describe('memory citations', () => {
+    let testDir: string;
+    let config: ServerConfig;
+
+    beforeEach(async () => {
+        testDir = await createTestDir();
+        config = createTestConfig(testDir);
+    });
+
+    afterEach(async () => {
+        await rm(testDir, { recursive: true, force: true });
+    });
+
+    it('should create memory with citations', async () => {
+        const input: AddMemoryInput = {
+            store: 'default',
+            path: 'project/with-citations',
+            content: 'Memory with citations',
+            citations: [
+                'src/types.ts:17', 'https://docs.example.com',
+            ],
+        };
+
+        const result = await addMemoryHandler({ config }, input);
+        expect(result.content[0]!.text).toContain('Memory created at project/with-citations');
+
+        // Verify citations are stored
+        const getResult = await getMemoryHandler(
+            { config },
+            { store: 'default', path: 'project/with-citations' },
+        );
+        const output = JSON.parse(getResult.content[0]!.text);
+        expect(output.metadata.citations).toEqual([
+            'src/types.ts:17', 'https://docs.example.com',
+        ]);
+    });
+
+    it('should return citations in get response', async () => {
+        // Create memory with citations
+        const storeRoot = join(testDir, MEMORY_SUBDIR);
+        await createMemoryFile(storeRoot, 'project/cited-memory', {
+            metadata: {
+                createdAt: new Date('2024-01-01'),
+                updatedAt: new Date('2024-01-02'),
+                tags: [],
+                source: 'test',
+                citations: [
+                    'README.md', 'https://example.com/doc',
+                ],
+            },
+            content: 'Content with citations',
+        });
+
+        const result = await getMemoryHandler(
+            { config },
+            { store: 'default', path: 'project/cited-memory' },
+        );
+        const output = JSON.parse(result.content[0]!.text);
+
+        expect(output.metadata.citations).toEqual([
+            'README.md', 'https://example.com/doc',
+        ]);
+    });
+
+    it('should update citations with overwrite semantics', async () => {
+        // Create memory with initial citations
+        const storeRoot = join(testDir, MEMORY_SUBDIR);
+        await createMemoryFile(storeRoot, 'project/update-citations', {
+            metadata: {
+                createdAt: new Date('2024-01-01'),
+                updatedAt: new Date('2024-01-02'),
+                tags: [],
+                source: 'test',
+                citations: ['old-citation.ts'],
+            },
+            content: 'Content',
+        });
+
+        // Update with new citations
+        const updateInput: UpdateMemoryInput = {
+            store: 'default',
+            path: 'project/update-citations',
+            citations: [
+                'new-citation-1.ts', 'new-citation-2.ts',
+            ],
+        };
+
+        await updateMemoryHandler({ config }, updateInput);
+
+        // Verify citations are replaced
+        const getResult = await getMemoryHandler(
+            { config },
+            { store: 'default', path: 'project/update-citations' },
+        );
+        const output = JSON.parse(getResult.content[0]!.text);
+        expect(output.metadata.citations).toEqual([
+            'new-citation-1.ts', 'new-citation-2.ts',
+        ]);
+    });
+
+    it('should return empty citations array for memory without citations', async () => {
+        // Create memory without citations
+        const storeRoot = join(testDir, MEMORY_SUBDIR);
+        await createMemoryFile(storeRoot, 'project/no-citations', {
+            metadata: {
+                createdAt: new Date('2024-01-01'),
+                updatedAt: new Date('2024-01-02'),
+                tags: [],
+                source: 'test',
+                citations: [],
+            },
+            content: 'No citations here',
+        });
+
+        const result = await getMemoryHandler(
+            { config },
+            { store: 'default', path: 'project/no-citations' },
+        );
+        const output = JSON.parse(result.content[0]!.text);
+
+        expect(output.metadata.citations).toEqual([]);
     });
 });
 

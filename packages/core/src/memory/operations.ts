@@ -62,6 +62,25 @@ export interface CreateMemoryInput {
     source: string;
     /** Optional expiration timestamp */
     expiresAt?: Date;
+    /**
+     * References to source material (file paths, URLs, document identifiers).
+     *
+     * When omitted or undefined, defaults to an empty array. Each citation must
+     * be a non-empty string.
+     *
+     * @example
+     * ```typescript
+     * const input: CreateMemoryInput = {
+     *     content: 'API design decisions for v2',
+     *     source: 'user',
+     *     citations: [
+     *         'docs/api-spec.md',
+     *         'https://github.com/org/repo/issues/123',
+     *     ],
+     * };
+     * ```
+     */
+    citations?: string[];
 }
 
 /** Input for updating an existing memory */
@@ -77,6 +96,34 @@ export interface UpdateMemoryInput {
      * - `undefined` (omitted) — keep the existing value unchanged
      */
     expiresAt?: Date | null;
+    /**
+     * References to source material (file paths, URLs, document identifiers).
+     *
+     * **Update semantics:** When provided, completely replaces the existing
+     * citations array. To add citations, retrieve the current memory, merge
+     * the arrays, and pass the combined result. When omitted or undefined,
+     * existing citations are preserved unchanged.
+     *
+     * @example
+     * ```typescript
+     * // Replace all citations
+     * const update: UpdateMemoryInput = {
+     *     citations: ['new-source.md', 'https://example.com/updated'],
+     * };
+     *
+     * // Clear all citations by providing an empty array
+     * const clearCitations: UpdateMemoryInput = {
+     *     citations: [],
+     * };
+     *
+     * // Keep existing citations by omitting the field
+     * const keepCitations: UpdateMemoryInput = {
+     *     content: 'Updated content only',
+     *     // citations: undefined - existing citations preserved
+     * };
+     * ```
+     */
+    citations?: string[];
 }
 
 /** Options for retrieving a memory */
@@ -432,6 +479,7 @@ export const createMemory = async (
             tags: input.tags ?? [],
             source: input.source,
             expiresAt: input.expiresAt,
+            citations: input.citations ?? [],
         },
         content: input.content,
     };
@@ -568,7 +616,8 @@ export const updateMemory = async (
     const hasUpdates =
         updates.content !== undefined ||
         updates.tags !== undefined ||
-        updates.expiresAt !== undefined;
+        updates.expiresAt !== undefined ||
+        updates.citations !== undefined;
     if (!hasUpdates) {
         return err(
             memoryError('INVALID_INPUT', 'No updates provided', {
@@ -613,6 +662,7 @@ export const updateMemory = async (
             expiresAt: updates.expiresAt === null
                 ? undefined
                 : (updates.expiresAt ?? existing.metadata.expiresAt),
+            citations: updates.citations ?? existing.metadata.citations,
         },
         content: updates.content ?? existing.content,
     };

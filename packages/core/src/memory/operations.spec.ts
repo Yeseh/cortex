@@ -97,6 +97,7 @@ const createMockSerializer = (): MemorySerializer => ({
                     tags: (metadata.tags as string[]) || [],
                     source: (metadata.source as string) || 'unknown',
                     expiresAt: metadata.expires_at as Date | undefined,
+                    citations: (metadata.citations as string[]) || [],
                 },
                 content,
             });
