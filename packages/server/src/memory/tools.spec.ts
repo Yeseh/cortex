@@ -1331,6 +1331,7 @@ describe('cortex_get_recent_memories tool', () => {
                 updatedAt: twoDaysAgo,
                 tags: [],
                 source: 'test',
+                citations: [],
             },
         });
 
@@ -1341,6 +1342,7 @@ describe('cortex_get_recent_memories tool', () => {
                 updatedAt: oneDayAgo,
                 tags: ['tag1'],
                 source: 'test',
+                citations: [],
             },
         });
 
@@ -1353,6 +1355,7 @@ describe('cortex_get_recent_memories tool', () => {
                     'tag2', 'tag3',
                 ],
                 source: 'test',
+                citations: [],
             },
         });
 
@@ -1398,6 +1401,7 @@ describe('cortex_get_recent_memories tool', () => {
                     updatedAt: timestamp,
                     tags: [],
                     source: 'test',
+                    citations: [],
                 },
             });
         }
@@ -1429,6 +1433,7 @@ describe('cortex_get_recent_memories tool', () => {
                 updatedAt: now,
                 tags: [],
                 source: 'test',
+                citations: [],
             },
         });
 
@@ -1439,6 +1444,7 @@ describe('cortex_get_recent_memories tool', () => {
                 updatedAt: now,
                 tags: [],
                 source: 'test',
+                citations: [],
             },
         });
 
@@ -1469,6 +1475,7 @@ describe('cortex_get_recent_memories tool', () => {
                 updatedAt: now,
                 tags: [],
                 source: 'test',
+                citations: [],
             },
         });
 
@@ -1479,6 +1486,7 @@ describe('cortex_get_recent_memories tool', () => {
                 updatedAt: pastDate,
                 tags: [],
                 source: 'test',
+                citations: [],
                 expiresAt: pastDate, // Already expired
             },
         });
@@ -1507,6 +1515,7 @@ describe('cortex_get_recent_memories tool', () => {
                 updatedAt: now,
                 tags: [],
                 source: 'test',
+                citations: [],
             },
         });
 
@@ -1517,6 +1526,7 @@ describe('cortex_get_recent_memories tool', () => {
                 updatedAt: pastDate,
                 tags: [],
                 source: 'test',
+                citations: [],
                 expiresAt: pastDate,
             },
         });
@@ -1562,6 +1572,7 @@ describe('cortex_get_recent_memories tool', () => {
                     updatedAt: timestamp,
                     tags: [],
                     source: 'test',
+                    citations: [],
                 },
             });
         }
