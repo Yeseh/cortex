@@ -1,29 +1,21 @@
 /**
  * Index module for category index management.
  *
- * This module provides types and utilities for working with category
- * index files, which track memories and subcategories within each
- * category directory. Index files (`index.yaml`) are maintained
- * automatically when memories are written or deleted.
- *
- * Parsing and serialization functions are available in the
- * `core/serialization` module.
+ * This module provides types for working with category index data,
+ * which track memories and subcategories within each category directory.
+ * Parsing and serialization are handled by storage adapters and are
+ * not part of the core index module API.
  *
  * @module core/index
  *
  * @example
  * ```typescript
- * import { CategoryIndex, INDEX_FILE_NAME } from './core/index';
- * import { parseCategoryIndex, serializeCategoryIndex } from './core/serialization';
+ * import { CategoryIndex } from './core/index';
  *
- * // Parse an index file
- * const result = parseCategoryIndex(rawYaml);
- * if (result.ok) {
- *   console.log(`Found ${result.value.memories.length} memories`);
- * }
- *
- * // Serialize an index
- * const serialized = serializeCategoryIndex(index);
+ * const index: CategoryIndex = {
+ *   memories: [],
+ *   subcategories: [],
+ * };
  * ```
  */
 

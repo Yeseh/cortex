@@ -5,7 +5,6 @@ import { join } from 'node:path';
 
 import { FilesystemCategoryStorage } from './category-storage.ts';
 import type { FilesystemContext } from './types.ts';
-import type { CategoryIndex } from '@yeseh/cortex-core/index';
 
 describe('FilesystemCategoryStorage', () => {
     let tempDir: string;
@@ -32,7 +31,7 @@ describe('FilesystemCategoryStorage', () => {
         it('should return true for existing category', async () => {
             await fs.mkdir(join(tempDir, 'project'), { recursive: true });
 
-            const result = await storage.categoryExists('project');
+            const result = await storage.exists('project');
 
             expect(result.ok).toBe(true);
             if (result.ok) {
@@ -41,7 +40,7 @@ describe('FilesystemCategoryStorage', () => {
         });
 
         it('should return false for non-existing category', async () => {
-            const result = await storage.categoryExists('nonexistent');
+            const result = await storage.exists('nonexistent');
 
             expect(result.ok).toBe(true);
             if (result.ok) {
@@ -52,7 +51,7 @@ describe('FilesystemCategoryStorage', () => {
         it('should handle nested category paths', async () => {
             await fs.mkdir(join(tempDir, 'project', 'cortex'), { recursive: true });
 
-            const result = await storage.categoryExists('project/cortex');
+            const result = await storage.exists('project/cortex');
 
             expect(result.ok).toBe(true);
             if (result.ok) {
@@ -63,7 +62,7 @@ describe('FilesystemCategoryStorage', () => {
 
     describe('ensureCategoryDirectory', () => {
         it('should create a new category directory', async () => {
-            const result = await storage.ensureCategoryDirectory('new-category');
+            const result = await storage.ensure('new-category');
 
             expect(result.ok).toBe(true);
 
@@ -72,7 +71,7 @@ describe('FilesystemCategoryStorage', () => {
         });
 
         it('should create nested category directories', async () => {
-            const result = await storage.ensureCategoryDirectory('project/cortex/docs');
+            const result = await storage.ensure('project/cortex/docs');
 
             expect(result.ok).toBe(true);
 
@@ -83,7 +82,7 @@ describe('FilesystemCategoryStorage', () => {
         it('should succeed if directory already exists', async () => {
             await fs.mkdir(join(tempDir, 'existing'), { recursive: true });
 
-            const result = await storage.ensureCategoryDirectory('existing');
+            const result = await storage.ensure('existing');
 
             expect(result.ok).toBe(true);
         });
@@ -94,14 +93,14 @@ describe('FilesystemCategoryStorage', () => {
             await fs.mkdir(join(tempDir, 'to-delete'), { recursive: true });
             await fs.writeFile(join(tempDir, 'to-delete', 'test.md'), 'content');
 
-            const result = await storage.deleteCategoryDirectory('to-delete');
+            const result = await storage.delete('to-delete');
 
             expect(result.ok).toBe(true);
             await expect(fs.access(join(tempDir, 'to-delete'))).rejects.toThrow();
         });
 
         it('should succeed if directory does not exist', async () => {
-            const result = await storage.deleteCategoryDirectory('nonexistent');
+            const result = await storage.delete('nonexistent');
 
             expect(result.ok).toBe(true);
         });
@@ -110,113 +109,10 @@ describe('FilesystemCategoryStorage', () => {
             await fs.mkdir(join(tempDir, 'parent', 'child'), { recursive: true });
             await fs.writeFile(join(tempDir, 'parent', 'child', 'file.md'), 'content');
 
-            const result = await storage.deleteCategoryDirectory('parent');
+            const result = await storage.delete('parent');
 
             expect(result.ok).toBe(true);
             await expect(fs.access(join(tempDir, 'parent'))).rejects.toThrow();
-        });
-    });
-
-    describe('readCategoryIndex', () => {
-        it('should return null for missing index file', async () => {
-            await fs.mkdir(join(tempDir, 'no-index'), { recursive: true });
-
-            const result = await storage.readCategoryIndex('no-index');
-
-            expect(result.ok).toBe(true);
-            if (result.ok) {
-                expect(result.value).toBeNull();
-            }
-        });
-
-        it('should read and parse existing index file', async () => {
-            await fs.mkdir(join(tempDir, 'with-index'), { recursive: true });
-            const indexContent = [
-                'memories:',
-                '  - path: with-index/test-memory',
-                '    token_estimate: 100',
-                'subcategories:',
-                '  - path: with-index/child',
-                '    memory_count: 5',
-            ].join('\n');
-            await fs.writeFile(join(tempDir, 'with-index', 'index.yaml'), indexContent);
-
-            const result = await storage.readCategoryIndex('with-index');
-
-            expect(result.ok).toBe(true);
-            if (result.ok && result.value) {
-                expect(result.value.memories).toHaveLength(1);
-                expect(result.value.memories[0]?.path).toBe('with-index/test-memory');
-                expect(result.value.subcategories).toHaveLength(1);
-                expect(result.value.subcategories[0]?.path).toBe('with-index/child');
-            }
-        });
-
-        it('should return error for malformed index file', async () => {
-            await fs.mkdir(join(tempDir, 'bad-index'), { recursive: true });
-            await fs.writeFile(
-                join(tempDir, 'bad-index', 'index.yaml'),
-                'not valid yaml content:::',
-            );
-
-            const result = await storage.readCategoryIndex('bad-index');
-
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
-                expect(result.error.code).toBe('STORAGE_ERROR');
-            }
-        });
-    });
-
-    describe('writeCategoryIndex', () => {
-        it('should write a new index file', async () => {
-            await fs.mkdir(join(tempDir, 'new-index'), { recursive: true });
-            const index: CategoryIndex = {
-                memories: [{ path: 'new-index/memory1', tokenEstimate: 50 }],
-                subcategories: [{ path: 'new-index/sub', memoryCount: 2 }],
-            };
-
-            const result = await storage.writeCategoryIndex('new-index', index);
-
-            expect(result.ok).toBe(true);
-
-            const content = await fs.readFile(join(tempDir, 'new-index', 'index.yaml'), 'utf8');
-            expect(content).toContain('new-index/memory1');
-            expect(content).toContain('token_estimate: 50');
-        });
-
-        it('should overwrite existing index file', async () => {
-            await fs.mkdir(join(tempDir, 'existing-index'), { recursive: true });
-            await fs.writeFile(join(tempDir, 'existing-index', 'index.yaml'), 'old content');
-
-            const index: CategoryIndex = {
-                memories: [{ path: 'existing-index/new', tokenEstimate: 100 }],
-                subcategories: [],
-            };
-
-            const result = await storage.writeCategoryIndex('existing-index', index);
-
-            expect(result.ok).toBe(true);
-
-            const content = await fs.readFile(
-                join(tempDir, 'existing-index', 'index.yaml'),
-                'utf8',
-            );
-            expect(content).toContain('existing-index/new');
-            expect(content).not.toContain('old content');
-        });
-
-        it('should create parent directories if needed', async () => {
-            const index: CategoryIndex = {
-                memories: [],
-                subcategories: [],
-            };
-
-            const result = await storage.writeCategoryIndex('deep/nested/path', index);
-
-            expect(result.ok).toBe(true);
-
-            await fs.access(join(tempDir, 'deep', 'nested', 'path', 'index.yaml'));
         });
     });
 

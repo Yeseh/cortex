@@ -15,10 +15,11 @@ import type {
     StorageIndexName,
 } from '@yeseh/cortex-core/storage';
 import type { CategoryIndex, IndexMemoryEntry } from '@yeseh/cortex-core/index';
-import { parseIndex, serializeIndex, defaultTokenizer, toSlug } from '@yeseh/cortex-core';
+import { defaultTokenizer, toSlug } from '@yeseh/cortex-core';
 import type { DirEntriesResult, FilesystemContext, StringOrNullResult } from './types.ts';
 import { err, isNotFoundError, ok, resolveStoragePath, toSlugPathFromRelative } from './utils.ts';
 import { validateSlugPath, parseMemory } from './memories.ts';
+import { parseIndex, serializeIndex } from './index-serialization.ts';
 
 /**
  * Internal state for building indexes during reindex.

@@ -7,11 +7,11 @@
  * @module core/store/operations
  */
 
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Result } from '../types.ts';
 import type { Registry } from '../storage/adapter.ts';
-import { serializeIndex } from '../serialization.ts';
+import type { CategoryIndex } from '../index/types.ts';
 import { isValidStoreName } from './registry.ts';
 
 /**
@@ -64,14 +64,15 @@ const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
 const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 /**
- * Creates an empty index serialized as YAML.
+ * Creates an empty category index with optional subcategories.
  */
-const buildEmptyIndex = (subcategories: string[] = []): Result<string, { message: string }> => {
-    return serializeIndex({
-        memories: [],
-        subcategories: subcategories.map((name) => ({ path: name, memoryCount: 0 })),
-    });
-};
+const buildEmptyIndex = (subcategories: string[] = []): CategoryIndex => ({
+    memories: [],
+    subcategories: subcategories.map((name) => ({
+        path: name,
+        memoryCount: 0,
+    })),
+});
 
 /**
  * Initializes a new store with proper directory structure and registry entry.
@@ -80,9 +81,9 @@ const buildEmptyIndex = (subcategories: string[] = []): Result<string, { message
  * 1. Validates the store name
  * 2. Loads the registry and checks for name collision
  * 3. Creates the store directory
- * 4. Creates a root index file
- * 5. Optionally creates category subdirectories with indexes
- * 6. Registers the store in the registry
+ * 4. Registers the store in the registry
+ * 5. Creates a root index entry via IndexStorage
+ * 6. Optionally creates category subdirectories with indexes
  *
  * @param registry - The registry to use for store registration
  * @param name - The store name (must be a valid lowercase slug)
@@ -159,61 +160,7 @@ export const initializeStore = async (
         });
     }
 
-    // 4. Create root index
-    const categories = options.categories ?? [];
-    const rootIndex = buildEmptyIndex(categories);
-    if (!rootIndex.ok) {
-        return err({
-            code: 'STORE_INDEX_FAILED',
-            message: 'Failed to serialize root index',
-            store: name,
-            path,
-            cause: rootIndex.error,
-        });
-    }
-
-    try {
-        await writeFile(join(path, 'index.yaml'), rootIndex.value, 'utf8');
-    }
-    catch (error) {
-        return err({
-            code: 'STORE_INDEX_FAILED',
-            message: `Failed to write root index at ${path}`,
-            store: name,
-            path,
-            cause: error,
-        });
-    }
-
-    // 5. Create category subdirectories and indexes
-    for (const category of categories) {
-        const categoryPath = join(path, category);
-        try {
-            await mkdir(categoryPath, { recursive: true });
-            const categoryIndex = buildEmptyIndex();
-            if (!categoryIndex.ok) {
-                return err({
-                    code: 'STORE_INDEX_FAILED',
-                    message: `Failed to serialize category index for '${category}'`,
-                    store: name,
-                    path: categoryPath,
-                    cause: categoryIndex.error,
-                });
-            }
-            await writeFile(join(categoryPath, 'index.yaml'), categoryIndex.value, 'utf8');
-        }
-        catch (error) {
-            return err({
-                code: 'STORE_INDEX_FAILED',
-                message: `Failed to create category '${category}'`,
-                store: name,
-                path: categoryPath,
-                cause: error,
-            });
-        }
-    }
-
-    // 6. Register in registry
+    // 4. Register in registry
     const updatedRegistry = {
         ...currentRegistry,
         [name]: {
@@ -230,6 +177,58 @@ export const initializeStore = async (
             store: name,
             cause: saveResult.error,
         });
+    }
+
+    // 5. Create root index via IndexStorage
+    const categories = options.categories ?? [];
+    const rootIndex = buildEmptyIndex(categories);
+    const adapterResult = registry.getStore(name);
+    if (!adapterResult.ok) {
+        return err({
+            code: 'STORE_INDEX_FAILED',
+            message: `Failed to resolve store adapter for '${name}'.`,
+            store: name,
+            path,
+            cause: adapterResult.error,
+        });
+    }
+    const rootIndexResult = await adapterResult.value.indexes.write('', rootIndex);
+    if (!rootIndexResult.ok) {
+        return err({
+            code: 'STORE_INDEX_FAILED',
+            message: `Failed to write root index at ${path}.`,
+            store: name,
+            path,
+            cause: rootIndexResult.error,
+        });
+    }
+
+    // 6. Create category subdirectories and indexes
+    for (const category of categories) {
+        const categoryPath = join(path, category);
+        try {
+            await mkdir(categoryPath, { recursive: true });
+            const categoryIndex = buildEmptyIndex();
+            const writeResult = await adapterResult.value.indexes.write(category, categoryIndex);
+            if (!writeResult.ok) {
+                return err({
+                    code: 'STORE_INDEX_FAILED',
+                    message: `Failed to write category index for '${category}'.`,
+                    store: name,
+                    path: categoryPath,
+                    cause: writeResult.error,
+                });
+            }
+        }
+        catch (error) {
+            return err({
+                code: 'STORE_INDEX_FAILED',
+                message: `Failed to create category '${category}'`,
+                store: name,
+                path: categoryPath,
+                cause: error,
+            });
+        }
     }
 
     return ok(undefined);

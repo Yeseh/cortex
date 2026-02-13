@@ -20,7 +20,6 @@ import {
 } from './resources.ts';
 import { FilesystemStorageAdapter, serializeMemory } from '@yeseh/cortex-storage-fs';
 import type { Memory } from '@yeseh/cortex-core/memory';
-import { serializeIndex } from '@yeseh/cortex-core';
 import type { CategoryIndex } from '@yeseh/cortex-core/index';
 
 // Test configuration
@@ -71,11 +70,7 @@ const _createCategoryIndex = async (
     index: CategoryIndex,
 ): Promise<void> => {
     const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
-    const serialized = serializeIndex(index);
-    if (!serialized.ok) {
-        throw new Error(`Failed to serialize index: ${serialized.error.message}`);
-    }
-    const result = await adapter.writeIndexFile(categoryPath, serialized.value);
+    const result = await adapter.writeIndexFile(categoryPath, index);
     if (!result.ok) {
         throw new Error(`Failed to write index: ${result.error.message}`);
     }
@@ -514,6 +509,32 @@ describe('readCategoryListing', () => {
         }
     });
 
+    it('should derive root categories from root index when available', async () => {
+        await createMemoryFile(storeRoot, 'custom/root-memory', {
+            metadata: {
+                createdAt: new Date('2024-01-01'),
+                updatedAt: new Date('2024-01-02'),
+                tags: [],
+                source: 'test',
+                citations: [],
+            },
+            content: 'Custom root memory',
+        });
+
+        const result = await readCategoryListing(adapter, 'default', '');
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            const content = result.value.contents[0];
+            expect(content).toBeDefined();
+            const text = getTextContent(content);
+            const listing: CategoryListing = JSON.parse(text);
+
+            const subcategoryPaths = listing.subcategories.map((s) => s.path);
+            expect(subcategoryPaths).toContain('custom');
+        }
+    });
+
     it('should return error for non-existent category', async () => {
         const result = await readCategoryListing(adapter, 'default', 'non-existent-category');
 
@@ -787,6 +808,46 @@ describe('listResources', () => {
             expect(categoryNames).toContain('Category: project');
             expect(categoryNames).toContain('Category: human');
             expect(categoryNames).toContain('Category: persona');
+        }
+    });
+
+    it('should return only root resource when root index is missing', async () => {
+        const storeRoot = join(testDir, 'default');
+        await mkdir(storeRoot, { recursive: true });
+
+        const result = await listResources(config);
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value.resources).toHaveLength(1);
+            expect(result.value.resources[0]!.name).toContain('Memory Store');
+        }
+    });
+
+    it('should list resources for root categories from root index', async () => {
+        const storeRoot = join(testDir, 'default');
+        await mkdir(storeRoot, { recursive: true });
+
+        await createMemoryFile(storeRoot, 'custom/custom-memory', {
+            metadata: {
+                createdAt: new Date('2024-01-01'),
+                updatedAt: new Date('2024-01-02'),
+                tags: [],
+                source: 'test',
+                citations: [],
+            },
+            content: 'Custom memory',
+        });
+
+        const result = await listResources(config);
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            const categoryResource = result.value.resources.find(
+                (r) => r.name === 'Category: custom',
+            );
+            expect(categoryResource).toBeDefined();
+            expect(categoryResource!.uri).toBe('cortex://memory/default/custom/');
         }
     });
 });

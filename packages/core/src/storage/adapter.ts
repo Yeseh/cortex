@@ -20,6 +20,7 @@
  */
 
 import type { MemorySlugPath, Result } from '../types.ts';
+import type { CategoryIndex } from '../index/types.ts';
 import type { CategoryStorage } from '../category/types.ts';
 import type {
     StoreRegistry,
@@ -148,30 +149,57 @@ export interface MemoryStorage {
  * @example
  * ```typescript
  * // Read and update an index after memory changes
- * const indexResult = await storage.read('category-index');
- * // ... process and update index ...
- * await storage.write('category-index', updatedContents);
+ * const indexResult = await storage.read('project/cortex');
+ * if (indexResult.ok && indexResult.value) {
+ *   const updatedIndex: CategoryIndex = {
+ *     ...indexResult.value,
+ *     memories: [...indexResult.value.memories],
+ *   };
+ *   await storage.write('project/cortex', updatedIndex);
+ * }
  * ```
  */
 export interface IndexStorage {
     /**
      * Reads the contents of an index file.
      *
-     * @param name - Index identifier (e.g., "category-index", "search-index")
+     * @param name - Index identifier (category path, or empty string for root)
      * @returns Result with file contents, or null if the index does not exist
+     *
+     * @example
+     * ```typescript
+     * const rootIndex = await storage.read('');
+     * const categoryIndex = await storage.read('standards/typescript');
+     * ```
+     *
+     * @edgeCases
+     * - Passing an empty string reads the root index.
+     * - When the index file is missing, the result is `ok(null)` rather than an error.
      */
-    read(name: StorageIndexName): Promise<Result<string | null, StorageAdapterError>>;
+    read(name: StorageIndexName): Promise<Result<CategoryIndex | null, StorageAdapterError>>;
 
     /**
      * Writes contents to an index file.
      *
      * Creates the file if it does not exist. Overwrites existing content.
      *
-     * @param name - Index identifier (e.g., "category-index", "search-index")
+     * @param name - Index identifier (category path, or empty string for root)
      * @param contents - The content to write
      * @returns Result indicating success or failure
+     *
+     * @example
+     * ```typescript
+     * await storage.write('', { memories: [], subcategories: [] });
+     * ```
+     *
+     * @edgeCases
+     * - Writing to the root index uses an empty string as the name.
+     * - Serialization failures (e.g., invalid paths or counts) surface as `INDEX_ERROR`.
      */
-    write(name: StorageIndexName, contents: string): Promise<Result<void, StorageAdapterError>>;
+    write(
+        name: StorageIndexName,
+        contents: CategoryIndex,
+    ): Promise<Result<void, StorageAdapterError>>;
 
     /**
      * Rebuilds all category indexes from the current filesystem state.
@@ -190,6 +218,18 @@ export interface IndexStorage {
      * resolved by appending numeric suffixes (-2, -3, etc.).
      *
      * @returns Result with warnings array, or error on failure
+     *
+     * @example
+     * ```typescript
+     * const result = await storage.reindex();
+     * if (result.ok) {
+     *   console.log(result.value.warnings);
+     * }
+     * ```
+     *
+     * @edgeCases
+     * - Empty or missing directories return `ok({ warnings: [] })`.
+     * - Slug collisions are resolved automatically and reported in `warnings`.
      */
     reindex(): Promise<Result<ReindexResult, StorageAdapterError>>;
 
@@ -204,6 +244,18 @@ export interface IndexStorage {
      * @param options - Optional settings for index behavior
      * @param options.createWhenMissing - Create index entries for new categories (default: true)
      * @returns Result indicating success or failure
+     *
+     * @example
+     * ```typescript
+     * await storage.updateAfterMemoryWrite(
+     *   'standards/typescript/formatting',
+     *   '---\ncreated_at: 2024-01-01T00:00:00.000Z\n---\nUse Prettier.'
+     * );
+     * ```
+     *
+     * @edgeCases
+     * - Invalid slug paths return `INDEX_ERROR` without updating any indexes.
+     * - If `createWhenMissing` is false, missing category indexes may prevent updates.
      */
     updateAfterMemoryWrite(
         slugPath: MemorySlugPath,
@@ -367,7 +419,9 @@ export interface StorageAdapter {
      * @param name - Index identifier
      * @returns Result with file contents or null if missing
      */
-    readIndexFile(name: StorageIndexName): Promise<Result<string | null, StorageAdapterError>>;
+    readIndexFile(
+        name: StorageIndexName,
+    ): Promise<Result<CategoryIndex | null, StorageAdapterError>>;
 
     /**
      * Writes contents to an index file.
@@ -378,7 +432,7 @@ export interface StorageAdapter {
      */
     writeIndexFile(
         name: StorageIndexName,
-        contents: string
+        contents: CategoryIndex
     ): Promise<Result<void, StorageAdapterError>>;
 
     /**

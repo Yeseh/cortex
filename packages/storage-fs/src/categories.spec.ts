@@ -9,8 +9,6 @@ import {
     deleteCategoryDirectory,
     updateSubcategoryDescription,
     removeSubcategoryEntry,
-    readCategoryIndexForPort,
-    writeCategoryIndexForPort,
 } from './categories.ts';
 import type { FilesystemContext } from './types.ts';
 
@@ -33,7 +31,7 @@ describe('categories module', () => {
         }
     });
 
-    describe('categoryExists', () => {
+    describe('exists', () => {
         it('should return true for existing directory', async () => {
             await fs.mkdir(join(tempDir, 'exists'), { recursive: true });
 
@@ -77,7 +75,7 @@ describe('categories module', () => {
         });
     });
 
-    describe('ensureCategoryDirectory', () => {
+    describe('ensure', () => {
         it('should create a new directory', async () => {
             const result = await ensureCategoryDirectory(ctx, 'new-dir');
 
@@ -105,7 +103,7 @@ describe('categories module', () => {
         });
     });
 
-    describe('deleteCategoryDirectory', () => {
+    describe('delete', () => {
         it('should delete existing directory', async () => {
             await fs.mkdir(join(tempDir, 'to-delete'), { recursive: true });
 
@@ -296,77 +294,4 @@ describe('categories module', () => {
         });
     });
 
-    describe('readCategoryIndexForPort', () => {
-        it('should return null for missing index', async () => {
-            await fs.mkdir(join(tempDir, 'no-index'), { recursive: true });
-
-            const result = await readCategoryIndexForPort(ctx, 'no-index');
-
-            expect(result.ok).toBe(true);
-            if (result.ok) {
-                expect(result.value).toBeNull();
-            }
-        });
-
-        it('should parse valid index file', async () => {
-            await fs.mkdir(join(tempDir, 'valid'), { recursive: true });
-            const indexContent = [
-                'memories:',
-                '  - path: valid/mem1',
-                '    token_estimate: 100',
-                'subcategories:',
-                '  - path: valid/sub1',
-                '    memory_count: 2',
-            ].join('\n');
-            await fs.writeFile(join(tempDir, 'valid', 'index.yaml'), indexContent);
-
-            const result = await readCategoryIndexForPort(ctx, 'valid');
-
-            expect(result.ok).toBe(true);
-            if (result.ok && result.value) {
-                expect(result.value.memories).toHaveLength(1);
-                expect(result.value.subcategories).toHaveLength(1);
-            }
-        });
-
-        it('should return error for malformed index', async () => {
-            await fs.mkdir(join(tempDir, 'malformed'), { recursive: true });
-            await fs.writeFile(join(tempDir, 'malformed', 'index.yaml'), 'invalid:: yaml::');
-
-            const result = await readCategoryIndexForPort(ctx, 'malformed');
-
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
-                expect(result.error.code).toBe('STORAGE_ERROR');
-            }
-        });
-    });
-
-    describe('writeCategoryIndexForPort', () => {
-        it('should write valid index', async () => {
-            await fs.mkdir(join(tempDir, 'write-test'), { recursive: true });
-
-            const result = await writeCategoryIndexForPort(ctx, 'write-test', {
-                memories: [{ path: 'write-test/m1', tokenEstimate: 50 }],
-                subcategories: [{ path: 'write-test/s1', memoryCount: 1 }],
-            });
-
-            expect(result.ok).toBe(true);
-
-            const content = await fs.readFile(join(tempDir, 'write-test', 'index.yaml'), 'utf8');
-            expect(content).toContain('write-test/m1');
-            expect(content).toContain('write-test/s1');
-        });
-
-        it('should create parent directories', async () => {
-            const result = await writeCategoryIndexForPort(ctx, 'deep/nested/cat', {
-                memories: [],
-                subcategories: [],
-            });
-
-            expect(result.ok).toBe(true);
-
-            await fs.access(join(tempDir, 'deep', 'nested', 'cat', 'index.yaml'));
-        });
-    });
 });

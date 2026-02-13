@@ -39,12 +39,11 @@ import type {
     StorageAdapterError,
     StorageIndexName,
 } from '@yeseh/cortex-core/storage';
-import type { CategoryError, CategoryStoragePort } from '@yeseh/cortex-core/category';
+import type { CategoryError, CategoryStorage } from '@yeseh/cortex-core/category';
 import type { CategoryIndex } from '@yeseh/cortex-core/index';
 import type {
     FilesystemStorageAdapterOptions,
     FilesystemContext,
-    StringOrNullResult,
 } from './types.ts';
 import { normalizeExtension, ok } from './utils.ts';
 
@@ -57,10 +56,6 @@ import { FilesystemCategoryStorage } from './category-storage.ts';
 export { FilesystemRegistry } from './filesystem-registry.ts';
 
 // Import legacy operations needed for backward-compatible port methods
-import {
-    readCategoryIndexForPort,
-    writeCategoryIndexForPort,
-} from './categories.ts';
 
 /**
  * Filesystem-based storage adapter for Cortex memory system.
@@ -96,7 +91,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
     /** Index file operations and reindexing */
     public readonly indexes: IndexStorage;
     /** Category operations */
-    public readonly categories: CategoryStoragePort;
+    public readonly categories: CategoryStorage;
 
     constructor(options: FilesystemStorageAdapterOptions) {
         this.ctx = {
@@ -122,7 +117,9 @@ export class FilesystemStorageAdapter implements StorageAdapter {
      * @returns The file contents or null if not found
      * @deprecated Use `adapter.memories.read()` instead
      */
-    async readMemoryFile(slugPath: MemorySlugPath): Promise<StringOrNullResult> {
+    async readMemoryFile(
+        slugPath: MemorySlugPath,
+    ): Promise<Result<string | null, StorageAdapterError>> {
         return this.memories.read(slugPath);
     }
 
@@ -190,8 +187,10 @@ export class FilesystemStorageAdapter implements StorageAdapter {
      * @returns The file contents or null if not found
      * @deprecated Use `adapter.indexes.read()` instead
      */
-    async readIndexFile(name: StorageIndexName): Promise<StringOrNullResult> {
-        return this.indexes.read(name);
+    async readIndexFile(
+        name: StorageIndexName,
+    ): Promise<Result<CategoryIndex | null, StorageAdapterError>> {
+        return (this.indexes as FilesystemIndexStorage).readIndexFile(name);
     }
 
     /**
@@ -203,9 +202,9 @@ export class FilesystemStorageAdapter implements StorageAdapter {
      */
     async writeIndexFile(
         name: StorageIndexName,
-        contents: string,
+        contents: CategoryIndex,
     ): Promise<Result<void, StorageAdapterError>> {
-        return this.indexes.write(name, contents);
+        return (this.indexes as FilesystemIndexStorage).writeIndexFile(name, contents);
     }
 
     /**
@@ -220,37 +219,37 @@ export class FilesystemStorageAdapter implements StorageAdapter {
     }
 
     // ========================================================================
-    // CategoryStoragePort (Legacy) - Category operations
+    // CategoryStorage (Legacy) - Category operations
     // ========================================================================
 
     /**
      * Checks if a category directory exists.
      *
      * @param path - Category path to check (e.g., "project/cortex")
-     * @deprecated Use `adapter.categories.categoryExists()` instead
+     * @deprecated Use `adapter.categories.exists()` instead
      */
     async categoryExists(path: string): Promise<Result<boolean, CategoryError>> {
-        return this.categories.categoryExists(path);
+        return this.categories.exists(path);
     }
 
     /**
      * Ensures a category directory exists, creating it if missing.
      *
      * @param path - Category path to create (e.g., "project/cortex")
-     * @deprecated Use `adapter.categories.ensureCategoryDirectory()` instead
+     * @deprecated Use `adapter.categories.ensure()` instead
      */
     async ensureCategoryDirectory(path: string): Promise<Result<void, CategoryError>> {
-        return this.categories.ensureCategoryDirectory(path);
+        return this.categories.ensure(path);
     }
 
     /**
      * Deletes a category directory and all its contents recursively.
      *
      * @param path - Category path to delete (e.g., "project/cortex")
-     * @deprecated Use `adapter.categories.deleteCategoryDirectory()` instead
+     * @deprecated Use `adapter.categories.delete()` instead
      */
     async deleteCategoryDirectory(path: string): Promise<Result<void, CategoryError>> {
-        return this.categories.deleteCategoryDirectory(path);
+        return this.categories.delete(path);
     }
 
     /**
@@ -287,36 +286,6 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         return this.categories.removeSubcategoryEntry(parentPath, subcategoryPath);
     }
 
-    /**
-     * Reads a category index for the CategoryStoragePort interface.
-     *
-     * This method is kept for backward compatibility with existing callers
-     * that expect the port-style interface.
-     *
-     * @param path - Category path (e.g., "project/cortex")
-     * @returns The parsed CategoryIndex or null if not found
-     */
-    async readCategoryIndexForPort(
-        path: string,
-    ): Promise<Result<CategoryIndex | null, CategoryError>> {
-        return readCategoryIndexForPort(this.ctx, path);
-    }
-
-    /**
-     * Writes a category index for the CategoryStoragePort interface.
-     *
-     * This method is kept for backward compatibility with existing callers
-     * that expect the port-style interface.
-     *
-     * @param path - Category path (e.g., "project/cortex")
-     * @param index - The CategoryIndex to write
-     */
-    async writeCategoryIndexForPort(
-        path: string,
-        index: CategoryIndex,
-    ): Promise<Result<void, CategoryError>> {
-        return writeCategoryIndexForPort(this.ctx, path, index);
-    }
 }
 
 // Re-export types for convenience

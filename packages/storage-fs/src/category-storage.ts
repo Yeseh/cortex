@@ -13,17 +13,14 @@
  */
 
 import type { Result } from '@yeseh/cortex-core';
-import type { CategoryError, CategoryStoragePort } from '@yeseh/cortex-core/category';
-import type { CategoryIndex } from '@yeseh/cortex-core/index';
+import type { CategoryError, CategoryStorage } from '@yeseh/cortex-core/category';
 import type { FilesystemContext } from './types.ts';
 import {
-    categoryExists as categoryExistsOp,
-    ensureCategoryDirectory as ensureCategoryDirectoryOp,
+    exists as existsOp,
+    ensure as ensureOp,
     deleteCategoryDirectory as deleteCategoryDirectoryOp,
     updateSubcategoryDescription as updateSubcategoryDescriptionOp,
     removeSubcategoryEntry as removeSubcategoryEntryOp,
-    readCategoryIndexForPort,
-    writeCategoryIndexForPort,
 } from './categories.ts';
 
 /**
@@ -35,7 +32,7 @@ import {
  *
  * Categories are organized hierarchically as directories:
  * - Path: `{storeRoot}/{category/path}/`
- * - Index: `{storeRoot}/{category/path}/_index.yaml`
+ * - Index: `{storeRoot}/{category/path}/index.yaml`
  *
  * @example
  * ```typescript
@@ -47,10 +44,10 @@ import {
  * const storage = new FilesystemCategoryStorage(ctx);
  *
  * // Create a new category hierarchy
- * await storage.ensureCategoryDirectory('project/cortex/docs');
+ * await storage.ensure('project/cortex/docs');
  *
  * // Check if category exists
- * const existsResult = await storage.categoryExists('project/cortex');
+ * const existsResult = await storage.exists('project/cortex');
  * if (existsResult.ok && existsResult.value) {
  *     console.log('Category exists');
  * }
@@ -63,13 +60,13 @@ import {
  * );
  *
  * // Delete category and all contents
- * await storage.deleteCategoryDirectory('project/cortex/old');
+ * await storage.delete('project/cortex/old');
  * ```
  *
  * @see {@link CategoryStorage} - The interface this class implements
  * @see {@link FilesystemMemoryStorage} - For memory file operations
  */
-export class FilesystemCategoryStorage implements CategoryStoragePort {
+export class FilesystemCategoryStorage implements CategoryStorage {
     /**
      * Creates a new FilesystemCategoryStorage instance.
      *
@@ -88,66 +85,18 @@ export class FilesystemCategoryStorage implements CategoryStoragePort {
      *
      * @example
      * ```typescript
-     * const result = await storage.categoryExists('project/cortex');
+     * const result = await storage.exists('project/cortex');
      * if (result.ok) {
      *     console.log(result.value ? 'Exists' : 'Not found');
      * }
      * ```
+     *
+     * @edgeCases
+     * - Returns `ok(false)` when the directory is missing.
+     * - Returns `STORAGE_ERROR` on underlying filesystem access issues.
      */
-    async categoryExists(path: string): Promise<Result<boolean, CategoryError>> {
-        return categoryExistsOp(this.ctx, path);
-    }
-
-    /**
-     * Reads and parses the index file for a category.
-     *
-     * The index file contains metadata about memories in the category
-     * (slugs, tags, expiration dates) and references to subcategories.
-     *
-     * @param path - Category path (e.g., "project/cortex")
-     * @returns Result with the parsed CategoryIndex, or null if no index exists
-     *
-     * @example
-     * ```typescript
-     * const result = await storage.readCategoryIndex('project/cortex');
-     * if (result.ok && result.value) {
-     *     console.log('Memories:', result.value.memories?.length ?? 0);
-     *     console.log('Subcategories:', result.value.subcategories?.length ?? 0);
-     * }
-     * ```
-     */
-    async readCategoryIndex(path: string): Promise<Result<CategoryIndex | null, CategoryError>> {
-        return readCategoryIndexForPort(this.ctx, path);
-    }
-
-    /**
-     * Writes or overwrites a category index file.
-     *
-     * Creates parent directories if needed. The index is serialized
-     * to YAML format before writing.
-     *
-     * @param path - Category path (e.g., "project/cortex")
-     * @param index - The CategoryIndex data to write
-     * @returns Result indicating success or failure
-     *
-     * @example
-     * ```typescript
-     * const index: CategoryIndex = {
-     *     memories: [
-     *         { slug: 'architecture', tags: ['design'] }
-     *     ],
-     *     subcategories: [
-     *         { path: 'project/cortex/docs' }
-     *     ]
-     * };
-     * await storage.writeCategoryIndex('project/cortex', index);
-     * ```
-     */
-    async writeCategoryIndex(
-        path: string,
-        index: CategoryIndex,
-    ): Promise<Result<void, CategoryError>> {
-        return writeCategoryIndexForPort(this.ctx, path, index);
+    async exists(path: string): Promise<Result<boolean, CategoryError>> {
+        return existsOp(this.ctx, path);
     }
 
     /**
@@ -162,11 +111,15 @@ export class FilesystemCategoryStorage implements CategoryStoragePort {
      * @example
      * ```typescript
      * // Creates 'project', 'project/cortex', and 'project/cortex/docs' if needed
-     * await storage.ensureCategoryDirectory('project/cortex/docs');
+     * await storage.ensure('project/cortex/docs');
      * ```
+     *
+     * @edgeCases
+     * - Calling with an existing path is a no-op and should succeed.
+     * - Returns `STORAGE_ERROR` on permission or filesystem failures.
      */
-    async ensureCategoryDirectory(path: string): Promise<Result<void, CategoryError>> {
-        return ensureCategoryDirectoryOp(this.ctx, path);
+    async ensure(path: string): Promise<Result<void, CategoryError>> {
+        return ensureOp(this.ctx, path);
     }
 
     /**
@@ -185,10 +138,14 @@ export class FilesystemCategoryStorage implements CategoryStoragePort {
      * @example
      * ```typescript
      * // Removes category and all its contents
-     * await storage.deleteCategoryDirectory('project/cortex/deprecated');
+     * await storage.delete('project/cortex/deprecated');
      * ```
+     *
+     * @edgeCases
+     * - Missing directories are treated as successful no-ops.
+     * - Returns `STORAGE_ERROR` when deletion fails (e.g., permissions).
      */
-    async deleteCategoryDirectory(path: string): Promise<Result<void, CategoryError>> {
+    async delete(path: string): Promise<Result<void, CategoryError>> {
         return deleteCategoryDirectoryOp(this.ctx, path);
     }
 
@@ -219,6 +176,10 @@ export class FilesystemCategoryStorage implements CategoryStoragePort {
      *     null
      * );
      * ```
+     *
+     * @edgeCases
+     * - Passing `''` as `parentPath` updates the root index.
+     * - Passing `null` clears the description field.
      */
     async updateSubcategoryDescription(
         parentPath: string,
@@ -246,6 +207,10 @@ export class FilesystemCategoryStorage implements CategoryStoragePort {
      *     'project/cortex/old-docs'
      * );
      * ```
+     *
+     * @edgeCases
+     * - If the parent index is missing, this is treated as a no-op success.
+     * - Only the index entry is removed; the directory remains.
      */
     async removeSubcategoryEntry(
         parentPath: string,

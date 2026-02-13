@@ -24,6 +24,9 @@
  *   summary: 'TypeScript project using Bun runtime'
  * };
  * ```
+ *
+ * @edgeCases
+ * - `updatedAt` may be undefined when the memory frontmatter is missing or invalid.
  */
 export interface IndexMemoryEntry {
     /** Full path to the memory (e.g., "project/cortex/conventions") */
@@ -51,6 +54,9 @@ export interface IndexMemoryEntry {
  *   description: 'Cortex memory system project knowledge'
  * };
  * ```
+ *
+ * @edgeCases
+ * - `memoryCount` reflects direct memories in the subcategory, not recursive totals.
  */
 export interface IndexSubcategoryEntry {
     /** Full path to the subcategory (e.g., "project/cortex") */
@@ -65,8 +71,10 @@ export interface IndexSubcategoryEntry {
  * Complete index structure for a category directory.
  *
  * Each category directory contains an `index.yaml` file with this
- * structure, listing all direct memories and subcategories. The
- * index is maintained automatically when memories are written or
+ * structure, listing all direct memories and subcategories. Storage
+ * adapters handle YAML serialization using snake_case fields such as
+ * `token_estimate`, `memory_count`, and optional `updated_at`.
+ * The index is maintained automatically when memories are written or
  * deleted, and can be rebuilt via the `reindex` command.
  *
  * @example
@@ -81,6 +89,9 @@ export interface IndexSubcategoryEntry {
  *   ]
  * };
  * ```
+ *
+ * @edgeCases
+ * - Empty categories are represented with `{ memories: [], subcategories: [] }`.
  */
 export interface CategoryIndex {
     /** List of memory entries in this category */
@@ -152,10 +163,3 @@ export interface IndexSerializeError {
     cause?: unknown;
 }
 
-/**
- * Standard filename for category index files.
- *
- * Each category directory contains an index file with this name,
- * storing the {@link CategoryIndex} structure in YAML format.
- */
-export const INDEX_FILE_NAME = 'index.yaml';

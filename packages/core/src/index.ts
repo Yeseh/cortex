@@ -13,8 +13,6 @@ export {
     stringifyYaml,
     parseJson,
     stringifyJson,
-    parseIndex,
-    serializeIndex,
     toonOptions,
     type OutputFormat,
     type SerializationError,

@@ -9,7 +9,6 @@
  */
 
 import type { Result } from '../types.ts';
-import type { CategoryIndex } from '../index/types.ts';
 
 /**
  * Error codes for category operations.
@@ -103,10 +102,9 @@ export interface DeleteCategoryResult {
  * @example
  * ```typescript
  * // Creating a category using the port
- * const result = await port.categoryExists('project/cortex');
+ * const result = await port.exists('project/cortex');
  * if (result.ok && !result.value) {
- *   await port.ensureCategoryDirectory('project/cortex');
- *   await port.writeCategoryIndex('project/cortex', { memories: [], subcategories: [] });
+ *   await port.ensure('project/cortex');
  * }
  * ```
  */
@@ -116,27 +114,20 @@ export interface CategoryStorage {
      *
      * @param path - Category path (e.g., "project/cortex")
      * @returns Result with true if category exists, false otherwise
-     */
-    categoryExists(path: string): Promise<Result<boolean, CategoryError>>;
-
-    /**
-     * Reads the index file for a category.
      *
-     * @param path - Category path (e.g., "project/cortex")
-     * @returns Result with the parsed CategoryIndex or null if not found
-     */
-    readCategoryIndex(path: string): Promise<Result<CategoryIndex | null, CategoryError>>;
-
-    /**
-     * Writes or overwrites a category index file.
+     * @example
+     * ```typescript
+     * const result = await storage.exists('project/cortex');
+     * if (result.ok) {
+     *   console.log(result.value ? 'Exists' : 'Missing');
+     * }
+     * ```
      *
-     * Creates parent directories if needed.
-     *
-     * @param path - Category path (e.g., "project/cortex")
-     * @param index - The CategoryIndex to write
-     * @returns Result indicating success or failure
+     * @edgeCases
+     * - Returns `ok(false)` when the directory is missing.
+     * - Returns `INVALID_PATH` when the path is empty or malformed.
      */
-    writeCategoryIndex(path: string, index: CategoryIndex): Promise<Result<void, CategoryError>>;
+    exists(path: string): Promise<Result<boolean, CategoryError>>;
 
     /**
      * Ensures a category directory exists, creating it if missing.
@@ -146,8 +137,17 @@ export interface CategoryStorage {
      *
      * @param path - Category path (e.g., "project/cortex")
      * @returns Result indicating success or failure
+     *
+     * @example
+     * ```typescript
+     * await storage.ensure('project/cortex/docs');
+     * ```
+     *
+     * @edgeCases
+     * - Calling with an existing path is a no-op and should succeed.
+     * - Returns `INVALID_PATH` when the path is empty or malformed.
      */
-    ensureCategoryDirectory(path: string): Promise<Result<void, CategoryError>>;
+    ensure(path: string): Promise<Result<void, CategoryError>>;
 
     /**
      * Deletes a category directory and all its contents recursively.
@@ -157,8 +157,17 @@ export interface CategoryStorage {
      *
      * @param path - Category path to delete (e.g., "project/cortex")
      * @returns Result indicating success or failure
+     *
+     * @example
+     * ```typescript
+     * await storage.delete('project/cortex/old');
+     * ```
+     *
+     * @edgeCases
+     * - Some implementations treat missing directories as a no-op success.
+     * - Returns `INVALID_PATH` when the path is empty or malformed.
      */
-    deleteCategoryDirectory(path: string): Promise<Result<void, CategoryError>>;
+    delete(path: string): Promise<Result<void, CategoryError>>;
 
     /**
      * Updates the description of a subcategory in its parent's index.
@@ -170,6 +179,19 @@ export interface CategoryStorage {
      * @param subcategoryPath - Full path to the subcategory
      * @param description - New description or null to clear
      * @returns Result indicating success or failure
+     *
+     * @example
+     * ```typescript
+     * await storage.updateSubcategoryDescription(
+     *   'project/cortex',
+     *   'project/cortex/docs',
+     *   'Project documentation'
+     * );
+     * ```
+     *
+     * @edgeCases
+     * - Passing `''` as `parentPath` updates the root index.
+     * - Passing `null` clears the description field for the subcategory.
      */
     updateSubcategoryDescription(
         parentPath: string,
@@ -186,6 +208,15 @@ export interface CategoryStorage {
      * @param parentPath - Path to the parent category (empty string for root)
      * @param subcategoryPath - Full path to the subcategory to remove
      * @returns Result indicating success or failure
+     *
+     * @example
+     * ```typescript
+     * await storage.removeSubcategoryEntry('project/cortex', 'project/cortex/old-docs');
+     * ```
+     *
+     * @edgeCases
+     * - Passing `''` as `parentPath` removes a top-level entry from the root index.
+     * - If the parent index is missing, implementations may return success.
      */
     removeSubcategoryEntry(
         parentPath: string,
