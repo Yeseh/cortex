@@ -70,7 +70,7 @@ export async function handleUpdate(
     path: string,
     options: UpdateCommandOptions,
     storeName: string | undefined,
-    deps: UpdateHandlerDeps = {}
+    deps: UpdateHandlerDeps = {},
 ): Promise<void> {
     // 1. Resolve store context
     const storeResult = await resolveStoreAdapter(storeName);
@@ -100,9 +100,9 @@ export async function handleUpdate(
     const tags =
         options.tags !== undefined
             ? options.tags
-                  .split(',')
-                  .map((t) => t.trim())
-                  .filter(Boolean)
+                .split(',')
+                .map((t) => t.trim())
+                .filter(Boolean)
             : undefined;
 
     // Validate tags are non-empty if provided
@@ -122,7 +122,8 @@ export async function handleUpdate(
     if (options.expiresAt === false) {
         // --no-expires-at flag: explicitly clear expiration
         expiresAt = null;
-    } else if (options.expiresAt) {
+    }
+    else if (options.expiresAt) {
         expiresAt = new Date(options.expiresAt);
         if (Number.isNaN(expiresAt.getTime())) {
             mapCoreError({

@@ -60,7 +60,7 @@ export async function handleAdd(
     path: string,
     options: AddCommandOptions,
     storeName: string | undefined,
-    deps: AddHandlerDeps = {}
+    deps: AddHandlerDeps = {},
 ): Promise<void> {
     // 1. Resolve store context and adapter
     const storeResult = await resolveStoreAdapter(storeName);
@@ -130,7 +130,7 @@ export async function handleAdd(
     const indexResult = await adapter.indexes.updateAfterMemoryWrite(
         pathResult.value.slugPath,
         serialized.value,
-        { createWhenMissing: true }
+        { createWhenMissing: true },
     );
     if (!indexResult.ok) {
         mapCoreError({ code: 'STORAGE_ERROR', message: indexResult.error.message });

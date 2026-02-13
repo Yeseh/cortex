@@ -32,6 +32,8 @@ export interface IndexMemoryEntry {
     tokenEstimate: number;
     /** Optional brief summary of memory contents (for listing displays) */
     summary?: string;
+    /** Optional last updated timestamp for sorting by recency */
+    updatedAt?: Date;
 }
 
 /**

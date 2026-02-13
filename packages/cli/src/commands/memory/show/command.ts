@@ -74,7 +74,7 @@ export async function handleShow(
     path: string,
     options: ShowCommandOptions,
     storeName: string | undefined,
-    deps: ShowHandlerDeps = {}
+    deps: ShowHandlerDeps = {},
 ): Promise<void> {
     // 1. Resolve store context
     const storeResult = await resolveStoreAdapter(storeName);
@@ -136,7 +136,11 @@ export async function handleShow(
     };
 
     // 7. Serialize and output
-    const VALID_FORMATS: OutputFormat[] = ['yaml', 'json', 'toon'];
+    const VALID_FORMATS: OutputFormat[] = [
+        'yaml',
+        'json',
+        'toon',
+    ];
     const requestedFormat = options.format as OutputFormat;
     const format: OutputFormat = VALID_FORMATS.includes(requestedFormat) ? requestedFormat : 'yaml';
     const serialized = serializeOutput({ kind: 'memory', value: outputMemory }, format);

@@ -43,5 +43,23 @@ export {
     removeMemory,
     listMemories,
     pruneExpiredMemories,
+    getRecentMemories,
 } from './operations.ts';
+
+export type {
+    CreateMemoryInput,
+    UpdateMemoryInput,
+    GetMemoryOptions,
+    ListMemoriesOptions,
+    PruneOptions,
+    GetRecentMemoriesOptions,
+    ListedMemory,
+    ListedSubcategory,
+    ListMemoriesResult,
+    PrunedMemory,
+    PruneResult,
+    RecentMemory,
+    GetRecentMemoriesResult,
+} from './operations.ts';
+
 

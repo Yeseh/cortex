@@ -18,7 +18,7 @@ import type { CategoryIndex, IndexMemoryEntry } from '@yeseh/cortex-core/index';
 import { parseIndex, serializeIndex, defaultTokenizer, toSlug } from '@yeseh/cortex-core';
 import type { DirEntriesResult, FilesystemContext, StringOrNullResult } from './types.ts';
 import { err, isNotFoundError, ok, resolveStoragePath, toSlugPathFromRelative } from './utils.ts';
-import { validateSlugPath } from './memories.ts';
+import { validateSlugPath, parseMemory } from './memories.ts';
 
 /**
  * Internal state for building indexes during reindex.
@@ -308,12 +308,24 @@ export const updateCategoryIndexes = async (
         });
     }
 
+    // Parse memory to extract updatedAt timestamp
+    const parseResult = parseMemory(contents);
+    if (!parseResult.ok) {
+        return err({
+            code: 'INDEX_ERROR',
+            message: 'Failed to parse memory content for index update.',
+            path: slugPath,
+            cause: parseResult.error,
+        });
+    }
+
     const upsertMemory = await upsertMemoryEntry(
         ctx,
         categoryIndexName,
         {
             path: slugPath,
             tokenEstimate: tokenEstimateResult.value,
+            updatedAt: parseResult.value.metadata.updatedAt,
         },
         { ...options, createWhenMissing: true },
     );
@@ -424,10 +436,11 @@ const addIndexEntry = (
     indexes: Map<string, CategoryIndex>,
     slugPath: MemorySlugPath,
     tokenEstimate: number,
+    updatedAt?: Date,
 ): void => {
     const categoryPath = slugPath.split('/').slice(0, -1).join('/');
     const current = indexes.get(categoryPath) ?? { memories: [], subcategories: [] };
-    current.memories.push({ path: slugPath, tokenEstimate });
+    current.memories.push({ path: slugPath, tokenEstimate, updatedAt });
     indexes.set(categoryPath, current);
 };
 
@@ -497,7 +510,9 @@ const applyParentSubcategories = (
  * Result of building an index entry from a memory file.
  */
 type BuildIndexEntryResult = Result<
-    { slugPath: MemorySlugPath; tokenEstimate: number } | { skipped: true; reason: string } | null,
+    | { slugPath: MemorySlugPath; tokenEstimate: number; updatedAt?: Date }
+    | { skipped: true; reason: string }
+    | null,
     StorageAdapterError
 >;
 
@@ -505,7 +520,8 @@ type BuildIndexEntryResult = Result<
  * Builds an index entry from a memory file.
  *
  * Normalizes file paths to valid slugs. Returns a skipped result
- * if the path normalizes to empty.
+ * if the path normalizes to empty. Parses memory frontmatter to
+ * extract the updatedAt timestamp if present.
  */
 const buildIndexEntry = async (
     ctx: FilesystemContext,
@@ -558,7 +574,16 @@ const buildIndexEntry = async (
         });
     }
 
-    return ok({ slugPath: normalizedPath as MemorySlugPath, tokenEstimate: tokenEstimate.value });
+    // Parse memory to extract updatedAt from frontmatter
+    const parseResult = parseMemory(contents);
+    // If parsing fails, we still create the index entry without updatedAt
+    const updatedAt = parseResult.ok ? parseResult.value.metadata.updatedAt : undefined;
+
+    return ok({
+        slugPath: normalizedPath as MemorySlugPath,
+        tokenEstimate: tokenEstimate.value,
+        updatedAt,
+    });
 };
 
 /**
@@ -604,7 +629,12 @@ const buildIndexState = async (
         }
         usedPaths.add(slugPath);
 
-        addIndexEntry(indexes, slugPath, entryResult.value.tokenEstimate);
+        addIndexEntry(
+            indexes,
+            slugPath,
+            entryResult.value.tokenEstimate,
+            entryResult.value.updatedAt,
+        );
         recordParentSubcategory(parentSubcategories, slugPath);
     }
 

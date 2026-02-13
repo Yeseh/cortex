@@ -141,7 +141,7 @@ export const getAncestorPaths = (path: string): string[] => {
  */
 export const createCategory = async (
     storage: CategoryStorage,
-    path: string
+    path: string,
 ): Promise<Result<CreateCategoryResult, CategoryError>> => {
     // Validate path
     const segments = path.split('/').filter((s) => s.length > 0);
@@ -240,7 +240,7 @@ export const createCategory = async (
 export const setDescription = async (
     storage: CategoryStorage,
     path: string,
-    description: string
+    description: string,
 ): Promise<Result<SetDescriptionResult, CategoryError>> => {
     // Trim and validate length
     const trimmed = description.trim();
@@ -272,7 +272,7 @@ export const setDescription = async (
     const updateResult = await storage.updateSubcategoryDescription(
         parentPath,
         path,
-        finalDescription
+        finalDescription,
     );
     if (!updateResult.ok) {
         return updateResult;
@@ -310,7 +310,7 @@ export const setDescription = async (
  */
 export const deleteCategory = async (
     storage: CategoryStorage,
-    path: string
+    path: string,
 ): Promise<Result<DeleteCategoryResult, CategoryError>> => {
     // Reject root categories
     if (isRootCategory(path)) {

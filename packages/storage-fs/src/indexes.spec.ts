@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { reindexCategoryIndexes } from './indexes.ts';
+import { reindexCategoryIndexes, updateCategoryIndexes, readCategoryIndex } from './indexes.ts';
 import type { FilesystemContext } from './types.ts';
 
 const MEMORY_CONTENT = [
@@ -242,4 +242,229 @@ describe('reindexCategoryIndexes', () => {
         // root index.yaml should also be cleaned up (no memories means no index entries)
         await expect(fs.access(join(tempDir, 'index.yaml'))).rejects.toThrow();
     });
+
+    it('should populate updatedAt in index entries from memory frontmatter', async () => {
+        const updatedAt1 = new Date('2024-06-15T10:30:00.000Z');
+        const updatedAt2 = new Date('2024-06-20T14:45:00.000Z');
+
+        // Create memories with updatedAt in frontmatter
+        const memory1 = [
+            '---',
+            'created_at: 2024-01-01T00:00:00.000Z',
+            `updated_at: ${updatedAt1.toISOString()}`,
+            'tags: []',
+            'source: test',
+            '---',
+            'Memory 1 content',
+        ].join('\n');
+
+        const memory2 = [
+            '---',
+            'created_at: 2024-01-15T00:00:00.000Z',
+            `updated_at: ${updatedAt2.toISOString()}`,
+            'tags: []',
+            'source: test',
+            '---',
+            'Memory 2 content',
+        ].join('\n');
+
+        await fs.mkdir(join(tempDir, 'project'), { recursive: true });
+        await fs.writeFile(join(tempDir, 'project', 'memory-1.md'), memory1);
+        await fs.writeFile(join(tempDir, 'project', 'memory-2.md'), memory2);
+
+        // Reindex
+        const result = await reindexCategoryIndexes(ctx);
+
+        expect(result.ok).toBe(true);
+
+        // Read and verify the index
+        const indexResult = await readCategoryIndex(ctx, 'project');
+
+        expect(indexResult.ok).toBe(true);
+        if (indexResult.ok) {
+            const index = indexResult.value;
+            expect(index.memories).toHaveLength(2);
+
+            const entry1 = index.memories.find((m) => m.path === 'project/memory-1');
+            expect(entry1).toBeDefined();
+            expect(entry1?.updatedAt).toBeDefined();
+            expect(entry1?.updatedAt?.toISOString()).toBe(updatedAt1.toISOString());
+
+            const entry2 = index.memories.find((m) => m.path === 'project/memory-2');
+            expect(entry2).toBeDefined();
+            expect(entry2?.updatedAt).toBeDefined();
+            expect(entry2?.updatedAt?.toISOString()).toBe(updatedAt2.toISOString());
+        }
+    });
+
+    it('should handle memories without updatedAt in frontmatter during reindex', async () => {
+        // Create a memory with malformed frontmatter (no updated_at)
+        const memoryWithoutUpdatedAt = [
+            '---',
+            'created_at: 2024-01-01T00:00:00.000Z',
+            'tags: []',
+            'source: test',
+            '---',
+            'Memory without updatedAt',
+        ].join('\n');
+
+        await fs.mkdir(join(tempDir, 'project'), { recursive: true });
+        await fs.writeFile(join(tempDir, 'project', 'memory-legacy.md'), memoryWithoutUpdatedAt);
+
+        // Reindex should succeed, but entry should have undefined updatedAt
+        const result = await reindexCategoryIndexes(ctx);
+
+        expect(result.ok).toBe(true);
+
+        // Read and verify the index
+        const indexResult = await readCategoryIndex(ctx, 'project');
+
+        expect(indexResult.ok).toBe(true);
+        if (indexResult.ok) {
+            const index = indexResult.value;
+            expect(index.memories).toHaveLength(1);
+
+            const entry = index.memories[0];
+            expect(entry?.path).toBe('project/memory-legacy');
+            expect(entry?.updatedAt).toBeUndefined();
+        }
+    });
 });
+
+describe('updateCategoryIndexes', () => {
+    let tempDir: string;
+    let ctx: FilesystemContext;
+
+    beforeEach(async () => {
+        tempDir = await fs.mkdtemp(join(tmpdir(), 'cortex-update-indexes-'));
+        ctx = {
+            storeRoot: tempDir,
+            memoryExtension: '.md',
+            indexExtension: '.yaml',
+        };
+    });
+
+    afterEach(async () => {
+        if (tempDir) {
+            await fs.rm(tempDir, { recursive: true, force: true });
+        }
+    });
+
+    it('should include updatedAt in index entry after create', async () => {
+        const updatedAt = new Date('2024-06-15T10:30:00.000Z');
+        const memoryContent = [
+            '---',
+            'created_at: 2024-01-01T00:00:00.000Z',
+            `updated_at: ${updatedAt.toISOString()}`,
+            'tags: [test]',
+            'source: test',
+            '---',
+            'Memory content',
+        ].join('\n');
+
+        // Create the memory and update indexes
+        const result = await updateCategoryIndexes(
+            ctx,
+            'project/cortex/test-memory',
+            memoryContent,
+            { createWhenMissing: true },
+        );
+
+        expect(result.ok).toBe(true);
+
+        // Read the category index
+        const indexResult = await readCategoryIndex(ctx, 'project/cortex');
+        expect(indexResult.ok).toBe(true);
+
+        if (indexResult.ok) {
+            const index = indexResult.value;
+            expect(index.memories).toHaveLength(1);
+            const entry = index.memories[0];
+            expect(entry?.path).toBe('project/cortex/test-memory');
+            expect(entry?.updatedAt).toBeDefined();
+            expect(entry?.updatedAt?.toISOString()).toBe(updatedAt.toISOString());
+        }
+    });
+
+    it('should update updatedAt in index entry after update', async () => {
+        const createdAt = new Date('2024-01-01T00:00:00.000Z');
+        const updatedAt = new Date('2024-06-20T14:45:00.000Z');
+
+        // Create initial memory
+        const initialContent = [
+            '---',
+            `created_at: ${createdAt.toISOString()}`,
+            `updated_at: ${createdAt.toISOString()}`,
+            'tags: [test]',
+            'source: test',
+            '---',
+            'Initial content',
+        ].join('\n');
+
+        await updateCategoryIndexes(
+            ctx,
+            'project/test-memory',
+            initialContent,
+            { createWhenMissing: true },
+        );
+
+        // Update the memory with new timestamp
+        const updatedContent = [
+            '---',
+            `created_at: ${createdAt.toISOString()}`,
+            `updated_at: ${updatedAt.toISOString()}`,
+            'tags: [test, updated]',
+            'source: test',
+            '---',
+            'Updated content',
+        ].join('\n');
+
+        const updateResult = await updateCategoryIndexes(
+            ctx,
+            'project/test-memory',
+            updatedContent,
+            { createWhenMissing: true },
+        );
+
+        expect(updateResult.ok).toBe(true);
+
+        // Verify the index has the updated timestamp
+        const indexResult = await readCategoryIndex(ctx, 'project');
+        expect(indexResult.ok).toBe(true);
+
+        if (indexResult.ok) {
+            const index = indexResult.value;
+            expect(index.memories).toHaveLength(1);
+            const entry = index.memories[0];
+            expect(entry?.path).toBe('project/test-memory');
+            expect(entry?.updatedAt).toBeDefined();
+            expect(entry?.updatedAt?.toISOString()).toBe(updatedAt.toISOString());
+        }
+    });
+
+    it('should handle memory without updatedAt field gracefully', async () => {
+        // Memory with only created_at (legacy format)
+        const memoryContent = [
+            '---',
+            'created_at: 2024-01-01T00:00:00.000Z',
+            'tags: []',
+            'source: test',
+            '---',
+            'Content',
+        ].join('\n');
+
+        // This should fail during parsing because updatedAt is required
+        const result = await updateCategoryIndexes(
+            ctx,
+            'project/legacy-memory',
+            memoryContent,
+            { createWhenMissing: true },
+        );
+
+        expect(result.ok).toBe(false);
+        if (!result.ok) {
+            expect(result.error.code).toBe('INDEX_ERROR');
+        }
+    });
+});
+

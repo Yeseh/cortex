@@ -213,6 +213,7 @@ const IndexMemoryEntrySchema = z.object({
     path: z.string().min(1),
     token_estimate: z.number().int().nonnegative(),
     summary: z.string().optional(),
+    updated_at: z.string().datetime().optional(),
 });
 
 /**
@@ -277,6 +278,7 @@ export const parseIndex = (raw: string): Result<CategoryIndex, SerializationErro
             path: m.path,
             tokenEstimate: m.token_estimate,
             ...(m.summary ? { summary: m.summary } : {}),
+            ...(m.updated_at ? { updatedAt: new Date(m.updated_at) } : {}),
         })),
         subcategories: parsed.data.subcategories.map((s) => ({
             path: s.path,
@@ -317,6 +319,7 @@ export const serializeIndex = (index: CategoryIndex): Result<string, Serializati
             path: m.path,
             token_estimate: m.tokenEstimate,
             ...(m.summary ? { summary: m.summary } : {}),
+            ...(m.updatedAt ? { updated_at: m.updatedAt.toISOString() } : {}),
         })),
         subcategories: index.subcategories.map((s) => ({
             path: s.path,

@@ -60,7 +60,9 @@ describe('getAncestorPaths', () => {
 
     it('should return ancestor paths for deeply nested', () => {
         expect(getAncestorPaths('project/cortex/arch')).toEqual(['project/cortex']);
-        expect(getAncestorPaths('a/b/c/d')).toEqual(['a/b', 'a/b/c']);
+        expect(getAncestorPaths('a/b/c/d')).toEqual([
+            'a/b', 'a/b/c',
+        ]);
     });
 });
 
@@ -139,7 +141,7 @@ describe('setDescription', () => {
                     capturedParent = parent;
                     capturedDesc = desc;
                     return ok(undefined);
-                }
+                },
             ),
         });
         const result = await setDescription(storage, 'project', 'Root category description');
@@ -175,7 +177,7 @@ describe('setDescription', () => {
                 async (_parent: string, _path: string, desc: string | null) => {
                     capturedDesc = desc;
                     return ok(undefined);
-                }
+                },
             ),
         });
 
@@ -192,7 +194,7 @@ describe('setDescription', () => {
                 async (_parent: string, _path: string, desc: string | null) => {
                     capturedDesc = desc;
                     return ok(undefined);
-                }
+                },
             ),
         });
 
@@ -222,7 +224,7 @@ describe('setDescription', () => {
                 async (_parent: string, _path: string, desc: string | null) => {
                     capturedDesc = desc;
                     return ok(undefined);
-                }
+                },
             ),
         });
 
@@ -239,7 +241,7 @@ describe('setDescription', () => {
                 async (_parent: string, _path: string, desc: string | null) => {
                     capturedDesc = desc;
                     return ok(undefined);
-                }
+                },
             ),
         });
         const exactlyMaxDesc = 'a'.repeat(500);

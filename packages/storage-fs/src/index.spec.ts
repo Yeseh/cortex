@@ -211,7 +211,7 @@ describe('CategoryStoragePort implementation', () => {
         index: {
             memories: { path: string; tokenEstimate: number }[];
             subcategories: { path: string; memoryCount: number; description?: string }[];
-        }
+        },
     ) => {
         const serialized = serializeIndex(index);
         if (!serialized.ok) throw new Error('Failed to serialize index');
@@ -280,7 +280,7 @@ describe('CategoryStoragePort implementation', () => {
         const result = await adapter.updateSubcategoryDescription(
             'project',
             'project/test',
-            'Test description'
+            'Test description',
         );
 
         expect(result.ok).toBe(true);
@@ -335,7 +335,7 @@ describe('CategoryStoragePort implementation', () => {
         const result = await adapter.updateSubcategoryDescription(
             'project',
             'project/new',
-            'New description'
+            'New description',
         );
 
         expect(result.ok).toBe(true);
