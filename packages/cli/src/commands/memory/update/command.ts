@@ -19,7 +19,7 @@
  * cortex memory update project/temp --expires-at "2026-12-31T00:00:00Z"
  *
  * # Clear expiration date
- * cortex memory update project/temp --clear-expiry
+ * cortex memory update project/temp --no-expires-at
  *
  * # Update from a specific store
  * cortex memory --store work update project/notes --content "New content"
@@ -39,8 +39,13 @@ export interface UpdateCommandOptions {
     content?: string;
     file?: string;
     tags?: string;
-    expiresAt?: string;
-    clearExpiry?: boolean;
+    /**
+     * Expiration date from Commander.js option parsing.
+     * - `string` — ISO 8601 date provided via `--expires-at <date>`
+     * - `false` — expiration cleared via `--no-expires-at` negation flag
+     * - `undefined` (omitted) — keep the existing value unchanged
+     */
+    expiresAt?: string | false;
 }
 
 /** Dependencies injected into the handler for testability */
@@ -67,15 +72,7 @@ export async function handleUpdate(
     storeName: string | undefined,
     deps: UpdateHandlerDeps = {}
 ): Promise<void> {
-    // 1. Validate mutually exclusive options
-    if (options.expiresAt && options.clearExpiry) {
-        mapCoreError({
-            code: 'INVALID_ARGUMENTS',
-            message: 'Use either --expires-at or --clear-expiry, not both.',
-        });
-    }
-
-    // 2. Resolve store context
+    // 1. Resolve store context
     const storeResult = await resolveStoreAdapter(storeName);
     if (!storeResult.ok) {
         mapCoreError(storeResult.error);
@@ -120,19 +117,25 @@ export async function handleUpdate(
         }
     }
 
-    // 6. Parse expiration date if provided
-    const expiresAt = options.expiresAt ? new Date(options.expiresAt) : undefined;
-    if (expiresAt && Number.isNaN(expiresAt.getTime())) {
-        mapCoreError({
-            code: 'INVALID_ARGUMENTS',
-            message: 'Expiry must be a valid ISO timestamp.',
-        });
+    // Parse expiration date
+    let expiresAt: Date | null | undefined;
+    if (options.expiresAt === false) {
+        // --no-expires-at flag: explicitly clear expiration
+        expiresAt = null;
+    } else if (options.expiresAt) {
+        expiresAt = new Date(options.expiresAt);
+        if (Number.isNaN(expiresAt.getTime())) {
+            mapCoreError({
+                code: 'INVALID_ARGUMENTS',
+                message: 'Expiry must be a valid ISO timestamp.',
+            });
+        }
     }
 
     // 7. Verify at least one update is provided
     const hasContentUpdate = contentResult.value.content !== null;
     const hasTagsUpdate = tags !== undefined;
-    const hasExpiryUpdate = expiresAt !== undefined || options.clearExpiry;
+    const hasExpiryUpdate = expiresAt !== undefined;
 
     if (!hasContentUpdate && !hasTagsUpdate && !hasExpiryUpdate) {
         mapCoreError({
@@ -167,7 +170,7 @@ export async function handleUpdate(
             ...parsedMemory.value.metadata,
             updatedAt: now,
             tags: tags ?? parsedMemory.value.metadata.tags,
-            expiresAt: options.clearExpiry
+            expiresAt: expiresAt === null
                 ? undefined
                 : (expiresAt ?? parsedMemory.value.metadata.expiresAt),
         },
@@ -196,7 +199,7 @@ export async function handleUpdate(
  * Updates an existing memory at the specified path. Can update:
  * - Content via `--content` flag for inline text or `--file` to read from a file
  * - Tags via `--tags` flag (replaces existing tags)
- * - Expiration via `--expires-at` or `--clear-expiry`
+ * - Expiration via `--expires-at` or `--no-expires-at`
  *
  * The `--store` option is inherited from the parent `memory` command.
  */
@@ -207,7 +210,7 @@ export const updateCommand = new Command('update')
     .option('-f, --file <filepath>', 'Read new content from a file')
     .option('-t, --tags <tags>', 'Comma-separated tags (replaces existing)')
     .option('-e, --expires-at <date>', 'New expiration date (ISO 8601)')
-    .option('-E, --clear-expiry', 'Remove expiration date')
+    .option('--no-expires-at', 'Remove expiration date')
     .action(async (path, options, command) => {
         const parentOpts = command.parent?.opts() as { store?: string } | undefined;
         await handleUpdate(path, options, parentOpts?.store);

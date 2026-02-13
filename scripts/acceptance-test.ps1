@@ -370,7 +370,7 @@ function Main {
         Write-TestStep "Clearing expiration"
         $result = Invoke-Cortex -Arguments @(
             "update", "project/sprint-goal",
-            "--clear-expiry"
+            "--no-expires-at"
         ) -StoreRoot $storeRoot -WorkDir $tempRoot
         Assert-Contains $result.Output "Updated memory" "Clear expiry reports success"
         

@@ -407,7 +407,7 @@ describe('cortex_update_memory tool', () => {
         const input: UpdateMemoryInput = {
             store: 'default',
             path: 'project/with-expiry',
-            clear_expiry: true,
+            expires_at: null,
         };
 
         await updateMemoryHandler({ config }, input);
@@ -418,6 +418,37 @@ describe('cortex_update_memory tool', () => {
         );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.expires_at).toBeUndefined();
+    });
+
+    it('should preserve existing expiry when expires_at is omitted', async () => {
+        const expiryDate = new Date('2030-06-15T00:00:00.000Z');
+        const storeRoot = join(testDir, MEMORY_SUBDIR);
+        await createMemoryFile(storeRoot, 'project/preserve-expiry', {
+            metadata: {
+                createdAt: new Date('2024-01-01'),
+                updatedAt: new Date('2024-01-02'),
+                tags: [],
+                source: 'test',
+                expiresAt: expiryDate,
+            },
+            content: 'Has expiry',
+        });
+
+        // Update only content (expires_at omitted)
+        const updateInput: UpdateMemoryInput = {
+            store: 'default',
+            path: 'project/preserve-expiry',
+            content: 'Updated content',
+        };
+        await updateMemoryHandler({ config }, updateInput);
+
+        // Verify expiry is preserved
+        const getResult = await getMemoryHandler(
+            { config },
+            { store: 'default', path: 'project/preserve-expiry' },
+        );
+        const output = JSON.parse(getResult.content[0]!.text);
+        expect(output.metadata.expires_at).toBe(expiryDate.toISOString());
     });
 
     it('should reject update with no changes', async () => {

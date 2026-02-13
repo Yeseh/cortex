@@ -70,10 +70,13 @@ export interface UpdateMemoryInput {
     content?: string;
     /** New tags (undefined = keep existing) */
     tags?: string[];
-    /** New expiration (undefined = keep existing) */
-    expiresAt?: Date;
-    /** If true, removes expiration */
-    clearExpiry?: boolean;
+    /**
+     * New expiration date.
+     * - `Date` — set expiration to this date
+     * - `null` — explicitly clear (remove) the expiration
+     * - `undefined` (omitted) — keep the existing value unchanged
+     */
+    expiresAt?: Date | null;
 }
 
 /** Options for retrieving a memory */
@@ -501,7 +504,7 @@ export const getMemory = async (
  * @param storage - The composed storage adapter
  * @param serializer - Memory serializer for format conversion
  * @param slugPath - Memory path (e.g., "project/cortex/config")
- * @param updates - Update input (content, tags, expiresAt, clearExpiry)
+ * @param updates - Update input (content, tags, expiresAt). Pass expiresAt as null to clear expiration.
  * @param now - Current time (defaults to new Date())
  * @returns Result containing updated Memory or MemoryError
  */
@@ -526,8 +529,7 @@ export const updateMemory = async (
     const hasUpdates =
         updates.content !== undefined ||
         updates.tags !== undefined ||
-        updates.expiresAt !== undefined ||
-        updates.clearExpiry === true;
+        updates.expiresAt !== undefined;
     if (!hasUpdates) {
         return err(
             memoryError('INVALID_INPUT', 'No updates provided', {
@@ -569,7 +571,7 @@ export const updateMemory = async (
             updatedAt: timestamp,
             tags: updates.tags ?? existing.metadata.tags,
             source: existing.metadata.source,
-            expiresAt: updates.clearExpiry
+            expiresAt: updates.expiresAt === null
                 ? undefined
                 : (updates.expiresAt ?? existing.metadata.expiresAt),
         },

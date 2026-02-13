@@ -80,8 +80,9 @@ export const updateMemoryInputSchema = z.object({
     path: memoryPathSchema.describe('Memory path in category/slug format'),
     content: z.string().optional().describe('New memory content'),
     tags: tagsSchema.describe('New tags (replaces existing)'),
-    expires_at: isoDateSchema.optional().describe('New expiration date (ISO 8601)'),
-    clear_expiry: z.boolean().optional().default(false).describe('Remove expiration date'),
+    expires_at: isoDateSchema.optional().nullable().describe(
+        'New expiration date (ISO 8601). Pass null to clear the expiration. Omit to keep existing value.',
+    ),
 });
 
 /** Schema for remove_memory tool input */
@@ -147,8 +148,13 @@ export interface UpdateMemoryInput {
     path: string;
     content?: string;
     tags?: string[];
-    expires_at?: string;
-    clear_expiry?: boolean;
+    /**
+     * New expiration date.
+     * - ISO 8601 string — set expiration to this date
+     * - `null` — explicitly clear (remove) the expiration
+     * - `undefined` (omitted) — keep the existing value unchanged
+     */
+    expires_at?: string | null;
 }
 
 /** Input type for remove_memory tool */
@@ -409,10 +415,10 @@ export const updateMemoryHandler = async (
     input: UpdateMemoryInput,
 ): Promise<McpToolResponse> => {
     // Validate that at least one update field is provided
-    if (!input.content && !input.tags && !input.expires_at && !input.clear_expiry) {
+    if (input.content === undefined && input.tags === undefined && input.expires_at === undefined) {
         throw new McpError(
             ErrorCode.InvalidParams,
-            'No updates provided. Specify content, tags, expires_at, or clear_expiry.',
+            'No updates provided. Specify content, tags, or expires_at.',
         );
     }
 
@@ -424,8 +430,11 @@ export const updateMemoryHandler = async (
     const result = await updateMemory(adapterResult.value, memorySerializer, input.path, {
         content: input.content,
         tags: input.tags,
-        expiresAt: input.expires_at ? new Date(input.expires_at) : undefined,
-        clearExpiry: input.clear_expiry,
+        expiresAt: input.expires_at === null
+            ? null
+            : input.expires_at
+              ? new Date(input.expires_at)
+              : undefined,
     });
 
     if (!result.ok) {
