@@ -32,6 +32,7 @@ export {
     moveMemoryInputSchema,
     listMemoriesInputSchema,
     pruneMemoriesInputSchema,
+    getRecentMemoriesInputSchema,
     // Types
     type AddMemoryInput,
     type GetMemoryInput,
@@ -40,6 +41,7 @@ export {
     type MoveMemoryInput,
     type ListMemoriesInput,
     type PruneMemoriesInput,
+    type GetRecentMemoriesInput,
     // Handlers for testing
     addMemoryHandler,
     getMemoryHandler,
@@ -48,6 +50,7 @@ export {
     moveMemoryHandler,
     listMemoriesHandler,
     pruneMemoriesHandler,
+    getRecentMemoriesHandler,
 } from './tools.ts';
 
 export { registerMemoryResources } from './resources.ts';

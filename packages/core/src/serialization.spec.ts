@@ -667,6 +667,40 @@ describe('parseIndex()', () => {
         }
     });
 
+    it('should parse index with optional updatedAt field', () => {
+        const raw = [
+            'memories:',
+            '  - path: working/preferences',
+            '    token_estimate: 100',
+            '    updated_at: 2024-01-15T10:30:00.000Z',
+            'subcategories: []',
+        ].join('\n');
+
+        const result = parseIndex(raw);
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value.memories[0]?.updatedAt).toBeInstanceOf(Date);
+            expect(result.value.memories[0]?.updatedAt?.toISOString()).toBe('2024-01-15T10:30:00.000Z');
+        }
+    });
+
+    it('should parse index without updatedAt field (backward compatibility)', () => {
+        const raw = [
+            'memories:',
+            '  - path: working/notes',
+            '    token_estimate: 50',
+            'subcategories: []',
+        ].join('\n');
+
+        const result = parseIndex(raw);
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value.memories[0]?.updatedAt).toBeUndefined();
+        }
+    });
+
     it('should return VALIDATION_FAILED for missing memories field', () => {
         const raw = [
             'subcategories:',
@@ -871,6 +905,37 @@ describe('serializeIndex()', () => {
         if (result.ok) {
             expect(result.value).not.toContain('summary:');
             expect(result.value).not.toContain('description:');
+            expect(result.value).not.toContain('updated_at:');
+        }
+    });
+
+    it('should serialize with updatedAt field present', () => {
+        const testDate = new Date('2024-01-15T10:30:00.000Z');
+        const index: CategoryIndex = {
+            memories: [{ path: 'working/notes', tokenEstimate: 50, updatedAt: testDate }],
+            subcategories: [],
+        };
+
+        const result = serializeIndex(index);
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value).toContain('updated_at: 2024-01-15T10:30:00.000Z');
+            expect(result.value).not.toContain('updatedAt');
+        }
+    });
+
+    it('should serialize without updatedAt field when absent', () => {
+        const index: CategoryIndex = {
+            memories: [{ path: 'working/notes', tokenEstimate: 50 }],
+            subcategories: [],
+        };
+
+        const result = serializeIndex(index);
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value).not.toContain('updated_at:');
         }
     });
 
@@ -962,6 +1027,54 @@ describe('serializeIndex()', () => {
                 { path: 'y', memoryCount: 20 },
                 { path: 'z', memoryCount: 30, description: 'Category Z' },
             ],
+        };
+
+        const serialized = serializeIndex(originalIndex);
+        expect(serialized.ok).toBe(true);
+        if (!serialized.ok) {
+            return;
+        }
+
+        const parsed = parseIndex(serialized.value);
+        expect(parsed.ok).toBe(true);
+        if (parsed.ok) {
+            expect(parsed.value).toEqual(originalIndex);
+        }
+    });
+
+    it('should round-trip with updatedAt field present', () => {
+        const testDate = new Date('2024-01-15T10:30:00.000Z');
+        const originalIndex: CategoryIndex = {
+            memories: [
+                { path: 'recent/note', tokenEstimate: 100, updatedAt: testDate },
+                { path: 'old/note', tokenEstimate: 50 },
+            ],
+            subcategories: [],
+        };
+
+        const serialized = serializeIndex(originalIndex);
+        expect(serialized.ok).toBe(true);
+        if (!serialized.ok) {
+            return;
+        }
+
+        const parsed = parseIndex(serialized.value);
+        expect(parsed.ok).toBe(true);
+        if (parsed.ok) {
+            expect(parsed.value).toEqual(originalIndex);
+        }
+    });
+
+    it('should round-trip with mixed updatedAt presence', () => {
+        const date1 = new Date('2024-01-15T10:30:00.000Z');
+        const date2 = new Date('2024-02-20T14:45:00.000Z');
+        const originalIndex: CategoryIndex = {
+            memories: [
+                { path: 'a', tokenEstimate: 1, updatedAt: date1 },
+                { path: 'b', tokenEstimate: 2 },
+                { path: 'c', tokenEstimate: 3, updatedAt: date2, summary: 'Has summary' },
+            ],
+            subcategories: [],
         };
 
         const serialized = serializeIndex(originalIndex);

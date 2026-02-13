@@ -27,6 +27,7 @@ import {
     removeMemory,
     moveMemory,
     listMemories,
+    getRecentMemories,
 } from '@yeseh/cortex-core/memory';
 import { FilesystemRegistry, parseMemory, serializeMemory } from '@yeseh/cortex-storage-fs';
 import { resolveStorePath } from '@yeseh/cortex-core/store';
@@ -126,6 +127,28 @@ export const pruneMemoriesInputSchema = z.object({
 /** Schema for reindex_store tool input */
 export const reindexStoreInputSchema = z.object({
     store: storeNameSchema.describe('Store name (required)'),
+});
+
+/** Schema for get_recent_memories tool input */
+export const getRecentMemoriesInputSchema = z.object({
+    store: storeNameSchema.describe('Store name (required)'),
+    category: z
+        .string()
+        .optional()
+        .describe('Category path to scope retrieval (retrieves from all categories if omitted)'),
+    limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(100)
+        .optional()
+        .default(5)
+        .describe('Maximum number of memories to return (default: 5, max: 100)'),
+    include_expired: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe('Include expired memories'),
 });
 
 // ---------------------------------------------------------------------------
@@ -255,6 +278,14 @@ export interface PruneMemoriesInput {
 /** Input type for reindex_store tool */
 export interface ReindexStoreInput {
     store: string;
+}
+
+/** Input type for get_recent_memories tool */
+export interface GetRecentMemoriesInput {
+    store: string;
+    category?: string;
+    limit?: number;
+    include_expired?: boolean;
 }
 
 interface ToolContext {
@@ -600,6 +631,7 @@ export const listMemoriesHandler = async (
             summary: m.summary,
             expires_at: m.expiresAt?.toISOString(),
             is_expired: m.isExpired,
+            updated_at: m.updatedAt?.toISOString(),
         })),
         subcategories: listResult.subcategories.map((s) => ({
             path: s.path,
@@ -709,6 +741,55 @@ export const reindexStoreHandler = async (
     };
 };
 
+/**
+ * Retrieves the N most recently updated memories across a store or category.
+ *
+ * Returns memories sorted by updatedAt descending (newest first), with full
+ * content included. Useful for showing recent activity or context to agents.
+ *
+ * @param ctx - Tool context containing server configuration
+ * @param input - Input containing store, optional category, limit, and include_expired
+ * @returns MCP response with category, count, and memories array
+ * @throws {McpError} When store resolution fails (InvalidParams) or
+ *                    retrieval operation errors (InternalError)
+ */
+export const getRecentMemoriesHandler = async (
+    ctx: ToolContext,
+    input: GetRecentMemoriesInput,
+): Promise<McpToolResponse> => {
+    const adapterResult = await resolveStoreAdapter(ctx.config, input.store, false);
+    if (!adapterResult.ok) {
+        throw adapterResult.error;
+    }
+
+    const result = await getRecentMemories(adapterResult.value, memorySerializer, {
+        category: input.category,
+        limit: input.limit,
+        includeExpired: input.include_expired,
+    });
+
+    if (!result.ok) {
+        throw translateMemoryError(result.error);
+    }
+
+    const recentResult = result.value;
+    const output = {
+        category: recentResult.category,
+        count: recentResult.count,
+        memories: recentResult.memories.map((m) => ({
+            path: m.path,
+            content: m.content,
+            updated_at: m.updatedAt?.toISOString() ?? null,
+            token_estimate: m.tokenEstimate,
+            tags: m.tags,
+        })),
+    };
+
+    return {
+        content: [{ type: 'text', text: JSON.stringify(output, null, 2) }],
+    };
+};
+
 // ---------------------------------------------------------------------------
 // Tool Registration
 // ---------------------------------------------------------------------------
@@ -804,6 +885,17 @@ export const registerMemoryTools = (server: McpServer, config: ServerConfig): vo
         async (input) => {
             const parsed = parseInput(reindexStoreInputSchema, input);
             return reindexStoreHandler(ctx, parsed);
+        },
+    );
+
+    // cortex_get_recent_memories
+    server.tool(
+        'cortex_get_recent_memories',
+        'Retrieve the N most recently updated memories across a store or category',
+        getRecentMemoriesInputSchema.shape,
+        async (input) => {
+            const parsed = parseInput(getRecentMemoriesInputSchema, input);
+            return getRecentMemoriesHandler(ctx, parsed);
         },
     );
 };

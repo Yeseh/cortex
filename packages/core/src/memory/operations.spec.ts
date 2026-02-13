@@ -23,6 +23,7 @@ import {
     removeMemory,
     listMemories,
     pruneExpiredMemories,
+    getRecentMemories,
     type MemorySerializer,
 } from './operations.ts';
 
@@ -1450,3 +1451,505 @@ subcategories: []`);
         }
     });
 });
+
+describe('getRecentMemories', () => {
+    it('should retrieve recent memories store-wide sorted by updatedAt', async () => {
+        const memoryFiles: Record<string, string> = {
+            'project/memory1': `---
+created_at: 2025-01-01T10:00:00.000Z
+updated_at: 2025-01-03T10:00:00.000Z
+tags: [project]
+source: test
+---
+Memory 1 content`,
+            'project/memory2': `---
+created_at: 2025-01-01T10:00:00.000Z
+updated_at: 2025-01-05T10:00:00.000Z
+tags: [project]
+source: test
+---
+Memory 2 content`,
+            'notes/note1': `---
+created_at: 2025-01-01T10:00:00.000Z
+updated_at: 2025-01-04T10:00:00.000Z
+tags: [notes]
+source: test
+---
+Note 1 content`,
+        };
+
+        const storage = createMockStorage({
+            memories: {
+                read: async (path: string) => ok(memoryFiles[path] ?? null),
+            },
+            indexes: {
+                read: async (name: string) => {
+                    if (name === '') {
+                        return ok(`memories: []
+subcategories:
+  - path: project
+    memory_count: 2
+  - path: notes
+    memory_count: 1`);
+                    }
+                    if (name === 'project') {
+                        return ok(`memories:
+  - path: project/memory1
+    token_estimate: 50
+    updated_at: 2025-01-03T10:00:00.000Z
+  - path: project/memory2
+    token_estimate: 60
+    updated_at: 2025-01-05T10:00:00.000Z
+subcategories: []`);
+                    }
+                    if (name === 'notes') {
+                        return ok(`memories:
+  - path: notes/note1
+    token_estimate: 40
+    updated_at: 2025-01-04T10:00:00.000Z
+subcategories: []`);
+                    }
+                    return ok(null);
+                },
+            },
+        });
+
+        const result = await getRecentMemories(storage, mockSerializer, { limit: 3 });
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value.category).toBe('all');
+            expect(result.value.count).toBe(3);
+            expect(result.value.memories).toHaveLength(3);
+            // Should be sorted by updatedAt descending
+            expect(result.value.memories[0]?.path).toBe('project/memory2');
+            expect(result.value.memories[1]?.path).toBe('notes/note1');
+            expect(result.value.memories[2]?.path).toBe('project/memory1');
+            // Check content is present
+            expect(result.value.memories[0]?.content).toContain('Memory 2 content');
+        }
+    });
+
+    it('should retrieve recent memories from a specific category', async () => {
+        const memoryFiles: Record<string, string> = {
+            'project/cortex/memory1': `---
+created_at: 2025-01-01T10:00:00.000Z
+updated_at: 2025-01-03T10:00:00.000Z
+tags: [cortex]
+source: test
+---
+Cortex memory 1`,
+            'project/cortex/memory2': `---
+created_at: 2025-01-01T10:00:00.000Z
+updated_at: 2025-01-05T10:00:00.000Z
+tags: [cortex]
+source: test
+---
+Cortex memory 2`,
+        };
+
+        const storage = createMockStorage({
+            memories: {
+                read: async (path: string) => ok(memoryFiles[path] ?? null),
+            },
+            indexes: {
+                read: async (name: string) => {
+                    if (name === 'project/cortex') {
+                        return ok(`memories:
+  - path: project/cortex/memory1
+    token_estimate: 50
+    updated_at: 2025-01-03T10:00:00.000Z
+  - path: project/cortex/memory2
+    token_estimate: 60
+    updated_at: 2025-01-05T10:00:00.000Z
+subcategories: []`);
+                    }
+                    return ok(null);
+                },
+            },
+        });
+
+        const result = await getRecentMemories(storage, mockSerializer, {
+            category: 'project/cortex',
+        });
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value.category).toBe('project/cortex');
+            expect(result.value.count).toBe(2);
+            expect(result.value.memories[0]?.path).toBe('project/cortex/memory2');
+            expect(result.value.memories[1]?.path).toBe('project/cortex/memory1');
+        }
+    });
+
+    it('should respect custom limit', async () => {
+        const memoryFiles: Record<string, string> = {
+            'notes/note1': `---
+created_at: 2025-01-01T10:00:00.000Z
+updated_at: 2025-01-01T10:00:00.000Z
+tags: []
+source: test
+---
+Note 1`,
+            'notes/note2': `---
+created_at: 2025-01-01T10:00:00.000Z
+updated_at: 2025-01-02T10:00:00.000Z
+tags: []
+source: test
+---
+Note 2`,
+            'notes/note3': `---
+created_at: 2025-01-01T10:00:00.000Z
+updated_at: 2025-01-03T10:00:00.000Z
+tags: []
+source: test
+---
+Note 3`,
+        };
+
+        const storage = createMockStorage({
+            memories: {
+                read: async (path: string) => ok(memoryFiles[path] ?? null),
+            },
+            indexes: {
+                read: async (name: string) => {
+                    if (name === '') {
+                        return ok(`memories: []
+subcategories:
+  - path: notes
+    memory_count: 3`);
+                    }
+                    if (name === 'notes') {
+                        return ok(`memories:
+  - path: notes/note1
+    token_estimate: 10
+    updated_at: 2025-01-01T10:00:00.000Z
+  - path: notes/note2
+    token_estimate: 10
+    updated_at: 2025-01-02T10:00:00.000Z
+  - path: notes/note3
+    token_estimate: 10
+    updated_at: 2025-01-03T10:00:00.000Z
+subcategories: []`);
+                    }
+                    return ok(null);
+                },
+            },
+        });
+
+        const result = await getRecentMemories(storage, mockSerializer, { limit: 2 });
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value.count).toBe(2);
+            expect(result.value.memories).toHaveLength(2);
+            expect(result.value.memories[0]?.path).toBe('notes/note3');
+            expect(result.value.memories[1]?.path).toBe('notes/note2');
+        }
+    });
+
+    it('should handle fewer memories than limit', async () => {
+        const memoryFiles: Record<string, string> = {
+            'notes/note1': `---
+created_at: 2025-01-01T10:00:00.000Z
+updated_at: 2025-01-01T10:00:00.000Z
+tags: []
+source: test
+---
+Note 1`,
+        };
+
+        const storage = createMockStorage({
+            memories: {
+                read: async (path: string) => ok(memoryFiles[path] ?? null),
+            },
+            indexes: {
+                read: async (name: string) => {
+                    if (name === '') {
+                        return ok(`memories: []
+subcategories:
+  - path: notes
+    memory_count: 1`);
+                    }
+                    if (name === 'notes') {
+                        return ok(`memories:
+  - path: notes/note1
+    token_estimate: 10
+    updated_at: 2025-01-01T10:00:00.000Z
+subcategories: []`);
+                    }
+                    return ok(null);
+                },
+            },
+        });
+
+        const result = await getRecentMemories(storage, mockSerializer, { limit: 10 });
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value.count).toBe(1);
+            expect(result.value.memories).toHaveLength(1);
+        }
+    });
+
+    it('should return empty result for empty store', async () => {
+        const storage = createMockStorage({
+            indexes: {
+                read: async () => ok(null),
+            },
+        });
+
+        const result = await getRecentMemories(storage, mockSerializer);
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value.category).toBe('all');
+            expect(result.value.count).toBe(0);
+            expect(result.value.memories).toHaveLength(0);
+        }
+    });
+
+    it('should filter expired memories by default', async () => {
+        const memoryFiles: Record<string, string> = {
+            'notes/active': `---
+created_at: 2025-01-01T10:00:00.000Z
+updated_at: 2025-01-05T10:00:00.000Z
+tags: []
+source: test
+---
+Active note`,
+            'notes/expired': `---
+created_at: 2025-01-01T10:00:00.000Z
+updated_at: 2025-01-03T10:00:00.000Z
+tags: []
+source: test
+expires_at: 2025-01-02T10:00:00.000Z
+---
+Expired note`,
+        };
+
+        const storage = createMockStorage({
+            memories: {
+                read: async (path: string) => ok(memoryFiles[path] ?? null),
+            },
+            indexes: {
+                read: async (name: string) => {
+                    if (name === '') {
+                        return ok(`memories: []
+subcategories:
+  - path: notes
+    memory_count: 2`);
+                    }
+                    if (name === 'notes') {
+                        return ok(`memories:
+  - path: notes/active
+    token_estimate: 10
+    updated_at: 2025-01-05T10:00:00.000Z
+  - path: notes/expired
+    token_estimate: 10
+    updated_at: 2025-01-03T10:00:00.000Z
+subcategories: []`);
+                    }
+                    return ok(null);
+                },
+            },
+        });
+
+        const now = new Date('2025-01-10T10:00:00.000Z');
+        const result = await getRecentMemories(storage, mockSerializer, { now });
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value.count).toBe(1);
+            expect(result.value.memories[0]?.path).toBe('notes/active');
+        }
+    });
+
+    it('should include expired memories when requested', async () => {
+        const memoryFiles: Record<string, string> = {
+            'notes/active': `---
+created_at: 2025-01-01T10:00:00.000Z
+updated_at: 2025-01-05T10:00:00.000Z
+tags: []
+source: test
+---
+Active note`,
+            'notes/expired': `---
+created_at: 2025-01-01T10:00:00.000Z
+updated_at: 2025-01-03T10:00:00.000Z
+tags: []
+source: test
+expires_at: 2025-01-02T10:00:00.000Z
+---
+Expired note`,
+        };
+
+        const storage = createMockStorage({
+            memories: {
+                read: async (path: string) => ok(memoryFiles[path] ?? null),
+            },
+            indexes: {
+                read: async (name: string) => {
+                    if (name === '') {
+                        return ok(`memories: []
+subcategories:
+  - path: notes
+    memory_count: 2`);
+                    }
+                    if (name === 'notes') {
+                        return ok(`memories:
+  - path: notes/active
+    token_estimate: 10
+    updated_at: 2025-01-05T10:00:00.000Z
+  - path: notes/expired
+    token_estimate: 10
+    updated_at: 2025-01-03T10:00:00.000Z
+subcategories: []`);
+                    }
+                    return ok(null);
+                },
+            },
+        });
+
+        const now = new Date('2025-01-10T10:00:00.000Z');
+        const result = await getRecentMemories(storage, mockSerializer, {
+            now,
+            includeExpired: true,
+        });
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value.count).toBe(2);
+            expect(result.value.memories[0]?.path).toBe('notes/active');
+            expect(result.value.memories[1]?.path).toBe('notes/expired');
+        }
+    });
+
+    it('should sort stale index entries (missing updatedAt) last', async () => {
+        const memoryFiles: Record<string, string> = {
+            'notes/recent': `---
+created_at: 2025-01-01T10:00:00.000Z
+updated_at: 2025-01-05T10:00:00.000Z
+tags: []
+source: test
+---
+Recent note`,
+            'notes/stale': `---
+created_at: 2025-01-01T10:00:00.000Z
+updated_at: 2025-01-03T10:00:00.000Z
+tags: []
+source: test
+---
+Stale note`,
+            'notes/middle': `---
+created_at: 2025-01-01T10:00:00.000Z
+updated_at: 2025-01-04T10:00:00.000Z
+tags: []
+source: test
+---
+Middle note`,
+        };
+
+        const storage = createMockStorage({
+            memories: {
+                read: async (path: string) => ok(memoryFiles[path] ?? null),
+            },
+            indexes: {
+                read: async (name: string) => {
+                    if (name === '') {
+                        return ok(`memories: []
+subcategories:
+  - path: notes
+    memory_count: 3`);
+                    }
+                    if (name === 'notes') {
+                        // Note: 'stale' entry is missing updated_at
+                        return ok(`memories:
+  - path: notes/recent
+    token_estimate: 10
+    updated_at: 2025-01-05T10:00:00.000Z
+  - path: notes/stale
+    token_estimate: 10
+  - path: notes/middle
+    token_estimate: 10
+    updated_at: 2025-01-04T10:00:00.000Z
+subcategories: []`);
+                    }
+                    return ok(null);
+                },
+            },
+        });
+
+        const result = await getRecentMemories(storage, mockSerializer, { limit: 10 });
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value.count).toBe(3);
+            expect(result.value.memories).toHaveLength(3);
+            // Stale entry (missing updatedAt) should be last
+            expect(result.value.memories[0]?.path).toBe('notes/recent');
+            expect(result.value.memories[1]?.path).toBe('notes/middle');
+            expect(result.value.memories[2]?.path).toBe('notes/stale');
+            expect(result.value.memories[2]?.updatedAt).toBe(null);
+        }
+    });
+
+    it('should handle recursive category traversal', async () => {
+        const memoryFiles: Record<string, string> = {
+            'project/cortex/deep/memory1': `---
+created_at: 2025-01-01T10:00:00.000Z
+updated_at: 2025-01-05T10:00:00.000Z
+tags: []
+source: test
+---
+Deep memory`,
+            'project/cortex/memory2': `---
+created_at: 2025-01-01T10:00:00.000Z
+updated_at: 2025-01-04T10:00:00.000Z
+tags: []
+source: test
+---
+Shallow memory`,
+        };
+
+        const storage = createMockStorage({
+            memories: {
+                read: async (path: string) => ok(memoryFiles[path] ?? null),
+            },
+            indexes: {
+                read: async (name: string) => {
+                    if (name === 'project/cortex') {
+                        return ok(`memories:
+  - path: project/cortex/memory2
+    token_estimate: 20
+    updated_at: 2025-01-04T10:00:00.000Z
+subcategories:
+  - path: project/cortex/deep
+    memory_count: 1`);
+                    }
+                    if (name === 'project/cortex/deep') {
+                        return ok(`memories:
+  - path: project/cortex/deep/memory1
+    token_estimate: 20
+    updated_at: 2025-01-05T10:00:00.000Z
+subcategories: []`);
+                    }
+                    return ok(null);
+                },
+            },
+        });
+
+        const result = await getRecentMemories(storage, mockSerializer, {
+            category: 'project/cortex',
+        });
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value.count).toBe(2);
+            // Deep memory is more recent
+            expect(result.value.memories[0]?.path).toBe('project/cortex/deep/memory1');
+            expect(result.value.memories[1]?.path).toBe('project/cortex/memory2');
+        }
+    });
+});
+
