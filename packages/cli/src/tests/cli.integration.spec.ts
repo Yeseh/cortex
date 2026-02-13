@@ -619,7 +619,7 @@ describe('Cortex CLI Integration Tests', () => {
             expect(content).toContain('2030-01-01');
         });
 
-        it('should clear expiry date with --clear-expiry', async () => {
+        it('should clear expiry date with --no-expires-at', async () => {
             // First set an expiry
             await createMemoryFile(storeDir, 'project/with-expiry', {
                 content: 'Has expiry.',
@@ -631,7 +631,7 @@ describe('Cortex CLI Integration Tests', () => {
                     'memory',
                     'update',
                     'project/with-expiry',
-                    '--clear-expiry',
+                    '--no-expires-at',
                 ],
                 {
                     cwd: testProject,
@@ -671,22 +671,6 @@ describe('Cortex CLI Integration Tests', () => {
 
             expect(result.exitCode).toBe(1);
             expect(result.stderr.toLowerCase()).toContain('no update');
-        });
-
-        it('should fail when both --expires-at and --clear-expiry are used', async () => {
-            const result = await runCortexCli(
-                [
-                    'memory',
-                    'update',
-                    'project/updatable',
-                    '--expires-at',
-                    '2030-01-01T00:00:00.000Z',
-                    '--clear-expiry',
-                ],
-                { cwd: testProject },
-            );
-
-            expect(result.exitCode).toBe(1);
         });
 
         it('should update content from file', async () => {

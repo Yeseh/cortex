@@ -511,18 +511,33 @@ describe('updateMemory', () => {
         }
     });
 
-    it('should clear expiry with clearExpiry=true', async () => {
+    it('should clear expiry with expiresAt=null', async () => {
         const storage = createMockStorage({
             memories: {
                 read: async () => ok(expiredMemoryContent),
             },
         });
         const result = await updateMemory(storage, mockSerializer, 'project/test/memory', {
-            clearExpiry: true,
+            expiresAt: null,
         });
         expect(result.ok).toBe(true);
         if (result.ok) {
             expect(result.value.metadata.expiresAt).toBeUndefined();
+        }
+    });
+
+    it('should preserve existing expiry when expiresAt is omitted', async () => {
+        const storage = createMockStorage({
+            memories: {
+                read: async () => ok(expiredMemoryContent),
+            },
+        });
+        const result = await updateMemory(storage, mockSerializer, 'project/test/memory', {
+            content: 'Updated content only',
+        });
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value.metadata.expiresAt).toBeDefined();
         }
     });
 

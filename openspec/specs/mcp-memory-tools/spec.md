@@ -63,7 +63,7 @@ The MCP server SHALL provide an `update_memory` tool that modifies memory conten
 
 #### Scenario: Clearing expiry
 
-- **WHEN** an agent calls `update_memory` with `clear_expiry: true`
+- **WHEN** an agent calls `update_memory` with `expires_at: null`
 - **THEN** the expiry date is removed from the memory
 
 ### Requirement: Remove memory tool
