@@ -196,6 +196,7 @@ Example: `feat(core): add new caching mechanism for improved performance`
 ## Using memory
 
 When interacting with the memory system use `cortex` as the project store.
+Start every session by retrieving the most recent memories from the `cortex` store to build context, and save new memories back to it as you work.
 
 ### Memory stores
 

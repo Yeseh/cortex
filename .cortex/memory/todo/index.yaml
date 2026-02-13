@@ -1,6 +1,9 @@
 memories:
   - path: todo/fix-prune-reindex-consistency
     token_estimate: 144
+  - path: todo/refactor-index-storage-structured
+    token_estimate: 373
+    updated_at: 2026-02-13T21:47:02.743Z
   - path: todo/remove-clear-expiry-flag
     token_estimate: 130
 subcategories: []

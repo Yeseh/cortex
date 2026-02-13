@@ -5,4 +5,7 @@ memories:
     token_estimate: 378
   - path: features/get-recent-memories
     token_estimate: 210
+  - path: features/sqlite-derived-index
+    token_estimate: 428
+    updated_at: 2026-02-13T21:47:14.829Z
 subcategories: []
