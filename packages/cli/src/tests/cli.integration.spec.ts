@@ -135,6 +135,7 @@ const createMemoryFile = async (
             tags,
             source: 'user',
             expiresAt: options.expiresAt,
+            citations: [],
         },
         content,
     };

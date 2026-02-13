@@ -36,6 +36,7 @@ export interface AddCommandOptions {
     file?: string;
     tags?: string;
     expiresAt?: string;
+    citation?: string[];
 }
 
 /** Dependencies injected into the handler for testability */
@@ -60,7 +61,7 @@ export async function handleAdd(
     path: string,
     options: AddCommandOptions,
     storeName: string | undefined,
-    deps: AddHandlerDeps = {}
+    deps: AddHandlerDeps = {},
 ): Promise<void> {
     // 1. Resolve store context and adapter
     const storeResult = await resolveStoreAdapter(storeName);
@@ -98,6 +99,9 @@ export async function handleAdd(
         mapCoreError({ code: 'INVALID_ARGUMENTS', message: 'Invalid expiration date format' });
     }
 
+    // Get citations from options
+    const citations = options.citation ?? [];
+
     // 5. Build memory file contents
     const now = deps.now ?? new Date();
     const memory: Memory = {
@@ -107,6 +111,7 @@ export async function handleAdd(
             tags,
             source: contentResult.value.source,
             expiresAt,
+            citations,
         },
         content: contentResult.value.content ?? '',
     };
@@ -130,7 +135,7 @@ export async function handleAdd(
     const indexResult = await adapter.indexes.updateAfterMemoryWrite(
         pathResult.value.slugPath,
         serialized.value,
-        { createWhenMissing: true }
+        { createWhenMissing: true },
     );
     if (!indexResult.ok) {
         mapCoreError({ code: 'STORAGE_ERROR', message: indexResult.error.message });
@@ -158,6 +163,7 @@ export const addCommand = new Command('add')
     .option('-f, --file <filepath>', 'Read content from a file')
     .option('-t, --tags <tags>', 'Comma-separated tags')
     .option('-e, --expires-at <date>', 'Expiration date (ISO 8601)')
+    .option('--citation <value...>', 'Citation references (file paths or URLs)')
     .action(async (path, options, command) => {
         const parentOpts = command.parent?.opts() as { store?: string } | undefined;
         await handleAdd(path, options, parentOpts?.store);
