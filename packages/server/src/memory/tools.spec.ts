@@ -39,7 +39,6 @@ import {
 } from './tools.ts';
 import { FilesystemStorageAdapter, serializeMemory } from '@yeseh/cortex-storage-fs';
 import type { Memory } from '@yeseh/cortex-core/memory';
-import { serializeIndex } from '@yeseh/cortex-core';
 import { serializeStoreRegistry } from '@yeseh/cortex-core/store';
 import { MEMORY_SUBDIR } from '../config.ts';
 
@@ -749,17 +748,13 @@ describe('cortex_list_memories tool', () => {
         const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
 
         // Write an index with a described subcategory
-        const indexContent = serializeIndex({
+        await adapter.writeIndexFile('project', {
             memories: [],
             subcategories: [
                 { path: 'project/cortex', memoryCount: 0, description: 'Cortex memory system' },
                 { path: 'project/other', memoryCount: 0 },
             ],
         });
-        expect(indexContent.ok).toBe(true);
-        if (indexContent.ok) {
-            await adapter.writeIndexFile('project', indexContent.value);
-        }
 
         const input: ListMemoriesInput = {
             store: 'default',

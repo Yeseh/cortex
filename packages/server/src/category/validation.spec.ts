@@ -110,9 +110,11 @@ describe('Category Descriptions Validation', () => {
 
             expect(indexResult.ok).toBe(true);
             if (indexResult.ok && indexResult.value) {
-                // Parse the YAML to check the description
-                expect(indexResult.value).toContain('domain');
-                expect(indexResult.value).toContain('Domain knowledge');
+                const entry = indexResult.value.subcategories.find(
+                    (subcategory) => subcategory.path === 'domain',
+                );
+                expect(entry).toBeDefined();
+                expect(entry?.description).toBe('Domain knowledge');
             }
         });
 
@@ -267,7 +269,7 @@ describe('Category Descriptions Validation', () => {
             // Verify directory still exists using the adapter
             const storeRoot = join(testDir, 'memory');
             const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
-            const existsResult = await adapter.categoryExists('project/persist');
+            const existsResult = await adapter.categories.exists('project/persist');
 
             expect(existsResult.ok).toBe(true);
             if (existsResult.ok) {
@@ -487,9 +489,9 @@ describe('Category Descriptions Validation', () => {
             const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
 
             // Verify all exist before delete
-            const beforeParent = await adapter.categoryExists('project/parent');
-            const beforeChild = await adapter.categoryExists('project/parent/child');
-            const beforeGrandchild = await adapter.categoryExists(
+            const beforeParent = await adapter.categories.exists('project/parent');
+            const beforeChild = await adapter.categories.exists('project/parent/child');
+            const beforeGrandchild = await adapter.categories.exists(
                 'project/parent/child/grandchild',
             );
             expect(beforeParent.ok && beforeParent.value).toBe(true);
@@ -505,9 +507,9 @@ describe('Category Descriptions Validation', () => {
             expect(output.deleted).toBe(true);
 
             // Verify all are deleted from filesystem
-            const afterParent = await adapter.categoryExists('project/parent');
-            const afterChild = await adapter.categoryExists('project/parent/child');
-            const afterGrandchild = await adapter.categoryExists('project/parent/child/grandchild');
+            const afterParent = await adapter.categories.exists('project/parent');
+            const afterChild = await adapter.categories.exists('project/parent/child');
+            const afterGrandchild = await adapter.categories.exists('project/parent/child/grandchild');
             expect(afterParent.ok && afterParent.value).toBe(false);
             expect(afterChild.ok && afterChild.value).toBe(false);
             expect(afterGrandchild.ok && afterGrandchild.value).toBe(false);
@@ -532,7 +534,7 @@ describe('Category Descriptions Validation', () => {
             const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
 
             // Verify category exists before delete
-            const beforeResult = await adapter.categoryExists('project/with-memories');
+            const beforeResult = await adapter.categories.exists('project/with-memories');
             expect(beforeResult.ok && beforeResult.value).toBe(true);
 
             // Delete category
@@ -544,7 +546,7 @@ describe('Category Descriptions Validation', () => {
             expect(output.deleted).toBe(true);
 
             // Verify category is gone from filesystem
-            const afterResult = await adapter.categoryExists('project/with-memories');
+            const afterResult = await adapter.categories.exists('project/with-memories');
             expect(afterResult.ok && afterResult.value).toBe(false);
 
             // Verify memories are also gone
@@ -577,9 +579,9 @@ describe('Category Descriptions Validation', () => {
             const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
 
             // Verify everything exists before delete
-            const beforeComplex = await adapter.categoryExists('project/complex');
-            const beforeSub1 = await adapter.categoryExists('project/complex/sub1');
-            const beforeSub2 = await adapter.categoryExists('project/complex/sub2');
+            const beforeComplex = await adapter.categories.exists('project/complex');
+            const beforeSub1 = await adapter.categories.exists('project/complex/sub1');
+            const beforeSub2 = await adapter.categories.exists('project/complex/sub2');
             expect(beforeComplex.ok && beforeComplex.value).toBe(true);
             expect(beforeSub1.ok && beforeSub1.value).toBe(true);
             expect(beforeSub2.ok && beforeSub2.value).toBe(true);
@@ -593,9 +595,9 @@ describe('Category Descriptions Validation', () => {
             expect(output.deleted).toBe(true);
 
             // All should be gone from filesystem
-            const afterComplex = await adapter.categoryExists('project/complex');
-            const afterSub1 = await adapter.categoryExists('project/complex/sub1');
-            const afterSub2 = await adapter.categoryExists('project/complex/sub2');
+            const afterComplex = await adapter.categories.exists('project/complex');
+            const afterSub1 = await adapter.categories.exists('project/complex/sub1');
+            const afterSub2 = await adapter.categories.exists('project/complex/sub2');
             expect(afterComplex.ok && afterComplex.value).toBe(false);
             expect(afterSub1.ok && afterSub1.value).toBe(false);
             expect(afterSub2.ok && afterSub2.value).toBe(false);
@@ -652,7 +654,7 @@ describe('Category Descriptions Validation', () => {
             const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
 
             // Verify it exists
-            const beforeResult = await adapter.categoryExists('project/todelete');
+            const beforeResult = await adapter.categories.exists('project/todelete');
             expect(beforeResult.ok).toBe(true);
             if (beforeResult.ok) {
                 expect(beforeResult.value).toBe(true);
@@ -662,7 +664,7 @@ describe('Category Descriptions Validation', () => {
             await deleteCategoryHandler({ config }, { store: STORE, path: 'project/todelete' });
 
             // Verify it's gone
-            const afterResult = await adapter.categoryExists('project/todelete');
+            const afterResult = await adapter.categories.exists('project/todelete');
             expect(afterResult.ok).toBe(true);
             if (afterResult.ok) {
                 expect(afterResult.value).toBe(false);

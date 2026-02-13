@@ -21,7 +21,6 @@ import type {
 } from '@modelcontextprotocol/sdk/types.js';
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 import type { Result } from '@yeseh/cortex-core';
-import { parseIndex } from '@yeseh/cortex-core';
 import { validateMemorySlugPath } from '@yeseh/cortex-core/memory';
 import { parseMemory, FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
@@ -32,10 +31,11 @@ import type { ServerConfig } from '../config.ts';
 // ---------------------------------------------------------------------------
 
 /**
- * Root memory categories used for listing operations.
+ * Root memory categories used as a fallback for listing operations.
  *
- * These are the top-level categories in the memory hierarchy that are
- * enumerated when listing resources or providing path completions.
+ * These are the historical top-level categories in the memory hierarchy.
+ * They are only used when the root index is missing or unreadable, to
+ * preserve existing behavior for root listings and resource discovery.
  */
 const ROOT_CATEGORIES = [
     'human',
@@ -415,26 +415,15 @@ const readCategoryListing = async (
         );
     }
 
-    // Parse the category index
-    const parsed = parseIndex(indexResult.value);
-    if (!parsed.ok) {
-        return err(
-            new McpError(
-                ErrorCode.InternalError,
-                `Failed to parse category index: ${parsed.error.message}`,
-            ),
-        );
-    }
-
     const listing: CategoryListing = {
         category: categoryPath,
-        memories: parsed.value.memories.map((memory) => ({
+        memories: indexResult.value.memories.map((memory) => ({
             path: memory.path,
             uri: buildResourceUri(store, memory.path, false),
             tokenEstimate: memory.tokenEstimate,
             summary: memory.summary,
         })),
-        subcategories: parsed.value.subcategories.map((sub) => ({
+        subcategories: indexResult.value.subcategories.map((sub) => ({
             path: sub.path,
             uri: buildResourceUri(store, sub.path, true),
             memoryCount: sub.memoryCount,
@@ -455,8 +444,9 @@ const readCategoryListing = async (
 /**
  * Reads root category listing (lists all root categories).
  *
- * Enumerates all root categories (human, persona, project, domain) and
- * returns their availability and memory counts.
+ * Enumerates root categories using the root index when available. If the
+ * root index is missing or unreadable, falls back to the default category
+ * list to preserve legacy behavior.
  *
  * @param adapter - Scoped storage adapter for index operations
  * @param store - Store name for building response URIs
@@ -468,23 +458,30 @@ const readRootCategoryListing = async (
 ): Promise<Result<ReadResourceResult, McpError>> => {
     const subcategories: CategoryListing['subcategories'] = [];
 
-    for (const category of ROOT_CATEGORIES) {
-        const indexResult = await adapter.indexes.read(category);
-        if (!indexResult.ok || !indexResult.value) {
-            // Category doesn't exist, skip it
-            continue;
+    const rootIndexResult = await adapter.indexes.read('');
+    if (rootIndexResult.ok && rootIndexResult.value) {
+        for (const sub of rootIndexResult.value.subcategories) {
+            subcategories.push({
+                path: sub.path,
+                uri: buildResourceUri(store, sub.path, true),
+                memoryCount: sub.memoryCount,
+            });
         }
+    }
+    else {
+        for (const category of ROOT_CATEGORIES) {
+            const indexResult = await adapter.indexes.read(category);
+            if (!indexResult.ok || !indexResult.value) {
+                // Category doesn't exist, skip it
+                continue;
+            }
 
-        const parsed = parseIndex(indexResult.value);
-        if (!parsed.ok) {
-            continue;
+            subcategories.push({
+                path: category,
+                uri: buildResourceUri(store, category, true),
+                memoryCount: indexResult.value.memories.length,
+            });
         }
-
-        subcategories.push({
-            path: category,
-            uri: buildResourceUri(store, category, true),
-            memoryCount: parsed.value.memories.length,
-        });
     }
 
     const listing: CategoryListing = {
@@ -508,8 +505,9 @@ const readRootCategoryListing = async (
  * Lists all available resources for MCP discovery.
  *
  * Enumerates all accessible memory resources including the root store,
- * categories, subcategories, and individual memories. Used by MCP clients
- * to discover available resources before reading them.
+ * categories, subcategories, and individual memories. Root categories are
+ * derived from the root index when available; if missing or unreadable, the
+ * default category list is used as a fallback.
  *
  * @param config - Server configuration containing data path and default store
  * @returns Result containing array of Resource objects or McpError
@@ -545,15 +543,15 @@ const listResources = async (
         mimeType: 'application/json',
     });
 
+    const rootIndexResult = await adapter.indexes.read('');
+    const rootCategories = rootIndexResult.ok && rootIndexResult.value
+        ? rootIndexResult.value.subcategories.map((sub) => sub.path)
+        : [...ROOT_CATEGORIES];
+
     // Collect resources from all root categories
-    for (const category of ROOT_CATEGORIES) {
+    for (const category of rootCategories) {
         const indexResult = await adapter.indexes.read(category);
         if (!indexResult.ok || !indexResult.value) {
-            continue;
-        }
-
-        const parsed = parseIndex(indexResult.value);
-        if (!parsed.ok) {
             continue;
         }
 
@@ -566,7 +564,7 @@ const listResources = async (
         });
 
         // Add memory resources
-        for (const memory of parsed.value.memories) {
+        for (const memory of indexResult.value.memories) {
             resources.push({
                 uri: buildResourceUri(store, memory.path, false),
                 name: `Memory: ${memory.path}`,
@@ -576,7 +574,7 @@ const listResources = async (
         }
 
         // Add subcategory resources
-        for (const sub of parsed.value.subcategories) {
+        for (const sub of indexResult.value.subcategories) {
             resources.push({
                 uri: buildResourceUri(store, sub.path, true),
                 name: `Category: ${sub.path}`,
@@ -692,21 +690,18 @@ export const registerMemoryResources = (
                     // Read the parent category index
                     const indexResult = await adapter.indexes.read(categoryPath);
                     if (indexResult.ok && indexResult.value) {
-                        const parsed = parseIndex(indexResult.value);
-                        if (parsed.ok) {
-                            // Add matching subcategories
-                            for (const sub of parsed.value.subcategories) {
-                                const subName = sub.path.split('/').pop() ?? '';
-                                if (subName.startsWith(prefix)) {
-                                    completions.push(sub.path);
-                                }
+                        // Add matching subcategories
+                        for (const sub of indexResult.value.subcategories) {
+                            const subName = sub.path.split('/').pop() ?? '';
+                            if (subName.startsWith(prefix)) {
+                                completions.push(sub.path);
                             }
-                            // Add matching memories
-                            for (const mem of parsed.value.memories) {
-                                const memName = mem.path.split('/').pop() ?? '';
-                                if (memName.startsWith(prefix)) {
-                                    completions.push(mem.path);
-                                }
+                        }
+                        // Add matching memories
+                        for (const mem of indexResult.value.memories) {
+                            const memName = mem.path.split('/').pop() ?? '';
+                            if (memName.startsWith(prefix)) {
+                                completions.push(mem.path);
                             }
                         }
                     }

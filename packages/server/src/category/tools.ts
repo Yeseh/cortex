@@ -20,7 +20,7 @@ import { join } from 'node:path';
 import type { Result } from '@yeseh/cortex-core';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
-import type { CategoryStoragePort } from '@yeseh/cortex-core/category';
+import type { CategoryStorage } from '@yeseh/cortex-core/category';
 import {
     createCategory,
     setDescription,
@@ -194,7 +194,7 @@ const resolveStoreAdapter = async (
  * @param adapter - Scoped storage adapter from registry.getStore()
  * @returns CategoryStorage implementation
  */
-const createCategoryStoragePort = (adapter: ScopedStorageAdapter): CategoryStoragePort => {
+const createCategoryStoragePort = (adapter: ScopedStorageAdapter): CategoryStorage => {
     return adapter.categories;
 };
 
