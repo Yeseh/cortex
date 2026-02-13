@@ -1,0 +1,12 @@
+memories:
+  - path: standards/architecture/patterns/interface-segregation
+    token_estimate: 286
+  - path: standards/architecture/patterns/ports-adapters
+    token_estimate: 291
+  - path: standards/architecture/patterns/storage-adapter-composition
+    token_estimate: 344
+subcategories:
+  - path: standards/architecture/patterns/core-module
+    memory_count: 3
+  - path: standards/architecture/patterns/registry-caching
+    memory_count: 2

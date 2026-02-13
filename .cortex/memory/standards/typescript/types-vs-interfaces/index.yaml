@@ -1,0 +1,8 @@
+memories:
+  - path: standards/typescript/types-vs-interfaces/examples
+    token_estimate: 67
+  - path: standards/typescript/types-vs-interfaces/rationale
+    token_estimate: 54
+  - path: standards/typescript/types-vs-interfaces/rule
+    token_estimate: 56
+subcategories: []

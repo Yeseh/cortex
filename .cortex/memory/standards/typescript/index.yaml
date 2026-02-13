@@ -3,6 +3,6 @@ memories:
     token_estimate: 155
   - path: standards/typescript/general
     token_estimate: 114
+subcategories:
   - path: standards/typescript/types-vs-interfaces
-    token_estimate: 377
-subcategories: []
+    memory_count: 3

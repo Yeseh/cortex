@@ -1,0 +1,8 @@
+memories:
+  - path: standards/entrypoints/mcp/tool-pattern/errors
+    token_estimate: 60
+  - path: standards/entrypoints/mcp/tool-pattern/handler
+    token_estimate: 53
+  - path: standards/entrypoints/mcp/tool-pattern/registration
+    token_estimate: 62
+subcategories: []

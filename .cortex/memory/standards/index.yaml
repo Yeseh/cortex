@@ -1,12 +1,8 @@
 memories:
-  - path: standards/barrel-exports
-    token_estimate: 400
   - path: standards/ci-workflows
     token_estimate: 140
   - path: standards/commits
     token_estimate: 128
-  - path: standards/cross-platform-paths
-    token_estimate: 494
   - path: standards/documentation
     token_estimate: 326
   - path: standards/frontmatter-format
@@ -21,12 +17,16 @@ subcategories:
   - path: standards/api
     memory_count: 1
   - path: standards/architecture
-    memory_count: 7
+    memory_count: 1
+  - path: standards/barrel-exports
+    memory_count: 3
   - path: standards/entrypoints
-    memory_count: 4
+    memory_count: 0
   - path: standards/errors
-    memory_count: 6
+    memory_count: 5
+  - path: standards/paths
+    memory_count: 0
   - path: standards/testing
     memory_count: 4
   - path: standards/typescript
-    memory_count: 3
+    memory_count: 2

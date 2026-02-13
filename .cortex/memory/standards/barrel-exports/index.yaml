@@ -1,0 +1,8 @@
+memories:
+  - path: standards/barrel-exports/exports-config
+    token_estimate: 59
+  - path: standards/barrel-exports/guidelines
+    token_estimate: 69
+  - path: standards/barrel-exports/rule
+    token_estimate: 57
+subcategories: []

@@ -5,4 +5,6 @@ memories:
     token_estimate: 137
   - path: map/core/files
     token_estimate: 385
+  - path: map/core/summary-index
+    token_estimate: 75
 subcategories: []

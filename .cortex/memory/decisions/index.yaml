@@ -1,36 +1,20 @@
-memories:
-  - path: decisions/cli-commander-refactor
-    token_estimate: 236
-  - path: decisions/commander-negation-pattern
-    token_estimate: 176
-  - path: decisions/dynamic-root-category-discovery
-    token_estimate: 235
-  - path: decisions/index-migration-strategy
-    token_estimate: 162
-  - path: decisions/mcp-store-parameter
-    token_estimate: 111
-  - path: decisions/registry-abstraction
-    token_estimate: 342
-  - path: decisions/registry-as-store-factory
-    token_estimate: 347
-  - path: decisions/registry-interface-rename
-    token_estimate: 340
-  - path: decisions/reindex-root-subcategories
-    token_estimate: 297
-  - path: decisions/reindex-stale-cleanup-algorithm
-    token_estimate: 230
-  - path: decisions/root-category-descriptions
-    token_estimate: 341
-  - path: decisions/scoped-storage-adapter
-    token_estimate: 288
-  - path: decisions/simple-first-optimization
-    token_estimate: 160
-  - path: decisions/split-operations-test-file
-    token_estimate: 340
-  - path: decisions/storage-abstraction-cli-server
-    token_estimate: 366
-  - path: decisions/store-init-project-support
-    token_estimate: 340
-  - path: decisions/store-list-from-registry
-    token_estimate: 247
-subcategories: []
+memories: []
+subcategories:
+  - path: decisions/architecture
+    memory_count: 1
+  - path: decisions/category
+    memory_count: 1
+  - path: decisions/cli
+    memory_count: 4
+  - path: decisions/index
+    memory_count: 3
+  - path: decisions/mcp
+    memory_count: 1
+  - path: decisions/performance
+    memory_count: 1
+  - path: decisions/registry
+    memory_count: 4
+  - path: decisions/storage
+    memory_count: 1
+  - path: decisions/testing
+    memory_count: 1

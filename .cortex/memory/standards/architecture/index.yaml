@@ -1,16 +1,8 @@
 memories:
   - path: standards/architecture/category-description-storage
     token_estimate: 352
-  - path: standards/architecture/core-module
-    token_estimate: 573
-  - path: standards/architecture/file-organization
-    token_estimate: 271
-  - path: standards/architecture/interface-segregation
-    token_estimate: 286
-  - path: standards/architecture/ports-adapters
-    token_estimate: 291
-  - path: standards/architecture/registry-caching
-    token_estimate: 405
-  - path: standards/architecture/storage-adapter-composition
-    token_estimate: 344
-subcategories: []
+subcategories:
+  - path: standards/architecture/layout
+    memory_count: 1
+  - path: standards/architecture/patterns
+    memory_count: 3

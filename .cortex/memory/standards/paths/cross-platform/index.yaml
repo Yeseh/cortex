@@ -1,0 +1,8 @@
+memories:
+  - path: standards/paths/cross-platform/examples
+    token_estimate: 57
+  - path: standards/paths/cross-platform/rule
+    token_estimate: 67
+  - path: standards/paths/cross-platform/testing
+    token_estimate: 59
+subcategories: []

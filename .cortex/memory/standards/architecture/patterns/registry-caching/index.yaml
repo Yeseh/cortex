@@ -1,0 +1,6 @@
+memories:
+  - path: standards/architecture/patterns/registry-caching/rule
+    token_estimate: 61
+  - path: standards/architecture/patterns/registry-caching/usage
+    token_estimate: 72
+subcategories: []

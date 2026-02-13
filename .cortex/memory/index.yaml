@@ -1,18 +1,18 @@
 memories: []
 subcategories:
   - path: decisions
-    memory_count: 17
+    memory_count: 0
   - path: features
     memory_count: 3
+  - path: history
+    memory_count: 0
   - path: investigations
     memory_count: 1
   - path: map
-    memory_count: 5
+    memory_count: 1
   - path: runbooks
     memory_count: 2
   - path: standards
-    memory_count: 9
+    memory_count: 7
   - path: standup
-    memory_count: 3
-  - path: todo
     memory_count: 2

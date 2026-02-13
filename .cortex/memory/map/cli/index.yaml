@@ -3,4 +3,6 @@ memories:
     token_estimate: 282
   - path: map/cli/files
     token_estimate: 381
+  - path: map/cli/summary-index
+    token_estimate: 72
 subcategories: []

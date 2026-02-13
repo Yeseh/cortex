@@ -1,0 +1,8 @@
+memories:
+  - path: decisions/index/index-migration-strategy
+    token_estimate: 162
+  - path: decisions/index/reindex-root-subcategories
+    token_estimate: 297
+  - path: decisions/index/reindex-stale-cleanup-algorithm
+    token_estimate: 236
+subcategories: []

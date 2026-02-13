@@ -1,0 +1,6 @@
+memories:
+  - path: standards/entrypoints/mcp/thin-wrapper/anti-patterns
+    token_estimate: 61
+  - path: standards/entrypoints/mcp/thin-wrapper/rule
+    token_estimate: 65
+subcategories: []

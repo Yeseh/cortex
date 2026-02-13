@@ -1,0 +1,10 @@
+memories:
+  - path: decisions/cli/commander-negation-pattern
+    token_estimate: 181
+  - path: decisions/cli/commander-refactor
+    token_estimate: 236
+  - path: decisions/cli/dynamic-root-category-discovery
+    token_estimate: 235
+  - path: decisions/cli/store-init-project-support
+    token_estimate: 340
+subcategories: []

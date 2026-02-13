@@ -1,0 +1,8 @@
+memories:
+  - path: standards/architecture/patterns/core-module/file-structure
+    token_estimate: 101
+  - path: standards/architecture/patterns/core-module/overview
+    token_estimate: 105
+  - path: standards/architecture/patterns/core-module/scaling
+    token_estimate: 85
+subcategories: []

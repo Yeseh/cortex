@@ -3,4 +3,6 @@ memories:
     token_estimate: 306
   - path: map/server/files
     token_estimate: 277
+  - path: map/server/summary-index
+    token_estimate: 73
 subcategories: []
