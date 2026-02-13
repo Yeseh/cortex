@@ -73,7 +73,8 @@ const createMockSerializer = (): MemorySerializer => ({
                     const value = match[2]!;
                     if (key === 'created_at' || key === 'updated_at' || key === 'expires_at') {
                         metadata[key] = new Date(value);
-                    } else if (key === 'tags') {
+                    }
+                    else if (key === 'tags') {
                         // Parse [tag1, tag2] format
                         const tagMatch = value.match(/^\[(.*)\]$/);
                         metadata[key] =
@@ -81,7 +82,8 @@ const createMockSerializer = (): MemorySerializer => ({
                                 ?.split(',')
                                 .map((t) => t.trim())
                                 .filter(Boolean) ?? [];
-                    } else {
+                    }
+                    else {
                         metadata[key] = value;
                     }
                 }
@@ -94,10 +96,12 @@ const createMockSerializer = (): MemorySerializer => ({
                     tags: (metadata.tags as string[]) || [],
                     source: (metadata.source as string) || 'unknown',
                     expiresAt: metadata.expires_at as Date | undefined,
+                    citations: (metadata.citations as string[]) || [],
                 },
                 content,
             });
-        } catch {
+        }
+        catch {
             return err({ code: 'INVALID_FRONTMATTER', message: 'Failed to parse' });
         }
     },
@@ -129,7 +133,7 @@ const createMockStorage = (
         indexes: Partial<IndexStorage>;
         categories: Partial<CategoryStorage>;
         stores: Partial<StoreStorage>;
-    }> = {}
+    }> = {},
 ): ComposedStorageAdapter => ({
     memories: {
         read: async () => ok(null),
@@ -214,7 +218,9 @@ describe('createMemory', () => {
 
         const result = await createMemory(storage, mockSerializer, 'project/test/memory', {
             content: 'Test content',
-            tags: ['tag1', 'tag2'],
+            tags: [
+                'tag1', 'tag2',
+            ],
             source: 'test',
         });
 
@@ -333,7 +339,7 @@ describe('createMemory', () => {
             mockSerializer,
             'project/test/memory',
             { content: 'Test', source: 'test' },
-            customTime
+            customTime,
         );
 
         expect(result.ok).toBe(true);
@@ -357,7 +363,9 @@ describe('getMemory', () => {
         expect(result.ok).toBe(true);
         if (result.ok) {
             expect(result.value.content).toContain('Sample memory content');
-            expect(result.value.metadata.tags).toEqual(['test', 'sample']);
+            expect(result.value.metadata.tags).toEqual([
+                'test', 'sample',
+            ]);
             expect(result.value.metadata.source).toBe('test');
         }
     });
@@ -474,7 +482,9 @@ describe('updateMemory', () => {
         if (result.ok) {
             expect(result.value.content).toBe('Updated content');
             // Original tags preserved
-            expect(result.value.metadata.tags).toEqual(['test', 'sample']);
+            expect(result.value.metadata.tags).toEqual([
+                'test', 'sample',
+            ]);
         }
     });
 
@@ -485,11 +495,15 @@ describe('updateMemory', () => {
             },
         });
         const result = await updateMemory(storage, mockSerializer, 'project/test/memory', {
-            tags: ['new', 'tags'],
+            tags: [
+                'new', 'tags',
+            ],
         });
         expect(result.ok).toBe(true);
         if (result.ok) {
-            expect(result.value.metadata.tags).toEqual(['new', 'tags']);
+            expect(result.value.metadata.tags).toEqual([
+                'new', 'tags',
+            ]);
             // Original content preserved
             expect(result.value.content).toContain('Sample memory content');
         }
@@ -570,7 +584,7 @@ describe('updateMemory', () => {
             mockSerializer,
             'project/test/memory',
             { content: 'Updated' },
-            updateTime
+            updateTime,
         );
         expect(result.ok).toBe(true);
         if (result.ok) {

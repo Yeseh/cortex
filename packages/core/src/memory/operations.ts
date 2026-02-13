@@ -62,6 +62,25 @@ export interface CreateMemoryInput {
     source: string;
     /** Optional expiration timestamp */
     expiresAt?: Date;
+    /**
+     * References to source material (file paths, URLs, document identifiers).
+     *
+     * When omitted or undefined, defaults to an empty array. Each citation must
+     * be a non-empty string.
+     *
+     * @example
+     * ```typescript
+     * const input: CreateMemoryInput = {
+     *     content: 'API design decisions for v2',
+     *     source: 'user',
+     *     citations: [
+     *         'docs/api-spec.md',
+     *         'https://github.com/org/repo/issues/123',
+     *     ],
+     * };
+     * ```
+     */
+    citations?: string[];
 }
 
 /** Input for updating an existing memory */
@@ -77,6 +96,34 @@ export interface UpdateMemoryInput {
      * - `undefined` (omitted) — keep the existing value unchanged
      */
     expiresAt?: Date | null;
+    /**
+     * References to source material (file paths, URLs, document identifiers).
+     *
+     * **Update semantics:** When provided, completely replaces the existing
+     * citations array. To add citations, retrieve the current memory, merge
+     * the arrays, and pass the combined result. When omitted or undefined,
+     * existing citations are preserved unchanged.
+     *
+     * @example
+     * ```typescript
+     * // Replace all citations
+     * const update: UpdateMemoryInput = {
+     *     citations: ['new-source.md', 'https://example.com/updated'],
+     * };
+     *
+     * // Clear all citations by providing an empty array
+     * const clearCitations: UpdateMemoryInput = {
+     *     citations: [],
+     * };
+     *
+     * // Keep existing citations by omitting the field
+     * const keepCitations: UpdateMemoryInput = {
+     *     content: 'Updated content only',
+     *     // citations: undefined - existing citations preserved
+     * };
+     * ```
+     */
+    citations?: string[];
 }
 
 /** Options for retrieving a memory */
@@ -167,7 +214,7 @@ export interface PruneResult {
 const memoryError = (
     code: MemoryErrorCode,
     message: string,
-    extras?: Partial<MemoryError>
+    extras?: Partial<MemoryError>,
 ): MemoryError => ({
     code,
     message,
@@ -189,14 +236,14 @@ const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
  */
 const readCategoryIndex = async (
     storage: ScopedStorageAdapter,
-    categoryPath: string
+    categoryPath: string,
 ): Promise<Result<CategoryIndex | null, MemoryError>> => {
     const result = await storage.indexes.read(categoryPath);
     if (!result.ok) {
         return err(
             memoryError('STORAGE_ERROR', `Failed to read index: ${categoryPath}`, {
                 cause: result.error,
-            })
+            }),
         );
     }
     if (!result.value) {
@@ -207,7 +254,7 @@ const readCategoryIndex = async (
         return err(
             memoryError('STORAGE_ERROR', `Failed to parse index: ${categoryPath}`, {
                 cause: parsed.error,
-            })
+            }),
         );
     }
     return ok(parsed.value);
@@ -221,7 +268,7 @@ const readCategoryIndex = async (
  * a hardcoded list, allowing stores to have any root-level categories.
  */
 const discoverRootCategories = async (
-    storage: ScopedStorageAdapter
+    storage: ScopedStorageAdapter,
 ): Promise<Result<string[], MemoryError>> => {
     const indexResult = await readCategoryIndex(storage, '');
     if (!indexResult.ok) {
@@ -247,7 +294,7 @@ const collectMemoriesFromCategory = async (
     categoryPath: string,
     includeExpired: boolean,
     now: Date,
-    visited: Set<string>
+    visited: Set<string>,
 ): Promise<Result<ListedMemory[], MemoryError>> => {
     // Prevent cycles
     if (visited.has(categoryPath)) return ok([]);
@@ -308,7 +355,7 @@ const collectMemoriesFromCategory = async (
             subcategory.path,
             includeExpired,
             now,
-            visited
+            visited,
         );
         if (subResult.ok) {
             memories.push(...subResult.value);
@@ -323,7 +370,7 @@ const collectMemoriesFromCategory = async (
  */
 const collectDirectSubcategories = async (
     storage: ScopedStorageAdapter,
-    categoryPath: string
+    categoryPath: string,
 ): Promise<Result<ListedSubcategory[], MemoryError>> => {
     const indexResult = await readCategoryIndex(storage, categoryPath);
     if (!indexResult.ok) {
@@ -340,7 +387,7 @@ const collectDirectSubcategories = async (
             path: s.path,
             memoryCount: s.memoryCount,
             description: s.description,
-        }))
+        })),
     );
 };
 
@@ -372,7 +419,7 @@ export const createMemory = async (
     serializer: MemorySerializer,
     slugPath: string,
     input: CreateMemoryInput,
-    now?: Date
+    now?: Date,
 ): Promise<Result<void, MemoryError>> => {
     // 1. Validate path
     const pathResult = validateMemorySlugPath(slugPath);
@@ -380,7 +427,7 @@ export const createMemory = async (
         return err(
             memoryError('INVALID_PATH', pathResult.error.message, {
                 path: slugPath,
-            })
+            }),
         );
     }
 
@@ -393,6 +440,7 @@ export const createMemory = async (
             tags: input.tags ?? [],
             source: input.source,
             expiresAt: input.expiresAt,
+            citations: input.citations ?? [],
         },
         content: input.content,
     };
@@ -403,7 +451,7 @@ export const createMemory = async (
         return err(
             memoryError('STORAGE_ERROR', 'Failed to serialize memory', {
                 cause: serializeResult.error,
-            })
+            }),
         );
     }
 
@@ -414,20 +462,20 @@ export const createMemory = async (
             memoryError('STORAGE_ERROR', `Failed to write memory: ${slugPath}`, {
                 path: slugPath,
                 cause: writeResult.error,
-            })
+            }),
         );
     }
 
     // 5. Update indexes
     const indexResult = await storage.indexes.updateAfterMemoryWrite(
         slugPath,
-        serializeResult.value
+        serializeResult.value,
     );
     if (!indexResult.ok) {
         return err(
             memoryError('STORAGE_ERROR', 'Failed to update indexes', {
                 cause: indexResult.error,
-            })
+            }),
         );
     }
 
@@ -447,7 +495,7 @@ export const getMemory = async (
     storage: ScopedStorageAdapter,
     serializer: MemorySerializer,
     slugPath: string,
-    options?: GetMemoryOptions
+    options?: GetMemoryOptions,
 ): Promise<Result<Memory, MemoryError>> => {
     // 1. Validate path
     const pathResult = validateMemorySlugPath(slugPath);
@@ -455,7 +503,7 @@ export const getMemory = async (
         return err(
             memoryError('INVALID_PATH', pathResult.error.message, {
                 path: slugPath,
-            })
+            }),
         );
     }
 
@@ -466,14 +514,14 @@ export const getMemory = async (
             memoryError('STORAGE_ERROR', `Failed to read memory: ${slugPath}`, {
                 path: slugPath,
                 cause: readResult.error,
-            })
+            }),
         );
     }
     if (!readResult.value) {
         return err(
             memoryError('MEMORY_NOT_FOUND', `Memory not found: ${slugPath}`, {
                 path: slugPath,
-            })
+            }),
         );
     }
 
@@ -490,7 +538,7 @@ export const getMemory = async (
         return err(
             memoryError('MEMORY_EXPIRED', `Memory has expired: ${slugPath}`, {
                 path: slugPath,
-            })
+            }),
         );
     }
 
@@ -513,7 +561,7 @@ export const updateMemory = async (
     serializer: MemorySerializer,
     slugPath: string,
     updates: UpdateMemoryInput,
-    now?: Date
+    now?: Date,
 ): Promise<Result<Memory, MemoryError>> => {
     // 1. Validate path
     const pathResult = validateMemorySlugPath(slugPath);
@@ -521,7 +569,7 @@ export const updateMemory = async (
         return err(
             memoryError('INVALID_PATH', pathResult.error.message, {
                 path: slugPath,
-            })
+            }),
         );
     }
 
@@ -529,12 +577,13 @@ export const updateMemory = async (
     const hasUpdates =
         updates.content !== undefined ||
         updates.tags !== undefined ||
-        updates.expiresAt !== undefined;
+        updates.expiresAt !== undefined ||
+        updates.citations !== undefined;
     if (!hasUpdates) {
         return err(
             memoryError('INVALID_INPUT', 'No updates provided', {
                 path: slugPath,
-            })
+            }),
         );
     }
 
@@ -545,14 +594,14 @@ export const updateMemory = async (
             memoryError('STORAGE_ERROR', `Failed to read memory: ${slugPath}`, {
                 path: slugPath,
                 cause: readResult.error,
-            })
+            }),
         );
     }
     if (!readResult.value) {
         return err(
             memoryError('MEMORY_NOT_FOUND', `Memory not found: ${slugPath}`, {
                 path: slugPath,
-            })
+            }),
         );
     }
 
@@ -574,6 +623,7 @@ export const updateMemory = async (
             expiresAt: updates.expiresAt === null
                 ? undefined
                 : (updates.expiresAt ?? existing.metadata.expiresAt),
+            citations: updates.citations ?? existing.metadata.citations,
         },
         content: updates.content ?? existing.content,
     };
@@ -584,7 +634,7 @@ export const updateMemory = async (
         return err(
             memoryError('STORAGE_ERROR', 'Failed to serialize memory', {
                 cause: serializeResult.error,
-            })
+            }),
         );
     }
 
@@ -594,20 +644,20 @@ export const updateMemory = async (
             memoryError('STORAGE_ERROR', `Failed to write memory: ${slugPath}`, {
                 path: slugPath,
                 cause: writeResult.error,
-            })
+            }),
         );
     }
 
     // 6. Update indexes
     const indexResult = await storage.indexes.updateAfterMemoryWrite(
         slugPath,
-        serializeResult.value
+        serializeResult.value,
     );
     if (!indexResult.ok) {
         return err(
             memoryError('STORAGE_ERROR', 'Failed to update indexes', {
                 cause: indexResult.error,
-            })
+            }),
         );
     }
 
@@ -626,7 +676,7 @@ export const updateMemory = async (
 export const moveMemory = async (
     storage: ScopedStorageAdapter,
     fromPath: string,
-    toPath: string
+    toPath: string,
 ): Promise<Result<void, MemoryError>> => {
     // 1. Validate both paths
     const fromResult = validateMemorySlugPath(fromPath);
@@ -634,7 +684,7 @@ export const moveMemory = async (
         return err(
             memoryError('INVALID_PATH', fromResult.error.message, {
                 path: fromPath,
-            })
+            }),
         );
     }
 
@@ -643,7 +693,7 @@ export const moveMemory = async (
         return err(
             memoryError('INVALID_PATH', toResult.error.message, {
                 path: toPath,
-            })
+            }),
         );
     }
 
@@ -659,14 +709,14 @@ export const moveMemory = async (
             memoryError('STORAGE_ERROR', `Failed to read source memory: ${fromPath}`, {
                 path: fromPath,
                 cause: sourceCheck.error,
-            })
+            }),
         );
     }
     if (!sourceCheck.value) {
         return err(
             memoryError('MEMORY_NOT_FOUND', `Source memory not found: ${fromPath}`, {
                 path: fromPath,
-            })
+            }),
         );
     }
 
@@ -677,14 +727,14 @@ export const moveMemory = async (
             memoryError('STORAGE_ERROR', `Failed to check destination: ${toPath}`, {
                 path: toPath,
                 cause: destCheck.error,
-            })
+            }),
         );
     }
     if (destCheck.value) {
         return err(
             memoryError('DESTINATION_EXISTS', `Destination already exists: ${toPath}`, {
                 path: toPath,
-            })
+            }),
         );
     }
 
@@ -695,7 +745,7 @@ export const moveMemory = async (
         return err(
             memoryError('STORAGE_ERROR', `Failed to create destination category: ${destCategory}`, {
                 cause: ensureResult.error,
-            })
+            }),
         );
     }
 
@@ -705,7 +755,7 @@ export const moveMemory = async (
         return err(
             memoryError('STORAGE_ERROR', `Failed to move memory from ${fromPath} to ${toPath}`, {
                 cause: moveResult.error,
-            })
+            }),
         );
     }
 
@@ -715,7 +765,7 @@ export const moveMemory = async (
         return err(
             memoryError('STORAGE_ERROR', 'Failed to reindex after move', {
                 cause: reindexResult.error,
-            })
+            }),
         );
     }
 
@@ -731,7 +781,7 @@ export const moveMemory = async (
  */
 export const removeMemory = async (
     storage: ScopedStorageAdapter,
-    slugPath: string
+    slugPath: string,
 ): Promise<Result<void, MemoryError>> => {
     // 1. Validate path
     const pathResult = validateMemorySlugPath(slugPath);
@@ -739,7 +789,7 @@ export const removeMemory = async (
         return err(
             memoryError('INVALID_PATH', pathResult.error.message, {
                 path: slugPath,
-            })
+            }),
         );
     }
 
@@ -750,14 +800,14 @@ export const removeMemory = async (
             memoryError('STORAGE_ERROR', `Failed to read memory: ${slugPath}`, {
                 path: slugPath,
                 cause: checkResult.error,
-            })
+            }),
         );
     }
     if (!checkResult.value) {
         return err(
             memoryError('MEMORY_NOT_FOUND', `Memory not found: ${slugPath}`, {
                 path: slugPath,
-            })
+            }),
         );
     }
 
@@ -768,7 +818,7 @@ export const removeMemory = async (
             memoryError('STORAGE_ERROR', `Failed to remove memory: ${slugPath}`, {
                 path: slugPath,
                 cause: removeResult.error,
-            })
+            }),
         );
     }
 
@@ -778,7 +828,7 @@ export const removeMemory = async (
         return err(
             memoryError('STORAGE_ERROR', 'Failed to reindex after remove', {
                 cause: reindexResult.error,
-            })
+            }),
         );
     }
 
@@ -796,7 +846,7 @@ export const removeMemory = async (
 export const listMemories = async (
     storage: ScopedStorageAdapter,
     serializer: MemorySerializer,
-    options?: ListMemoriesOptions
+    options?: ListMemoriesOptions,
 ): Promise<Result<ListMemoriesResult, MemoryError>> => {
     const includeExpired = options?.includeExpired ?? false;
     const now = options?.now ?? new Date();
@@ -821,7 +871,7 @@ export const listMemories = async (
                 rootCat,
                 includeExpired,
                 now,
-                visited
+                visited,
             );
             if (collectResult.ok) {
                 memories.push(...collectResult.value);
@@ -837,7 +887,8 @@ export const listMemories = async (
                 });
             }
         }
-    } else {
+    }
+    else {
         // Specific category requested
         const collectResult = await collectMemoriesFromCategory(
             storage,
@@ -845,7 +896,7 @@ export const listMemories = async (
             category,
             includeExpired,
             now,
-            visited
+            visited,
         );
         if (!collectResult.ok) {
             return collectResult;
@@ -877,7 +928,7 @@ export const listMemories = async (
 export const pruneExpiredMemories = async (
     storage: ScopedStorageAdapter,
     serializer: MemorySerializer,
-    options?: PruneOptions
+    options?: PruneOptions,
 ): Promise<Result<PruneResult, MemoryError>> => {
     const dryRun = options?.dryRun ?? false;
     const now = options?.now ?? new Date();
@@ -900,7 +951,7 @@ export const pruneExpiredMemories = async (
             rootCat,
             true, // Include expired
             now,
-            visited
+            visited,
         );
         if (collectResult.ok) {
             for (const memory of collectResult.value) {
@@ -927,7 +978,7 @@ export const pruneExpiredMemories = async (
                 memoryError('STORAGE_ERROR', `Failed to remove expired memory: ${memory.path}`, {
                     path: memory.path,
                     cause: removeResult.error,
-                })
+                }),
             );
         }
     }
@@ -939,7 +990,7 @@ export const pruneExpiredMemories = async (
             return err(
                 memoryError('STORAGE_ERROR', 'Failed to reindex after prune', {
                     cause: reindexResult.error,
-                })
+                }),
             );
         }
     }

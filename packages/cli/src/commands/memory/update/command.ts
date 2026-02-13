@@ -46,6 +46,7 @@ export interface UpdateCommandOptions {
      * - `undefined` (omitted) — keep the existing value unchanged
      */
     expiresAt?: string | false;
+    citation?: string[];
 }
 
 /** Dependencies injected into the handler for testability */
@@ -70,7 +71,7 @@ export async function handleUpdate(
     path: string,
     options: UpdateCommandOptions,
     storeName: string | undefined,
-    deps: UpdateHandlerDeps = {}
+    deps: UpdateHandlerDeps = {},
 ): Promise<void> {
     // 1. Resolve store context
     const storeResult = await resolveStoreAdapter(storeName);
@@ -100,9 +101,9 @@ export async function handleUpdate(
     const tags =
         options.tags !== undefined
             ? options.tags
-                  .split(',')
-                  .map((t) => t.trim())
-                  .filter(Boolean)
+                .split(',')
+                .map((t) => t.trim())
+                .filter(Boolean)
             : undefined;
 
     // Validate tags are non-empty if provided
@@ -122,7 +123,8 @@ export async function handleUpdate(
     if (options.expiresAt === false) {
         // --no-expires-at flag: explicitly clear expiration
         expiresAt = null;
-    } else if (options.expiresAt) {
+    }
+    else if (options.expiresAt) {
         expiresAt = new Date(options.expiresAt);
         if (Number.isNaN(expiresAt.getTime())) {
             mapCoreError({
@@ -132,15 +134,20 @@ export async function handleUpdate(
         }
     }
 
+    // Parse citations from options
+    // undefined if not provided, array if provided
+    const citations = options.citation;
+
     // 7. Verify at least one update is provided
     const hasContentUpdate = contentResult.value.content !== null;
     const hasTagsUpdate = tags !== undefined;
     const hasExpiryUpdate = expiresAt !== undefined;
+    const hasCitationsUpdate = citations !== undefined;
 
-    if (!hasContentUpdate && !hasTagsUpdate && !hasExpiryUpdate) {
+    if (!hasContentUpdate && !hasTagsUpdate && !hasExpiryUpdate && !hasCitationsUpdate) {
         mapCoreError({
             code: 'INVALID_ARGUMENTS',
-            message: 'No updates provided. Use --content, --file, --tags, or expiry flags.',
+            message: 'No updates provided. Use --content, --file, --tags, --citation, or expiry flags.',
         });
     }
 
@@ -173,6 +180,7 @@ export async function handleUpdate(
             expiresAt: expiresAt === null
                 ? undefined
                 : (expiresAt ?? parsedMemory.value.metadata.expiresAt),
+            citations: citations ?? parsedMemory.value.metadata.citations,
         },
         content: contentResult.value.content ?? parsedMemory.value.content,
     };
@@ -211,6 +219,7 @@ export const updateCommand = new Command('update')
     .option('-t, --tags <tags>', 'Comma-separated tags (replaces existing)')
     .option('-e, --expires-at <date>', 'New expiration date (ISO 8601)')
     .option('--no-expires-at', 'Remove expiration date')
+    .option('--citation <value...>', 'Citation references (replaces existing)')
     .action(async (path, options, command) => {
         const parentOpts = command.parent?.opts() as { store?: string } | undefined;
         await handleUpdate(path, options, parentOpts?.store);

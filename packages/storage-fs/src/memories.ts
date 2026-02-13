@@ -28,6 +28,51 @@ export type ParseMetadataResult = Result<MemoryMetadata, MemoryError>;
 export type SerializeMemoryResult = Result<string, MemoryError>;
 
 /**
+ * Schema for validating individual citation strings.
+ *
+ * Citations must be non-empty strings representing references to source
+ * material such as file paths, URLs, or document identifiers.
+ *
+ * @example
+ * ```typescript
+ * citationSchema.parse('docs/api.md');           // OK
+ * citationSchema.parse('https://example.com');   // OK
+ * citationSchema.parse('');                      // Error: Citation must not be empty
+ * ```
+ */
+const citationSchema = z.string().min(1, 'Citation must not be empty');
+
+/**
+ * Schema for validating the citations array in memory frontmatter.
+ *
+ * The citations field is optional in the frontmatter. When present, it must
+ * be an array of non-empty strings. When absent, defaults to an empty array.
+ *
+ * In YAML frontmatter format (snake_case):
+ * ```yaml
+ * ---
+ * created_at: 2024-01-01T00:00:00.000Z
+ * updated_at: 2024-01-01T00:00:00.000Z
+ * tags: [example]
+ * source: user
+ * citations:
+ *   - docs/architecture.md
+ *   - https://github.com/org/repo/issues/42
+ * ---
+ * Memory content here.
+ * ```
+ *
+ * @example
+ * ```typescript
+ * citationsSchema.parse(['file.md', 'https://example.com']); // OK: ['file.md', 'https://example.com']
+ * citationsSchema.parse(undefined);                          // OK: [] (defaults to empty)
+ * citationsSchema.parse([]);                                 // OK: []
+ * citationsSchema.parse(['', 'valid']);                      // Error: Citation must not be empty
+ * ```
+ */
+const citationsSchema = z.array(citationSchema).optional().default([]);
+
+/**
  * Schema for parsing YAML frontmatter from memory files.
  * Uses snake_case keys to match the file format.
  */
@@ -37,6 +82,7 @@ const FrontmatterSchema = z.object({
     tags: tagsSchema,
     source: nonEmptyStringSchema,
     expires_at: dateSchema.optional(),
+    citations: citationsSchema,
 });
 
 /**
@@ -45,7 +91,7 @@ const FrontmatterSchema = z.object({
  */
 export const validateSlugPath = (
     slugPath: string,
-    failure: { code: StorageAdapterError['code']; message: string; path: string }
+    failure: { code: StorageAdapterError['code']; message: string; path: string },
 ): Result<MemoryIdentity, StorageAdapterError> => {
     const identity = validateMemorySlugPath(slugPath);
     if (!identity.ok) {
@@ -70,6 +116,7 @@ export const validateSlugPath = (
 const mapSerializeErrorCode = (field: string | undefined): MemoryErrorCode => {
     if (field === 'tags') return 'INVALID_TAGS';
     if (field === 'source') return 'INVALID_SOURCE';
+    if (field === 'citations') return 'INVALID_CITATIONS';
     return 'INVALID_TIMESTAMP';
 };
 
@@ -103,6 +150,9 @@ const mapZodErrorCode = (field: string | undefined, fieldExists: boolean): Memor
     if (field === 'source') {
         return 'INVALID_SOURCE';
     }
+    if (field === 'citations') {
+        return 'INVALID_CITATIONS';
+    }
     if (field === 'created_at' || field === 'updated_at' || field === 'expires_at') {
         return 'INVALID_TIMESTAMP';
     }
@@ -122,8 +172,10 @@ const parseMetadata = (frontmatterLines: string[]): ParseMetadataResult => {
     try {
         const doc = yaml.parseDocument(frontmatterText, { uniqueKeys: true });
 
-        const hasDuplicateKeyIssue = [...doc.errors, ...doc.warnings].some((issue) =>
-            /duplicate key/i.test(issue.message)
+        const hasDuplicateKeyIssue = [
+            ...doc.errors, ...doc.warnings,
+        ].some((issue) =>
+            /duplicate key/i.test(issue.message),
         );
 
         if (hasDuplicateKeyIssue) {
@@ -141,7 +193,8 @@ const parseMetadata = (frontmatterLines: string[]): ParseMetadataResult => {
         }
 
         data = doc.toJS();
-    } catch {
+    }
+    catch {
         return err({
             code: 'INVALID_FRONTMATTER',
             message: 'Invalid YAML frontmatter.',
@@ -176,6 +229,7 @@ const parseMetadata = (frontmatterLines: string[]): ParseMetadataResult => {
         tags: result.data.tags,
         source: result.data.source,
         expiresAt: result.data.expires_at,
+        citations: result.data.citations ?? [],
     });
 };
 
@@ -185,7 +239,7 @@ const parseMetadata = (frontmatterLines: string[]): ParseMetadataResult => {
 export const resolveMemoryPath = (
     ctx: FilesystemContext,
     slugPath: MemorySlugPath,
-    errorCode: StorageAdapterError['code']
+    errorCode: StorageAdapterError['code'],
 ): Result<string, StorageAdapterError> => {
     return resolveStoragePath(ctx.storeRoot, `${slugPath}${ctx.memoryExtension}`, errorCode);
 };
@@ -194,7 +248,8 @@ export const resolveMemoryPath = (
  * Serializes a Memory object to the frontmatter file format.
  *
  * The output format consists of YAML frontmatter delimited by `---` markers,
- * followed by the memory content.
+ * followed by the memory content. Citations are only included in the output
+ * when the array is non-empty, keeping files clean for memories without sources.
  *
  * @param memory - The Memory object to serialize
  * @returns Result containing the serialized string or MemoryError
@@ -207,11 +262,12 @@ export const resolveMemoryPath = (
  *         updatedAt: new Date('2024-01-01T00:00:00.000Z'),
  *         tags: ['example', 'test'],
  *         source: 'user',
+ *         citations: ['docs/spec.md', 'https://example.com/api'],
  *     },
  *     content: 'This is the memory content.',
  * };
  *
- * const result = serializeFrontmatter(memory);
+ * const result = serializeMemory(memory);
  * if (result.ok) {
  *     console.log(result.value);
  *     // ---
@@ -219,19 +275,23 @@ export const resolveMemoryPath = (
  *     // updated_at: 2024-01-01T00:00:00.000Z
  *     // tags: [example, test]
  *     // source: user
+ *     // citations:
+ *     //   - docs/spec.md
+ *     //   - https://example.com/api
  *     // ---
  *     // This is the memory content.
  * }
  * ```
  */
 export const serializeMemory = (memory: Memory): SerializeMemoryResult => {
-    // Convert camelCase from internal API to snake_case for validation/serialization
+// Convert camelCase from internal API to snake_case for validation/serialization
     const snakeCaseMetadata = {
         created_at: memory.metadata.createdAt,
         updated_at: memory.metadata.updatedAt,
         tags: memory.metadata.tags,
         source: memory.metadata.source,
         expires_at: memory.metadata.expiresAt,
+        citations: memory.metadata.citations,
     };
 
     const result = FrontmatterSchema.safeParse(snakeCaseMetadata);
@@ -254,6 +314,9 @@ export const serializeMemory = (memory: Memory): SerializeMemoryResult => {
         tags,
         source,
         ...(expires_at ? { expires_at: expires_at.toISOString() } : {}),
+        ...(result.data.citations && result.data.citations.length > 0
+            ? { citations: result.data.citations }
+            : {}),
     };
 
     const frontmatterBody = yaml.stringify(frontmatterData).trimEnd();
@@ -273,7 +336,7 @@ export const serializeMemory = (memory: Memory): SerializeMemoryResult => {
  */
 export const readMemory = async (
     ctx: FilesystemContext,
-    slugPath: MemorySlugPath
+    slugPath: MemorySlugPath,
 ): Promise<StringOrNullResult> => {
     const filePathResult = resolveMemoryPath(ctx, slugPath, 'IO_READ_ERROR');
     if (!filePathResult.ok) {
@@ -283,7 +346,8 @@ export const readMemory = async (
     try {
         const contents = await readFile(filePath, 'utf8');
         return ok(contents);
-    } catch (error) {
+    }
+    catch (error) {
         if (isNotFoundError(error)) {
             return ok(null);
         }
@@ -309,7 +373,7 @@ export const readMemory = async (
 export const writeMemory = async (
     ctx: FilesystemContext,
     slugPath: MemorySlugPath,
-    memory: string
+    memory: string,
 ): Promise<Result<void, StorageAdapterError>> => {
     const parsed = parseMemory(memory);
     if (!parsed.ok) {
@@ -346,7 +410,8 @@ export const writeMemory = async (
     try {
         await mkdir(dirname(filePath), { recursive: true });
         await writeFile(filePath, serializedResult.value, 'utf8');
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'IO_WRITE_ERROR',
             message: `Failed to write memory file at ${filePath}.`,
@@ -367,7 +432,7 @@ export const writeMemory = async (
  */
 export const removeMemory = async (
     ctx: FilesystemContext,
-    slugPath: MemorySlugPath
+    slugPath: MemorySlugPath,
 ): Promise<Result<void, StorageAdapterError>> => {
     const identityResult = validateSlugPath(slugPath, {
         code: 'IO_WRITE_ERROR',
@@ -386,7 +451,8 @@ export const removeMemory = async (
     try {
         await rm(filePath);
         return ok(undefined);
-    } catch (error) {
+    }
+    catch (error) {
         if (isNotFoundError(error)) {
             return ok(undefined);
         }
@@ -412,7 +478,7 @@ export const removeMemory = async (
 export const moveMemory = async (
     ctx: FilesystemContext,
     sourceSlugPath: MemorySlugPath,
-    destinationSlugPath: MemorySlugPath
+    destinationSlugPath: MemorySlugPath,
 ): Promise<Result<void, StorageAdapterError>> => {
     const sourceIdentityResult = validateSlugPath(sourceSlugPath, {
         code: 'IO_WRITE_ERROR',
@@ -445,7 +511,8 @@ export const moveMemory = async (
     const destinationDirectory = dirname(destinationPathResult.value);
     try {
         await access(destinationDirectory);
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'IO_WRITE_ERROR',
             message: `Destination category does not exist for ${destinationSlugPath}.`,
@@ -457,7 +524,8 @@ export const moveMemory = async (
     try {
         await rename(sourcePathResult.value, destinationPathResult.value);
         return ok(undefined);
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'IO_WRITE_ERROR',
             message: `Failed to move memory from ${sourceSlugPath} to ${destinationSlugPath}.`,
@@ -471,7 +539,9 @@ export const moveMemory = async (
  * Parses a raw memory file string into a Memory object.
  *
  * The file format consists of YAML frontmatter delimited by `---` markers,
- * followed by the memory content.
+ * followed by the memory content. The frontmatter uses snake_case keys
+ * (e.g., `created_at`, `expires_at`, `citations`), which are converted
+ * to camelCase in the returned Memory object.
  *
  * @param raw - The raw file content to parse
  * @returns Result containing Memory or MemoryError
@@ -483,16 +553,38 @@ export const moveMemory = async (
  * updated_at: 2024-01-01T00:00:00.000Z
  * tags: [example, test]
  * source: user
+ * citations:
+ *   - docs/architecture.md
+ *   - https://github.com/org/repo/issues/42
  * ---
  * This is the memory content.
  * `;
  *
- * const result = parseFrontmatter(raw);
+ * const result = parseMemory(raw);
  * if (result.ok) {
- *     console.log(result.value.metadata.tags); // ['example', 'test']
- *     console.log(result.value.content); // 'This is the memory content.\n'
+ *     console.log(result.value.metadata.tags);      // ['example', 'test']
+ *     console.log(result.value.metadata.citations); // ['docs/architecture.md', 'https://github.com/org/repo/issues/42']
+ *     console.log(result.value.content);            // 'This is the memory content.\n'
  * } else {
  *     console.error(result.error.code, result.error.message);
+ * }
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Memory without citations (citations defaults to empty array)
+ * const rawNoCitations = `---
+ * created_at: 2024-01-01T00:00:00.000Z
+ * updated_at: 2024-01-01T00:00:00.000Z
+ * tags: []
+ * source: mcp
+ * ---
+ * Simple memory without sources.
+ * `;
+ *
+ * const result = parseMemory(rawNoCitations);
+ * if (result.ok) {
+ *     console.log(result.value.metadata.citations); // [] (defaults to empty)
  * }
  * ```
  */

@@ -65,6 +65,9 @@ export const addMemoryInputSchema = z.object({
     content: z.string().min(1, 'Content is required').describe('Memory content'),
     tags: tagsSchema.describe('Optional tags for categorization'),
     expires_at: isoDateSchema.optional().describe('Optional expiration date (ISO 8601)'),
+    citations: z.array(z.string().min(1)).optional().describe(
+        'Optional citations referencing source material (file paths, URLs, document identifiers)',
+    ),
 });
 
 /** Schema for get_memory tool input */
@@ -82,6 +85,9 @@ export const updateMemoryInputSchema = z.object({
     tags: tagsSchema.describe('New tags (replaces existing)'),
     expires_at: isoDateSchema.optional().nullable().describe(
         'New expiration date (ISO 8601). Pass null to clear the expiration. Omit to keep existing value.',
+    ),
+    citations: z.array(z.string().min(1)).optional().describe(
+        'New citations (replaces existing). Omit to keep existing citations.',
     ),
 });
 
@@ -126,13 +132,41 @@ export const reindexStoreInputSchema = z.object({
 // Helper Types
 // ---------------------------------------------------------------------------
 
-/** Input type for add_memory tool */
+/**
+ * Input type for the add_memory MCP tool.
+ *
+ * @example
+ * ```typescript
+ * const input: AddMemoryInput = {
+ *     store: 'cortex',
+ *     path: 'decisions/api-versioning',
+ *     content: 'We decided to use URL path versioning for the API.',
+ *     tags: ['api', 'versioning'],
+ *     citations: [
+ *         'docs/api-spec.md',
+ *         'https://github.com/org/repo/discussions/42',
+ *     ],
+ * };
+ * ```
+ */
 export interface AddMemoryInput {
+    /** Name of the memory store */
     store: string;
+    /** Memory path in category/slug format (e.g., "decisions/api-versioning") */
     path: string;
+    /** Memory content (markdown supported) */
     content: string;
+    /** Optional tags for categorization and discovery */
     tags?: string[];
+    /** Optional expiration date as ISO 8601 string */
     expires_at?: string;
+    /**
+     * Optional citations referencing source material.
+     *
+     * Each citation must be a non-empty string representing a file path,
+     * URL, or document identifier.
+     */
+    citations?: string[];
 }
 
 /** Input type for get_memory tool */
@@ -142,11 +176,38 @@ export interface GetMemoryInput {
     include_expired?: boolean;
 }
 
-/** Input type for update_memory tool */
+/**
+ * Input type for the update_memory MCP tool.
+ *
+ * All fields except `store` and `path` are optional. Only provided fields
+ * are updated; omitted fields retain their existing values.
+ *
+ * @example
+ * ```typescript
+ * // Update content and add new citations (replaces existing citations)
+ * const input: UpdateMemoryInput = {
+ *     store: 'cortex',
+ *     path: 'decisions/api-versioning',
+ *     content: 'Updated: We now use semantic versioning headers.',
+ *     citations: ['docs/api-spec-v2.md'],
+ * };
+ *
+ * // Clear expiration while keeping everything else
+ * const clearExpiry: UpdateMemoryInput = {
+ *     store: 'cortex',
+ *     path: 'decisions/api-versioning',
+ *     expires_at: null,
+ * };
+ * ```
+ */
 export interface UpdateMemoryInput {
+    /** Name of the memory store */
     store: string;
+    /** Memory path in category/slug format */
     path: string;
+    /** New content (omit to keep existing) */
     content?: string;
+    /** New tags - replaces existing tags when provided */
     tags?: string[];
     /**
      * New expiration date.
@@ -155,6 +216,14 @@ export interface UpdateMemoryInput {
      * - `undefined` (omitted) — keep the existing value unchanged
      */
     expires_at?: string | null;
+    /**
+     * New citations - replaces existing citations when provided.
+     *
+     * **Update semantics:** When provided, completely replaces the existing
+     * citations array. When omitted, existing citations are preserved.
+     * To clear all citations, pass an empty array `[]`.
+     */
+    citations?: string[];
 }
 
 /** Input type for remove_memory tool */
@@ -312,6 +381,7 @@ const translateMemoryError = (error: MemoryError): McpError => {
         case 'INVALID_TIMESTAMP':
         case 'INVALID_TAGS':
         case 'INVALID_SOURCE':
+        case 'INVALID_CITATIONS':
             return new McpError(
                 ErrorCode.InternalError,
                 `Memory file corrupted: ${error.message}`,
@@ -358,6 +428,7 @@ export const addMemoryHandler = async (
         tags: input.tags,
         source: 'mcp',
         expiresAt: input.expires_at ? new Date(input.expires_at) : undefined,
+        citations: input.citations,
     });
 
     if (!result.ok) {
@@ -399,6 +470,7 @@ export const getMemoryHandler = async (
             tags: memory.metadata.tags,
             source: memory.metadata.source,
             expires_at: memory.metadata.expiresAt?.toISOString(),
+            citations: memory.metadata.citations,
         },
     };
 
@@ -415,10 +487,11 @@ export const updateMemoryHandler = async (
     input: UpdateMemoryInput,
 ): Promise<McpToolResponse> => {
     // Validate that at least one update field is provided
-    if (input.content === undefined && input.tags === undefined && input.expires_at === undefined) {
+    if (input.content === undefined && input.tags === undefined && 
+        input.expires_at === undefined && input.citations === undefined) {
         throw new McpError(
             ErrorCode.InvalidParams,
-            'No updates provided. Specify content, tags, or expires_at.',
+            'No updates provided. Specify content, tags, expires_at, or citations.',
         );
     }
 
@@ -433,8 +506,9 @@ export const updateMemoryHandler = async (
         expiresAt: input.expires_at === null
             ? null
             : input.expires_at
-              ? new Date(input.expires_at)
-              : undefined,
+                ? new Date(input.expires_at)
+                : undefined,
+        citations: input.citations,
     });
 
     if (!result.ok) {

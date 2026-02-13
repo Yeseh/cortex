@@ -280,6 +280,7 @@ describe('memory file serialization', () => {
                 ],
                 source: 'system',
                 expiresAt: new Date('2024-04-01T00:00:00.000Z'),
+                citations: [],
             },
             content: 'Memory payload with multiple lines.\nSecond line.',
         };
@@ -319,6 +320,7 @@ describe('memory file serialization', () => {
                 updatedAt: new Date('2024-03-02T10:15:00.000Z'),
                 tags: ['alpha'],
                 source: 'system',
+                citations: [],
             },
             content: '',
         };
@@ -343,6 +345,7 @@ describe('memory file serialization', () => {
                 updatedAt: new Date('2024-03-02T10:15:00.000Z'),
                 tags: ['alpha'],
                 source: 'system',
+                citations: [],
             },
             content: '\nLeading newline content.',
         };
@@ -367,6 +370,7 @@ describe('memory file serialization', () => {
                 updatedAt: new Date('2024-03-02T10:15:00.000Z'),
                 tags: ['alpha'],
                 source: 'system',
+                citations: [],
             },
             content: 'Serialized memory.',
         };
@@ -387,6 +391,7 @@ describe('memory file serialization', () => {
                 updatedAt: new Date('2024-03-02T10:15:00.000Z'),
                 tags: 'alpha',
                 source: 'system',
+                citations: [],
             },
             content: 'Serialized memory.',
         };
@@ -411,6 +416,7 @@ describe('memory file serialization', () => {
                     'alpha', 42,
                 ],
                 source: 'system',
+                citations: [],
             },
             content: 'Serialized memory.',
         };
@@ -433,6 +439,7 @@ describe('memory file serialization', () => {
                 updatedAt: new Date('2024-03-02T10:15:00.000Z'),
                 tags: ['alpha'],
                 source: ' ',
+                citations: [],
             },
             content: 'Serialized memory.',
         };
@@ -443,6 +450,119 @@ describe('memory file serialization', () => {
         if (!result.ok) {
             expect(result.error.code).toBe('INVALID_SOURCE');
             expect(result.error.field).toBe('source');
+        }
+    });
+});
+
+describe('memory citations', () => {
+    it('should parse frontmatter with citations', () => {
+        const raw = [
+            '---',
+            'created_at: 2024-01-01T00:00:00.000Z',
+            'updated_at: 2024-01-02T00:00:00.000Z',
+            'tags: [architecture]',
+            'source: user',
+            'citations:',
+            '  - src/types.ts:17',
+            '  - https://docs.example.com',
+            '---',
+            'Memory with citations.',
+        ].join('\n');
+
+        const result = parseMemory(raw);
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value.metadata.citations).toEqual([
+                'src/types.ts:17',
+                'https://docs.example.com',
+            ]);
+        }
+    });
+
+    it('should default citations to empty array when not present', () => {
+        const raw = [
+            '---',
+            'created_at: 2024-01-01T00:00:00.000Z',
+            'updated_at: 2024-01-02T00:00:00.000Z',
+            'tags: [personal]',
+            'source: user',
+            '---',
+            'Memory without citations field.',
+        ].join('\n');
+
+        const result = parseMemory(raw);
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value.metadata.citations).toEqual([]);
+        }
+    });
+
+    it('should round-trip memory with citations', () => {
+        const memory = {
+            metadata: {
+                createdAt: new Date('2024-01-01T00:00:00.000Z'),
+                updatedAt: new Date('2024-01-02T00:00:00.000Z'),
+                tags: ['test'],
+                source: 'user',
+                citations: [
+                    'src/file.ts:10', 'https://example.com',
+                ],
+            },
+            content: 'Test content.',
+        };
+
+        const serialized = serializeMemory(memory);
+        expect(serialized.ok).toBe(true);
+        if (!serialized.ok) {
+            return;
+        }
+
+        const reparsed = parseMemory(serialized.value);
+        expect(reparsed.ok).toBe(true);
+        if (reparsed.ok) {
+            expect(reparsed.value.metadata.citations).toEqual([
+                'src/file.ts:10',
+                'https://example.com',
+            ]);
+        }
+    });
+
+    it('should omit citations key from frontmatter when array is empty', () => {
+        const memory = {
+            metadata: {
+                createdAt: new Date('2024-01-01T00:00:00.000Z'),
+                updatedAt: new Date('2024-01-02T00:00:00.000Z'),
+                tags: ['test'],
+                source: 'user',
+                citations: [],
+            },
+            content: 'Test content.',
+        };
+
+        const result = serializeMemory(memory);
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.value).not.toContain('citations:');
+        }
+    });
+
+    it('should reject empty citation strings', () => {
+        const raw = [
+            '---',
+            'created_at: 2024-01-01T00:00:00.000Z',
+            'updated_at: 2024-01-02T00:00:00.000Z',
+            'tags: []',
+            'source: user',
+            'citations:',
+            '  - ""',
+            '---',
+            'Invalid citation.',
+        ].join('\n');
+
+        const result = parseMemory(raw);
+        expect(result.ok).toBe(false);
+        if (!result.ok) {
+            expect(result.error.code).toBe('INVALID_CITATIONS');
         }
     });
 });

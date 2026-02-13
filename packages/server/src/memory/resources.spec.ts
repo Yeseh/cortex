@@ -220,6 +220,7 @@ describe('readMemoryContent', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: ['test'],
                 source: 'test',
+                citations: [],
             },
             content: 'This is the memory content',
         });
@@ -241,6 +242,7 @@ describe('readMemoryContent', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Content for MIME test',
         });
@@ -262,6 +264,7 @@ describe('readMemoryContent', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Content for URI test',
         });
@@ -283,6 +286,7 @@ describe('readMemoryContent', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: ['nested'],
                 source: 'test',
+                citations: [],
             },
             content: 'Deeply nested memory content',
         });
@@ -350,6 +354,7 @@ describe('readCategoryListing', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Memory 1',
         });
@@ -360,6 +365,7 @@ describe('readCategoryListing', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Memory 2',
         });
@@ -388,6 +394,7 @@ describe('readCategoryListing', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Subcategory memory',
         });
@@ -414,6 +421,7 @@ describe('readCategoryListing', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: ['tag1'],
                 source: 'test',
+                citations: [],
             },
             content: 'Test content',
         });
@@ -448,6 +456,7 @@ describe('readCategoryListing', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'MIME test',
         });
@@ -470,6 +479,7 @@ describe('readCategoryListing', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Project memory',
         });
@@ -480,6 +490,7 @@ describe('readCategoryListing', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Human preference',
         });
@@ -519,6 +530,7 @@ describe('readCategoryListing', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'URI test memory',
         });
@@ -542,6 +554,7 @@ describe('readCategoryListing', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Subcategory memory',
         });
@@ -588,6 +601,7 @@ describe('listResources', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: ['test'],
                 source: 'test',
+                citations: [],
             },
             content: 'Test memory content',
         });
@@ -610,6 +624,7 @@ describe('listResources', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Root test',
         });
@@ -637,6 +652,7 @@ describe('listResources', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Category test',
         });
@@ -664,6 +680,7 @@ describe('listResources', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Memory resource test',
         });
@@ -691,6 +708,7 @@ describe('listResources', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Nested memory',
         });
@@ -731,6 +749,7 @@ describe('listResources', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Project memory',
         });
@@ -741,6 +760,7 @@ describe('listResources', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Human memory',
         });
@@ -751,6 +771,7 @@ describe('listResources', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
+                citations: [],
             },
             content: 'Persona memory',
         });
@@ -863,6 +884,7 @@ describe('resource workflow', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: ['workflow'],
                 source: 'test',
+                citations: [],
             },
             content: 'Workflow test content',
         });
@@ -900,6 +922,7 @@ describe('resource workflow', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: ['deep'],
                 source: 'test',
+                citations: [],
             },
             content: 'Deep nested content',
         });
