@@ -27,8 +27,6 @@ The package provides multiple entry points for different domains:
 // Main entry - common types and utilities
 import { 
   defaultTokenizer,
-  parseIndex,
-  serializeIndex,
   type Result,
   type CoreError 
 } from '@yeseh/cortex-core';
@@ -46,22 +44,22 @@ import {
 // Category domain
 import { 
   type Category,
-  type CategoryStoragePort,
+  type CategoryStorage,
   createCategory,
   setDescription 
 } from '@yeseh/cortex-core/category';
 
 // Store domain
 import { 
-  type Store,
   type StoreRegistry,
-  createStoreRegistry 
+  initializeStore,
+  resolveStore
 } from '@yeseh/cortex-core/store';
 
 // Index domain
 import { 
   type CategoryIndex,
-  type MemoryIndexEntry 
+  type IndexMemoryEntry 
 } from '@yeseh/cortex-core/index';
 
 // Storage port interfaces
@@ -108,14 +106,14 @@ interface MemoryMetadata {
 
 ### Storage Ports
 
-The core package defines storage port interfaces that adapters implement:
+The core package defines focused storage port interfaces that adapters implement:
 
 ```typescript
-interface MemoryStoragePort {
-  readMemory(slugPath: string): Promise<Result<Memory | null, StorageError>>;
-  writeMemory(slugPath: string, memory: Memory): Promise<Result<void, StorageError>>;
-  deleteMemory(slugPath: string): Promise<Result<void, StorageError>>;
-  moveMemory(from: string, to: string): Promise<Result<void, StorageError>>;
+interface MemoryStorage {
+  read(slugPath: string): Promise<Result<string | null, StorageAdapterError>>;
+  write(slugPath: string, contents: string): Promise<Result<void, StorageAdapterError>>;
+  remove(slugPath: string): Promise<Result<void, StorageAdapterError>>;
+  move(from: string, to: string): Promise<Result<void, StorageAdapterError>>;
 }
 ```
 

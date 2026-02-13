@@ -15,9 +15,7 @@
 import type { Result } from '../types.ts';
 import type { ScopedStorageAdapter } from '../storage/adapter.ts';
 import type { Memory, MemoryError, MemoryErrorCode } from './types.ts';
-import type { CategoryIndex } from '../index/types.ts';
 import { validateMemorySlugPath } from './validation.ts';
-import { parseIndex } from '../serialization.ts';
 import { isExpired } from './expiration.ts';
 
 // ============================================================================
@@ -270,35 +268,6 @@ const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
 const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 /**
- * Reads and parses a category index.
- */
-const readCategoryIndex = async (
-    storage: ScopedStorageAdapter,
-    categoryPath: string,
-): Promise<Result<CategoryIndex | null, MemoryError>> => {
-    const result = await storage.indexes.read(categoryPath);
-    if (!result.ok) {
-        return err(
-            memoryError('STORAGE_ERROR', `Failed to read index: ${categoryPath}`, {
-                cause: result.error,
-            }),
-        );
-    }
-    if (!result.value) {
-        return ok(null);
-    }
-    const parsed = parseIndex(result.value);
-    if (!parsed.ok) {
-        return err(
-            memoryError('STORAGE_ERROR', `Failed to parse index: ${categoryPath}`, {
-                cause: parsed.error,
-            }),
-        );
-    }
-    return ok(parsed.value);
-};
-
-/**
  * Discovers all root categories by reading the store's root index.
  * Returns the category paths from the subcategories array.
  *
@@ -308,9 +277,13 @@ const readCategoryIndex = async (
 const discoverRootCategories = async (
     storage: ScopedStorageAdapter,
 ): Promise<Result<string[], MemoryError>> => {
-    const indexResult = await readCategoryIndex(storage, '');
+    const indexResult = await storage.indexes.read('');
     if (!indexResult.ok) {
-        return indexResult;
+        return err(
+            memoryError('STORAGE_ERROR', 'Failed to read index: root', {
+                cause: indexResult.error,
+            }),
+        );
     }
 
     if (!indexResult.value) {
@@ -339,9 +312,13 @@ const collectMemoriesFromCategory = async (
     visited.add(categoryPath);
 
     // Read index
-    const indexResult = await readCategoryIndex(storage, categoryPath);
+    const indexResult = await storage.indexes.read(categoryPath);
     if (!indexResult.ok) {
-        return indexResult;
+        return err(
+            memoryError('STORAGE_ERROR', `Failed to read index: ${categoryPath}`, {
+                cause: indexResult.error,
+            }),
+        );
     }
 
     const index = indexResult.value;
@@ -411,9 +388,13 @@ const collectDirectSubcategories = async (
     storage: ScopedStorageAdapter,
     categoryPath: string,
 ): Promise<Result<ListedSubcategory[], MemoryError>> => {
-    const indexResult = await readCategoryIndex(storage, categoryPath);
+    const indexResult = await storage.indexes.read(categoryPath);
     if (!indexResult.ok) {
-        return indexResult;
+        return err(
+            memoryError('STORAGE_ERROR', `Failed to read index: ${categoryPath}`, {
+                cause: indexResult.error,
+            }),
+        );
     }
 
     const index = indexResult.value;
@@ -422,10 +403,10 @@ const collectDirectSubcategories = async (
     }
 
     return ok(
-        index.subcategories.map((s) => ({
-            path: s.path,
-            memoryCount: s.memoryCount,
-            description: s.description,
+        index.subcategories.map((subcategory) => ({
+            path: subcategory.path,
+            memoryCount: subcategory.memoryCount,
+            description: subcategory.description,
         })),
     );
 };
@@ -779,7 +760,7 @@ export const moveMemory = async (
 
     // 4. Create destination category
     const destCategory = getCategoryFromSlugPath(toPath);
-    const ensureResult = await storage.categories.ensureCategoryDirectory(destCategory);
+    const ensureResult = await storage.categories.ensure(destCategory);
     if (!ensureResult.ok) {
         return err(
             memoryError('STORAGE_ERROR', `Failed to create destination category: ${destCategory}`, {
@@ -917,7 +898,7 @@ export const listMemories = async (
             }
 
             // Add root category itself as a discoverable subcategory
-            const indexResult = await readCategoryIndex(storage, rootCat);
+            const indexResult = await storage.indexes.read(rootCat);
             if (indexResult.ok && indexResult.value) {
                 subcategories.push({
                     path: rootCat,
@@ -1083,9 +1064,13 @@ export const getRecentMemories = async (
     const collectEntriesFromCategory = async (
         catPath: string,
     ): Promise<Result<void, MemoryError>> => {
-        const indexResult = await readCategoryIndex(storage, catPath);
+        const indexResult = await storage.indexes.read(catPath);
         if (!indexResult.ok) {
-            return indexResult;
+            return err(
+                memoryError('STORAGE_ERROR', `Failed to read index: ${catPath}`, {
+                    cause: indexResult.error,
+                }),
+            );
         }
         if (!indexResult.value) {
             return ok(undefined);

@@ -16,11 +16,9 @@ import {
 
 // Mock storage port factory
 const createMockStorage = (overrides: Partial<CategoryStorage> = {}): CategoryStorage => ({
-    categoryExists: mock(async () => ok(false)),
-    readCategoryIndex: mock(async () => ok(null)),
-    writeCategoryIndex: mock(async () => ok(undefined)),
-    ensureCategoryDirectory: mock(async () => ok(undefined)),
-    deleteCategoryDirectory: mock(async () => ok(undefined)),
+    exists: mock(async () => ok(false)),
+    ensure: mock(async () => ok(undefined)),
+    delete: mock(async () => ok(undefined)),
     updateSubcategoryDescription: mock(async () => ok(undefined)),
     removeSubcategoryEntry: mock(async () => ok(undefined)),
     ...overrides,
@@ -80,7 +78,7 @@ describe('createCategory', () => {
 
     it('should return created: false for existing category', async () => {
         const storage = createMockStorage({
-            categoryExists: mock(async () => ok(true)),
+            exists: mock(async () => ok(true)),
         });
         const result = await createCategory(storage, 'project/cortex');
 
@@ -103,7 +101,7 @@ describe('createCategory', () => {
     it('should not create root categories in ancestors', async () => {
         const ensureCalls: string[] = [];
         const storage = createMockStorage({
-            ensureCategoryDirectory: mock(async (path: string) => {
+            ensure: mock(async (path: string) => {
                 ensureCalls.push(path);
                 return ok(undefined);
             }),
@@ -120,7 +118,7 @@ describe('createCategory', () => {
 describe('setDescription', () => {
     it('should set description on existing category', async () => {
         const storage = createMockStorage({
-            categoryExists: mock(async () => ok(true)),
+            exists: mock(async () => ok(true)),
         });
 
         const result = await setDescription(storage, 'project/cortex', 'Test description');
@@ -135,7 +133,7 @@ describe('setDescription', () => {
         let capturedParent: string | null = null;
         let capturedDesc: string | null = null;
         const storage = createMockStorage({
-            categoryExists: mock(async () => ok(true)),
+            exists: mock(async () => ok(true)),
             updateSubcategoryDescription: mock(
                 async (parent: string, _path: string, desc: string | null) => {
                     capturedParent = parent;
@@ -157,7 +155,7 @@ describe('setDescription', () => {
 
     it('should reject descriptions over 500 characters', async () => {
         const storage = createMockStorage({
-            categoryExists: mock(async () => ok(true)),
+            exists: mock(async () => ok(true)),
         });
         const longDesc = 'a'.repeat(501);
 
@@ -172,7 +170,7 @@ describe('setDescription', () => {
     it('should trim whitespace', async () => {
         let capturedDesc: string | null = null;
         const storage = createMockStorage({
-            categoryExists: mock(async () => ok(true)),
+            exists: mock(async () => ok(true)),
             updateSubcategoryDescription: mock(
                 async (_parent: string, _path: string, desc: string | null) => {
                     capturedDesc = desc;
@@ -189,7 +187,7 @@ describe('setDescription', () => {
     it('should clear description with empty string', async () => {
         let capturedDesc: string | null = 'initial';
         const storage = createMockStorage({
-            categoryExists: mock(async () => ok(true)),
+            exists: mock(async () => ok(true)),
             updateSubcategoryDescription: mock(
                 async (_parent: string, _path: string, desc: string | null) => {
                     capturedDesc = desc;
@@ -205,7 +203,7 @@ describe('setDescription', () => {
 
     it('should reject non-existent category', async () => {
         const storage = createMockStorage({
-            categoryExists: mock(async () => ok(false)),
+            exists: mock(async () => ok(false)),
         });
 
         const result = await setDescription(storage, 'project/missing', 'Test');
@@ -219,7 +217,7 @@ describe('setDescription', () => {
     it('should clear description with whitespace-only string', async () => {
         let capturedDesc: string | null = 'initial';
         const storage = createMockStorage({
-            categoryExists: mock(async () => ok(true)),
+            exists: mock(async () => ok(true)),
             updateSubcategoryDescription: mock(
                 async (_parent: string, _path: string, desc: string | null) => {
                     capturedDesc = desc;
@@ -236,7 +234,7 @@ describe('setDescription', () => {
     it('should accept descriptions exactly at 500 characters', async () => {
         let capturedDesc: string | null = null;
         const storage = createMockStorage({
-            categoryExists: mock(async () => ok(true)),
+            exists: mock(async () => ok(true)),
             updateSubcategoryDescription: mock(
                 async (_parent: string, _path: string, desc: string | null) => {
                     capturedDesc = desc;
@@ -261,7 +259,7 @@ describe('setDescription', () => {
             message: 'Disk full',
         };
         const storage = createMockStorage({
-            categoryExists: mock(async () => err(storageError)),
+            exists: mock(async () => err(storageError)),
         });
 
         const result = await setDescription(storage, 'project/cortex', 'Test');
@@ -277,7 +275,7 @@ describe('setDescription', () => {
 describe('deleteCategory', () => {
     it('should delete existing category', async () => {
         const storage = createMockStorage({
-            categoryExists: mock(async () => ok(true)),
+            exists: mock(async () => ok(true)),
         });
 
         const result = await deleteCategory(storage, 'project/cortex');
@@ -300,7 +298,7 @@ describe('deleteCategory', () => {
 
     it('should reject non-existent category', async () => {
         const storage = createMockStorage({
-            categoryExists: mock(async () => ok(false)),
+            exists: mock(async () => ok(false)),
         });
 
         const result = await deleteCategory(storage, 'project/missing');
@@ -314,7 +312,7 @@ describe('deleteCategory', () => {
     it('should remove entry from parent index', async () => {
         let removedPath: string | null = null;
         const storage = createMockStorage({
-            categoryExists: mock(async () => ok(true)),
+            exists: mock(async () => ok(true)),
             removeSubcategoryEntry: mock(async (_parent: string, path: string) => {
                 removedPath = path;
                 return ok(undefined);

@@ -12,6 +12,7 @@ import type {
     StoreStorage,
     StorageAdapterError,
 } from '../storage/adapter.ts';
+import type { CategoryIndex } from '../index/types.ts';
 import type { CategoryStorage } from '../category/types.ts';
 import type { StoreRegistry } from '../store/registry.ts';
 import type { Memory, MemoryError } from './types.ts';
@@ -124,6 +125,14 @@ const createMockSerializer = (): MemorySerializer => ({
 // Default mock serializer for tests
 const mockSerializer = createMockSerializer();
 
+const buildIndex = (
+    memories: CategoryIndex['memories'],
+    subcategories: CategoryIndex['subcategories'],
+): CategoryIndex => ({
+    memories,
+    subcategories,
+});
+
 // ============================================================================
 // Mock Storage Adapter Factory
 // ============================================================================
@@ -151,11 +160,9 @@ const createMockStorage = (
         ...overrides.indexes,
     } as IndexStorage,
     categories: {
-        categoryExists: async () => ok(false),
-        readCategoryIndex: async () => ok(null),
-        writeCategoryIndex: async () => ok(undefined),
-        ensureCategoryDirectory: async () => ok(undefined),
-        deleteCategoryDirectory: async () => ok(undefined),
+        exists: async () => ok(false),
+        ensure: async () => ok(undefined),
+        delete: async () => ok(undefined),
         updateSubcategoryDescription: async () => ok(undefined),
         removeSubcategoryEntry: async () => ok(undefined),
         ...overrides.categories,
@@ -753,7 +760,7 @@ describe('moveMemory', () => {
                     path === 'project/src/memory' ? ok(sampleMemoryContent) : ok(null),
             },
             categories: {
-                ensureCategoryDirectory: async (path) => {
+                ensure: async (path: string) => {
                     ensuredCategory = path;
                     return ok(undefined);
                 },
@@ -940,21 +947,19 @@ describe('removeMemory', () => {
 describe('listMemories', () => {
     it('should list memories in a category', async () => {
         // Index for the main category with 2 memories and 1 subcategory
-        const mainIndex = `memories:
-  - path: project/test/memory1
-    token_estimate: 100
-  - path: project/test/memory2
-    token_estimate: 150
-subcategories:
-  - path: project/test/sub
-    memory_count: 2`;
+        const mainIndex = buildIndex(
+            [
+                { path: 'project/test/memory1', tokenEstimate: 100 },
+                { path: 'project/test/memory2', tokenEstimate: 150 },
+            ],
+            [{ path: 'project/test/sub', memoryCount: 2 }],
+        );
         // Empty index for the subcategory (no recursive collection wanted for this test)
-        const subIndex = `memories: []
-subcategories: []`;
+        const subIndex = buildIndex([], []);
 
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => {
+                read: async (path: string) => {
                     if (path === 'project/test') return ok(mainIndex);
                     if (path === 'project/test/sub') return ok(subIndex);
                     return ok(null);
@@ -988,10 +993,10 @@ subcategories: []`;
         const storage = createMockStorage({
             indexes: {
                 read: async () =>
-                    ok(`memories:
-  - path: project/test/expired
-    token_estimate: 100
-subcategories: []`),
+                    ok(buildIndex(
+                        [{ path: 'project/test/expired', tokenEstimate: 100 }],
+                        [],
+                    )),
             },
             memories: {
                 read: async () => ok(expiredMemoryContent),
@@ -1012,10 +1017,10 @@ subcategories: []`),
         const storage = createMockStorage({
             indexes: {
                 read: async () =>
-                    ok(`memories:
-  - path: project/test/expired
-    token_estimate: 100
-subcategories: []`),
+                    ok(buildIndex(
+                        [{ path: 'project/test/expired', tokenEstimate: 100 }],
+                        [],
+                    )),
             },
             memories: {
                 read: async () => ok(expiredMemoryContent),
@@ -1035,24 +1040,23 @@ subcategories: []`),
     });
 
     it('should list root categories when no category specified', async () => {
-        const rootIndex = `memories: []
-subcategories:
-  - path: project
-    memory_count: 0
-  - path: human
-    memory_count: 0`;
+        const rootIndex = buildIndex(
+            [],
+            [
+                { path: 'project', memoryCount: 0 },
+                { path: 'human', memoryCount: 0 },
+            ],
+        );
 
         const storage = createMockStorage({
             indexes: {
-                read: async (name) => {
+                read: async (name: string) => {
                     if (name === '') return ok(rootIndex);
                     if (name === 'project') {
-                        return ok(`memories: []
-subcategories: []`);
+                        return ok(buildIndex([], []));
                     }
                     if (name === 'human') {
-                        return ok(`memories: []
-subcategories: []`);
+                        return ok(buildIndex([], []));
                     }
                     return ok(null);
                 },
@@ -1073,12 +1077,13 @@ subcategories: []`);
         const storage = createMockStorage({
             indexes: {
                 read: async () =>
-                    ok(`memories:
-  - path: project/test/valid
-    token_estimate: 100
-  - path: project/test/invalid
-    token_estimate: 50
-subcategories: []`),
+                    ok(buildIndex(
+                        [
+                            { path: 'project/test/valid', tokenEstimate: 100 },
+                            { path: 'project/test/invalid', tokenEstimate: 50 },
+                        ],
+                        [],
+                    )),
             },
             memories: {
                 read: async (path) => {
@@ -1103,12 +1108,13 @@ subcategories: []`),
         const storage = createMockStorage({
             indexes: {
                 read: async () =>
-                    ok(`memories:
-  - path: project/test/exists
-    token_estimate: 100
-  - path: project/test/missing
-    token_estimate: 50
-subcategories: []`),
+                    ok(buildIndex(
+                        [
+                            { path: 'project/test/exists', tokenEstimate: 100 },
+                            { path: 'project/test/missing', tokenEstimate: 50 },
+                        ],
+                        [],
+                    )),
             },
             memories: {
                 read: async (path) => {
@@ -1136,10 +1142,10 @@ describe('pruneExpiredMemories', () => {
     it('should return empty list when no expired memories', async () => {
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => {
+                read: async (path: string) => {
                     if (path === '') {
                         // Root index with no subcategories
-                        return ok('memories: []\nsubcategories: []');
+                        return ok(buildIndex([], []));
                     }
                     return ok(null);
                 },
@@ -1153,19 +1159,19 @@ describe('pruneExpiredMemories', () => {
     });
 
     it('should return candidates without deleting in dry run mode', async () => {
-        const rootIndex = `memories: []
-subcategories:
-  - path: project
-    memory_count: 1`;
-        const projectIndex = `memories:
-  - path: project/test/expired
-    token_estimate: 100
-subcategories: []`;
+        const rootIndex = buildIndex(
+            [],
+            [{ path: 'project', memoryCount: 1 }],
+        );
+        const projectIndex = buildIndex(
+            [{ path: 'project/test/expired', tokenEstimate: 100 }],
+            [],
+        );
 
         let deleteCalled = false;
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => {
+                read: async (path: string) => {
                     if (path === '') return ok(rootIndex);
                     if (path === 'project') return ok(projectIndex);
                     return ok(null);
@@ -1190,19 +1196,19 @@ subcategories: []`;
     });
 
     it('should delete expired memories when not in dry run mode', async () => {
-        const rootIndex = `memories: []
-subcategories:
-  - path: project
-    memory_count: 1`;
-        const projectIndex = `memories:
-  - path: project/test/expired
-    token_estimate: 100
-subcategories: []`;
+        const rootIndex = buildIndex(
+            [],
+            [{ path: 'project', memoryCount: 1 }],
+        );
+        const projectIndex = buildIndex(
+            [{ path: 'project/test/expired', tokenEstimate: 100 }],
+            [],
+        );
 
         const deletedPaths: string[] = [];
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => {
+                read: async (path: string) => {
                     if (path === '') return ok(rootIndex);
                     if (path === 'project') return ok(projectIndex);
                     return ok(null);
@@ -1227,19 +1233,19 @@ subcategories: []`;
     });
 
     it('should reindex after pruning when memories were deleted', async () => {
-        const rootIndex = `memories: []
-subcategories:
-  - path: project
-    memory_count: 1`;
-        const projectIndex = `memories:
-  - path: project/test/expired
-    token_estimate: 100
-subcategories: []`;
+        const rootIndex = buildIndex(
+            [],
+            [{ path: 'project', memoryCount: 1 }],
+        );
+        const projectIndex = buildIndex(
+            [{ path: 'project/test/expired', tokenEstimate: 100 }],
+            [],
+        );
 
         let reindexCalled = false;
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => {
+                read: async (path: string) => {
                     if (path === '') return ok(rootIndex);
                     if (path === 'project') return ok(projectIndex);
                     return ok(null);
@@ -1264,10 +1270,10 @@ subcategories: []`;
         let reindexCalled = false;
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => {
+                read: async (path: string) => {
                     if (path === '') {
                         // Root index with no subcategories
-                        return ok('memories: []\nsubcategories: []');
+                        return ok(buildIndex([], []));
                     }
                     return ok(null);
                 },
@@ -1284,18 +1290,18 @@ subcategories: []`;
     });
 
     it('should return STORAGE_ERROR when delete fails', async () => {
-        const rootIndex = `memories: []
-subcategories:
-  - path: project
-    memory_count: 1`;
-        const projectIndex = `memories:
-  - path: project/test/expired
-    token_estimate: 100
-subcategories: []`;
+        const rootIndex = buildIndex(
+            [],
+            [{ path: 'project', memoryCount: 1 }],
+        );
+        const projectIndex = buildIndex(
+            [{ path: 'project/test/expired', tokenEstimate: 100 }],
+            [],
+        );
 
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => {
+                read: async (path: string) => {
                     if (path === '') return ok(rootIndex);
                     if (path === 'project') return ok(projectIndex);
                     return ok(null);
@@ -1320,19 +1326,19 @@ subcategories: []`;
     });
 
     it('should skip non-expired memories', async () => {
-        const rootIndex = `memories: []
-subcategories:
-  - path: project
-    memory_count: 1`;
-        const projectIndex = `memories:
-  - path: project/test/active
-    token_estimate: 100
-subcategories: []`;
+        const rootIndex = buildIndex(
+            [],
+            [{ path: 'project', memoryCount: 1 }],
+        );
+        const projectIndex = buildIndex(
+            [{ path: 'project/test/active', tokenEstimate: 100 }],
+            [],
+        );
 
         const deletedPaths: string[] = [];
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => {
+                read: async (path: string) => {
                     if (path === '') return ok(rootIndex);
                     if (path === 'project') return ok(projectIndex);
                     return ok(null);
@@ -1357,29 +1363,30 @@ subcategories: []`;
     });
 
     it('should prune across multiple root categories', async () => {
-        const rootIndex = `memories: []
-subcategories:
-  - path: project
-    memory_count: 1
-  - path: human
-    memory_count: 1`;
+        const rootIndex = buildIndex(
+            [],
+            [
+                { path: 'project', memoryCount: 1 },
+                { path: 'human', memoryCount: 1 },
+            ],
+        );
 
         const deletedPaths: string[] = [];
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => {
+                read: async (path: string) => {
                     if (path === '') return ok(rootIndex);
                     if (path === 'project') {
-                        return ok(`memories:
-  - path: project/expired1
-    token_estimate: 100
-subcategories: []`);
+                        return ok(buildIndex(
+                            [{ path: 'project/expired1', tokenEstimate: 100 }],
+                            [],
+                        ));
                     }
                     if (path === 'human') {
-                        return ok(`memories:
-  - path: human/expired2
-    token_estimate: 50
-subcategories: []`);
+                        return ok(buildIndex(
+                            [{ path: 'human/expired2', tokenEstimate: 50 }],
+                            [],
+                        ));
                     }
                     return ok(null);
                 },
@@ -1405,29 +1412,30 @@ subcategories: []`);
 
     it('should prune memories in non-standard root categories', async () => {
         // Test that dynamic discovery finds memories in any root category, not just human/persona
-        const rootIndex = `memories: []
-subcategories:
-  - path: todo
-    memory_count: 1
-  - path: issues
-    memory_count: 1`;
+        const rootIndex = buildIndex(
+            [],
+            [
+                { path: 'todo', memoryCount: 1 },
+                { path: 'issues', memoryCount: 1 },
+            ],
+        );
 
         const deletedPaths: string[] = [];
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => {
+                read: async (path: string) => {
                     if (path === '') return ok(rootIndex);
                     if (path === 'todo') {
-                        return ok(`memories:
-  - path: todo/expired-task
-    token_estimate: 50
-subcategories: []`);
+                        return ok(buildIndex(
+                            [{ path: 'todo/expired-task', tokenEstimate: 50 }],
+                            [],
+                        ));
                     }
                     if (path === 'issues') {
-                        return ok(`memories:
-  - path: issues/old-issue
-    token_estimate: 75
-subcategories: []`);
+                        return ok(buildIndex(
+                            [{ path: 'issues/old-issue', tokenEstimate: 75 }],
+                            [],
+                        ));
                     }
                     return ok(null);
                 },
@@ -1485,29 +1493,40 @@ Note 1 content`,
             indexes: {
                 read: async (name: string) => {
                     if (name === '') {
-                        return ok(`memories: []
-subcategories:
-  - path: project
-    memory_count: 2
-  - path: notes
-    memory_count: 1`);
+                        return ok(buildIndex(
+                            [],
+                            [
+                                { path: 'project', memoryCount: 2 },
+                                { path: 'notes', memoryCount: 1 },
+                            ],
+                        ));
                     }
                     if (name === 'project') {
-                        return ok(`memories:
-  - path: project/memory1
-    token_estimate: 50
-    updated_at: 2025-01-03T10:00:00.000Z
-  - path: project/memory2
-    token_estimate: 60
-    updated_at: 2025-01-05T10:00:00.000Z
-subcategories: []`);
+                        return ok(buildIndex(
+                            [
+                                {
+                                    path: 'project/memory1',
+                                    tokenEstimate: 50,
+                                    updatedAt: new Date('2025-01-03T10:00:00.000Z'),
+                                },
+                                {
+                                    path: 'project/memory2',
+                                    tokenEstimate: 60,
+                                    updatedAt: new Date('2025-01-05T10:00:00.000Z'),
+                                },
+                            ],
+                            [],
+                        ));
                     }
                     if (name === 'notes') {
-                        return ok(`memories:
-  - path: notes/note1
-    token_estimate: 40
-    updated_at: 2025-01-04T10:00:00.000Z
-subcategories: []`);
+                        return ok(buildIndex(
+                            [{
+                                path: 'notes/note1',
+                                tokenEstimate: 40,
+                                updatedAt: new Date('2025-01-04T10:00:00.000Z'),
+                            }],
+                            [],
+                        ));
                     }
                     return ok(null);
                 },
@@ -1555,14 +1574,21 @@ Cortex memory 2`,
             indexes: {
                 read: async (name: string) => {
                     if (name === 'project/cortex') {
-                        return ok(`memories:
-  - path: project/cortex/memory1
-    token_estimate: 50
-    updated_at: 2025-01-03T10:00:00.000Z
-  - path: project/cortex/memory2
-    token_estimate: 60
-    updated_at: 2025-01-05T10:00:00.000Z
-subcategories: []`);
+                        return ok(buildIndex(
+                            [
+                                {
+                                    path: 'project/cortex/memory1',
+                                    tokenEstimate: 50,
+                                    updatedAt: new Date('2025-01-03T10:00:00.000Z'),
+                                },
+                                {
+                                    path: 'project/cortex/memory2',
+                                    tokenEstimate: 60,
+                                    updatedAt: new Date('2025-01-05T10:00:00.000Z'),
+                                },
+                            ],
+                            [],
+                        ));
                     }
                     return ok(null);
                 },
@@ -1614,23 +1640,32 @@ Note 3`,
             indexes: {
                 read: async (name: string) => {
                     if (name === '') {
-                        return ok(`memories: []
-subcategories:
-  - path: notes
-    memory_count: 3`);
+                        return ok(buildIndex(
+                            [],
+                            [{ path: 'notes', memoryCount: 3 }],
+                        ));
                     }
                     if (name === 'notes') {
-                        return ok(`memories:
-  - path: notes/note1
-    token_estimate: 10
-    updated_at: 2025-01-01T10:00:00.000Z
-  - path: notes/note2
-    token_estimate: 10
-    updated_at: 2025-01-02T10:00:00.000Z
-  - path: notes/note3
-    token_estimate: 10
-    updated_at: 2025-01-03T10:00:00.000Z
-subcategories: []`);
+                        return ok(buildIndex(
+                            [
+                                {
+                                    path: 'notes/note1',
+                                    tokenEstimate: 10,
+                                    updatedAt: new Date('2025-01-01T10:00:00.000Z'),
+                                },
+                                {
+                                    path: 'notes/note2',
+                                    tokenEstimate: 10,
+                                    updatedAt: new Date('2025-01-02T10:00:00.000Z'),
+                                },
+                                {
+                                    path: 'notes/note3',
+                                    tokenEstimate: 10,
+                                    updatedAt: new Date('2025-01-03T10:00:00.000Z'),
+                                },
+                            ],
+                            [],
+                        ));
                     }
                     return ok(null);
                 },
@@ -1666,17 +1701,20 @@ Note 1`,
             indexes: {
                 read: async (name: string) => {
                     if (name === '') {
-                        return ok(`memories: []
-subcategories:
-  - path: notes
-    memory_count: 1`);
+                        return ok(buildIndex(
+                            [],
+                            [{ path: 'notes', memoryCount: 1 }],
+                        ));
                     }
                     if (name === 'notes') {
-                        return ok(`memories:
-  - path: notes/note1
-    token_estimate: 10
-    updated_at: 2025-01-01T10:00:00.000Z
-subcategories: []`);
+                        return ok(buildIndex(
+                            [{
+                                path: 'notes/note1',
+                                tokenEstimate: 10,
+                                updatedAt: new Date('2025-01-01T10:00:00.000Z'),
+                            }],
+                            [],
+                        ));
                     }
                     return ok(null);
                 },
@@ -1735,20 +1773,27 @@ Expired note`,
             indexes: {
                 read: async (name: string) => {
                     if (name === '') {
-                        return ok(`memories: []
-subcategories:
-  - path: notes
-    memory_count: 2`);
+                        return ok(buildIndex(
+                            [],
+                            [{ path: 'notes', memoryCount: 2 }],
+                        ));
                     }
                     if (name === 'notes') {
-                        return ok(`memories:
-  - path: notes/active
-    token_estimate: 10
-    updated_at: 2025-01-05T10:00:00.000Z
-  - path: notes/expired
-    token_estimate: 10
-    updated_at: 2025-01-03T10:00:00.000Z
-subcategories: []`);
+                        return ok(buildIndex(
+                            [
+                                {
+                                    path: 'notes/active',
+                                    tokenEstimate: 10,
+                                    updatedAt: new Date('2025-01-05T10:00:00.000Z'),
+                                },
+                                {
+                                    path: 'notes/expired',
+                                    tokenEstimate: 10,
+                                    updatedAt: new Date('2025-01-03T10:00:00.000Z'),
+                                },
+                            ],
+                            [],
+                        ));
                     }
                     return ok(null);
                 },
@@ -1791,20 +1836,27 @@ Expired note`,
             indexes: {
                 read: async (name: string) => {
                     if (name === '') {
-                        return ok(`memories: []
-subcategories:
-  - path: notes
-    memory_count: 2`);
+                        return ok(buildIndex(
+                            [],
+                            [{ path: 'notes', memoryCount: 2 }],
+                        ));
                     }
                     if (name === 'notes') {
-                        return ok(`memories:
-  - path: notes/active
-    token_estimate: 10
-    updated_at: 2025-01-05T10:00:00.000Z
-  - path: notes/expired
-    token_estimate: 10
-    updated_at: 2025-01-03T10:00:00.000Z
-subcategories: []`);
+                        return ok(buildIndex(
+                            [
+                                {
+                                    path: 'notes/active',
+                                    tokenEstimate: 10,
+                                    updatedAt: new Date('2025-01-05T10:00:00.000Z'),
+                                },
+                                {
+                                    path: 'notes/expired',
+                                    tokenEstimate: 10,
+                                    updatedAt: new Date('2025-01-03T10:00:00.000Z'),
+                                },
+                            ],
+                            [],
+                        ));
                     }
                     return ok(null);
                 },
@@ -1857,23 +1909,32 @@ Middle note`,
             indexes: {
                 read: async (name: string) => {
                     if (name === '') {
-                        return ok(`memories: []
-subcategories:
-  - path: notes
-    memory_count: 3`);
+                        return ok(buildIndex(
+                            [],
+                            [{ path: 'notes', memoryCount: 3 }],
+                        ));
                     }
                     if (name === 'notes') {
                         // Note: 'stale' entry is missing updated_at
-                        return ok(`memories:
-  - path: notes/recent
-    token_estimate: 10
-    updated_at: 2025-01-05T10:00:00.000Z
-  - path: notes/stale
-    token_estimate: 10
-  - path: notes/middle
-    token_estimate: 10
-    updated_at: 2025-01-04T10:00:00.000Z
-subcategories: []`);
+                        return ok(buildIndex(
+                            [
+                                {
+                                    path: 'notes/recent',
+                                    tokenEstimate: 10,
+                                    updatedAt: new Date('2025-01-05T10:00:00.000Z'),
+                                },
+                                {
+                                    path: 'notes/stale',
+                                    tokenEstimate: 10,
+                                },
+                                {
+                                    path: 'notes/middle',
+                                    tokenEstimate: 10,
+                                    updatedAt: new Date('2025-01-04T10:00:00.000Z'),
+                                },
+                            ],
+                            [],
+                        ));
                     }
                     return ok(null);
                 },
@@ -1919,20 +1980,24 @@ Shallow memory`,
             indexes: {
                 read: async (name: string) => {
                     if (name === 'project/cortex') {
-                        return ok(`memories:
-  - path: project/cortex/memory2
-    token_estimate: 20
-    updated_at: 2025-01-04T10:00:00.000Z
-subcategories:
-  - path: project/cortex/deep
-    memory_count: 1`);
+                        return ok(buildIndex(
+                            [{
+                                path: 'project/cortex/memory2',
+                                tokenEstimate: 20,
+                                updatedAt: new Date('2025-01-04T10:00:00.000Z'),
+                            }],
+                            [{ path: 'project/cortex/deep', memoryCount: 1 }],
+                        ));
                     }
                     if (name === 'project/cortex/deep') {
-                        return ok(`memories:
-  - path: project/cortex/deep/memory1
-    token_estimate: 20
-    updated_at: 2025-01-05T10:00:00.000Z
-subcategories: []`);
+                        return ok(buildIndex(
+                            [{
+                                path: 'project/cortex/deep/memory1',
+                                tokenEstimate: 20,
+                                updatedAt: new Date('2025-01-05T10:00:00.000Z'),
+                            }],
+                            [],
+                        ));
                     }
                     return ok(null);
                 },

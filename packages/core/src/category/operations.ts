@@ -154,7 +154,7 @@ export const createCategory = async (
     }
 
     // Check if already exists
-    const existsResult = await storage.categoryExists(path);
+    const existsResult = await storage.exists(path);
     if (!existsResult.ok) {
         return existsResult;
     }
@@ -165,39 +165,22 @@ export const createCategory = async (
     // Create parent categories (excluding root)
     const ancestors = getAncestorPaths(path);
     for (const ancestor of ancestors) {
-        const ancestorExists = await storage.categoryExists(ancestor);
+        const ancestorExists = await storage.exists(ancestor);
         if (!ancestorExists.ok) {
             return ancestorExists;
         }
         if (!ancestorExists.value) {
-            const ensureResult = await storage.ensureCategoryDirectory(ancestor);
+            const ensureResult = await storage.ensure(ancestor);
             if (!ensureResult.ok) {
                 return ensureResult;
-            }
-            // Initialize empty index
-            const writeResult = await storage.writeCategoryIndex(ancestor, {
-                memories: [],
-                subcategories: [],
-            });
-            if (!writeResult.ok) {
-                return writeResult;
             }
         }
     }
 
     // Create the target category
-    const ensureResult = await storage.ensureCategoryDirectory(path);
+    const ensureResult = await storage.ensure(path);
     if (!ensureResult.ok) {
         return ensureResult;
-    }
-
-    // Initialize empty index
-    const writeResult = await storage.writeCategoryIndex(path, {
-        memories: [],
-        subcategories: [],
-    });
-    if (!writeResult.ok) {
-        return writeResult;
     }
 
     return ok({ path, created: true });
@@ -253,7 +236,7 @@ export const setDescription = async (
     }
 
     // Check category exists
-    const existsResult = await storage.categoryExists(path);
+    const existsResult = await storage.exists(path);
     if (!existsResult.ok) {
         return existsResult;
     }
@@ -322,7 +305,7 @@ export const deleteCategory = async (
     }
 
     // Check category exists
-    const existsResult = await storage.categoryExists(path);
+    const existsResult = await storage.exists(path);
     if (!existsResult.ok) {
         return existsResult;
     }
@@ -335,7 +318,7 @@ export const deleteCategory = async (
     }
 
     // Delete the category directory recursively
-    const deleteResult = await storage.deleteCategoryDirectory(path);
+    const deleteResult = await storage.delete(path);
     if (!deleteResult.ok) {
         return deleteResult;
     }
