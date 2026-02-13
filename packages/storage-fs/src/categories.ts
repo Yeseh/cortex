@@ -11,11 +11,9 @@ import { access, mkdir, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { Result } from '@yeseh/cortex-core';
 import type { CategoryError } from '@yeseh/cortex-core/category';
-import type { CategoryIndex } from '@yeseh/cortex-core/index';
-import { parseIndex } from '@yeseh/cortex-core';
 import type { FilesystemContext } from './types.ts';
 import { err, isNotFoundError, ok } from './utils.ts';
-import { readCategoryIndex, readIndexFile, writeCategoryIndex } from './indexes.ts';
+import { readCategoryIndex, writeCategoryIndex } from './indexes.ts';
 
 /**
  * Creates a CategoryError from components.
@@ -34,7 +32,7 @@ const toCategoryError = (
  * @param path - Category path to check (e.g., "project/cortex")
  * @returns true if the category exists, false otherwise
  */
-export const categoryExists = async (
+export const exists = async (
     ctx: FilesystemContext,
     path: string,
 ): Promise<Result<boolean, CategoryError>> => {
@@ -57,7 +55,7 @@ export const categoryExists = async (
  * @param path - Category path to create (e.g., "project/cortex")
  * @returns Success or error
  */
-export const ensureCategoryDirectory = async (
+export const ensure = async (
     ctx: FilesystemContext,
     path: string,
 ): Promise<Result<void, CategoryError>> => {
@@ -110,6 +108,21 @@ export const deleteCategoryDirectory = async (
         );
     }
 };
+
+/**
+ * @deprecated Use {@link exists} instead.
+ */
+export const categoryExists = exists;
+
+/**
+ * @deprecated Use {@link ensure} instead.
+ */
+export const ensureCategoryDirectory = ensure;
+
+/**
+ * @deprecated Use {@link deleteCategoryDirectory} instead.
+ */
+export { deleteCategoryDirectory as delete };
 
 /**
  * Updates the description of a subcategory in its parent's index.
@@ -207,7 +220,9 @@ export const removeSubcategoryEntry = async (
     }
 
     const currentIndex = currentResult.value;
-    const subcategories = currentIndex.subcategories.filter((s) => s.path !== subcategoryPath);
+    const subcategories = currentIndex.subcategories.filter(
+        (subcategory) => subcategory.path !== subcategoryPath,
+    );
 
     const writeResult = await writeCategoryIndex(ctx, indexName, {
         memories: currentIndex.memories,
@@ -228,62 +243,3 @@ export const removeSubcategoryEntry = async (
     return ok(undefined);
 };
 
-/**
- * Reads a category index for the CategoryStoragePort interface.
- *
- * Returns null if the index doesn't exist (instead of error).
- */
-export const readCategoryIndexForPort = async (
-    ctx: FilesystemContext,
-    path: string,
-): Promise<Result<CategoryIndex | null, CategoryError>> => {
-    const contents = await readIndexFile(ctx, path);
-    if (!contents.ok) {
-        return err(
-            toCategoryError(
-                'STORAGE_ERROR',
-                `Failed to read category index: ${path}`,
-                path,
-                contents.error,
-            ),
-        );
-    }
-    // Return null for missing index file (per interface contract)
-    if (contents.value === null) {
-        return ok(null);
-    }
-    const parsed = parseIndex(contents.value);
-    if (!parsed.ok) {
-        return err(
-            toCategoryError(
-                'STORAGE_ERROR',
-                `Failed to parse category index: ${path}`,
-                path,
-                parsed.error,
-            ),
-        );
-    }
-    return ok(parsed.value);
-};
-
-/**
- * Writes a category index for the CategoryStoragePort interface.
- */
-export const writeCategoryIndexForPort = async (
-    ctx: FilesystemContext,
-    path: string,
-    index: CategoryIndex,
-): Promise<Result<void, CategoryError>> => {
-    const result = await writeCategoryIndex(ctx, path, index);
-    if (!result.ok) {
-        return err(
-            toCategoryError(
-                'STORAGE_ERROR',
-                `Failed to write category index: ${path}`,
-                path,
-                result.error,
-            ),
-        );
-    }
-    return ok(undefined);
-};

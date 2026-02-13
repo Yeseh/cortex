@@ -4,7 +4,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { FilesystemStorageAdapter } from './index.ts';
-import { parseIndex, serializeIndex } from '@yeseh/cortex-core';
 
 describe('filesystem storage adapter', () => {
     let tempDir: string;
@@ -112,32 +111,32 @@ describe('filesystem storage adapter', () => {
         const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
 
         // Write root index (empty string = STORE_ROOT/index.yaml)
-        const writeRootResult = await adapter.writeIndexFile('', 'memories: []');
+        const writeRootResult = await adapter.writeIndexFile('', { memories: [], subcategories: [] });
         expect(writeRootResult.ok).toBe(true);
 
         const readRootResult = await adapter.readIndexFile('');
         expect(readRootResult.ok).toBe(true);
         if (readRootResult.ok) {
-            expect(readRootResult.value).toBe('memories: []');
+            expect(readRootResult.value).toEqual({ memories: [], subcategories: [] });
         }
 
         // Write category index (global = STORE_ROOT/global/index.yaml)
-        const writeCatResult = await adapter.writeIndexFile('global', 'memories: []');
+        const writeCatResult = await adapter.writeIndexFile('global', { memories: [], subcategories: [] });
         expect(writeCatResult.ok).toBe(true);
 
         const readCatResult = await adapter.readIndexFile('global');
         expect(readCatResult.ok).toBe(true);
         if (readCatResult.ok) {
-            expect(readCatResult.value).toBe('memories: []');
+            expect(readCatResult.value).toEqual({ memories: [], subcategories: [] });
         }
     });
 
     it('should store indexes in-folder at correct paths', async () => {
         const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
 
-        await adapter.writeIndexFile('', 'root index');
-        await adapter.writeIndexFile('global', 'global index');
-        await adapter.writeIndexFile('global/sub', 'sub index');
+        await adapter.writeIndexFile('', { memories: [], subcategories: [] });
+        await adapter.writeIndexFile('global', { memories: [], subcategories: [] });
+        await adapter.writeIndexFile('global/sub', { memories: [], subcategories: [] });
 
         // Verify physical file locations using fs.readFile
         const rootIndexPath = join(tempDir, 'index.yaml');
@@ -145,13 +144,13 @@ describe('filesystem storage adapter', () => {
         const subIndexPath = join(tempDir, 'global', 'sub', 'index.yaml');
 
         const rootContent = await fs.readFile(rootIndexPath, 'utf8');
-        expect(rootContent).toBe('root index');
+        expect(rootContent).toContain('memories: []');
 
         const globalContent = await fs.readFile(globalIndexPath, 'utf8');
-        expect(globalContent).toBe('global index');
+        expect(globalContent).toContain('memories: []');
 
         const subContent = await fs.readFile(subIndexPath, 'utf8');
-        expect(subContent).toBe('sub index');
+        expect(subContent).toContain('memories: []');
     });
 
     it('should return ok(null) for missing index files', async () => {
@@ -178,7 +177,7 @@ describe('filesystem storage adapter', () => {
     });
 });
 
-describe('CategoryStoragePort implementation', () => {
+describe('CategoryStorage implementation', () => {
     let tempDir: string;
 
     // Helper to generate valid memory content with frontmatter
@@ -213,15 +212,13 @@ describe('CategoryStoragePort implementation', () => {
             subcategories: { path: string; memoryCount: number; description?: string }[];
         },
     ) => {
-        const serialized = serializeIndex(index);
-        if (!serialized.ok) throw new Error('Failed to serialize index');
-        return adapter.writeIndexFile(path, serialized.value);
+        return adapter.writeIndexFile(path, index);
     };
 
     it('should check category existence - non-existent', async () => {
         const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
 
-        const result = await adapter.categoryExists('project/test');
+        const result = await adapter.categories.exists('project/test');
 
         expect(result.ok).toBe(true);
         if (result.ok) {
@@ -232,8 +229,8 @@ describe('CategoryStoragePort implementation', () => {
     it('should check category existence - exists', async () => {
         const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
 
-        await adapter.ensureCategoryDirectory('project/test');
-        const result = await adapter.categoryExists('project/test');
+        await adapter.categories.ensure('project/test');
+        const result = await adapter.categories.exists('project/test');
 
         expect(result.ok).toBe(true);
         if (result.ok) {
@@ -244,10 +241,10 @@ describe('CategoryStoragePort implementation', () => {
     it('should create category directory', async () => {
         const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
 
-        const result = await adapter.ensureCategoryDirectory('project/test/nested');
+        const result = await adapter.categories.ensure('project/test/nested');
 
         expect(result.ok).toBe(true);
-        const exists = await adapter.categoryExists('project/test/nested');
+        const exists = await adapter.categories.exists('project/test/nested');
         expect(exists.ok && exists.value).toBe(true);
     });
 
@@ -255,14 +252,14 @@ describe('CategoryStoragePort implementation', () => {
         const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
 
         // Create nested structure
-        await adapter.ensureCategoryDirectory('project/test/nested');
+        await adapter.categories.ensure('project/test/nested');
         await writeIndex(adapter, 'project/test/nested', { memories: [], subcategories: [] });
 
         // Delete parent
-        const result = await adapter.deleteCategoryDirectory('project/test');
+        const result = await adapter.categories.delete('project/test');
 
         expect(result.ok).toBe(true);
-        const exists = await adapter.categoryExists('project/test');
+        const exists = await adapter.categories.exists('project/test');
         expect(exists.ok && exists.value).toBe(false);
     });
 
@@ -270,7 +267,7 @@ describe('CategoryStoragePort implementation', () => {
         const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
 
         // Setup parent with subcategory
-        await adapter.ensureCategoryDirectory('project');
+        await adapter.categories.ensure('project');
         await writeIndex(adapter, 'project', {
             memories: [],
             subcategories: [{ path: 'project/test', memoryCount: 0 }],
@@ -289,11 +286,7 @@ describe('CategoryStoragePort implementation', () => {
         const indexResult = await adapter.readIndexFile('project');
         expect(indexResult.ok).toBe(true);
         if (indexResult.ok && indexResult.value) {
-            const parsed = parseIndex(indexResult.value);
-            expect(parsed.ok).toBe(true);
-            if (parsed.ok) {
-                expect(parsed.value.subcategories[0]?.description).toBe('Test description');
-            }
+            expect(indexResult.value.subcategories[0]?.description).toBe('Test description');
         }
     });
 
@@ -301,7 +294,7 @@ describe('CategoryStoragePort implementation', () => {
         const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
 
         // Setup with description
-        await adapter.ensureCategoryDirectory('project');
+        await adapter.categories.ensure('project');
         await writeIndex(adapter, 'project', {
             memories: [],
             subcategories: [{ path: 'project/test', memoryCount: 0, description: 'Old desc' }],
@@ -316,11 +309,7 @@ describe('CategoryStoragePort implementation', () => {
         const indexResult = await adapter.readIndexFile('project');
         expect(indexResult.ok).toBe(true);
         if (indexResult.ok && indexResult.value) {
-            const parsed = parseIndex(indexResult.value);
-            expect(parsed.ok).toBe(true);
-            if (parsed.ok) {
-                expect(parsed.value.subcategories[0]?.description).toBeUndefined();
-            }
+            expect(indexResult.value.subcategories[0]?.description).toBeUndefined();
         }
     });
 
@@ -328,7 +317,7 @@ describe('CategoryStoragePort implementation', () => {
         const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
 
         // Setup empty parent
-        await adapter.ensureCategoryDirectory('project');
+        await adapter.categories.ensure('project');
         await writeIndex(adapter, 'project', { memories: [], subcategories: [] });
 
         // Set description on non-existent subcategory entry
@@ -344,14 +333,10 @@ describe('CategoryStoragePort implementation', () => {
         const indexResult = await adapter.readIndexFile('project');
         expect(indexResult.ok).toBe(true);
         if (indexResult.ok && indexResult.value) {
-            const parsed = parseIndex(indexResult.value);
-            expect(parsed.ok).toBe(true);
-            if (parsed.ok) {
-                const entry = parsed.value.subcategories.find((s) => s.path === 'project/new');
-                expect(entry).toBeDefined();
-                expect(entry?.description).toBe('New description');
-                expect(entry?.memoryCount).toBe(0);
-            }
+            const entry = indexResult.value.subcategories.find((s) => s.path === 'project/new');
+            expect(entry).toBeDefined();
+            expect(entry?.description).toBe('New description');
+            expect(entry?.memoryCount).toBe(0);
         }
     });
 
@@ -359,7 +344,7 @@ describe('CategoryStoragePort implementation', () => {
         const adapter = new FilesystemStorageAdapter({ rootDirectory: tempDir });
 
         // Setup parent with subcategory
-        await adapter.ensureCategoryDirectory('project');
+        await adapter.categories.ensure('project');
         await writeIndex(adapter, 'project', {
             memories: [],
             subcategories: [
@@ -377,12 +362,8 @@ describe('CategoryStoragePort implementation', () => {
         const indexResult = await adapter.readIndexFile('project');
         expect(indexResult.ok).toBe(true);
         if (indexResult.ok && indexResult.value) {
-            const parsed = parseIndex(indexResult.value);
-            expect(parsed.ok).toBe(true);
-            if (parsed.ok) {
-                expect(parsed.value.subcategories).toHaveLength(1);
-                expect(parsed.value.subcategories[0]?.path).toBe('project/keep');
-            }
+            expect(indexResult.value.subcategories).toHaveLength(1);
+            expect(indexResult.value.subcategories[0]?.path).toBe('project/keep');
         }
     });
 
@@ -396,7 +377,7 @@ describe('CategoryStoragePort implementation', () => {
         });
 
         // Setup project category index
-        await adapter.ensureCategoryDirectory('project');
+        await adapter.categories.ensure('project');
         await writeIndex(adapter, 'project', { memories: [], subcategories: [] });
 
         // Add a memory, which triggers upsertSubcategoryEntry with updated count
@@ -411,14 +392,10 @@ describe('CategoryStoragePort implementation', () => {
         const indexResult = await adapter.readIndexFile('');
         expect(indexResult.ok).toBe(true);
         if (indexResult.ok && indexResult.value) {
-            const parsed = parseIndex(indexResult.value);
-            expect(parsed.ok).toBe(true);
-            if (parsed.ok) {
-                const projectEntry = parsed.value.subcategories.find((s) => s.path === 'project');
-                expect(projectEntry).toBeDefined();
-                expect(projectEntry?.description).toBe('Project memories');
-                expect(projectEntry?.memoryCount).toBe(1);
-            }
+            const projectEntry = indexResult.value.subcategories.find((s) => s.path === 'project');
+            expect(projectEntry).toBeDefined();
+            expect(projectEntry?.description).toBe('Project memories');
+            expect(projectEntry?.memoryCount).toBe(1);
         }
     });
 });

@@ -13,7 +13,7 @@ bun add @yeseh/cortex-storage-fs
 This package provides:
 
 - **FilesystemStorageAdapter** - Full storage adapter for memories, categories, and indexes
-- **FilesystemStoreRegistry** - Multi-store registry with global configuration
+- **FilesystemRegistry** - Store registry with global configuration
 - **Serialization utilities** - Parse and serialize memory files with YAML frontmatter
 
 ## Usage
@@ -28,46 +28,31 @@ const adapter = new FilesystemStorageAdapter({
 });
 
 // Read a memory
-const result = await adapter.readMemory('project/notes/api-design');
+const result = await adapter.memories.read('project/notes/api-design');
 if (result.ok && result.value) {
   console.log(result.value.content);
   console.log(result.value.metadata);
 }
 
 // Write a memory
-await adapter.writeMemory('project/notes/new-note', {
-  content: 'Memory content here',
-  metadata: {
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    tags: ['architecture']
-  }
-});
+await adapter.memories.write('project/notes/new-note', 'Memory content here');
 
 // Delete a memory
-await adapter.deleteMemory('project/notes/old-note');
+await adapter.memories.remove('project/notes/old-note');
 ```
 
 ### Store Registry
 
 ```typescript
-import { FilesystemStoreRegistry } from '@yeseh/cortex-storage-fs';
+import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 
-const registry = new FilesystemStoreRegistry({
-  globalConfigPath: '~/.config/cortex'
-});
+const registry = new FilesystemRegistry('/path/to/stores.yaml');
 
-// List all registered stores
-const stores = await registry.listStores();
+await registry.initialize();
+await registry.load();
 
 // Get a specific store
-const store = await registry.getStore('my-project');
-
-// Register a new store
-await registry.addStore('my-project', '/path/to/project/.cortex');
-
-// Remove a store (doesn't delete files)
-await registry.removeStore('my-project');
+const store = registry.getStore('my-project');
 ```
 
 ### Memory File Parsing
@@ -79,8 +64,8 @@ import { parseMemory, serializeMemory } from '@yeseh/cortex-storage-fs';
 
 // Parse a memory file
 const fileContent = `---
-createdAt: 2024-01-15T10:00:00Z
-updatedAt: 2024-01-15T10:00:00Z
+created_at: 2024-01-15T10:00:00Z
+updated_at: 2024-01-15T10:00:00Z
 tags:
   - architecture
   - backend
@@ -110,12 +95,12 @@ The filesystem adapter uses this directory structure:
 
 ```
 store/
-  _index.yaml           # Root category index
+  index.yaml            # Root category index
   category/
-    _index.yaml         # Category index with memory summaries
+    index.yaml          # Category index with memory summaries
     memory-slug.md      # Memory file with YAML frontmatter
     subcategory/
-      _index.yaml
+      index.yaml
       another-memory.md
 ```
 
@@ -123,12 +108,12 @@ store/
 
 ```markdown
 ---
-createdAt: 2024-01-15T10:00:00.000Z
-updatedAt: 2024-01-15T10:00:00.000Z
+created_at: 2024-01-15T10:00:00.000Z
+updated_at: 2024-01-15T10:00:00.000Z
 tags:
   - tag1
   - tag2
-expiresAt: 2024-12-31T23:59:59.000Z  # optional
+expires_at: 2024-12-31T23:59:59.000Z  # optional
 source: user  # optional
 ---
 
@@ -138,14 +123,14 @@ Memory content goes here. This can be any markdown content.
 ### Index File Format
 
 ```yaml
-description: Optional category description
 memories:
   - path: category/memory-slug
-    tokenEstimate: 42
+    token_estimate: 42
     summary: First line or generated summary
+    updated_at: 2024-01-15T10:00:00.000Z # optional
 subcategories:
   - path: category/subcategory
-    memoryCount: 5
+    memory_count: 5
     description: Subcategory description
 ```
 
