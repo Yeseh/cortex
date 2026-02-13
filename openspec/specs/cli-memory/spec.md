@@ -24,3 +24,12 @@ The CLI SHALL create missing categories only during add operations.
 - **WHEN** a user adds a memory to a non-existent category
 - **THEN** the CLI creates the category structure
 
+### Requirement: Clear expiration via negation flag
+
+The `memory update` command SHALL accept `--no-expires-at` to remove an expiration date from a memory. This replaces the former `--clear-expiry` / `-E` flag.
+
+#### Scenario: Clearing expiration with negation flag
+
+- **WHEN** a user runs `cortex memory update category/slug --no-expires-at`
+- **THEN** the expiration date is removed from the memory
+

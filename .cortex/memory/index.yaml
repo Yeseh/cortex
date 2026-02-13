@@ -1,7 +1,7 @@
 memories: []
 subcategories:
   - path: decisions
-    memory_count: 15
+    memory_count: 17
   - path: features
     memory_count: 3
   - path: investigations
@@ -13,6 +13,6 @@ subcategories:
   - path: standards
     memory_count: 9
   - path: standup
-    memory_count: 2
+    memory_count: 3
   - path: todo
     memory_count: 2

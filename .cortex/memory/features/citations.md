@@ -1,11 +1,12 @@
 ---
 created_at: 2026-02-11T20:19:07.374Z
-updated_at: 2026-02-11T20:19:07.374Z
+updated_at: 2026-02-13T18:44:42.930Z
 tags:
   - feature
   - citations
   - memory
   - design
+  - openspec
 source: mcp
 ---
 # Memory Citations (Issue #17)
@@ -35,5 +36,7 @@ Add `citations: string[]` to `MemoryMetadata` for verifiable source references.
 - Memory skill: citation guidance in SKILL.md, tools.md, practices.md
 
 ## Related
+- OpenSpec proposal: `openspec/changes/add-memory-citations/`
+- Affected specs: `memory-core`, `storage-filesystem`, `mcp-memory-tools`, `cli-memory`
 - Full brainstorm: `.context/citations-brainstorm.md`
 - Separate TODO: remove `clear_expiry` boolean flag anti-pattern

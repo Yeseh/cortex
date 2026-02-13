@@ -1,6 +1,8 @@
 memories:
   - path: decisions/cli-commander-refactor
     token_estimate: 236
+  - path: decisions/commander-negation-pattern
+    token_estimate: 176
   - path: decisions/dynamic-root-category-discovery
     token_estimate: 235
   - path: decisions/index-migration-strategy
@@ -15,6 +17,8 @@ memories:
     token_estimate: 340
   - path: decisions/reindex-root-subcategories
     token_estimate: 297
+  - path: decisions/reindex-stale-cleanup-algorithm
+    token_estimate: 230
   - path: decisions/root-category-descriptions
     token_estimate: 341
   - path: decisions/scoped-storage-adapter
