@@ -6,7 +6,7 @@
  * @module core/storage/filesystem/indexes
  */
 
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { dirname, extname, relative, resolve } from 'node:path';
 import type { MemorySlugPath, Result } from '@yeseh/cortex-core';
 import type {
@@ -55,7 +55,7 @@ const normalizeSlugPath = (rawPath: string): string | null => {
 export const resolveIndexPath = (
     ctx: FilesystemContext,
     name: StorageIndexName,
-    errorCode: StorageAdapterError['code']
+    errorCode: StorageAdapterError['code'],
 ): Result<string, StorageAdapterError> => {
     // Category indexes are at: STORE_ROOT/<categoryPath>/index.yaml
     // For root category (empty string): STORE_ROOT/index.yaml
@@ -71,7 +71,8 @@ const readDirEntries = async (current: string): Promise<DirEntriesResult> => {
     try {
         const entries = await readdir(current, { withFileTypes: true });
         return ok(entries);
-    } catch (error) {
+    }
+    catch (error) {
         if (isNotFoundError(error)) {
             return ok([]);
         }
@@ -93,7 +94,7 @@ const readDirEntries = async (current: string): Promise<DirEntriesResult> => {
  */
 export const readIndexFile = async (
     ctx: FilesystemContext,
-    name: StorageIndexName
+    name: StorageIndexName,
 ): Promise<StringOrNullResult> => {
     const filePathResult = resolveIndexPath(ctx, name, 'IO_READ_ERROR');
     if (!filePathResult.ok) {
@@ -103,7 +104,8 @@ export const readIndexFile = async (
     try {
         const contents = await readFile(filePath, 'utf8');
         return ok(contents);
-    } catch (error) {
+    }
+    catch (error) {
         if (isNotFoundError(error)) {
             return ok(null);
         }
@@ -129,7 +131,7 @@ export const readIndexFile = async (
 export const writeIndexFile = async (
     ctx: FilesystemContext,
     name: StorageIndexName,
-    contents: string
+    contents: string,
 ): Promise<Result<void, StorageAdapterError>> => {
     const filePathResult = resolveIndexPath(ctx, name, 'IO_WRITE_ERROR');
     if (!filePathResult.ok) {
@@ -140,7 +142,8 @@ export const writeIndexFile = async (
         await mkdir(dirname(filePath), { recursive: true });
         await writeFile(filePath, contents, 'utf8');
         return ok(undefined);
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'IO_WRITE_ERROR',
             message: `Failed to write index file at ${filePath}.`,
@@ -161,7 +164,7 @@ export const writeIndexFile = async (
 export const readCategoryIndex = async (
     ctx: FilesystemContext,
     name: StorageIndexName,
-    options: { createWhenMissing?: boolean } = {}
+    options: { createWhenMissing?: boolean } = {},
 ): Promise<Result<CategoryIndex, StorageAdapterError>> => {
     const contents = await readIndexFile(ctx, name);
     if (!contents.ok) {
@@ -200,7 +203,7 @@ export const readCategoryIndex = async (
 export const writeCategoryIndex = async (
     ctx: FilesystemContext,
     name: StorageIndexName,
-    index: CategoryIndex
+    index: CategoryIndex,
 ): Promise<Result<void, StorageAdapterError>> => {
     const serialized = serializeIndex(index);
     if (!serialized.ok) {
@@ -224,7 +227,7 @@ export const upsertMemoryEntry = async (
     ctx: FilesystemContext,
     indexName: StorageIndexName,
     entry: IndexMemoryEntry,
-    options: { createWhenMissing?: boolean } = {}
+    options: { createWhenMissing?: boolean } = {},
 ): Promise<Result<void, StorageAdapterError>> => {
     const current = await readCategoryIndex(ctx, indexName, options);
     if (!current.ok) {
@@ -250,7 +253,7 @@ export const upsertSubcategoryEntry = async (
     indexName: StorageIndexName,
     entryPath: string,
     memoryCount: number,
-    options: { createWhenMissing?: boolean } = {}
+    options: { createWhenMissing?: boolean } = {},
 ): Promise<Result<void, StorageAdapterError>> => {
     const current = await readCategoryIndex(ctx, indexName, options);
     if (!current.ok) {
@@ -282,7 +285,7 @@ export const updateCategoryIndexes = async (
     ctx: FilesystemContext,
     slugPath: MemorySlugPath,
     contents: string,
-    options: { createWhenMissing?: boolean } = {}
+    options: { createWhenMissing?: boolean } = {},
 ): Promise<Result<void, StorageAdapterError>> => {
     const identityResult = validateSlugPath(slugPath, {
         code: 'INDEX_ERROR',
@@ -312,7 +315,7 @@ export const updateCategoryIndexes = async (
             path: slugPath,
             tokenEstimate: tokenEstimateResult.value,
         },
-        { ...options, createWhenMissing: true }
+        { ...options, createWhenMissing: true },
     );
     if (!upsertMemory.ok) {
         return upsertMemory;
@@ -334,7 +337,7 @@ export const updateCategoryIndexes = async (
             rootIndexName,
             topLevelCategory,
             topLevelCategoryIndex.value.memories.length,
-            { ...options, createWhenMissing: true }
+            { ...options, createWhenMissing: true },
         );
         if (!upsertRoot.ok) {
             return upsertRoot;
@@ -357,7 +360,7 @@ export const updateCategoryIndexes = async (
             parentIndexName,
             subcategoryPath,
             subcategoryIndex.value.memories.length,
-            { ...options, createWhenMissing: true }
+            { ...options, createWhenMissing: true },
         );
         if (!upsertSubcategory.ok) {
             return upsertSubcategory;
@@ -372,7 +375,7 @@ export const updateCategoryIndexes = async (
  */
 const collectMemoryFiles = async (
     ctx: FilesystemContext,
-    root: string
+    root: string,
 ): Promise<Result<string[], StorageAdapterError>> => {
     const results: string[] = [];
     const pending: string[] = [root];
@@ -420,7 +423,7 @@ const collectMemoryFiles = async (
 const addIndexEntry = (
     indexes: Map<string, CategoryIndex>,
     slugPath: MemorySlugPath,
-    tokenEstimate: number
+    tokenEstimate: number,
 ): void => {
     const categoryPath = slugPath.split('/').slice(0, -1).join('/');
     const current = indexes.get(categoryPath) ?? { memories: [], subcategories: [] };
@@ -441,7 +444,7 @@ const addIndexEntry = (
  */
 const recordParentSubcategory = (
     parentSubcategories: Map<string, Set<string>>,
-    slugPath: MemorySlugPath
+    slugPath: MemorySlugPath,
 ): void => {
     const segments = slugPath.split('/').filter((segment) => segment.length > 0);
     if (segments.length < 2) {
@@ -471,9 +474,11 @@ const recordParentSubcategory = (
  */
 const applyParentSubcategories = (
     indexes: Map<string, CategoryIndex>,
-    parentSubcategories: Map<string, Set<string>>
+    parentSubcategories: Map<string, Set<string>>,
 ): void => {
-    for (const [parentCategory, subcategories] of parentSubcategories.entries()) {
+    for (const [
+        parentCategory, subcategories,
+    ] of parentSubcategories.entries()) {
         const parentIndex = indexes.get(parentCategory) ?? {
             memories: [],
             subcategories: [],
@@ -504,7 +509,7 @@ type BuildIndexEntryResult = Result<
  */
 const buildIndexEntry = async (
     ctx: FilesystemContext,
-    filePath: string
+    filePath: string,
 ): Promise<BuildIndexEntryResult> => {
     const relativePath = relative(ctx.storeRoot, filePath);
     const rawSlugPath = toSlugPathFromRelative(relativePath, ctx.memoryExtension);
@@ -533,7 +538,8 @@ const buildIndexEntry = async (
     let contents: string;
     try {
         contents = await readFile(filePath, 'utf8');
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'IO_READ_ERROR',
             message: `Failed to read memory file at ${filePath}.`,
@@ -563,7 +569,7 @@ const buildIndexEntry = async (
  */
 const buildIndexState = async (
     ctx: FilesystemContext,
-    filePaths: string[]
+    filePaths: string[],
 ): Promise<IndexBuildResult> => {
     const indexes = new Map<string, CategoryIndex>();
     const parentSubcategories = new Map<string, Set<string>>();
@@ -611,10 +617,12 @@ const buildIndexState = async (
 const rebuildIndexFiles = async (
     ctx: FilesystemContext,
     targetRoot: string,
-    indexes: Map<string, CategoryIndex>
+    indexes: Map<string, CategoryIndex>,
 ): Promise<Result<void, StorageAdapterError>> => {
     const sortedIndexes = Array.from(indexes.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-    for (const [indexName, index] of sortedIndexes) {
+    for (const [
+        indexName, index,
+    ] of sortedIndexes) {
         index.memories.sort((a, b) => a.path.localeCompare(b.path));
         index.subcategories.sort((a, b) => a.path.localeCompare(b.path));
         const serialized = serializeIndex(index);
@@ -639,7 +647,8 @@ const rebuildIndexFiles = async (
         try {
             await mkdir(dirname(filePathResult.value), { recursive: true });
             await writeFile(filePathResult.value, serialized.value, 'utf8');
-        } catch (error) {
+        }
+        catch (error) {
             return err({
                 code: 'IO_WRITE_ERROR',
                 message: `Failed to write index file at ${filePathResult.value}.`,
@@ -652,18 +661,158 @@ const rebuildIndexFiles = async (
 };
 
 /**
+ * Collects all index file paths recursively from a directory.
+ *
+ * Walks the directory tree starting at `root` and finds all files
+ * matching the index file naming pattern (`index${ctx.indexExtension}`).
+ * Used during reindex to discover existing index files so stale ones
+ * can be identified and removed after the rebuild.
+ *
+ * Non-existent directories are treated as empty (no error is returned),
+ * consistent with {@link readDirEntries} behavior.
+ *
+ * @param ctx - Filesystem context providing `indexExtension` to match
+ * @param root - Absolute path of the root directory to scan recursively
+ * @returns `Result` containing an array of absolute paths to discovered
+ *   index files on success, or a `StorageAdapterError` with code
+ *   `'IO_READ_ERROR'` if a directory cannot be read
+ */
+const collectIndexFiles = async (
+    ctx: FilesystemContext,
+    root: string,
+): Promise<Result<string[], StorageAdapterError>> => {
+    const results: string[] = [];
+    const pending: string[] = [root];
+    const indexFileName = `index${ctx.indexExtension}`;
+
+    while (pending.length > 0) {
+        const current = pending.pop();
+        if (!current) {
+            continue;
+        }
+
+        const entriesResult = await readDirEntries(current);
+        if (!entriesResult.ok) {
+            return entriesResult;
+        }
+
+        for (const entry of entriesResult.value) {
+            const entryName = typeof entry.name === 'string' ? entry.name : entry.name.toString();
+            const entryPath = resolve(current, entryName);
+            if (entry.isDirectory()) {
+                pending.push(entryPath);
+                continue;
+            }
+            if (entry.isFile() && entryName === indexFileName) {
+                results.push(entryPath);
+            }
+        }
+    }
+
+    return ok(results);
+};
+
+/**
+ * Removes stale index files that no longer correspond to any category.
+ *
+ * After a reindex, the set of valid categories may have shrunk (e.g.,
+ * because all memories in a category were deleted or pruned). This
+ * function computes the set of expected index file paths from the
+ * rebuilt `indexes` map, then deletes any existing index files that
+ * are not in that set.
+ *
+ * Fails fast if a storage path cannot be resolved (path traversal
+ * check). Silently ignores `ENOENT` errors during deletion because
+ * the file may have already been removed by another process.
+ *
+ * @param ctx - Filesystem context providing `storeRoot` and `indexExtension`
+ * @param indexes - The rebuilt category indexes keyed by category path
+ *   (empty string for root). Only index paths derived from these keys are
+ *   considered "current".
+ * @param existingIndexPaths - Absolute paths of index files discovered on
+ *   disk before the rebuild (output of {@link collectIndexFiles})
+ * @returns `Result<void>` on success, or a `StorageAdapterError` with code
+ *   `'IO_WRITE_ERROR'` if a non-ENOENT deletion error occurs or a path
+ *   cannot be resolved
+ */
+const removeStaleIndexFiles = async (
+    ctx: FilesystemContext,
+    indexes: Map<string, CategoryIndex>,
+    existingIndexPaths: string[],
+): Promise<Result<void, StorageAdapterError>> => {
+    const newIndexPaths = new Set<string>();
+    for (const indexName of indexes.keys()) {
+        const indexPath =
+            indexName === ''
+                ? `index${ctx.indexExtension}`
+                : `${indexName}/index${ctx.indexExtension}`;
+        const filePathResult = resolveStoragePath(ctx.storeRoot, indexPath, 'IO_WRITE_ERROR');
+        if (!filePathResult.ok) {
+            return filePathResult;
+        }
+        newIndexPaths.add(filePathResult.value);
+    }
+
+    for (const existingPath of existingIndexPaths) {
+        if (!newIndexPaths.has(existingPath)) {
+            try {
+                await unlink(existingPath);
+            }
+            catch (error) {
+                if (!isNotFoundError(error)) {
+                    return err({
+                        code: 'IO_WRITE_ERROR',
+                        message: `Failed to remove stale index file at ${existingPath}.`,
+                        path: existingPath,
+                        cause: error,
+                    });
+                }
+            }
+        }
+    }
+
+    return ok(undefined);
+};
+
+/**
  * Reindexes all category indexes by scanning the filesystem.
  *
- * Walks the storage directory, collects all memory files,
- * and rebuilds all index files from scratch. File paths are
- * normalized to valid slugs during indexing.
+ * Walks the storage directory, collects all memory files, and rebuilds
+ * every category index from scratch. File paths are normalized to valid
+ * slugs during indexing; slug collisions are resolved by appending
+ * numeric suffixes (`-2`, `-3`, …).
  *
- * @param ctx - Filesystem context with configuration
- * @returns Result with warnings array, or error on failure
+ * After writing the new index files, stale index files for categories
+ * that no longer contain any memories are removed from disk, keeping
+ * the store directory clean.
+ *
+ * @param ctx - Filesystem context providing `storeRoot`, `memoryExtension`,
+ *   and `indexExtension`
+ * @returns `Result` containing a {@link ReindexResult} with a `warnings`
+ *   array describing skipped files and slug collisions on success, or a
+ *   `StorageAdapterError` on failure (e.g., I/O errors during read, write,
+ *   or deletion)
+ *
+ * @example
+ * ```typescript
+ * const result = await reindexCategoryIndexes(ctx);
+ * if (result.ok) {
+ *   for (const warning of result.value.warnings) {
+ *     console.warn(warning);
+ *   }
+ * }
+ * ```
  */
 export const reindexCategoryIndexes = async (
-    ctx: FilesystemContext
+    ctx: FilesystemContext,
 ): Promise<Result<ReindexResult, StorageAdapterError>> => {
+    // 1. Collect existing index files before rebuild
+    const existingIndexesResult = await collectIndexFiles(ctx, ctx.storeRoot);
+    if (!existingIndexesResult.ok) {
+        return existingIndexesResult;
+    }
+
+    // 2. Build new index state from memory files
     const filesResult = await collectMemoryFiles(ctx, ctx.storeRoot);
     if (!filesResult.ok) {
         return filesResult;
@@ -675,10 +824,20 @@ export const reindexCategoryIndexes = async (
     }
     applyParentSubcategories(buildState.value.indexes, buildState.value.parentSubcategories);
 
-    // Write index files in-place to storeRoot
+    // 3. Write new index files
     const buildResult = await rebuildIndexFiles(ctx, ctx.storeRoot, buildState.value.indexes);
     if (!buildResult.ok) {
         return buildResult;
+    }
+
+    // 4. Remove stale index files that are no longer needed
+    const removeResult = await removeStaleIndexFiles(
+        ctx,
+        buildState.value.indexes,
+        existingIndexesResult.value,
+    );
+    if (!removeResult.ok) {
+        return removeResult;
     }
 
     return ok({ warnings: buildState.value.warnings });
