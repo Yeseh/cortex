@@ -88,7 +88,7 @@ describe('cortex_create_category tool', () => {
         const input = { store: 'default', path: '' };
 
         await expect(
-            createCategoryHandler({ config }, input as CreateCategoryInput),
+            createCategoryHandler({ config }, input as CreateCategoryInput)
         ).rejects.toThrow();
     });
 });
@@ -140,7 +140,7 @@ describe('cortex_set_category_description tool', () => {
                 store: 'default',
                 path: 'project/cortex',
                 description: 'Initial',
-            },
+            }
         );
 
         // Then clear it
@@ -150,11 +150,35 @@ describe('cortex_set_category_description tool', () => {
                 store: 'default',
                 path: 'project/cortex',
                 description: '',
-            },
+            }
         );
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.description).toBeNull();
+    });
+
+    it('should persist description to index.yaml file', async () => {
+        const input: SetCategoryDescriptionInput = {
+            store: 'default',
+            path: 'test/categories/level1',
+            description: 'Test category for runbook validation',
+        };
+
+        const result = await setCategoryDescriptionHandler({ config }, input);
+        const output = JSON.parse(result.content[0]!.text);
+
+        expect(output.description).toBe('Test category for runbook validation');
+
+        // Read the parent index file to verify persistence
+        const { readFile } = await import('node:fs/promises');
+        const memoryDir = join(testDir, MEMORY_SUBDIR);
+        const parentIndexPath = join(memoryDir, 'test', 'categories', 'index.yaml');
+        const indexContent = await readFile(parentIndexPath, 'utf8');
+
+        // Verify the description is actually in the file
+        expect(indexContent).toContain('Test category for runbook validation');
+        expect(indexContent).toContain('description:');
+        expect(indexContent).toContain('test/categories/level1');
     });
 });
 
