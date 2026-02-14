@@ -29,11 +29,7 @@
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
 import { resolveStoreAdapter } from '../../context.ts';
-import {
-    updateMemory,
-    type UpdateMemoryInput,
-} from '@yeseh/cortex-core/memory';
-import { parseMemory, serializeMemory } from '@yeseh/cortex-storage-fs';
+import { updateMemory, type UpdateMemoryInput } from '@yeseh/cortex-core/memory';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 import { resolveMemoryContentInput } from '../../input.ts';
 
@@ -61,11 +57,6 @@ export interface UpdateHandlerDeps {
     adapter?: ScopedStorageAdapter;
 }
 
-const memorySerializer = {
-    parse: parseMemory,
-    serialize: serializeMemory,
-};
-
 const resolveAdapter = async (
     storeName: string | undefined,
     deps: UpdateHandlerDeps,
@@ -76,10 +67,12 @@ const resolveAdapter = async (
 
     const storeResult = await resolveStoreAdapter(storeName);
     if (!storeResult.ok()) {
-        throwCoreError(storeResult.error ?? {
-            code: 'STORE_RESOLUTION_FAILED',
-            message: 'Failed to resolve store adapter.',
-        });
+        throwCoreError(
+            storeResult.error ?? {
+                code: 'STORE_RESOLUTION_FAILED',
+                message: 'Failed to resolve store adapter.',
+            },
+        );
     }
 
     if (!storeResult.value) {
@@ -96,26 +89,35 @@ const resolveContent = async (
     options: UpdateCommandOptions,
     deps: UpdateHandlerDeps,
 ): Promise<{ content: string | null }> => {
+    // Don't read from stdin for update command - only use explicit --content or --file flags
+    // If neither is provided, return null to preserve existing content
+    if (options.content === undefined && options.file === undefined) {
+        return { content: null };
+    }
+
     const contentResult = await resolveMemoryContentInput({
         content: options.content,
         filePath: options.file,
         stdin: deps.stdin ?? process.stdin,
-        requireStdinFlag: false,
+        requireStdinFlag: true, // Changed from false - require explicit stdin flag
         requireContent: false,
     });
 
     if (!contentResult.ok()) {
-        throwCoreError(contentResult.error ?? {
-            code: 'CONTENT_INPUT_FAILED',
-            message: 'Failed to resolve memory content input.',
-        });
+        throwCoreError(
+            contentResult.error ?? {
+                code: 'CONTENT_INPUT_FAILED',
+                message: 'Failed to resolve memory content input.',
+            },
+        );
     }
 
     if (!contentResult.value) {
         return { content: null };
     }
 
-    return { content: contentResult.value.content ?? null };
+    const finalContent = contentResult.value.content ?? null;
+    return { content: finalContent };
 };
 
 const parseTags = (raw?: string): string[] | undefined => {
@@ -181,7 +183,8 @@ const buildUpdates = (
     if (Object.keys(updates).length === 0) {
         throwCoreError({
             code: 'INVALID_ARGUMENTS',
-            message: 'No updates provided. Use --content, --file, --tags, --citation, or expiry flags.',
+            message:
+                'No updates provided. Use --content, --file, --tags, --citation, or expiry flags.',
         });
     }
 
@@ -211,14 +214,14 @@ export async function handleUpdate(
 
     // 1. Update memory
     const now = deps.now ?? new Date();
-    const updateResult = await updateMemory(adapter, memorySerializer, path, updates, now);
+    const updateResult = await updateMemory(adapter, path, updates, now);
     if (!updateResult.ok()) {
         throwCoreError(updateResult.error);
     }
 
     // 2. Output success message
-    const out = deps.stdout ?? process.stdout;
-    out.write(`Updated memory at ${path}.\n`);
+    const stdout = deps.stdout ?? process.stdout;
+    stdout.write(`Updated memory at ${path}.\n`);
 }
 
 /**

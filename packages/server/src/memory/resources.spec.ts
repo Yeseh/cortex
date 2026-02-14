@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 import type { ServerConfig } from '../config.ts';
+import { MEMORY_SUBDIR } from '../config.ts';
 import {
     readMemoryContent,
     readCategoryListing,
@@ -18,9 +19,9 @@ import {
     MEMORY_URI_SCHEME,
     type CategoryListing,
 } from './resources.ts';
-import { FilesystemStorageAdapter, serializeMemory } from '@yeseh/cortex-storage-fs';
+import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 import type { Memory } from '@yeseh/cortex-core/memory';
-import type { CategoryIndex } from '@yeseh/cortex-core/index';
+import { createMemory } from '@yeseh/cortex-core/memory';
 
 // Test configuration
 const createTestConfig = (dataPath: string): ServerConfig => ({
@@ -47,32 +48,21 @@ const createTestDir = async (): Promise<string> => {
 const createMemoryFile = async (
     storeRoot: string,
     slugPath: string,
-    contents: Memory,
+    contents: Partial<Memory>,
 ): Promise<void> => {
+    // Use the proper core createMemory operation which updates indexes
     const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
-    const serialized = serializeMemory(contents);
-    if (!serialized.ok()) {
-        throw new Error(`Failed to serialize: ${serialized.error.message}`);
-    }
-    const result = await adapter.writeMemoryFile(slugPath, serialized.value, {
-        allowIndexCreate: true,
-        allowIndexUpdate: true,
-    });
-    if (!result.ok()) {
-        throw new Error(`Failed to write: ${result.error.message}`);
-    }
-};
 
-// Helper to create a category index directly
-const _createCategoryIndex = async (
-    storeRoot: string,
-    categoryPath: string,
-    index: CategoryIndex,
-): Promise<void> => {
-    const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
-    const result = await adapter.writeIndexFile(categoryPath, index);
+    const result = await createMemory(adapter, slugPath, {
+        content: contents.content!,
+        tags: contents.metadata?.tags ?? [],
+        source: contents.metadata?.source ?? 'test',
+        citations: contents.metadata?.citations ?? [],
+        expiresAt: contents.metadata?.expiresAt,
+    });
+
     if (!result.ok()) {
-        throw new Error(`Failed to write index: ${result.error.message}`);
+        throw new Error(`Failed to create memory: ${result.error.message}`);
     }
 };
 
@@ -199,7 +189,7 @@ describe('readMemoryContent', () => {
 
     beforeEach(async () => {
         testDir = await createTestDir();
-        storeRoot = join(testDir, 'default');
+        storeRoot = join(testDir, MEMORY_SUBDIR);
         await mkdir(storeRoot, { recursive: true });
         adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
     });
@@ -332,8 +322,7 @@ describe('readCategoryListing', () => {
 
     beforeEach(async () => {
         testDir = await createTestDir();
-        storeRoot = join(testDir, 'default');
-        await mkdir(storeRoot, { recursive: true });
+        storeRoot = join(testDir, MEMORY_SUBDIR);
         adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
     });
 
@@ -881,7 +870,7 @@ describe('error handling', () => {
 
     beforeEach(async () => {
         testDir = await createTestDir();
-        storeRoot = join(testDir, 'default');
+        storeRoot = join(testDir, MEMORY_SUBDIR);
         await mkdir(storeRoot, { recursive: true });
         adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
     });
@@ -927,7 +916,7 @@ describe('resource workflow', () => {
     beforeEach(async () => {
         testDir = await createTestDir();
         config = createTestConfig(testDir);
-        storeRoot = join(testDir, 'default');
+        storeRoot = join(testDir, MEMORY_SUBDIR);
         await mkdir(storeRoot, { recursive: true });
         // Create the store registry file needed by listResources
         await createStoreRegistry(testDir, 'default');

@@ -86,9 +86,9 @@ export const parseIndex = (raw: string): Result<CategoryIndex, IndexSerializatio
             ...(memory.updated_at
                 ? {
                     updatedAt:
-                        memory.updated_at instanceof Date
-                            ? memory.updated_at
-                            : new Date(memory.updated_at),
+                          memory.updated_at instanceof Date
+                              ? memory.updated_at
+                              : new Date(memory.updated_at),
                 }
                 : {}),
         })),
@@ -103,18 +103,16 @@ export const parseIndex = (raw: string): Result<CategoryIndex, IndexSerializatio
 /**
  * Serialize CategoryIndex to YAML string.
  */
-export const serializeIndex = (
-    index: CategoryIndex,
-): Result<string, IndexSerializationError> => {
+export const serializeIndex = (index: CategoryIndex): Result<string, IndexSerializationError> => {
     const yamlData = {
         memories: index.memories.map((memory) => ({
-            path: memory.path,
+            path: memory.path.toString(),
             token_estimate: memory.tokenEstimate,
             ...(memory.summary ? { summary: memory.summary } : {}),
             ...(memory.updatedAt ? { updated_at: memory.updatedAt.toISOString() } : {}),
         })),
         subcategories: index.subcategories.map((subcategory) => ({
-            path: subcategory.path,
+            path: subcategory.path.toString(),
             memory_count: subcategory.memoryCount,
             ...(subcategory.description ? { description: subcategory.description } : {}),
         })),

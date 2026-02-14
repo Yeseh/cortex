@@ -150,7 +150,7 @@ describe('context', () => {
                 // Result depends on whether process.cwd() has a local store
                 // The important thing is it doesn't throw and returns a valid Result
                 expect(result).toBeDefined();
-                expect(typeof result.ok()).toBe('function');
+                expect(result.ok()).toBe(true);
             });
         });
 

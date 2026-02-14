@@ -15,12 +15,9 @@ import { join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Variables } from '@modelcontextprotocol/sdk/shared/uriTemplate.js';
-import type {
-    ReadResourceResult,
-    Resource,
-} from '@modelcontextprotocol/sdk/types.js';
+import type { ReadResourceResult, Resource } from '@modelcontextprotocol/sdk/types.js';
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
-import { err, ok, type Result } from '@yeseh/cortex-core';
+import { CategoryPath, err, ok, type Result } from '@yeseh/cortex-core';
 import { getMemory } from '@yeseh/cortex-core/memory';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
@@ -82,10 +79,7 @@ const resolveAdapter = async (
     if (!loadResult.ok()) {
         if (loadResult.error.code === 'REGISTRY_MISSING') {
             return err(
-                new McpError(
-                    ErrorCode.InternalError,
-                    `Store registry not found at ${registryPath}`,
-                ),
+                new McpError(ErrorCode.InternalError, `Store registry not found at ${registryPath}`),
             );
         }
         return err(
@@ -98,9 +92,7 @@ const resolveAdapter = async (
 
     const storeResult = registry.getStore(store);
     if (!storeResult.ok()) {
-        return err(
-            new McpError(ErrorCode.InvalidParams, storeResult.error.message),
-        );
+        return err(new McpError(ErrorCode.InvalidParams, storeResult.error.message));
     }
 
     return ok(storeResult.value);
@@ -133,11 +125,7 @@ const resolveAdapter = async (
  * // Returns: 'cortex://memory/global/'
  * ```
  */
-const buildResourceUri = (
-    store: string,
-    path: string,
-    isCategory: boolean,
-): string => {
+const buildResourceUri = (store: string, path: string, isCategory: boolean): string => {
     if (!path) {
         return `${MEMORY_URI_SCHEME}/${store}/`;
     }
@@ -318,7 +306,10 @@ const readMemoryContent = async (
             );
         }
 
-        if (readResult.error.code === 'MEMORY_NOT_FOUND' || readResult.error.code === 'MEMORY_EXPIRED') {
+        if (
+            readResult.error.code === 'MEMORY_NOT_FOUND' ||
+            readResult.error.code === 'MEMORY_EXPIRED'
+        ) {
             return err(new McpError(ErrorCode.InvalidParams, `Memory not found: ${memoryPath}`));
         }
 
@@ -376,8 +367,19 @@ const readCategoryListing = async (
         return readRootCategoryListing(adapter, store);
     }
 
+    // Parse category path
+    const categoryPathResult = CategoryPath.fromString(categoryPath);
+    if (!categoryPathResult.ok()) {
+        return err(
+            new McpError(
+                ErrorCode.InvalidParams,
+                `Invalid category path: ${categoryPathResult.error.message}`,
+            ),
+        );
+    }
+
     // Read the category index
-    const indexResult = await adapter.indexes.read(categoryPath);
+    const indexResult = await adapter.indexes.read(categoryPathResult.value);
     if (!indexResult.ok()) {
         return err(
             new McpError(
@@ -388,25 +390,20 @@ const readCategoryListing = async (
     }
 
     if (!indexResult.value) {
-        return err(
-            new McpError(
-                ErrorCode.InvalidParams,
-                `Category not found: ${categoryPath}`,
-            ),
-        );
+        return err(new McpError(ErrorCode.InvalidParams, `Category not found: ${categoryPath}`));
     }
 
     const listing: CategoryListing = {
         category: categoryPath,
         memories: indexResult.value.memories.map((memory) => ({
-            path: memory.path,
-            uri: buildResourceUri(store, memory.path, false),
+            path: memory.path.toString(),
+            uri: buildResourceUri(store, memory.path.toString(), false),
             tokenEstimate: memory.tokenEstimate,
             summary: memory.summary,
         })),
         subcategories: indexResult.value.subcategories.map((sub) => ({
-            path: sub.path,
-            uri: buildResourceUri(store, sub.path, true),
+            path: sub.path.toString(),
+            uri: buildResourceUri(store, sub.path.toString(), true),
             memoryCount: sub.memoryCount,
         })),
     };
@@ -439,19 +436,23 @@ const readRootCategoryListing = async (
 ): Promise<Result<ReadResourceResult, McpError>> => {
     const subcategories: CategoryListing['subcategories'] = [];
 
-    const rootIndexResult = await adapter.indexes.read('');
+    const rootIndexResult = await adapter.indexes.read(CategoryPath.root());
     if (rootIndexResult.ok() && rootIndexResult.value) {
         for (const sub of rootIndexResult.value.subcategories) {
             subcategories.push({
-                path: sub.path,
-                uri: buildResourceUri(store, sub.path, true),
+                path: sub.path.toString(),
+                uri: buildResourceUri(store, sub.path.toString(), true),
                 memoryCount: sub.memoryCount,
             });
         }
     }
     else {
         for (const category of ROOT_CATEGORIES) {
-            const indexResult = await adapter.indexes.read(category);
+            const categoryPathResult = CategoryPath.fromString(category);
+            if (!categoryPathResult.ok()) {
+                continue;
+            }
+            const indexResult = await adapter.indexes.read(categoryPathResult.value);
             if (!indexResult.ok() || !indexResult.value) {
                 // Category doesn't exist, skip it
                 continue;
@@ -503,9 +504,7 @@ const readRootCategoryListing = async (
  * }
  * ```
  */
-const listResources = async (
-    config: ServerConfig,
-): Promise<ListResourcesResult> => {
+const listResources = async (config: ServerConfig): Promise<ListResourcesResult> => {
     const resources: Resource[] = [];
     const store = config.defaultStore;
 
@@ -524,42 +523,54 @@ const listResources = async (
         mimeType: 'application/json',
     });
 
-    const rootIndexResult = await adapter.indexes.read('');
-    const rootCategories = rootIndexResult.ok() && rootIndexResult.value
-        ? rootIndexResult.value.subcategories.map((sub) => sub.path)
-        : [...ROOT_CATEGORIES];
+    const rootIndexResult = await adapter.indexes.read(CategoryPath.root());
+    const rootCategories =
+        rootIndexResult.ok() && rootIndexResult.value
+            ? rootIndexResult.value.subcategories.map((sub) => sub.path)
+            : [...ROOT_CATEGORIES];
 
     // Collect resources from all root categories
     for (const category of rootCategories) {
-        const indexResult = await adapter.indexes.read(category);
+        const categoryPathResult =
+            typeof category === 'string' ? CategoryPath.fromString(category) : ok(category);
+
+        if (!categoryPathResult.ok()) {
+            continue;
+        }
+
+        const indexResult = await adapter.indexes.read(categoryPathResult.value);
         if (!indexResult.ok() || !indexResult.value) {
             continue;
         }
 
+        const categoryStr = categoryPathResult.value.toString();
+
         // Add category resource
         resources.push({
-            uri: buildResourceUri(store, category, true),
-            name: `Category: ${category}`,
-            description: `Memory category listing for ${category}`,
+            uri: buildResourceUri(store, categoryStr, true),
+            name: `Category: ${categoryStr}`,
+            description: `Memory category listing for ${categoryStr}`,
             mimeType: 'application/json',
         });
 
         // Add memory resources
         for (const memory of indexResult.value.memories) {
+            const memoryPathStr = memory.path.toString();
             resources.push({
-                uri: buildResourceUri(store, memory.path, false),
-                name: `Memory: ${memory.path}`,
-                description: memory.summary ?? `Memory at ${memory.path}`,
+                uri: buildResourceUri(store, memoryPathStr, false),
+                name: `Memory: ${memoryPathStr}`,
+                description: memory.summary ?? `Memory at ${memoryPathStr}`,
                 mimeType: 'text/plain',
             });
         }
 
         // Add subcategory resources
         for (const sub of indexResult.value.subcategories) {
+            const subPathStr = sub.path.toString();
             resources.push({
-                uri: buildResourceUri(store, sub.path, true),
-                name: `Category: ${sub.path}`,
-                description: `Memory category listing for ${sub.path} (${sub.memoryCount} memories)`,
+                uri: buildResourceUri(store, subPathStr, true),
+                name: `Category: ${subPathStr}`,
+                description: `Memory category listing for ${subPathStr} (${sub.memoryCount} memories)`,
                 mimeType: 'application/json',
             });
         }
@@ -621,10 +632,7 @@ export type { CategoryListing, ParsedUriVariables };
  * // - cortex://memory/global/project/my-memory (read memory content)
  * ```
  */
-export const registerMemoryResources = (
-    server: McpServer,
-    config: ServerConfig,
-): void => {
+export const registerMemoryResources = (server: McpServer, config: ServerConfig): void => {
     // Create resource template for dynamic URIs
     const template = new ResourceTemplate('cortex://memory/{store}/{path*}', {
         list: async () => {
@@ -662,27 +670,31 @@ export const registerMemoryResources = (
 
                 // Check root categories if at root level
                 if (categoryPath === '') {
-                    const matches = ROOT_CATEGORIES.filter((cat) =>
-                        cat.startsWith(prefix),
-                    );
+                    const matches = ROOT_CATEGORIES.filter((cat) => cat.startsWith(prefix));
                     completions.push(...matches);
                 }
                 else {
                     // Read the parent category index
-                    const indexResult = await adapter.indexes.read(categoryPath);
+                    const categoryPathResult = CategoryPath.fromString(categoryPath);
+                    if (!categoryPathResult.ok()) {
+                        return completions;
+                    }
+                    const indexResult = await adapter.indexes.read(categoryPathResult.value);
                     if (indexResult.ok() && indexResult.value) {
                         // Add matching subcategories
                         for (const sub of indexResult.value.subcategories) {
-                            const subName = sub.path.split('/').pop() ?? '';
+                            const subPathStr = sub.path.toString();
+                            const subName = subPathStr.split('/').pop() ?? '';
                             if (subName.startsWith(prefix)) {
-                                completions.push(sub.path);
+                                completions.push(subPathStr);
                             }
                         }
                         // Add matching memories
                         for (const mem of indexResult.value.memories) {
-                            const memName = mem.path.split('/').pop() ?? '';
+                            const memPathStr = mem.path.toString();
+                            const memName = memPathStr.split('/').pop() ?? '';
                             if (memName.startsWith(prefix)) {
-                                completions.push(mem.path);
+                                completions.push(memPathStr);
                             }
                         }
                     }
@@ -698,7 +710,7 @@ export const registerMemoryResources = (
         template,
         {
             description:
-				'Access memory content or category listings. Use trailing slash for category listings',
+                'Access memory content or category listings. Use trailing slash for category listings',
             mimeType: 'text/plain',
         },
         async (_uri: URL, variables: Variables): Promise<ReadResourceResult> => {

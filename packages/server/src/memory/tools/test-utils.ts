@@ -10,7 +10,8 @@ import { tmpdir } from 'node:os';
 import type { ServerConfig } from '../../config.ts';
 import { MEMORY_SUBDIR } from '../../config.ts';
 import { type Memory, serializeStoreRegistry } from '@yeseh/cortex-core';
-import { serializeMemory } from '@yeseh/cortex-storage-fs';
+import { createMemory } from '@yeseh/cortex-core/memory';
+import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 
 // Test configuration
 export const createTestConfig = (dataPath: string): ServerConfig => ({
@@ -74,6 +75,23 @@ export const createMemoryFile = async (
     slugPath: string,
     contents: Partial<Memory>,
 ): Promise<void> => {
-    const serialized = serializeMemory({metadata: contents.metadata!, content: contents.content!});
-    await writeFile(join(storeRoot, `${slugPath}.yaml`), serialized.value ?? '');
+    // Use the proper core createMemory operation which updates indexes
+    const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
+
+    const result = await createMemory(
+        adapter,
+        slugPath,
+        {
+            content: contents.content!,
+            tags: contents.metadata?.tags ?? [],
+            source: contents.metadata?.source ?? 'test',
+            citations: contents.metadata?.citations ?? [],
+            expiresAt: contents.metadata?.expiresAt,
+        },
+        contents.metadata?.createdAt, // Pass timestamp for test determinism
+    );
+
+    if (!result.ok()) {
+        throw new Error(`Failed to create memory: ${result.error.message}`);
+    }
 };

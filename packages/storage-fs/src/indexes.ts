@@ -8,18 +8,14 @@
 
 import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { dirname, extname, relative, resolve } from 'node:path';
-import type { CategoryPath, Result } from '@yeseh/cortex-core';
-import type { Memory, MemoryPath } from '@yeseh/cortex-core/memory';
-import type {
-    ReindexResult,
-    StorageAdapterError,
-    StorageIndexName,
-} from '@yeseh/cortex-core/storage';
+import { CategoryPath, type Result } from '@yeseh/cortex-core';
+import { type Memory, MemoryPath } from '@yeseh/cortex-core/memory';
+import type { ReindexResult, StorageAdapterError } from '@yeseh/cortex-core/storage';
 import type { CategoryIndex, IndexMemoryEntry } from '@yeseh/cortex-core/index';
 import { defaultTokenizer, err, ok } from '@yeseh/cortex-core';
 import type { DirEntriesResult, FilesystemContext, StringOrNullResult } from './types.ts';
 import { isNotFoundError, resolveStoragePath, toSlugPathFromRelative } from './utils.ts';
-import {  parseMemory, serializeMemory } from './memories.ts';
+import { parseMemory, serializeMemory } from './memories.ts';
 import { parseIndex, serializeIndex } from './index-serialization.ts';
 
 /**
@@ -33,7 +29,6 @@ interface IndexBuildState {
 
 type IndexBuildResult = Result<IndexBuildState, StorageAdapterError>;
 
-
 /**
  * Resolves the filesystem path for an index file.
  */
@@ -44,7 +39,9 @@ export const resolveIndexPath = (
 ): Result<string, StorageAdapterError> => {
     // Category indexes are at: STORE_ROOT/<categoryPath>/index.yaml
     // For root category (empty string): STORE_ROOT/index.yaml
-    const indexPath = name.isRoot ? `index${ctx.indexExtension}` : `${name}/index${ctx.indexExtension}`;
+    const indexPath = name.isRoot
+        ? `index${ctx.indexExtension}`
+        : `${name.toString()}/index${ctx.indexExtension}`;
     return resolveStoragePath(ctx.storeRoot, indexPath, errorCode);
 };
 
@@ -147,7 +144,7 @@ export const writeIndexFile = async (
  */
 export const readCategoryIndex = async (
     ctx: FilesystemContext,
-    name: StorageIndexName,
+    name: CategoryPath,
     options: { createWhenMissing?: boolean } = {},
 ): Promise<Result<CategoryIndex, StorageAdapterError>> => {
     const contents = await readIndexFile(ctx, name);
@@ -186,7 +183,7 @@ export const readCategoryIndex = async (
  */
 export const writeCategoryIndex = async (
     ctx: FilesystemContext,
-    name: StorageIndexName,
+    name: CategoryPath,
     index: CategoryIndex,
 ): Promise<Result<void, StorageAdapterError>> => {
     const serialized = serializeIndex(index);
@@ -209,7 +206,7 @@ export const writeCategoryIndex = async (
  */
 export const upsertMemoryEntry = async (
     ctx: FilesystemContext,
-    indexName: StorageIndexName,
+    indexName: CategoryPath,
     entry: IndexMemoryEntry,
     options: { createWhenMissing?: boolean } = {},
 ): Promise<Result<void, StorageAdapterError>> => {
@@ -219,7 +216,9 @@ export const upsertMemoryEntry = async (
     }
 
     const currentIndex = indexResult.value;
-    const memories = currentIndex.memories.filter((existing) => existing.path !== entry.path);
+    const memories = currentIndex.memories.filter(
+        (existing) => existing.path.toString() !== entry.path.toString(),
+    );
     memories.push(entry);
     memories.sort((a, b) => a.path.toString().localeCompare(b.path.toString()));
     const nextIndex: CategoryIndex = {
@@ -236,7 +235,7 @@ export const upsertMemoryEntry = async (
  */
 export const upsertSubcategoryEntry = async (
     ctx: FilesystemContext,
-    indexName: StorageIndexName,
+    indexName: CategoryPath,
     entryPath: string,
     memoryCount: number,
     options: { createWhenMissing?: boolean } = {},
@@ -245,15 +244,20 @@ export const upsertSubcategoryEntry = async (
     if (!current.ok()) {
         return current;
     }
-    const existing = current.value.subcategories.find((s) => s.path === entryPath);
-    const subcategories = current.value.subcategories.filter((s) => s.path !== entryPath);
+
+    // Convert string path to CategoryPath for comparison and storage
+    const entryPathObj = CategoryPath.fromString(entryPath).unwrap();
+    const existing = current.value.subcategories.find((s) => s.path.toString() === entryPath);
+    const subcategories = current.value.subcategories.filter(
+        (s) => s.path.toString() !== entryPath,
+    );
 
     subcategories.push({
-        path: entryPath,
+        path: entryPathObj,
         memoryCount,
         ...(existing?.description ? { description: existing.description } : {}),
     });
-    subcategories.sort((a, b) => a.path.localeCompare(b.path));
+    subcategories.sort((a, b) => a.path.toString().localeCompare(b.path.toString()));
     const nextIndex: CategoryIndex = {
         memories: current.value.memories,
         subcategories,
@@ -273,7 +277,8 @@ export const updateCategoryIndexes = async (
     contents: string,
     options: { createWhenMissing?: boolean } = {},
 ): Promise<Result<void, StorageAdapterError>> => {
-    const category = slugPath.category.toString();
+    const category = slugPath.category;
+    const categories = category.toString() ? category.toString().split('/') : [];
 
     const tokenEstimateResult = defaultTokenizer.estimateTokens(contents);
     if (!tokenEstimateResult.ok()) {
@@ -313,8 +318,9 @@ export const updateCategoryIndexes = async (
     // Update root index with top-level category
     const topLevelCategory = categories[0];
     if (topLevelCategory !== undefined) {
-        const rootIndexName = '';
-        const topLevelCategoryIndex = await readCategoryIndex(ctx, topLevelCategory, {
+        const rootCategory = CategoryPath.root();
+        const topLevelCategoryPath = CategoryPath.fromString(topLevelCategory).unwrap();
+        const topLevelCategoryIndex = await readCategoryIndex(ctx, topLevelCategoryPath, {
             ...options,
             createWhenMissing: true,
         });
@@ -323,7 +329,7 @@ export const updateCategoryIndexes = async (
         }
         const upsertRoot = await upsertSubcategoryEntry(
             ctx,
-            rootIndexName,
+            rootCategory,
             topLevelCategory,
             topLevelCategoryIndex.value.memories.length,
             { ...options, createWhenMissing: true },
@@ -335,8 +341,10 @@ export const updateCategoryIndexes = async (
 
     // Then handle nested subcategories
     for (let index = 1; index <= categories.length - 1; index += 1) {
-        const parentIndexName = categories.slice(0, index).join('/');
-        const subcategoryPath = categories.slice(0, index + 1).join('/');
+        const parentPath = CategoryPath.fromString(categories.slice(0, index).join('/')).unwrap();
+        const subcategoryPath = CategoryPath.fromString(
+            categories.slice(0, index + 1).join('/'),
+        ).unwrap();
         const subcategoryIndex = await readCategoryIndex(ctx, subcategoryPath, {
             ...options,
             createWhenMissing: true,
@@ -346,8 +354,8 @@ export const updateCategoryIndexes = async (
         }
         const upsertSubcategory = await upsertSubcategoryEntry(
             ctx,
-            parentIndexName,
-            subcategoryPath,
+            parentPath,
+            categories.slice(0, index + 1).join('/'),
             subcategoryIndex.value.memories.length,
             { ...options, createWhenMissing: true },
         );
@@ -373,7 +381,11 @@ export const updateCategoryIndexesFromMemory = async (
     const slug = memory.path.slug.toString();
     const slugPath = category ? `${category}/${slug}` : slug;
 
-    const serialized = serializeMemory(memory);
+    // serializeMemory expects MemoryFile (without path), so we extract metadata and content
+    const serialized = serializeMemory({
+        metadata: memory.metadata,
+        content: memory.content,
+    });
     if (!serialized.ok()) {
         return err({
             code: 'INDEX_ERROR',
@@ -383,7 +395,7 @@ export const updateCategoryIndexesFromMemory = async (
         });
     }
 
-    return updateCategoryIndexes(ctx, slugPath, serialized.value, options);
+    return updateCategoryIndexes(ctx, memory.path, serialized.value, options);
 };
 
 /**
@@ -537,23 +549,17 @@ const buildIndexEntry = async (
         return ok(null);
     }
 
-    // Normalize the slug path (convert uppercase, underscores, etc. to valid slugs)
-    const normalizedPath = normalizeSlugPath(rawSlugPath);
-    if (!normalizedPath) {
+    // Parse the path using MemoryPath to validate and normalize
+    const memoryPathResult = MemoryPath.fromString(rawSlugPath);
+    if (!memoryPathResult.ok()) {
         return ok({
             skipped: true,
-            reason: `Skipped: ${filePath} (path segment normalizes to empty)`,
+            reason: `Skipped: ${filePath} (invalid memory path: ${memoryPathResult.error.message})`,
         });
     }
 
-    // Ensure we have at least 2 segments (category + slug)
-    const segments = normalizedPath.split('/');
-    if (segments.length < 2) {
-        return ok({
-            skipped: true,
-            reason: `Skipped: ${filePath} (path must have at least 2 segments)`,
-        });
-    }
+    const memoryPath = memoryPathResult.value;
+    const normalizedPath = memoryPath.toString();
 
     let contents: string;
     try {
@@ -876,4 +882,3 @@ export const reindexCategoryIndexes = async (
 
     return ok({ warnings: buildState.value.warnings });
 };
-

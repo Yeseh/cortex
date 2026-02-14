@@ -23,7 +23,6 @@ import {
     writeMemory,
 } from './memories.ts';
 
-
 /**
  * Filesystem-based implementation of the MemoryStorage interface.
  *
@@ -129,10 +128,7 @@ export class FilesystemMemoryStorage implements MemoryStorage {
             });
         }
 
-        const memoryResult = Memory.init(
-            slugPath, 
-            parsed.value.metadata, 
-            parsed.value.content);
+        const memoryResult = Memory.init(slugPath, parsed.value.metadata, parsed.value.content);
 
         if (!memoryResult.ok()) {
             return err({
@@ -244,4 +240,3 @@ export class FilesystemMemoryStorage implements MemoryStorage {
         return moveMemory(this.ctx, sourceSlugPath, destinationSlugPath);
     }
 }
-

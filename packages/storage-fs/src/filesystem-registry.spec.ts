@@ -224,30 +224,33 @@ describe('FilesystemRegistry', () => {
 
             if (storeResult.ok()) {
                 // Test that the adapter actually works
-                // Memory files require YAML frontmatter with all required metadata
-                const memoryContent = [
-                    '---',
-                    'created_at: 2024-01-01T00:00:00.000Z',
-                    'updated_at: 2024-01-01T00:00:00.000Z',
-                    'tags: []',
-                    'source: test',
-                    '---',
-                    'Test memory content.',
-                ].join('\n');
-
-                const writeResult = await storeResult.value.memories.write(
+                const { Memory } = await import('@yeseh/cortex-core/memory');
+                const memoryResult = Memory.init(
                     'test/memory',
-                    memoryContent,
+                    {
+                        createdAt: new Date('2024-01-01T00:00:00.000Z'),
+                        updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+                        tags: [],
+                        source: 'test',
+                        citations: [],
+                    },
+                    'Test memory content.',
                 );
+
+                expect(memoryResult.ok()).toBe(true);
+                if (!memoryResult.ok()) return;
+
+                const memory = memoryResult.value;
+
+                const writeResult = await storeResult.value.memories.write(memory);
                 expect(writeResult.ok()).toBe(true);
 
-                const readResult = await storeResult.value.memories.read('test/memory');
+                const readResult = await storeResult.value.memories.read(memory.path);
                 expect(readResult.ok()).toBe(true);
-                if (readResult.ok()) {
-                    expect(readResult.value).toBe(memoryContent);
+                if (readResult.ok() && readResult.value) {
+                    expect(readResult.value.content).toBe('Test memory content.');
                 }
             }
         });
     });
 });
-

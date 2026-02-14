@@ -9,7 +9,7 @@
 
 import { access, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import type {  Result } from '@yeseh/cortex-core';
+import type { Result } from '@yeseh/cortex-core';
 import type { StorageAdapterError } from '@yeseh/cortex-core/storage';
 import type {
     Memory,
@@ -27,7 +27,7 @@ import { isNotFoundError, resolveStoragePath } from './utils.ts';
 
 export type ParseMetadataResult = Result<MemoryMetadata, MemoryError>;
 export type SerializeMemoryResult = Result<string, MemoryError>;
-export type MemoryFile = Omit<Memory, 'path' | 'isExpired'> ;
+export type MemoryFile = Omit<Memory, 'path' | 'isExpired'>;
 
 /**
  * Schema for validating individual citation strings.
@@ -86,7 +86,6 @@ const FrontmatterSchema = z.object({
     expires_at: dateSchema.optional(),
     citations: citationsSchema,
 });
-
 
 /**
  * Maps a serialization error field to the appropriate MemoryErrorCode.
@@ -264,8 +263,8 @@ export const resolveMemoryPath = (
  * }
  * ```
  */
-export const serializeMemory = (memory: MemoryFile): SerializeMemoryResult => {
-// Convert camelCase from internal API to snake_case for validation/serialization
+export const serializeMemory = (memory: Memory): SerializeMemoryResult => {
+    // Convert camelCase from internal API to snake_case for validation/serialization
     const snakeCaseMetadata = {
         created_at: memory.metadata.createdAt,
         updated_at: memory.metadata.updatedAt,
@@ -305,7 +304,8 @@ export const serializeMemory = (memory: MemoryFile): SerializeMemoryResult => {
     const content = memory.content ?? '';
     const separator = content.length > 0 && !content.startsWith('\n') ? '\n' : '';
 
-    return ok(`${frontmatter}${separator}${content}`);
+    const serialized = `${frontmatter}${separator}${content}`;
+    return ok(serialized);
 };
 
 /**
@@ -348,7 +348,7 @@ export const readMemory = async (
  *
  * @param ctx - Filesystem context with configuration
  * @param slugPath - Path to the memory (e.g., "project/cortex/config")
- * @param memory - The content to write
+ * @param memory - The serialized memory content to write
  * @returns Success or error
  */
 export const writeMemory = async (
@@ -356,32 +356,16 @@ export const writeMemory = async (
     slugPath: MemoryPath,
     memory: string,
 ): Promise<Result<void, StorageAdapterError>> => {
-    const parsed = parseMemory(memory);
-    if (!parsed.ok()) {
-        return err({
-            code: 'IO_WRITE_ERROR',
-            message: 'Failed to parse memory for writing.',
-            cause: parsed.error,
-        });
-    }
-
     const filePathResult = resolveMemoryPath(ctx, slugPath, 'IO_WRITE_ERROR');
     if (!filePathResult.ok()) {
         return filePathResult;
     }
 
     const filePath = filePathResult.value;
-    const serializedResult = serializeMemory(parsed.value);
-    if (!serializedResult.ok()) {
-        return err({
-            code: 'IO_WRITE_ERROR',
-            message: 'Failed to serialize memory for writing.',
-        });
-    }
 
     try {
         await mkdir(dirname(filePath), { recursive: true });
-        await writeFile(filePath, serializedResult.value, 'utf8');
+        await writeFile(filePath, memory, 'utf8');
     }
     catch (error) {
         return err({
@@ -575,4 +559,3 @@ export const parseMemory = (raw: string): MemoryResult<MemoryFile> => {
 
     return ok({ metadata: parsedMetadata.value, content });
 };
-

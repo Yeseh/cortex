@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
 import {
-    ok,
-    err,
     isNotFoundError,
     normalizeExtension,
     resolveStoragePath,
@@ -10,51 +8,6 @@ import {
 } from './utils.ts';
 
 describe('utils module', () => {
-    describe('ok', () => {
-        it('should create a successful Result', () => {
-            const result = ok('test value');
-
-            expect(result.ok()).toBe(true);
-            if (result.ok()) {
-                expect(result.value).toBe('test value');
-            }
-        });
-
-        it('should work with various types', () => {
-            expect(ok(42)).toEqual({ ok: true, value: 42 });
-            expect(ok(null)).toEqual({ ok: true, value: null });
-            expect(ok({ key: 'value' })).toEqual({ ok: true, value: { key: 'value' } });
-            expect(ok([
-                1,
-                2,
-                3,
-            ])).toEqual({ ok: true, value: [
-                1,
-                2,
-                3,
-            ] });
-        });
-    });
-
-    describe('err', () => {
-        it('should create a failed Result', () => {
-            const result = err({ code: 'TEST_ERROR', message: 'Test error' });
-
-            expect(result.ok()).toBe(false);
-            if (!result.ok()) {
-                expect(result.error.code).toBe('TEST_ERROR');
-            }
-        });
-
-        it('should work with various error types', () => {
-            expect(err('simple error')).toEqual({ ok: false, error: 'simple error' });
-            expect(err({ code: 'ERR', msg: 'msg' })).toEqual({
-                ok: false,
-                error: { code: 'ERR', msg: 'msg' },
-            });
-        });
-    });
-
     describe('isNotFoundError', () => {
         it('should return true for ENOENT errors', () => {
             const error = { code: 'ENOENT' };
@@ -257,4 +210,3 @@ describe('utils module', () => {
         });
     });
 });
-

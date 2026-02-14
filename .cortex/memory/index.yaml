@@ -7,11 +7,11 @@ subcategories:
   - path: history
     memory_count: 0
   - path: investigations
-    memory_count: 1
+    memory_count: 4
   - path: map
     memory_count: 1
   - path: runbooks
-    memory_count: 2
+    memory_count: 3
   - path: standards
     memory_count: 7
   - path: standup
