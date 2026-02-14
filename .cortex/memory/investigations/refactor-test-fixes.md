@@ -1,12 +1,13 @@
 ---
 created_at: 2026-02-14T21:00:45.577Z
-updated_at: 2026-02-14T21:00:45.577Z
+updated_at: 2026-02-14T21:20:47.061Z
 tags:
   - refactor
   - tests
   - bugfix
   - completed
 source: mcp
+expires_at: 2026-03-16T23:59:59.000Z
 ---
 # Refactor Test Fixes - ALL TESTS PASSING ✅
 

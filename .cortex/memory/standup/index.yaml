@@ -1,6 +1,8 @@
 memories:
   - path: standup/2026-02-11-1738
-    token_estimate: 268
+    token_estimate: 280
+    updated_at: 2026-02-11T16:38:13.203Z
   - path: standup/2026-02-13-1907
     token_estimate: 406
+    updated_at: 2026-02-13T18:07:34.649Z
 subcategories: []

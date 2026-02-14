@@ -1,14 +1,11 @@
 ---
 created_at: 2026-02-13T20:31:48.371Z
-updated_at: 2026-02-13T21:47:02.743Z
+updated_at: 2026-02-14T21:36:41.436Z
 tags:
-  - todo
   - refactor
   - index-storage
-  - category-storage
+  - sqlite-prerequisite
   - architecture
-  - prerequisite
-  - openspec
 source: mcp
 citations:
   - .context/2026-02-13-sqlite-index-brainstorm.md

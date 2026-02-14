@@ -1,13 +1,17 @@
 memories:
+  - path: investigations/category-description-verification
+    token_estimate: 725
+    updated_at: 2026-02-14T21:24:10.229Z
   - path: investigations/cli-test-failures-fix
     token_estimate: 648
-    updated_at: 2026-02-14T20:37:22.052Z
+    updated_at: 2026-02-14T21:20:49.257Z
   - path: investigations/mcp-server-test-fixes
-    token_estimate: 513
-    updated_at: 2026-02-14T20:55:58.888Z
+    token_estimate: 522
+    updated_at: 2026-02-14T21:20:47.905Z
   - path: investigations/refactor-test-fixes
-    token_estimate: 839
-    updated_at: 2026-02-14T21:00:45.577Z
+    token_estimate: 848
+    updated_at: 2026-02-14T21:20:47.061Z
   - path: investigations/set-category-description-caching
     token_estimate: 296
+    updated_at: 2026-02-05T20:31:07.779Z
 subcategories: []

@@ -37,7 +37,7 @@ import { resolveMemoryContentInput } from '../../input.ts';
 export interface UpdateCommandOptions {
     content?: string;
     file?: string;
-    tags?: string;
+    tags?: string[];
     /**
      * Expiration date from Commander.js option parsing.
      * - `string` — ISO 8601 date provided via `--expires-at <date>`
@@ -120,13 +120,13 @@ const resolveContent = async (
     return { content: finalContent };
 };
 
-const parseTags = (raw?: string): string[] | undefined => {
+const parseTags = (raw?: string[]): string[] | undefined => {
     if (raw === undefined) {
         return undefined;
     }
 
     const tags = raw
-        .split(',')
+        .flatMap((tag) => tag.split(','))
         .map((tag) => tag.trim())
         .filter(Boolean);
 
@@ -239,7 +239,7 @@ export const updateCommand = new Command('update')
     .argument('<path>', 'Memory path to update')
     .option('-c, --content <text>', 'New memory content as inline text')
     .option('-f, --file <filepath>', 'Read new content from a file')
-    .option('-t, --tags <tags>', 'Comma-separated tags (replaces existing)')
+    .option('-t, --tags <value...>', 'Tags (can be repeated or comma-separated, replaces existing)')
     .option('-e, --expires-at <date>', 'New expiration date (ISO 8601)')
     .option('--no-expires-at', 'Remove expiration date')
     .option('--citation <value...>', 'Citation references (replaces existing)')

@@ -1,7 +1,11 @@
 ---
 created_at: 2026-02-14T17:59:09.372Z
-updated_at: 2026-02-14T17:59:09.372Z
-tags: []
+updated_at: 2026-02-14T21:36:40.287Z
+tags:
+  - architecture
+  - refactor
+  - core
+  - breaking-change
 source: mcp
 citations:
   - openspec/project.md

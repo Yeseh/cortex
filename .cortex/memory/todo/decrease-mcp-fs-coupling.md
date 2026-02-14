@@ -1,7 +1,11 @@
 ---
 created_at: 2026-02-14T17:59:14.018Z
-updated_at: 2026-02-14T17:59:14.018Z
-tags: []
+updated_at: 2026-02-14T21:36:39.163Z
+tags:
+  - architecture
+  - refactor
+  - mcp-server
+  - storage
 source: mcp
 citations:
   - openspec/project.md

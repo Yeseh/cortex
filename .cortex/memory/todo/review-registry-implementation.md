@@ -1,7 +1,11 @@
 ---
 created_at: 2026-02-14T17:59:54.844Z
-updated_at: 2026-02-14T17:59:54.844Z
-tags: []
+updated_at: 2026-02-14T21:36:42.387Z
+tags:
+  - audit
+  - registry
+  - core
+  - architecture
 source: mcp
 citations:
   - .cortex/memory/decisions/registry/registry-abstraction.md

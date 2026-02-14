@@ -1,10 +1,14 @@
 memories:
   - path: map/core/concepts
-    token_estimate: 351
+    token_estimate: 359
+    updated_at: 2026-02-05T19:15:50.362Z
   - path: map/core/domain-operations
     token_estimate: 137
+    updated_at: 2026-01-29T19:54:00.348Z
   - path: map/core/files
-    token_estimate: 385
+    token_estimate: 394
+    updated_at: 2026-02-05T19:15:18.226Z
   - path: map/core/summary-index
-    token_estimate: 75
+    token_estimate: 77
+    updated_at: 2026-02-13T19:56:05.514Z
 subcategories: []

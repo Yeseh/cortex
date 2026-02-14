@@ -1,10 +1,14 @@
 memories:
   - path: decisions/registry/registry-abstraction
     token_estimate: 342
+    updated_at: 2026-01-31T14:47:42.765Z
   - path: decisions/registry/registry-as-store-factory
-    token_estimate: 347
+    token_estimate: 357
+    updated_at: 2026-01-29T19:53:41.992Z
   - path: decisions/registry/registry-interface-rename
-    token_estimate: 340
+    token_estimate: 351
+    updated_at: 2026-01-29T19:53:57.453Z
   - path: decisions/registry/store-list-from-registry
-    token_estimate: 247
+    token_estimate: 253
+    updated_at: 2026-01-29T16:35:41.034Z
 subcategories: []

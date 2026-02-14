@@ -303,6 +303,58 @@ describe('Cortex CLI Integration Tests', () => {
             expect(content).toContain('tag3');
         });
 
+        it('should add a memory with multiple -t flags', async () => {
+            const result = await runCortexCli(
+                [
+                    'memory',
+                    'add',
+                    'project/multi-tag-flags',
+                    '--content',
+                    'Content with multiple tag flags.',
+                    '-t',
+                    'first',
+                    '-t',
+                    'second',
+                    '-t',
+                    'third',
+                ],
+                { cwd: testProject },
+            );
+
+            expect(result.exitCode).toBe(0);
+
+            const content = await readMemoryFile(storeDir, 'project/multi-tag-flags');
+            expect(content).toContain('tags:');
+            expect(content).toContain('first');
+            expect(content).toContain('second');
+            expect(content).toContain('third');
+        });
+
+        it('should add a memory with mixed tag formats (comma-separated and multiple flags)', async () => {
+            const result = await runCortexCli(
+                [
+                    'memory',
+                    'add',
+                    'project/mixed-tags',
+                    '--content',
+                    'Content with mixed tag formats.',
+                    '-t',
+                    'alpha,beta',
+                    '-t',
+                    'gamma',
+                ],
+                { cwd: testProject },
+            );
+
+            expect(result.exitCode).toBe(0);
+
+            const content = await readMemoryFile(storeDir, 'project/mixed-tags');
+            expect(content).toContain('tags:');
+            expect(content).toContain('alpha');
+            expect(content).toContain('beta');
+            expect(content).toContain('gamma');
+        });
+
         it('should add a memory with expiry date', async () => {
             const expiryDate = '2025-12-31T23:59:59.000Z';
             const result = await runCortexCli(
@@ -727,6 +779,54 @@ describe('Cortex CLI Integration Tests', () => {
             const content = await readMemoryFile(storeDir, 'project/updatable');
             expect(content).toContain('Original content.');
             expect(content).toContain('new-tag');
+        });
+
+        it('should update memory tags with multiple -t flags', async () => {
+            const result = await runCortexCli(
+                [
+                    'memory',
+                    'update',
+                    'project/updatable',
+                    '-t',
+                    'tag-a',
+                    '-t',
+                    'tag-b',
+                    '-t',
+                    'tag-c',
+                ],
+                { cwd: testProject },
+            );
+
+            expect(result.exitCode).toBe(0);
+
+            const content = await readMemoryFile(storeDir, 'project/updatable');
+            expect(content).toContain('tags:');
+            expect(content).toContain('tag-a');
+            expect(content).toContain('tag-b');
+            expect(content).toContain('tag-c');
+        });
+
+        it('should update memory tags with mixed formats (comma-separated and multiple flags)', async () => {
+            const result = await runCortexCli(
+                [
+                    'memory',
+                    'update',
+                    'project/updatable',
+                    '-t',
+                    'x,y',
+                    '-t',
+                    'z',
+                ],
+                { cwd: testProject },
+            );
+
+            expect(result.exitCode).toBe(0);
+
+            const content = await readMemoryFile(storeDir, 'project/updatable');
+            expect(content).toContain('tags:');
+            expect(content).toContain('x');
+            expect(content).toContain('y');
+            expect(content).toContain('z');
         });
     });
 

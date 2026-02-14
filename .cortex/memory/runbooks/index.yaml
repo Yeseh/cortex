@@ -1,9 +1,19 @@
 memories:
   - path: runbooks/debug-mcp-tools
     token_estimate: 306
+    updated_at: 2026-02-05T20:31:13.818Z
   - path: runbooks/debugging-content-loss
-    token_estimate: 683
-    updated_at: 2026-02-14T20:37:29.728Z
+    token_estimate: 692
+    updated_at: 2026-02-14T21:20:48.746Z
+  - path: runbooks/user-test-cli
+    token_estimate: 4286
+    updated_at: 2026-02-14T21:07:10.951Z
+  - path: runbooks/user-test-mcp-server
+    token_estimate: 2758
+    updated_at: 2026-02-14T21:16:27.765Z
   - path: runbooks/verify-memory-tools
     token_estimate: 122
-subcategories: []
+    updated_at: 2026-02-05T18:11:41.204Z
+subcategories:
+  - path: runbooks/execution
+    memory_count: 1

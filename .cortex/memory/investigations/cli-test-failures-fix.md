@@ -1,6 +1,6 @@
 ---
 created_at: 2026-02-14T20:37:22.052Z
-updated_at: 2026-02-14T20:37:22.052Z
+updated_at: 2026-02-14T21:20:49.257Z
 tags:
   - bugfix
   - refactor-cleanup
@@ -8,7 +8,7 @@ tags:
   - content-loss
   - stdin-handling
 source: mcp
-expires_at: 2026-03-14T00:00:00.000Z
+expires_at: 2026-03-16T23:59:59.000Z
 ---
 # CLI Test Failures Fix (Post-Refactor)
 

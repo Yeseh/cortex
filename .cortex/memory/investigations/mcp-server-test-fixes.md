@@ -1,12 +1,13 @@
 ---
 created_at: 2026-02-14T20:51:38.142Z
-updated_at: 2026-02-14T20:55:58.888Z
+updated_at: 2026-02-14T21:20:47.905Z
 tags:
   - investigation
   - mcp-server
   - tests
   - refactor
 source: mcp
+expires_at: 2026-03-16T23:59:59.000Z
 ---
 # MCP Server Test Fixes - COMPLETED ✅
 

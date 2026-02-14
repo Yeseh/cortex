@@ -32,8 +32,7 @@ import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
 import { resolveStoreAdapter } from '../../context.ts';
 
-import { listMemories } from '@yeseh/cortex-core/memory';
-import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
+import { CategoryPath, listMemories, type ScopedStorageAdapter } from '@yeseh/cortex-core';
 import type { OutputFormat } from '../../output.ts';
 import { toonOptions } from '../../output.ts';
 import { encode as toonEncode } from '@toon-format/toon';
@@ -197,11 +196,15 @@ export async function handleList(
 
     const now = deps.now ?? new Date();
     const adapter = deps.adapter ?? storeResult.value.adapter;
-    const normalizedCategory = category ? category.replace(/^\/+/, '') : undefined;
+
+    const categoryResult = CategoryPath.fromString(category ?? '');
+    if (!categoryResult.ok()) {
+        throwCoreError(categoryResult.error);
+    }
 
     // 2. Collect memories and subcategories
     const listResult = await listMemories(adapter, {
-        category: normalizedCategory,
+        category: categoryResult.value,
         includeExpired: options.includeExpired ?? false,
         now,
     });
@@ -211,14 +214,14 @@ export async function handleList(
 
     const result: ListResult = {
         memories: listResult.value.memories.map((memory) => ({
-            path: memory.path,
+            path: memory.path.toString(),
             tokenEstimate: memory.tokenEstimate,
             summary: memory.summary,
             expiresAt: memory.expiresAt,
             isExpired: memory.isExpired,
         })),
         subcategories: listResult.value.subcategories.map((subcategory) => ({
-            path: subcategory.path,
+            path: subcategory.path.toString(),
             memoryCount: subcategory.memoryCount,
             description: subcategory.description,
         })),

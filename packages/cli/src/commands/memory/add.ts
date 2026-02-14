@@ -25,15 +25,14 @@ import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
 import { resolveStoreAdapter } from '../../context.ts';
 
-import { createMemory } from '@yeseh/cortex-core/memory';
-import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
+import { createMemory, type ScopedStorageAdapter } from '@yeseh/cortex-core';
 import { resolveMemoryContentInput } from '../../input.ts';
 
 /** Options parsed by Commander for the add command */
 export interface AddCommandOptions {
     content?: string;
     file?: string;
-    tags?: string;
+    tags?: string[];
     expiresAt?: string;
     citation?: string[];
 }
@@ -57,10 +56,12 @@ const resolveAdapter = async (
 
     const adapterResult = await resolveStoreAdapter(storeName);
     if (!adapterResult.ok()) {
-        throwCoreError(adapterResult.error ?? {
-            code: 'STORE_RESOLUTION_FAILED',
-            message: 'Failed to resolve store adapter.',
-        });
+        throwCoreError(
+            adapterResult.error ?? {
+                code: 'STORE_RESOLUTION_FAILED',
+                message: 'Failed to resolve store adapter.',
+            },
+        );
     }
 
     if (!adapterResult.value) {
@@ -86,10 +87,12 @@ const resolveContent = async (
     });
 
     if (!contentResult.ok()) {
-        throwCoreError(contentResult.error ?? {
-            code: 'CONTENT_INPUT_FAILED',
-            message: 'Failed to resolve memory content input.',
-        });
+        throwCoreError(
+            contentResult.error ?? {
+                code: 'CONTENT_INPUT_FAILED',
+                message: 'Failed to resolve memory content input.',
+            },
+        );
     }
 
     if (!contentResult.value) {
@@ -105,10 +108,10 @@ const resolveContent = async (
     };
 };
 
-const parseTags = (raw?: string): string[] =>
+const parseTags = (raw?: string[]): string[] =>
     raw
         ? raw
-            .split(',')
+            .flatMap((tag) => tag.split(','))
             .map((tag) => tag.trim())
             .filter(Boolean)
         : [];
@@ -148,13 +151,18 @@ export async function handleAdd(
     const citations = options.citation ?? [];
     const now = deps.now ?? new Date();
 
-    const createResult = await createMemory(adapter, path, {
-        content: contentInput.content,
-        tags,
-        source: contentInput.source,
-        expiresAt,
-        citations,
-    }, now);
+    const createResult = await createMemory(
+        adapter,
+        path,
+        {
+            content: contentInput.content,
+            tags,
+            source: contentInput.source,
+            expiresAt,
+            citations,
+        },
+        now,
+    );
 
     if (!createResult.ok()) {
         throwCoreError(createResult.error);
@@ -179,7 +187,7 @@ export const addCommand = new Command('add')
     .argument('<path>', 'Memory path (e.g., project/tech-stack)')
     .option('-c, --content <text>', 'Memory content as inline text')
     .option('-f, --file <filepath>', 'Read content from a file')
-    .option('-t, --tags <tags>', 'Comma-separated tags')
+    .option('-t, --tags <value...>', 'Tags (can be repeated or comma-separated)')
     .option('-e, --expires-at <date>', 'Expiration date (ISO 8601)')
     .option('--citation <value...>', 'Citation references (file paths or URLs)')
     .action(async (path, options, command) => {
