@@ -95,7 +95,7 @@ const ARGUMENT_ERROR_CODES = new Set([
  * }
  * ```
  */
-export function mapCoreError(error: CoreError): never {
+export function throwCoreError(error: CoreError): never {
     if (ARGUMENT_ERROR_CODES.has(error.code)) {
         throw new InvalidArgumentError(error.message);
     }

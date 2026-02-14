@@ -20,14 +20,12 @@
  */
 
 import { Command } from '@commander-js/extra-typings';
-import { mapCoreError } from '../../../errors.ts';
-import { resolveStoreAdapter } from '../../../context.ts';
+import { throwCoreError } from '../../errors.ts';
+import { resolveStoreAdapter } from '../../context.ts';
 import {
     pruneExpiredMemories,
-    type MemorySerializer,
 } from '@yeseh/cortex-core/memory';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
-import { parseMemory, serializeMemory } from '@yeseh/cortex-storage-fs';
 
 /**
  * Options for the prune command.
@@ -49,18 +47,6 @@ export interface PruneHandlerDeps {
     /** Pre-resolved adapter for testing */
     adapter?: ScopedStorageAdapter;
 }
-
-/**
- * Memory serializer bridging storage-fs format with core domain operations.
- *
- * Provides the `parse` and `serialize` functions that core's
- * `pruneExpiredMemories` uses to read and write memory files in the
- * filesystem-specific YAML-frontmatter format.
- */
-const memorySerializer: MemorySerializer = {
-    parse: parseMemory,
-    serialize: serializeMemory,
-};
 
 /**
  * Handles the prune command execution.
@@ -112,20 +98,20 @@ export async function handlePrune(
     }
     else {
         const storeResult = await resolveStoreAdapter(storeName);
-        if (!storeResult.ok) {
-            mapCoreError(storeResult.error);
+        if (!storeResult.ok()) {
+            throwCoreError(storeResult.error);
         }
         adapter = storeResult.value.adapter;
     }
 
     // 2. Delegate to core operation
-    const result = await pruneExpiredMemories(adapter, memorySerializer, {
+    const result = await pruneExpiredMemories(adapter, {
         dryRun: options.dryRun,
         now,
     });
 
-    if (!result.ok) {
-        mapCoreError(result.error);
+    if (!result.ok()) {
+        throwCoreError(result.error);
     }
 
     const pruned = result.value.pruned;

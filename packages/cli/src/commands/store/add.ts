@@ -19,12 +19,12 @@
  */
 
 import { Command } from '@commander-js/extra-typings';
-import { mapCoreError } from '../../../errors.ts';
-import { getDefaultRegistryPath } from '../../../context.ts';
+import { throwCoreError } from '../../errors.ts';
+import { getDefaultRegistryPath } from '../../context.ts';
 import { isValidStoreName } from '@yeseh/cortex-core/store';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
-import { serializeOutput, type OutputStore, type OutputFormat } from '../../../output.ts';
-import { resolveUserPath } from '../../../paths.ts';
+import { serializeOutput, type OutputStore, type OutputFormat } from '../../output.ts';
+import { resolveUserPath } from '../../paths.ts';
 
 /**
  * Options for the add command.
@@ -55,10 +55,10 @@ export interface AddHandlerDeps {
 function validateStoreName(name: string): string {
     const trimmed = name.trim();
     if (!trimmed) {
-        mapCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name is required.' });
+        throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name is required.' });
     }
     if (!isValidStoreName(trimmed)) {
-        mapCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug.' });
+        throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug.' });
     }
     return trimmed;
 }
@@ -74,7 +74,7 @@ function validateStoreName(name: string): string {
 function validateAndResolvePath(storePath: string, cwd: string): string {
     const trimmed = storePath.trim();
     if (!trimmed) {
-        mapCoreError({ code: 'INVALID_STORE_PATH', message: 'Store path is required.' });
+        throwCoreError({ code: 'INVALID_STORE_PATH', message: 'Store path is required.' });
     }
     return resolveUserPath(trimmed, cwd);
 }
@@ -92,8 +92,8 @@ function writeOutput(
     stdout: NodeJS.WritableStream,
 ): void {
     const serialized = serializeOutput({ kind: 'store', value: output }, format);
-    if (!serialized.ok) {
-        mapCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
+    if (!serialized.ok()) {
+        throwCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
     }
     stdout.write(serialized.value + '\n');
 }
@@ -134,26 +134,26 @@ export async function handleAdd(
     const registryResult = await registry.load();
     // Handle REGISTRY_MISSING as empty registry (like allowMissing: true did)
     let currentRegistry: Record<string, { path: string }>;
-    if (registryResult.ok) {
+    if (registryResult.ok()) {
         currentRegistry = registryResult.value;
     }
     else if (registryResult.error.code === 'REGISTRY_MISSING') {
         currentRegistry = {};
     }
     else {
-        mapCoreError({ code: 'STORE_REGISTRY_FAILED', message: registryResult.error.message });
+        throwCoreError({ code: 'STORE_REGISTRY_FAILED', message: registryResult.error.message });
     }
 
     // 3. Check for existing store
     if (currentRegistry[trimmedName]) {
-        mapCoreError({ code: 'STORE_ALREADY_EXISTS', message: `Store '${trimmedName}' is already registered.` });
+        throwCoreError({ code: 'STORE_ALREADY_EXISTS', message: `Store '${trimmedName}' is already registered.` });
     }
 
     // 4. Add to registry and save
     currentRegistry[trimmedName] = { path: resolvedPath };
     const saved = await registry.save(currentRegistry);
-    if (!saved.ok) {
-        mapCoreError({ code: 'STORE_REGISTRY_FAILED', message: saved.error.message });
+    if (!saved.ok()) {
+        throwCoreError({ code: 'STORE_REGISTRY_FAILED', message: saved.error.message });
     }
 
     // 5. Output result

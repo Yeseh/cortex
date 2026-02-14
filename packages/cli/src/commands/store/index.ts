@@ -20,12 +20,12 @@
  */
 import { Command } from '@commander-js/extra-typings';
 
-import { listCommand } from './list/command.ts';
-import { addCommand } from './add/command.ts';
-import { removeCommand } from './remove/command.ts';
-import { initCommand } from './init/command.ts';
-import { pruneCommand } from './prune/command.ts';
-import { reindexCommand } from './reindex/command.ts';
+import { listCommand } from './list.ts';
+import { addCommand } from './add.ts';
+import { removeCommand } from './remove.ts';
+import { initCommand } from './init.ts';
+import { pruneCommand } from './prune.ts';
+import { reindexCommand } from './reindexs.ts';
 
 /**
  * Store command group.

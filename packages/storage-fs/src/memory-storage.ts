@@ -11,10 +11,25 @@
  * @see {@link FilesystemIndexStorage} - Related index storage implementation
  */
 
-import type { MemorySlugPath, Result } from '@yeseh/cortex-core';
+import type { Result } from '@yeseh/cortex-core';
+import { Memory, type MemoryPath } from '@yeseh/cortex-core/memory';
 import type { MemoryStorage, StorageAdapterError } from '@yeseh/cortex-core/storage';
 import type { FilesystemContext } from './types.ts';
-import { readMemory, writeMemory, removeMemory, moveMemory } from './memories.ts';
+import {
+    parseMemory,
+    readMemory,
+    removeMemory,
+    moveMemory,
+    serializeMemory,
+    writeMemory,
+} from './memories.ts';
+import { err, ok } from './utils.ts';
+
+const toSlugPath = (path: MemoryPath): string => {
+    const category = path.category.toString();
+    const slug = path.slug.toString();
+    return category ? `${category}/${slug}` : slug;
+};
 
 /**
  * Filesystem-based implementation of the MemoryStorage interface.
@@ -40,15 +55,20 @@ import { readMemory, writeMemory, removeMemory, moveMemory } from './memories.ts
  * const storage = new FilesystemMemoryStorage(ctx);
  *
  * // Write a memory file
- * await storage.write('project/cortex/architecture', `---
- * tags: [design, overview]
- * ---
- * # Architecture Overview
- * This document describes the system architecture...
- * `);
+ * const memoryResult = Memory.init('project/cortex/architecture', {
+ *   createdAt: new Date(),
+ *   updatedAt: new Date(),
+ *   tags: ['design', 'overview'],
+ *   source: 'user',
+ *   citations: [],
+ * }, '# Architecture Overview\n');
+ * if (memoryResult.ok()) {
+ *   await storage.write(memoryResult.value);
+ * }
  *
  * // Read a memory file
- * const result = await storage.read('project/cortex/architecture');
+ * const pathResult = MemoryPath.fromPath('project/cortex/architecture');
+ * const result = pathResult.ok() ? await storage.read(pathResult.value) : null;
  * if (result.ok && result.value !== null) {
  *     console.log('Memory contents:', result.value);
  * }
@@ -81,7 +101,7 @@ export class FilesystemMemoryStorage implements MemoryStorage {
      * Returns null (not an error) if the memory file does not exist.
      *
      * @param slugPath - Memory identifier path (e.g., "project/cortex/architecture")
-     * @returns Result with file contents as a string, or null if the memory does not exist
+     * @returns Result with a Memory object, or null if the memory does not exist
      *
      * @example
      * ```typescript
@@ -97,8 +117,37 @@ export class FilesystemMemoryStorage implements MemoryStorage {
      * }
      * ```
      */
-    async read(slugPath: MemorySlugPath): Promise<Result<string | null, StorageAdapterError>> {
-        return readMemory(this.ctx, slugPath);
+    async read(slugPath: MemoryPath): Promise<Result<Memory | null, StorageAdapterError>> {
+        const slugPathString = toSlugPath(slugPath);
+        const readResult = await readMemory(this.ctx, slugPathString);
+        if (!readResult.ok) {
+            return readResult;
+        }
+        if (!readResult.value) {
+            return ok(null);
+        }
+
+        const parsed = parseMemory(readResult.value);
+        if (!parsed.ok) {
+            return err({
+                code: 'IO_READ_ERROR',
+                message: `Failed to parse memory file: ${slugPathString}.`,
+                path: slugPathString,
+                cause: parsed.error,
+            });
+        }
+
+        const memoryResult = Memory.init(slugPathString, parsed.value.metadata, parsed.value.content);
+        if (!memoryResult.ok()) {
+            return err({
+                code: 'IO_READ_ERROR',
+                message: memoryResult.error.message,
+                path: slugPathString,
+                cause: memoryResult.error,
+            });
+        }
+
+        return ok(memoryResult.value);
     }
 
     /**
@@ -110,8 +159,7 @@ export class FilesystemMemoryStorage implements MemoryStorage {
      * Note: This method only writes the file. To update category indexes
      * after writing, use {@link FilesystemIndexStorage.updateAfterMemoryWrite}.
      *
-     * @param slugPath - Memory identifier path (e.g., "project/cortex/architecture")
-     * @param contents - The content to write (typically Markdown with optional frontmatter)
+     * @param memory - The Memory object to serialize and write
      * @returns Result indicating success or failure
      *
      * @example
@@ -129,11 +177,18 @@ export class FilesystemMemoryStorage implements MemoryStorage {
      * }
      * ```
      */
-    async write(
-        slugPath: MemorySlugPath,
-        contents: string,
-    ): Promise<Result<void, StorageAdapterError>> {
-        return writeMemory(this.ctx, slugPath, contents);
+    async write(memory: Memory): Promise<Result<void, StorageAdapterError>> {
+        const slugPathString = toSlugPath(memory.path);
+        const serialized = serializeMemory(memory);
+        if (!serialized.ok) {
+            return err({
+                code: 'IO_WRITE_ERROR',
+                message: `Failed to serialize memory: ${slugPathString}.`,
+                path: slugPathString,
+                cause: serialized.error,
+            });
+        }
+        return writeMemory(this.ctx, slugPathString, serialized.value);
     }
 
     /**
@@ -157,8 +212,8 @@ export class FilesystemMemoryStorage implements MemoryStorage {
      * }
      * ```
      */
-    async remove(slugPath: MemorySlugPath): Promise<Result<void, StorageAdapterError>> {
-        return removeMemory(this.ctx, slugPath);
+    async remove(slugPath: MemoryPath): Promise<Result<void, StorageAdapterError>> {
+        return removeMemory(this.ctx, toSlugPath(slugPath));
     }
 
     /**
@@ -188,9 +243,9 @@ export class FilesystemMemoryStorage implements MemoryStorage {
      * ```
      */
     async move(
-        sourceSlugPath: MemorySlugPath,
-        destinationSlugPath: MemorySlugPath,
+        sourceSlugPath: MemoryPath,
+        destinationSlugPath: MemoryPath,
     ): Promise<Result<void, StorageAdapterError>> {
-        return moveMemory(this.ctx, sourceSlugPath, destinationSlugPath);
+        return moveMemory(this.ctx, toSlugPath(sourceSlugPath), toSlugPath(destinationSlugPath));
     }
 }

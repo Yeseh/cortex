@@ -11,7 +11,8 @@
  * @see {@link FilesystemMemoryStorage} - Related memory storage implementation
  */
 
-import type { MemorySlugPath, Result } from '@yeseh/cortex-core';
+import type { Result } from '@yeseh/cortex-core';
+import type { Memory } from '@yeseh/cortex-core/memory';
 import type { IndexStorage, ReindexResult, StorageAdapterError, StorageIndexName } from '@yeseh/cortex-core/storage';
 import type { CategoryIndex } from '@yeseh/cortex-core/index';
 import type { FilesystemContext } from './types.ts';
@@ -19,7 +20,7 @@ import {
     readIndexFile,
     writeIndexFile,
     reindexCategoryIndexes,
-    updateCategoryIndexes,
+    updateCategoryIndexesFromMemory,
 } from './indexes.ts';
 import { parseIndex, serializeIndex } from './index-serialization.ts';
 import { ok, err } from './utils.ts';
@@ -52,11 +53,7 @@ import { ok, err } from './utils.ts';
  * }
  *
  * // Update index after writing a memory
- * await indexStorage.updateAfterMemoryWrite(
- *     'project/cortex/architecture',
- *     '# Architecture\n...',
- *     { createWhenMissing: true }
- * );
+ * await indexStorage.updateAfterMemoryWrite(memory, { createWhenMissing: true });
  *
  * // Rebuild all indexes (expensive operation)
  * await indexStorage.reindex();
@@ -215,18 +212,14 @@ export class FilesystemIndexStorage implements IndexStorage {
      * This method handles incremental index updates when a memory file
      * is created or modified, avoiding full reindex operations.
      *
-     * @param slugPath - Memory identifier path that was written
-     * @param contents - The content that was written
+    * @param memory - The memory object that was written
      * @param options - Optional settings for index behavior
      * @param options.createWhenMissing - Create index entries for new categories (default: true)
      * @returns Result indicating success or failure
      *
      * @example
      * ```typescript
-     * await storage.updateAfterMemoryWrite(
-     *   'standards/typescript/formatting',
-     *   '---\ncreated_at: 2024-01-01T00:00:00.000Z\n---\nUse Prettier.'
-     * );
+    * await storage.updateAfterMemoryWrite(memory);
      * ```
      *
      * @edgeCases
@@ -234,10 +227,9 @@ export class FilesystemIndexStorage implements IndexStorage {
      * - Set `createWhenMissing` to false to avoid creating new indexes.
      */
     async updateAfterMemoryWrite(
-        slugPath: MemorySlugPath,
-        contents: string,
+        memory: Memory,
         options?: { createWhenMissing?: boolean },
     ): Promise<Result<void, StorageAdapterError>> {
-        return updateCategoryIndexes(this.ctx, slugPath, contents, options);
+        return updateCategoryIndexesFromMemory(this.ctx, memory, options);
     }
 }

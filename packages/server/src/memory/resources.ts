@@ -21,8 +21,8 @@ import type {
 } from '@modelcontextprotocol/sdk/types.js';
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 import type { Result } from '@yeseh/cortex-core';
-import { validateMemorySlugPath } from '@yeseh/cortex-core/memory';
-import { parseMemory, FilesystemRegistry } from '@yeseh/cortex-storage-fs';
+import { getMemory } from '@yeseh/cortex-core/memory';
+import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 import type { ServerConfig } from '../config.ts';
 
@@ -310,41 +310,29 @@ const readMemoryContent = async (
     store: string,
     memoryPath: string,
 ): Promise<Result<ReadResourceResult, McpError>> => {
-    // Validate the memory path
-    const identity = validateMemorySlugPath(memoryPath);
-    if (!identity.ok) {
-        return err(
-            new McpError(
-                ErrorCode.InvalidParams,
-                `Invalid memory path: ${identity.error.message}`,
-            ),
-        );
-    }
+    // Read the memory
+    const readResult = await getMemory(adapter, memoryPath, {
+        includeExpired: true,
+        now: new Date(),
+    });
+    if (!readResult.ok()) {
+        if (readResult.error.code === 'INVALID_PATH') {
+            return err(
+                new McpError(
+                    ErrorCode.InvalidParams,
+                    `Invalid memory path: ${readResult.error.message}`,
+                ),
+            );
+        }
 
-    // Read the memory file
-    const readResult = await adapter.memories.read(identity.value.slugPath);
-    if (!readResult.ok) {
+        if (readResult.error.code === 'MEMORY_NOT_FOUND' || readResult.error.code === 'MEMORY_EXPIRED') {
+            return err(new McpError(ErrorCode.InvalidParams, `Memory not found: ${memoryPath}`));
+        }
+
         return err(
             new McpError(
                 ErrorCode.InternalError,
                 `Failed to read memory: ${readResult.error.message}`,
-            ),
-        );
-    }
-
-    if (!readResult.value) {
-        return err(
-            new McpError(ErrorCode.InvalidParams, `Memory not found: ${memoryPath}`),
-        );
-    }
-
-    // Parse the memory file to get content
-    const parsed = parseMemory(readResult.value);
-    if (!parsed.ok) {
-        return err(
-            new McpError(
-                ErrorCode.InternalError,
-                `Failed to parse memory: ${parsed.error.message}`,
             ),
         );
     }
@@ -355,7 +343,7 @@ const readMemoryContent = async (
         contents: [{
             uri,
             mimeType: 'text/plain',
-            text: parsed.value.content,
+            text: readResult.value.content,
         }],
     });
 };

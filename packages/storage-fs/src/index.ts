@@ -25,7 +25,10 @@
  * }
  *
  * // New ISP API: Use focused storage interfaces
- * const memoryResult = await adapter.memories.read('project/cortex/config');
+ * const memoryPath = MemoryPath.fromPath('project/cortex/config');
+ * if (memoryPath.ok()) {
+ *   const memoryResult = await adapter.memories.read(memoryPath.value);
+ * }
  * ```
  */
 
@@ -46,6 +49,8 @@ import type {
     FilesystemContext,
 } from './types.ts';
 import { normalizeExtension, ok } from './utils.ts';
+import { readMemory, writeMemory, removeMemory, moveMemory } from './memories.ts';
+import { updateCategoryIndexes } from './indexes.ts';
 
 // Import ISP-compliant storage implementations
 import { FilesystemMemoryStorage } from './memory-storage.ts';
@@ -71,7 +76,7 @@ export { FilesystemRegistry } from './filesystem-registry.ts';
  * const adapter = new FilesystemStorageAdapter({ rootDirectory: '/path/to/storage' });
  *
  * // New ISP API (preferred)
- * await adapter.memories.write('project/config', '# Config');
+ * await adapter.memories.write(memory);
  * await adapter.indexes.reindex();
  *
  * // Legacy API (backward compatible)
@@ -120,7 +125,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
     async readMemoryFile(
         slugPath: MemorySlugPath,
     ): Promise<Result<string | null, StorageAdapterError>> {
-        return this.memories.read(slugPath);
+        return readMemory(this.ctx, slugPath);
     }
 
     /**
@@ -138,7 +143,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         contents: string,
         options: { allowIndexCreate?: boolean; allowIndexUpdate?: boolean } = {},
     ): Promise<Result<void, StorageAdapterError>> {
-        const writeResult = await this.memories.write(slugPath, contents);
+        const writeResult = await writeMemory(this.ctx, slugPath, contents);
         if (!writeResult.ok) {
             return writeResult;
         }
@@ -147,7 +152,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
             return ok(undefined);
         }
 
-        return this.indexes.updateAfterMemoryWrite(slugPath, contents, {
+        return updateCategoryIndexes(this.ctx, slugPath, contents, {
             createWhenMissing: options.allowIndexCreate,
         });
     }
@@ -159,7 +164,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
      * @deprecated Use `adapter.memories.remove()` instead
      */
     async removeMemoryFile(slugPath: MemorySlugPath): Promise<Result<void, StorageAdapterError>> {
-        return this.memories.remove(slugPath);
+        return removeMemory(this.ctx, slugPath);
     }
 
     /**
@@ -173,7 +178,7 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         sourceSlugPath: MemorySlugPath,
         destinationSlugPath: MemorySlugPath,
     ): Promise<Result<void, StorageAdapterError>> {
-        return this.memories.move(sourceSlugPath, destinationSlugPath);
+        return moveMemory(this.ctx, sourceSlugPath, destinationSlugPath);
     }
 
     // ========================================================================

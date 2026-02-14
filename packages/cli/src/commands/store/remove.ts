@@ -12,11 +12,11 @@
  */
 
 import { Command } from '@commander-js/extra-typings';
-import { mapCoreError } from '../../../errors.ts';
-import { getDefaultRegistryPath } from '../../../context.ts';
+import { throwCoreError } from '../../errors.ts';
+import { getDefaultRegistryPath } from '../../context.ts';
 import { isValidStoreName } from '@yeseh/cortex-core/store';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
-import { serializeOutput, type OutputStore, type OutputFormat } from '../../../output.ts';
+import { serializeOutput, type OutputStore, type OutputFormat } from '../../output.ts';
 
 /**
  * Options for the remove command.
@@ -45,10 +45,10 @@ export interface RemoveHandlerDeps {
 function validateStoreName(name: string): string {
     const trimmed = name.trim();
     if (!trimmed) {
-        mapCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name is required.' });
+        throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name is required.' });
     }
     if (!isValidStoreName(trimmed)) {
-        mapCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug.' });
+        throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug.' });
     }
     return trimmed;
 }
@@ -66,8 +66,8 @@ function writeOutput(
     stdout: NodeJS.WritableStream,
 ): void {
     const serialized = serializeOutput({ kind: 'store', value: output }, format);
-    if (!serialized.ok) {
-        mapCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
+    if (!serialized.ok()) {
+        throwCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
     }
     stdout.write(serialized.value + '\n');
 }
@@ -102,24 +102,24 @@ export async function handleRemove(
     const registry = new FilesystemRegistry(registryPath);
     const loadResult = await registry.load();
     // Handle REGISTRY_MISSING - if registry doesn't exist, nothing to remove
-    if (!loadResult.ok) {
+    if (!loadResult.ok()) {
         if (loadResult.error.code === 'REGISTRY_MISSING') {
-            mapCoreError({ code: 'STORE_NOT_FOUND', message: `Store '${trimmedName}' is not registered.` });
+            throwCoreError({ code: 'STORE_NOT_FOUND', message: `Store '${trimmedName}' is not registered.` });
         }
-        mapCoreError({ code: 'STORE_REGISTRY_FAILED', message: loadResult.error.message });
+        throwCoreError({ code: 'STORE_REGISTRY_FAILED', message: loadResult.error.message });
     }
 
     // 3. Check store exists
     const existingStore = loadResult.value[trimmedName];
     if (!existingStore) {
-        mapCoreError({ code: 'STORE_NOT_FOUND', message: `Store '${trimmedName}' is not registered.` });
+        throwCoreError({ code: 'STORE_NOT_FOUND', message: `Store '${trimmedName}' is not registered.` });
     }
 
     // 4. Remove from registry and save (even if registry would be empty, just save empty registry)
     const { [trimmedName]: _removed, ...rest } = loadResult.value;
     const saveResult = await registry.save(rest);
-    if (!saveResult.ok) {
-        mapCoreError({ code: 'STORE_REGISTRY_FAILED', message: saveResult.error.message });
+    if (!saveResult.ok()) {
+        throwCoreError({ code: 'STORE_REGISTRY_FAILED', message: saveResult.error.message });
     }
 
     // 5. Output result

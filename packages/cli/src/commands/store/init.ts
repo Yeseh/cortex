@@ -25,12 +25,12 @@
 import { Command } from '@commander-js/extra-typings';
 import { spawn } from 'node:child_process';
 import { basename, resolve } from 'node:path';
-import { mapCoreError } from '../../../errors.ts';
-import { getDefaultRegistryPath } from '../../../context.ts';
+import { throwCoreError } from '../../errors.ts';
+import { getDefaultRegistryPath } from '../../context.ts';
 import { isValidStoreName, initializeStore } from '@yeseh/cortex-core/store';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
-import { serializeOutput, type OutputStoreInit, type OutputFormat } from '../../../output.ts';
-import { resolveUserPath } from '../../../paths.ts';
+import { serializeOutput, type OutputStoreInit, type OutputFormat } from '../../output.ts';
+import { resolveUserPath } from '../../paths.ts';
 
 /**
  * Options for the init command.
@@ -127,10 +127,10 @@ async function resolveStoreName(
     if (explicitName) {
         const trimmed = explicitName.trim();
         if (!trimmed) {
-            mapCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name is required.' });
+            throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name is required.' });
         }
         if (!isValidStoreName(trimmed)) {
-            mapCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug.' });
+            throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug.' });
         }
         return trimmed;
     }
@@ -141,13 +141,13 @@ async function resolveStoreName(
         // Convert to valid store name (lowercase slug)
         const normalized = gitName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
         if (!isValidStoreName(normalized)) {
-            mapCoreError({ code: 'INVALID_STORE_NAME', message: 'Could not derive valid store name from git repo.' });
+            throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Could not derive valid store name from git repo.' });
         }
         return normalized;
     }
 
     // 3. Error: require --name
-    mapCoreError({ code: 'GIT_REPO_REQUIRED', message: 'Not in a git repository. Use --name to specify the store name.' });
+    throwCoreError({ code: 'GIT_REPO_REQUIRED', message: 'Not in a git repository. Use --name to specify the store name.' });
 }
 
 /**
@@ -163,8 +163,8 @@ function writeOutput(
     stdout: NodeJS.WritableStream,
 ): void {
     const serialized = serializeOutput({ kind: 'store-init', value: output }, format);
-    if (!serialized.ok) {
-        mapCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
+    if (!serialized.ok()) {
+        throwCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
     }
     stdout.write(serialized.value + '\n');
 }
@@ -203,14 +203,14 @@ export async function handleInit(
     // 3. Use initializeStore to handle directory creation, index, and registration
     const registry = new FilesystemRegistry(registryPath);
     const result = await initializeStore(registry, storeName, rootPath);
-    if (!result.ok) {
+    if (!result.ok()) {
         // Map InitStoreError to CLI error
         const errorCode = result.error.code === 'STORE_ALREADY_EXISTS'
             ? 'STORE_ALREADY_EXISTS'
             : result.error.code === 'INVALID_STORE_NAME'
                 ? 'INVALID_STORE_NAME'
                 : 'STORE_INIT_FAILED';
-        mapCoreError({ code: errorCode, message: result.error.message });
+        throwCoreError({ code: errorCode, message: result.error.message });
     }
 
     // 4. Output result

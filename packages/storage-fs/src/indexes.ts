@@ -9,6 +9,7 @@
 import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { dirname, extname, relative, resolve } from 'node:path';
 import type { MemorySlugPath, Result } from '@yeseh/cortex-core';
+import type { Memory } from '@yeseh/cortex-core/memory';
 import type {
     ReindexResult,
     StorageAdapterError,
@@ -18,7 +19,7 @@ import type { CategoryIndex, IndexMemoryEntry } from '@yeseh/cortex-core/index';
 import { defaultTokenizer, toSlug } from '@yeseh/cortex-core';
 import type { DirEntriesResult, FilesystemContext, StringOrNullResult } from './types.ts';
 import { err, isNotFoundError, ok, resolveStoragePath, toSlugPathFromRelative } from './utils.ts';
-import { validateSlugPath, parseMemory } from './memories.ts';
+import { validateSlugPath, parseMemory, serializeMemory } from './memories.ts';
 import { parseIndex, serializeIndex } from './index-serialization.ts';
 
 /**
@@ -381,6 +382,33 @@ export const updateCategoryIndexes = async (
     }
 
     return ok(undefined);
+};
+
+/**
+ * Updates all category indexes when a Memory object is written.
+ *
+ * Serializes the memory to reuse the existing index update pipeline.
+ */
+export const updateCategoryIndexesFromMemory = async (
+    ctx: FilesystemContext,
+    memory: Memory,
+    options: { createWhenMissing?: boolean } = {},
+): Promise<Result<void, StorageAdapterError>> => {
+    const category = memory.path.category.toString();
+    const slug = memory.path.slug.toString();
+    const slugPath = category ? `${category}/${slug}` : slug;
+
+    const serialized = serializeMemory(memory);
+    if (!serialized.ok) {
+        return err({
+            code: 'INDEX_ERROR',
+            message: `Failed to serialize memory for index update: ${slugPath}.`,
+            path: slugPath,
+            cause: serialized.error,
+        });
+    }
+
+    return updateCategoryIndexes(ctx, slugPath, serialized.value, options);
 };
 
 /**

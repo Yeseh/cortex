@@ -8,7 +8,7 @@
  */
 
 import YAML from 'yaml';
-import { encode as toonEncode } from '@toon-format/toon';
+import * as TOON from '@toon-format/toon';
 import { ok, err, type Result } from './result.ts';
 
 /** Supported output formats */
@@ -47,16 +47,31 @@ export interface SerializationError {
  * // name: test
  * ```
  */
-export const serialize = (obj: unknown, format: OutputFormat): string => {
-    switch (format) {
-        case 'json':
-            return JSON.stringify(obj);
-        case 'yaml':
-            return YAML.stringify(obj);
-        case 'toon':
-            return toonEncode(obj, toonOptions);
-        default:
-            throw new Error(`Unsupported output format: ${format}`);
+export const serialize = (
+    obj: unknown, 
+    format: OutputFormat): 
+Result<string, SerializationError> => {
+    try {
+        switch (format) {
+            case 'json':
+                return ok(JSON.stringify(obj));
+            case 'yaml':
+                return ok(YAML.stringify(obj));
+            case 'toon':
+                return ok(TOON.encode(obj, toonOptions));
+            default:
+                return err({
+                    code: 'INVALID_FORMAT',
+                    message: `Unsupported output format: ${format}`,
+                });
+        }
+    }
+    catch (cause) {
+        return err({
+            code: 'SERIALIZE_FAILED',
+            message: `Failed to serialize to ${format}.`,
+            cause,
+        });
     }
 };
 
@@ -64,9 +79,8 @@ export const serialize = (obj: unknown, format: OutputFormat): string => {
  * Deserialize a string to an object of the specified format.
  *
  * @param raw - The raw string to deserialize
- * @param format - The format to parse ('yaml' or 'json')
- * @returns The deserialized object
- * @throws Error if deserialization fails
+ * @param format - The format to parse ('yaml', 'json', or 'toon')
+ * @returns Result containing the deserialized object or a SerializationError
  *
  * @example
  * ```ts
@@ -74,128 +88,27 @@ export const serialize = (obj: unknown, format: OutputFormat): string => {
  * // { name: 'test' }
  * ```
  */
-export const deserialize = <T = unknown>(raw: string, format: 'yaml' | 'json'): T => {
-    switch (format) {
-        case 'json':
-            return JSON.parse(raw) as T;
-        case 'yaml':
-            return YAML.parse(raw) as T;
-        default:
-            throw new Error(`Unsupported input format: ${format}`);
-    }
-};
-
-// -----------------------------------------------------------------------------
-// Result-based API (non-throwing wrappers)
-// -----------------------------------------------------------------------------
-
-/**
- * Parse a YAML string into an object with Result error handling.
- *
- * @param raw - The raw YAML string to parse
- * @returns Result containing the parsed object or a SerializationError
- *
- * @example
- * ```ts
- * const result = parseYaml<{ name: string }>('name: test');
- * if (result.ok) {
- *     console.log(result.value.name); // 'test'
- * }
- * ```
- */
-export const parseYaml = <T = unknown>(raw: string): Result<T, SerializationError> => {
+export const deserialize = <T = unknown>(raw: string, format: 'yaml' | 'json' | 'toon'): Result<T, SerializationError> => {
     try {
-        const value = YAML.parse(raw) as T;
-        return ok(value);
+        switch (format) {
+            case 'json':
+                return ok(JSON.parse(raw) as T);
+            case 'yaml':
+                return ok(YAML.parse(raw) as T);
+            case 'toon':
+                return ok(TOON.decode(raw) as T);
+            default:
+                return err({
+                    code: 'INVALID_FORMAT',
+                    message: `Unsupported input format: ${format}`,
+                });
+        }
     }
     catch (cause) {
         return err({
             code: 'PARSE_FAILED',
-            message: 'Failed to parse YAML.',
+            message: `Failed to deserialize ${format}.`,
             cause,
         });
     }
 };
-
-/**
- * Stringify an object to YAML with Result error handling.
- *
- * @param obj - The object to serialize
- * @returns Result containing the YAML string or a SerializationError
- *
- * @example
- * ```ts
- * const result = stringifyYaml({ name: 'test' });
- * if (result.ok) {
- *     console.log(result.value); // 'name: test\n'
- * }
- * ```
- */
-export const stringifyYaml = (obj: unknown): Result<string, SerializationError> => {
-    try {
-        return ok(YAML.stringify(obj));
-    }
-    catch (cause) {
-        return err({
-            code: 'SERIALIZE_FAILED',
-            message: 'Failed to serialize to YAML.',
-            cause,
-        });
-    }
-};
-
-/**
- * Parse a JSON string into an object with Result error handling.
- *
- * @param raw - The raw JSON string to parse
- * @returns Result containing the parsed object or a SerializationError
- *
- * @example
- * ```ts
- * const result = parseJson<{ name: string }>('{"name": "test"}');
- * if (result.ok) {
- *     console.log(result.value.name); // 'test'
- * }
- * ```
- */
-export const parseJson = <T = unknown>(raw: string): Result<T, SerializationError> => {
-    try {
-        const value = JSON.parse(raw) as T;
-        return ok(value);
-    }
-    catch (cause) {
-        return err({
-            code: 'PARSE_FAILED',
-            message: 'Failed to parse JSON.',
-            cause,
-        });
-    }
-};
-
-/**
- * Stringify an object to JSON with Result error handling.
- *
- * @param obj - The object to serialize
- * @returns Result containing the JSON string or a SerializationError
- *
- * @example
- * ```ts
- * const result = stringifyJson({ name: 'test' });
- * if (result.ok) {
- *     console.log(result.value); // '{"name":"test"}'
- * }
- * ```
- */
-export const stringifyJson = (obj: unknown): Result<string, SerializationError> => {
-    try {
-        return ok(JSON.stringify(obj));
-    }
-    catch (cause) {
-        return err({
-            code: 'SERIALIZE_FAILED',
-            message: 'Failed to serialize to JSON.',
-            cause,
-        });
-    }
-};
-

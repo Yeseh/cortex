@@ -15,8 +15,8 @@
  */
 
 import { Command } from '@commander-js/extra-typings';
-import { mapCoreError } from '../../../errors.ts';
-import { resolveStoreAdapter } from '../../../context.ts';
+import { throwCoreError } from '../../errors.ts';
+import { resolveStoreAdapter } from '../../context.ts';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 
 /**
@@ -49,15 +49,15 @@ export async function handleReindex(
 ): Promise<void> {
     // 1. Resolve store context
     const storeResult = await resolveStoreAdapter(storeName);
-    if (!storeResult.ok) {
-        mapCoreError(storeResult.error);
+    if (!storeResult.ok()) {
+        throwCoreError(storeResult.error);
     }
 
     // 2. Create adapter and reindex
     const adapter = deps.adapter ?? storeResult.value.adapter;
     const reindexResult = await adapter.indexes.reindex();
-    if (!reindexResult.ok) {
-        mapCoreError({ code: 'REINDEX_FAILED', message: reindexResult.error.message });
+    if (!reindexResult.ok()) {
+        throwCoreError({ code: 'REINDEX_FAILED', message: reindexResult.error.message });
     }
 
     // 3. Output result

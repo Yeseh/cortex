@@ -4,6 +4,7 @@
 
 export * from './tokens.ts';
 export * from './config.ts';
+export * from './result.ts';
 export {
     serialize,
     deserialize,
@@ -17,4 +18,4 @@ export {
 } from './serialization.ts';
 
 // Validation schemas
-export { dateSchema, nonEmptyStringSchema, tagsSchema } from './valdiation/schemas.ts';
+export { dateSchema, nonEmptyStringSchema, tagsSchema } from './validation/schemas.ts';

@@ -29,14 +29,13 @@
  */
 
 import { Command } from '@commander-js/extra-typings';
-import { mapCoreError } from '../../../errors.ts';
-import { resolveStoreAdapter } from '../../../context.ts';
+import { throwCoreError } from '../../errors.ts';
+import { resolveStoreAdapter } from '../../context.ts';
 
-import type { CategoryIndex } from '@yeseh/cortex-core/index';
-import { parseMemory } from '@yeseh/cortex-storage-fs';
+import { listMemories } from '@yeseh/cortex-core/memory';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
-import type { OutputFormat } from '../../../output.ts';
-import { toonOptions } from '../../../output.ts';
+import type { OutputFormat } from '../../output.ts';
+import { toonOptions } from '../../output.ts';
 import { encode as toonEncode } from '@toon-format/toon';
 
 /**
@@ -92,191 +91,6 @@ export interface ListResult {
     subcategories: ListSubcategoryEntry[];
 }
 
-/**
- * Checks if a memory is expired based on its expiration date.
- */
-const isExpired = (expiresAt: Date | undefined, now: Date): boolean => {
-    if (!expiresAt) {
-        return false;
-    }
-    return expiresAt.getTime() <= now.getTime();
-};
-
-/**
- * Loads the expiration date from a memory file.
- */
-const loadMemoryExpiry = async (
-    adapter: ScopedStorageAdapter,
-    slugPath: string,
-): Promise<Date | undefined> => {
-    const contents = await adapter.memories.read(slugPath);
-    if (!contents.ok) {
-        mapCoreError({
-            code: 'STORAGE_ERROR',
-            message: `Failed to read memory file ${slugPath}.`,
-        });
-    }
-    if (!contents.value) {
-        return undefined;
-    }
-    const parsed = parseMemory(contents.value);
-    if (!parsed.ok) {
-        mapCoreError({
-            code: 'PARSE_FAILED',
-            message: `Failed to parse memory file ${slugPath}.`,
-        });
-    }
-    return parsed.value.metadata.expiresAt;
-};
-
-/**
- * Loads a category index from the specified path.
- */
-const loadCategoryIndex = async (
-    adapter: ScopedStorageAdapter,
-    categoryPath: string,
-): Promise<CategoryIndex | null> => {
-    const indexResult = await adapter.indexes.read(categoryPath);
-    if (!indexResult.ok) {
-        mapCoreError({
-            code: 'STORAGE_ERROR',
-            message: `Failed to read index for category ${categoryPath}.`,
-        });
-    }
-    if (!indexResult.value) {
-        return null;
-    }
-    return indexResult.value;
-};
-
-/**
- * Recursively collects memories from a category and its subcategories.
- */
-const collectMemoriesFromCategory = async (
-    adapter: ScopedStorageAdapter,
-    categoryPath: string,
-    includeExpired: boolean,
-    now: Date,
-    visited: Set<string>,
-): Promise<ListMemoryEntry[]> => {
-    if (visited.has(categoryPath)) {
-        return [];
-    }
-    visited.add(categoryPath);
-
-    const index = await loadCategoryIndex(adapter, categoryPath);
-    if (!index) {
-        return [];
-    }
-
-    const entries: ListMemoryEntry[] = [];
-
-    for (const memory of index.memories) {
-        const expiresAt = await loadMemoryExpiry(adapter, memory.path);
-        const expired = isExpired(expiresAt, now);
-        if (!includeExpired && expired) {
-            continue;
-        }
-        entries.push({
-            path: memory.path,
-            tokenEstimate: memory.tokenEstimate,
-            summary: memory.summary,
-            expiresAt,
-            isExpired: expired,
-        });
-    }
-
-    for (const subcategory of index.subcategories) {
-        const subEntries = await collectMemoriesFromCategory(
-            adapter,
-            subcategory.path,
-            includeExpired,
-            now,
-            visited,
-        );
-        entries.push(...subEntries);
-    }
-
-    return entries;
-};
-
-/**
- * Gets direct subcategories from a category index.
- */
-const getDirectSubcategories = async (
-    adapter: ScopedStorageAdapter,
-    categoryPath: string,
-): Promise<ListSubcategoryEntry[]> => {
-    const index = await loadCategoryIndex(adapter, categoryPath);
-    if (!index) {
-        return [];
-    }
-
-    return index.subcategories.map((subcategory) => ({
-        path: subcategory.path,
-        memoryCount: subcategory.memoryCount,
-        description: subcategory.description,
-    }));
-};
-
-/**
- * Collects all memories from the store by reading the root index.
- *
- * Dynamically discovers root categories from the store's root index file
- * rather than using a hardcoded list. This allows stores to organize
- * memories under any top-level category structure.
- */
-const collectAllCategories = async (
-    adapter: ScopedStorageAdapter,
-    includeExpired: boolean,
-    now: Date,
-): Promise<ListResult> => {
-    // Load root index to discover top-level categories dynamically
-    const rootIndex = await loadCategoryIndex(adapter, '');
-    if (!rootIndex) {
-        return { memories: [], subcategories: [] };
-    }
-
-    const memories: ListMemoryEntry[] = [];
-    const visited = new Set<string>();
-
-    // Collect memories directly in root (if any)
-    for (const memory of rootIndex.memories) {
-        const expiresAt = await loadMemoryExpiry(adapter, memory.path);
-        const expired = isExpired(expiresAt, now);
-        if (!includeExpired && expired) {
-            continue;
-        }
-        memories.push({
-            path: memory.path,
-            tokenEstimate: memory.tokenEstimate,
-            summary: memory.summary,
-            expiresAt,
-            isExpired: expired,
-        });
-    }
-
-    // Collect from all discovered subcategories
-    for (const subcategory of rootIndex.subcategories) {
-        const categoryEntries = await collectMemoriesFromCategory(
-            adapter,
-            subcategory.path,
-            includeExpired,
-            now,
-            visited,
-        );
-        memories.push(...categoryEntries);
-    }
-
-    // Return root-level subcategories
-    const subcategories: ListSubcategoryEntry[] = rootIndex.subcategories.map((subcategory) => ({
-        path: subcategory.path,
-        memoryCount: subcategory.memoryCount,
-        description: subcategory.description,
-    }));
-
-    return { memories, subcategories };
-};
 
 /**
  * Formats the output based on the specified format.
@@ -377,32 +191,38 @@ export async function handleList(
 ): Promise<void> {
     // 1. Resolve store context
     const storeResult = await resolveStoreAdapter(storeName);
-    if (!storeResult.ok) {
-        mapCoreError(storeResult.error);
+    if (!storeResult.ok()) {
+        throwCoreError(storeResult.error);
     }
 
     const now = deps.now ?? new Date();
     const adapter = deps.adapter ?? storeResult.value.adapter;
+    const normalizedCategory = category ? category.replace(/^\/+/, '') : undefined;
 
     // 2. Collect memories and subcategories
-    let result: ListResult;
+    const listResult = await listMemories(adapter, {
+        category: normalizedCategory,
+        includeExpired: options.includeExpired ?? false,
+        now,
+    });
+    if (!listResult.ok()) {
+        throwCoreError(listResult.error);
+    }
 
-    if (category) {
-        // Normalize category path by stripping leading slashes
-        const normalizedCategory = category.replace(/^\/+/, '');
-        const memories = await collectMemoriesFromCategory(
-            adapter,
-            normalizedCategory,
-            options.includeExpired ?? false,
-            now,
-            new Set(),
-        );
-        const subcategories = await getDirectSubcategories(adapter, normalizedCategory);
-        result = { memories, subcategories };
-    }
-    else {
-        result = await collectAllCategories(adapter, options.includeExpired ?? false, now);
-    }
+    const result: ListResult = {
+        memories: listResult.value.memories.map((memory) => ({
+            path: memory.path,
+            tokenEstimate: memory.tokenEstimate,
+            summary: memory.summary,
+            expiresAt: memory.expiresAt,
+            isExpired: memory.isExpired,
+        })),
+        subcategories: listResult.value.subcategories.map((subcategory) => ({
+            path: subcategory.path,
+            memoryCount: subcategory.memoryCount,
+            description: subcategory.description,
+        })),
+    };
 
     // 3. Format and output
     const VALID_FORMATS: OutputFormat[] = [

@@ -14,9 +14,9 @@
  */
 
 import { Command } from '@commander-js/extra-typings';
-import { mapCoreError } from '../../../errors.ts';
-import { resolveStoreAdapter } from '../../../context.ts';
-import { validateMemorySlugPath } from '@yeseh/cortex-core/memory';
+import { throwCoreError } from '../../errors.ts';
+import { resolveStoreAdapter } from '../../context.ts';
+import { moveMemory } from '@yeseh/cortex-core/memory';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 
 /** Dependencies injected into the handler for testability */
@@ -43,35 +43,20 @@ export async function handleMove(
 ): Promise<void> {
     // 1. Resolve store context
     const storeResult = await resolveStoreAdapter(storeName);
-    if (!storeResult.ok) {
-        mapCoreError(storeResult.error);
+    if (!storeResult.ok()) {
+        throwCoreError(storeResult.error);
     }
 
-    // 2. Validate source path
-    const sourceResult = validateMemorySlugPath(from);
-    if (!sourceResult.ok) {
-        mapCoreError({ code: 'INVALID_SOURCE_PATH', message: sourceResult.error.message });
-    }
-
-    // 3. Validate destination path
-    const destResult = validateMemorySlugPath(to);
-    if (!destResult.ok) {
-        mapCoreError({ code: 'INVALID_DESTINATION_PATH', message: destResult.error.message });
-    }
-
-    // 4. Move the memory file
+    // 2. Move the memory file
     const adapter = deps.adapter ?? storeResult.value.adapter;
-    const moveResult = await adapter.memories.move(
-        sourceResult.value.slugPath,
-        destResult.value.slugPath,
-    );
-    if (!moveResult.ok) {
-        mapCoreError({ code: 'MOVE_FAILED', message: moveResult.error.message });
+    const moveResult = await moveMemory(adapter, from, to);
+    if (!moveResult.ok()) {
+        throwCoreError(moveResult.error);
     }
 
-    // 5. Output success message
+    // 3. Output success message
     const out = deps.stdout ?? process.stdout;
-    out.write(`Moved memory from ${sourceResult.value.slugPath} to ${destResult.value.slugPath}.\n`);
+    out.write(`Moved memory from ${from} to ${to}.\n`);
 }
 
 /**

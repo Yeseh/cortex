@@ -22,14 +22,13 @@
  */
 
 import { Command } from '@commander-js/extra-typings';
-import { mapCoreError } from '../../../errors.ts';
-import { resolveStoreAdapter } from '../../../context.ts';
+import { throwCoreError } from '../../errors.ts';
+import { resolveStoreAdapter } from '../../context.ts';
 
-import { validateMemorySlugPath } from '@yeseh/cortex-core/memory';
-import { parseMemory } from '@yeseh/cortex-storage-fs';
+import { getMemory } from '@yeseh/cortex-core/memory';
 import { defaultTokenizer } from '@yeseh/cortex-core';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
-import { serializeOutput, type OutputMemory, type OutputFormat } from '../../../output.ts';
+import { serializeOutput, type OutputMemory, type OutputFormat } from '../../output.ts';
 
 /**
  * Options for the show command.
@@ -78,64 +77,39 @@ export async function handleShow(
 ): Promise<void> {
     // 1. Resolve store context
     const storeResult = await resolveStoreAdapter(storeName);
-    if (!storeResult.ok) {
-        mapCoreError(storeResult.error);
+    if (!storeResult.ok()) {
+        throwCoreError(storeResult.error);
     }
 
-    // 2. Validate the memory path
-    const pathResult = validateMemorySlugPath(path);
-    if (!pathResult.ok) {
-        mapCoreError(pathResult.error);
-    }
-
-    // 3. Read the memory file
+    // 2. Read the memory
     const adapter = deps.adapter ?? storeResult.value.adapter;
-    const readResult = await adapter.memories.read(pathResult.value.slugPath);
-    if (!readResult.ok) {
-        mapCoreError({ code: 'STORAGE_ERROR', message: readResult.error.message });
-    }
-    if (!readResult.value) {
-        mapCoreError({
-            code: 'MEMORY_NOT_FOUND',
-            message: `Memory not found at ${pathResult.value.slugPath}`,
-        });
+    const readResult = await getMemory(adapter, path, {
+        includeExpired: options.includeExpired ?? false,
+        now: new Date(),
+    });
+    if (!readResult.ok()) {
+        throwCoreError(readResult.error);
     }
 
-    // 4. Parse the memory file
-    const parsed = parseMemory(readResult.value);
-    if (!parsed.ok) {
-        mapCoreError({ code: 'PARSE_FAILED', message: parsed.error.message });
-    }
-
-    // 5. Check expiration (unless --include-expired)
-    if (!options.includeExpired && parsed.value.metadata.expiresAt) {
-        const now = new Date();
-        if (parsed.value.metadata.expiresAt.getTime() <= now.getTime()) {
-            mapCoreError({
-                code: 'MEMORY_NOT_FOUND',
-                message: `Memory at ${pathResult.value.slugPath} has expired`,
-            });
-        }
-    }
-
-    // 6. Build output
-    const tokenEstimateResult = defaultTokenizer.estimateTokens(parsed.value.content);
+    // 3. Build output
+    const memory = readResult.value;
+    const tokenEstimateResult = defaultTokenizer.estimateTokens(memory.content);
     const tokenEstimate = tokenEstimateResult.ok ? tokenEstimateResult.value : undefined;
 
     const outputMemory: OutputMemory = {
-        path: pathResult.value.slugPath,
+        path: memory.path.toString(),
         metadata: {
-            createdAt: parsed.value.metadata.createdAt,
-            updatedAt: parsed.value.metadata.updatedAt,
-            tags: parsed.value.metadata.tags,
-            source: parsed.value.metadata.source,
+            createdAt: memory.metadata.createdAt,
+            updatedAt: memory.metadata.updatedAt,
+            tags: memory.metadata.tags,
+            source: memory.metadata.source,
             tokenEstimate,
-            expiresAt: parsed.value.metadata.expiresAt,
+            expiresAt: memory.metadata.expiresAt,
         },
-        content: parsed.value.content,
+        content: memory.content,
     };
 
-    // 7. Serialize and output
+    // 4. Serialize and output
     const VALID_FORMATS: OutputFormat[] = [
         'yaml',
         'json',
@@ -144,8 +118,8 @@ export async function handleShow(
     const requestedFormat = options.format as OutputFormat;
     const format: OutputFormat = VALID_FORMATS.includes(requestedFormat) ? requestedFormat : 'yaml';
     const serialized = serializeOutput({ kind: 'memory', value: outputMemory }, format);
-    if (!serialized.ok) {
-        mapCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
+    if (!serialized.ok()) {
+        throwCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
     }
 
     const out = deps.stdout ?? process.stdout;

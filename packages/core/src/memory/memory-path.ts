@@ -47,4 +47,8 @@ export class MemoryPath {
 
         return ok(new MemoryPath(categoryResult.value, slugResult.value));
     }
+
+    toString(): string {
+        return `${this.category.toString()}/${this.slug.toString()}`;
+    }
 };
