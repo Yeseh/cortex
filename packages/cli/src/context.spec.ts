@@ -85,8 +85,8 @@ describe('context', () => {
                     globalStorePath: globalStoreDir,
                 });
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
+                expect(result.ok()).toBe(true);
+                if (result.ok()) {
                     expect(result.value.root).toBe(localStoreDir);
                     expect(result.value.scope).toBe('local');
                     expect(result.value.name).toBeUndefined();
@@ -101,8 +101,8 @@ describe('context', () => {
                     globalStorePath: globalStoreDir,
                 });
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
+                expect(result.ok()).toBe(true);
+                if (result.ok()) {
                     expect(result.value.root).toBe(globalStoreDir);
                     expect(result.value.scope).toBe('global');
                     expect(result.value.name).toBeUndefined();
@@ -118,8 +118,8 @@ describe('context', () => {
                     globalStorePath: globalStoreDir,
                 });
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
+                expect(result.ok()).toBe(true);
+                if (result.ok()) {
                     expect(result.value.root).toBe(localStoreDir);
                     expect(result.value.scope).toBe('local');
                 }
@@ -131,8 +131,8 @@ describe('context', () => {
                     globalStorePath: globalStoreDir,
                 });
 
-                expect(result.ok).toBe(false);
-                if (!result.ok) {
+                expect(result.ok()).toBe(false);
+                if (!result.ok()) {
                     expect(result.error.code).toBe('STORE_RESOLUTION_FAILED');
                 }
             });
@@ -150,7 +150,7 @@ describe('context', () => {
                 // Result depends on whether process.cwd() has a local store
                 // The important thing is it doesn't throw and returns a valid Result
                 expect(result).toBeDefined();
-                expect(typeof result.ok).toBe('boolean');
+                expect(typeof result.ok()).toBe('function');
             });
         });
 
@@ -168,8 +168,8 @@ describe('context', () => {
                     registryPath,
                 });
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
+                expect(result.ok()).toBe(true);
+                if (result.ok()) {
                     expect(result.value.root).toBe(storePathInRegistry);
                     expect(result.value.name).toBe('my-store');
                     expect(result.value.scope).toBe('registry');
@@ -187,8 +187,8 @@ describe('context', () => {
                     registryPath,
                 });
 
-                expect(result.ok).toBe(false);
-                if (!result.ok) {
+                expect(result.ok()).toBe(false);
+                if (!result.ok()) {
                     expect(result.error.code).toBe('STORE_NOT_FOUND');
                     expect(result.error.message).toContain('nonexistent-store');
                 }
@@ -200,8 +200,8 @@ describe('context', () => {
                     registryPath: join(tempDir, 'nonexistent-registry.yaml'),
                 });
 
-                expect(result.ok).toBe(false);
-                if (!result.ok) {
+                expect(result.ok()).toBe(false);
+                if (!result.ok()) {
                     expect(result.error.code).toBe('REGISTRY_LOAD_FAILED');
                 }
             });
@@ -214,8 +214,8 @@ describe('context', () => {
                     registryPath,
                 });
 
-                expect(result.ok).toBe(false);
-                if (!result.ok) {
+                expect(result.ok()).toBe(false);
+                if (!result.ok()) {
                     expect(result.error.code).toBe('REGISTRY_LOAD_FAILED');
                 }
             });
@@ -237,9 +237,9 @@ describe('context', () => {
                     registryPath,
                 });
 
-                expect(result1.ok).toBe(true);
-                expect(result2.ok).toBe(true);
-                if (result1.ok && result2.ok) {
+                expect(result1.ok()).toBe(true);
+                expect(result2.ok()).toBe(true);
+                if (result1.ok() && result2.ok()) {
                     expect(result1.value.root).toBe(store1Path);
                     expect(result2.value.root).toBe(store2Path);
                 }
@@ -255,8 +255,8 @@ describe('context', () => {
                     globalStorePath: globalStoreDir,
                 });
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
+                expect(result.ok()).toBe(true);
+                if (result.ok()) {
                     expect(result.value.scope).toBe('local');
                 }
             });
@@ -269,8 +269,8 @@ describe('context', () => {
                     globalStorePath: globalStoreDir,
                 });
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
+                expect(result.ok()).toBe(true);
+                if (result.ok()) {
                     expect(result.value.scope).toBe('global');
                 }
             });
@@ -287,8 +287,8 @@ describe('context', () => {
                     registryPath,
                 });
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
+                expect(result.ok()).toBe(true);
+                if (result.ok()) {
                     expect(result.value.scope).toBe('registry');
                 }
             });
@@ -306,8 +306,8 @@ describe('context', () => {
                     globalStorePath: globalStoreDir,
                 });
 
-                expect(result.ok).toBe(false);
-                if (!result.ok) {
+                expect(result.ok()).toBe(false);
+                if (!result.ok()) {
                     expect(result.error.code).toBe('STORE_RESOLUTION_FAILED');
                 }
             });
@@ -326,8 +326,8 @@ describe('context', () => {
                     globalStorePath: globalStoreDir,
                 });
 
-                expect(result.ok).toBe(false);
-                if (!result.ok) {
+                expect(result.ok()).toBe(false);
+                if (!result.ok()) {
                     expect(result.error.code).toBe('CONFIG_LOAD_FAILED');
                 }
             });
@@ -358,8 +358,8 @@ describe('context', () => {
                 });
 
                 // Empty string is falsy, so should fall through to default resolution
-                expect(result.ok).toBe(true);
-                if (result.ok) {
+                expect(result.ok()).toBe(true);
+                if (result.ok()) {
                     expect(result.value.scope).toBe('local');
                 }
             });
@@ -387,8 +387,8 @@ describe('context', () => {
 
             const result = await loadRegistry(registryPath);
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value['test-store']).toBeDefined();
                 expect(result.value['test-store']?.path).toBe(storePath);
             }
@@ -397,8 +397,8 @@ describe('context', () => {
         it('should return empty registry for missing file (allowMissing is true by default)', async () => {
             const result = await loadRegistry(join(tempDir, 'nonexistent.yaml'));
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(Object.keys(result.value)).toHaveLength(0);
             }
         });
@@ -408,8 +408,8 @@ describe('context', () => {
 
             const result = await loadRegistry(registryPath);
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('REGISTRY_LOAD_FAILED');
             }
         });
@@ -429,8 +429,8 @@ describe('context', () => {
 
             const result = await loadRegistry(registryPath);
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(Object.keys(result.value)).toHaveLength(3);
                 expect(result.value['alpha-store']?.path).toBe('/path/to/alpha');
                 expect(result.value['beta-store']?.path).toBe('/path/to/beta');
@@ -450,8 +450,8 @@ describe('context', () => {
 
             const result = await loadRegistry(registryPath);
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value['described-store']?.description).toBe(
                     'A store with a description',
                 );
@@ -480,8 +480,8 @@ stores:
 
             const result = await loadRegistry(registryPath);
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value['commented-store']?.path).toBe('/path/to/store');
             }
         });
@@ -497,8 +497,8 @@ stores:
 
             const result = await loadRegistry(registryPath);
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value['quoted-store']?.path).toBe('/path/with spaces/to/store');
             }
         });
@@ -508,8 +508,8 @@ stores:
 
             const result = await loadRegistry(registryPath);
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('REGISTRY_LOAD_FAILED');
             }
         });
@@ -525,8 +525,8 @@ stores:
 
             const result = await loadRegistry(registryPath);
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('REGISTRY_LOAD_FAILED');
             }
         });
@@ -542,8 +542,8 @@ stores:
 
             const result = await loadRegistry(registryPath);
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('REGISTRY_LOAD_FAILED');
             }
         });
