@@ -19,7 +19,8 @@
  * @module core/storage/adapter
  */
 
-import type { MemorySlugPath, Result } from '../types.ts';
+import type { Memory } from '@/memory/memory';
+import type { Result } from '@/result.ts';
 import type { CategoryIndex } from '../index/types.ts';
 import type { CategoryStorage } from '../category/types.ts';
 import type {
@@ -27,6 +28,7 @@ import type {
     StoreRegistryLoadError,
     StoreRegistrySaveError,
 } from '../store/registry.ts';
+import type { MemoryPath } from '@/memory/memory-path.ts';
 
 /**
  * Index file identifier type.
@@ -100,7 +102,7 @@ export interface MemoryStorage {
      * @param slugPath - Memory identifier path (e.g., "project/cortex/architecture")
      * @returns Result with file contents, or null if the memory does not exist
      */
-    read(slugPath: MemorySlugPath): Promise<Result<string | null, StorageAdapterError>>;
+    read(slugPath: MemoryPath): Promise<Result<Memory | null, StorageAdapterError>>;
 
     /**
      * Writes contents to a memory file.
@@ -112,7 +114,7 @@ export interface MemoryStorage {
      * @param contents - The content to write
      * @returns Result indicating success or failure
      */
-    write(slugPath: MemorySlugPath, contents: string): Promise<Result<void, StorageAdapterError>>;
+    write(contents: Memory): Promise<Result<void, StorageAdapterError>>;
 
     /**
      * Removes a memory file.
@@ -122,7 +124,7 @@ export interface MemoryStorage {
      * @param slugPath - Memory identifier path (e.g., "project/cortex/architecture")
      * @returns Result indicating success or failure
      */
-    remove(slugPath: MemorySlugPath): Promise<Result<void, StorageAdapterError>>;
+    remove(slugPath: MemoryPath): Promise<Result<void, StorageAdapterError>>;
 
     /**
      * Moves a memory file from one location to another.
@@ -135,8 +137,8 @@ export interface MemoryStorage {
      * @returns Result indicating success or failure
      */
     move(
-        sourceSlugPath: MemorySlugPath,
-        destinationSlugPath: MemorySlugPath
+        sourceSlugPath: MemoryPath,
+        destinationSlugPath: MemoryPath
     ): Promise<Result<void, StorageAdapterError>>;
 }
 
@@ -240,7 +242,7 @@ export interface IndexStorage {
      * is created or modified, avoiding full reindex operations.
      *
      * @param slugPath - Memory identifier path that was written
-     * @param contents - The content that was written
+     * @param memory - The memory that was written
      * @param options - Optional settings for index behavior
      * @param options.createWhenMissing - Create index entries for new categories (default: true)
      * @returns Result indicating success or failure
@@ -258,8 +260,7 @@ export interface IndexStorage {
      * - If `createWhenMissing` is false, missing category indexes may prevent updates.
      */
     updateAfterMemoryWrite(
-        slugPath: MemorySlugPath,
-        contents: string,
+        memory: Memory,
         options?: { createWhenMissing?: boolean }
     ): Promise<Result<void, StorageAdapterError>>;
 }
@@ -354,118 +355,6 @@ export interface ComposedStorageAdapter {
     /** Store registry persistence */
     stores: StoreStorage;
 }
-
-// ============================================================================
-// Legacy Interface (Current Implementation - Backward Compatibility)
-// ============================================================================
-
-/**
- * Storage adapter interface for memory persistence.
- *
- * This is the current interface used by existing implementations.
- * New code should prefer the focused interfaces ({@link MemoryStorage},
- * {@link IndexStorage}, etc.) or {@link ComposedStorageAdapter}.
- *
- * Migration path: Implementations will eventually expose the focused
- * interfaces via the `memories`, `indexes`, `categories`, and `stores`
- * properties while maintaining these methods for backward compatibility.
- */
-export interface StorageAdapter {
-    /**
-     * Reads the contents of a memory file.
-     *
-     * @param slugPath - Memory identifier path
-     * @returns Result with file contents or null if missing
-     */
-    readMemoryFile(slugPath: MemorySlugPath): Promise<Result<string | null, StorageAdapterError>>;
-
-    /**
-     * Writes contents to a memory file with optional index updates.
-     *
-     * @param slugPath - Memory identifier path
-     * @param contents - The content to write
-     * @param options - Optional settings for index behavior
-     * @returns Result indicating success or failure
-     */
-    writeMemoryFile(
-        slugPath: MemorySlugPath,
-        contents: string,
-        options?: { allowIndexCreate?: boolean; allowIndexUpdate?: boolean }
-    ): Promise<Result<void, StorageAdapterError>>;
-
-    /**
-     * Removes a memory file.
-     *
-     * @param slugPath - Memory identifier path
-     * @returns Result indicating success or failure
-     */
-    removeMemoryFile(slugPath: MemorySlugPath): Promise<Result<void, StorageAdapterError>>;
-
-    /**
-     * Moves a memory file from one location to another.
-     *
-     * @param sourceSlugPath - Current memory path
-     * @param destinationSlugPath - Target memory path
-     * @returns Result indicating success or failure
-     */
-    moveMemoryFile(
-        sourceSlugPath: MemorySlugPath,
-        destinationSlugPath: MemorySlugPath
-    ): Promise<Result<void, StorageAdapterError>>;
-
-    /**
-     * Reads the contents of an index file.
-     *
-     * @param name - Index identifier
-     * @returns Result with file contents or null if missing
-     */
-    readIndexFile(
-        name: StorageIndexName
-    ): Promise<Result<CategoryIndex | null, StorageAdapterError>>;
-
-    /**
-     * Writes contents to an index file.
-     *
-     * @param name - Index identifier
-     * @param contents - The content to write
-     * @returns Result indicating success or failure
-     */
-    writeIndexFile(
-        name: StorageIndexName,
-        contents: CategoryIndex
-    ): Promise<Result<void, StorageAdapterError>>;
-
-    /**
-     * Rebuilds all category indexes from the current filesystem state.
-     *
-     * @returns Result with warnings array, or error on failure
-     */
-    reindexCategoryIndexes(): Promise<Result<ReindexResult, StorageAdapterError>>;
-}
-
-/**
- * Extended storage adapter that combines legacy methods with the new
- * composed interface for gradual migration.
- *
- * Implementations can adopt this interface to provide both the legacy
- * method-based API and the new composition-based API simultaneously,
- * allowing consumers to migrate incrementally.
- *
- * @example
- * ```typescript
- * class MyAdapter implements LegacyStorageAdapter {
- *   // Legacy methods delegate to focused interfaces
- *   readMemoryFile(path) { return this.memories.read(path); }
- *
- *   // Focused interfaces
- *   memories: MemoryStorage = new MyMemoryStorage();
- *   indexes: IndexStorage = new MyIndexStorage();
- *   categories: CategoryStorage = new MyCategoryStorage();
- *   stores: StoreStorage = new MyStoreStorage();
- * }
- * ```
- */
-export interface LegacyStorageAdapter extends StorageAdapter, ComposedStorageAdapter {}
 
 // ============================================================================
 // Registry Interface (New Abstraction)

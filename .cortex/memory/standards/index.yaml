@@ -26,6 +26,8 @@ subcategories:
     memory_count: 5
   - path: standards/paths
     memory_count: 0
+  - path: standards/refactor
+    memory_count: 6
   - path: standards/testing
     memory_count: 4
   - path: standards/typescript

@@ -19,20 +19,9 @@
  * import { parseMemory, serializeMemory } from '@yeseh/cortex-storage-fs';
  * ```
  */
-
-// Domain types
-export type { MemoryMetadata, Memory, MemoryErrorCode, MemoryError } from './types.ts';
-
-// Validation functions and types
-export { validateCategoryPath, validateMemorySlugPath } from './validation.ts';
-
-export type { MemoryPathValidationError } from './validation.ts';
-
-// Expiration utilities
-export { isExpired, isExpiredNow } from './expiration.ts';
-
-// Operations types and interface
-export type { MemorySerializer } from './operations.ts';
+export * from '@/slug';
+export * from '@/memory/memory';
+export * from '@/memory/memory-path';
 
 // Domain operations
 export {
@@ -44,7 +33,7 @@ export {
     listMemories,
     pruneExpiredMemories,
     getRecentMemories,
-} from './operations.ts';
+} from './operations/index.ts';
 
 export type {
     CreateMemoryInput,
@@ -60,6 +49,4 @@ export type {
     PruneResult,
     RecentMemory,
     GetRecentMemoriesResult,
-} from './operations.ts';
-
-
+} from './operations/index.ts';
