@@ -9,8 +9,7 @@
  * @module core/category/operations
  */
 
-import type { Result } from '../types.ts';
-import { ok, err } from '../result.ts';
+import { ok, err, type Result } from '../result.ts';
 import type {
     CategoryStorage,
     CategoryError,
@@ -141,7 +140,7 @@ export const getAncestorPaths = (path: string): string[] => {
  */
 export const createCategory = async (
     storage: CategoryStorage,
-    path: string,
+    path: string
 ): Promise<Result<CreateCategoryResult, CategoryError>> => {
     // Validate path
     const segments = path.split('/').filter((s) => s.length > 0);
@@ -155,7 +154,7 @@ export const createCategory = async (
 
     // Check if already exists
     const existsResult = await storage.exists(path);
-    if (!existsResult.ok) {
+    if (!existsResult.ok()) {
         return existsResult;
     }
     if (existsResult.value) {
@@ -166,12 +165,12 @@ export const createCategory = async (
     const ancestors = getAncestorPaths(path);
     for (const ancestor of ancestors) {
         const ancestorExists = await storage.exists(ancestor);
-        if (!ancestorExists.ok) {
+        if (!ancestorExists.ok()) {
             return ancestorExists;
         }
         if (!ancestorExists.value) {
             const ensureResult = await storage.ensure(ancestor);
-            if (!ensureResult.ok) {
+            if (!ensureResult.ok()) {
                 return ensureResult;
             }
         }
@@ -179,7 +178,7 @@ export const createCategory = async (
 
     // Create the target category
     const ensureResult = await storage.ensure(path);
-    if (!ensureResult.ok) {
+    if (!ensureResult.ok()) {
         return ensureResult;
     }
 
@@ -223,7 +222,7 @@ export const createCategory = async (
 export const setDescription = async (
     storage: CategoryStorage,
     path: string,
-    description: string,
+    description: string
 ): Promise<Result<SetDescriptionResult, CategoryError>> => {
     // Trim and validate length
     const trimmed = description.trim();
@@ -237,7 +236,7 @@ export const setDescription = async (
 
     // Check category exists
     const existsResult = await storage.exists(path);
-    if (!existsResult.ok) {
+    if (!existsResult.ok()) {
         return existsResult;
     }
     if (!existsResult.value) {
@@ -255,9 +254,9 @@ export const setDescription = async (
     const updateResult = await storage.updateSubcategoryDescription(
         parentPath,
         path,
-        finalDescription,
+        finalDescription
     );
-    if (!updateResult.ok) {
+    if (!updateResult.ok()) {
         return updateResult;
     }
 
@@ -293,7 +292,7 @@ export const setDescription = async (
  */
 export const deleteCategory = async (
     storage: CategoryStorage,
-    path: string,
+    path: string
 ): Promise<Result<DeleteCategoryResult, CategoryError>> => {
     // Reject root categories
     if (isRootCategory(path)) {
@@ -306,7 +305,7 @@ export const deleteCategory = async (
 
     // Check category exists
     const existsResult = await storage.exists(path);
-    if (!existsResult.ok) {
+    if (!existsResult.ok()) {
         return existsResult;
     }
     if (!existsResult.value) {
@@ -319,14 +318,14 @@ export const deleteCategory = async (
 
     // Delete the category directory recursively
     const deleteResult = await storage.delete(path);
-    if (!deleteResult.ok) {
+    if (!deleteResult.ok()) {
         return deleteResult;
     }
 
     // Remove from parent's subcategories list
     const parentPath = getParentPath(path);
     const removeResult = await storage.removeSubcategoryEntry(parentPath, path);
-    if (!removeResult.ok) {
+    if (!removeResult.ok()) {
         return removeResult;
     }
 

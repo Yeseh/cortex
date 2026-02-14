@@ -33,11 +33,7 @@ describe('serialize()', () => {
         });
 
         it('should serialize arrays to JSON', () => {
-            const obj = { items: [
-                1,
-                2,
-                3,
-            ] };
+            const obj = { items: [1, 2, 3] };
 
             const result = serialize(obj, 'json');
 
@@ -73,11 +69,7 @@ describe('serialize()', () => {
         });
 
         it('should serialize arrays to YAML', () => {
-            const obj = { items: [
-                'a',
-                'b',
-                'c',
-            ] };
+            const obj = { items: ['a', 'b', 'c'] };
 
             const result = serialize(obj, 'yaml');
 
@@ -113,7 +105,7 @@ describe('serialize()', () => {
             const obj = { name: 'test' };
 
             expect(() => serialize(obj, 'xml' as OutputFormat)).toThrow(
-                'Unsupported output format: xml',
+                'Unsupported output format: xml'
             );
         });
     });
@@ -185,7 +177,7 @@ describe('deserialize()', () => {
             const raw = '<xml>test</xml>';
 
             expect(() => deserialize(raw, 'xml' as 'json' | 'yaml')).toThrow(
-                'Unsupported input format: xml',
+                'Unsupported input format: xml'
             );
         });
     });
@@ -201,8 +193,8 @@ describe('parseYaml()', () => {
 
         const result = parseYaml<{ name: string; value: number }>(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.name).toBe('test');
             expect(result.value.value).toBe(42);
         }
@@ -213,8 +205,8 @@ describe('parseYaml()', () => {
 
         const result = parseYaml(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('PARSE_FAILED');
             expect(result.error.message).toBe('Failed to parse YAML.');
             expect(result.error.cause).toBeDefined();
@@ -238,8 +230,8 @@ describe('parseYaml()', () => {
             };
         }>(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.config.database.host).toBe('localhost');
             expect(result.value.config.database.port).toBe(5432);
             expect(result.value.config.features.enabled).toBe(true);
@@ -260,18 +252,10 @@ describe('parseYaml()', () => {
 
         const result = parseYaml<{ items: string[]; numbers: number[] }>(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
-            expect(result.value.items).toEqual([
-                'first',
-                'second',
-                'third',
-            ]);
-            expect(result.value.numbers).toEqual([
-                1,
-                2,
-                3,
-            ]);
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
+            expect(result.value.items).toEqual(['first', 'second', 'third']);
+            expect(result.value.numbers).toEqual([1, 2, 3]);
         }
     });
 
@@ -280,8 +264,8 @@ describe('parseYaml()', () => {
 
         const result = parseYaml(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toBeNull();
         }
     });
@@ -291,13 +275,9 @@ describe('parseYaml()', () => {
 
         const result = parseYaml<{ tags: string[] }>(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
-            expect(result.value.tags).toEqual([
-                'a',
-                'b',
-                'c',
-            ]);
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
+            expect(result.value.tags).toEqual(['a', 'b', 'c']);
         }
     });
 });
@@ -312,8 +292,8 @@ describe('stringifyYaml()', () => {
 
         const result = stringifyYaml(obj);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toContain('name: test');
             expect(result.value).toContain('value: 42');
         }
@@ -324,8 +304,8 @@ describe('stringifyYaml()', () => {
 
         const result = stringifyYaml(obj);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toContain('defined: value');
         }
     });
@@ -335,23 +315,19 @@ describe('stringifyYaml()', () => {
 
         const result = stringifyYaml(obj);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toContain('nullable: null');
         }
     });
 
     it('should stringify arrays', () => {
-        const obj = { items: [
-            'a',
-            'b',
-            'c',
-        ] };
+        const obj = { items: ['a', 'b', 'c'] };
 
         const result = stringifyYaml(obj);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toContain('items:');
         }
     });
@@ -361,8 +337,8 @@ describe('stringifyYaml()', () => {
 
         const result = stringifyYaml(obj);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toBe('{}\n');
         }
     });
@@ -378,8 +354,8 @@ describe('parseJson()', () => {
 
         const result = parseJson<{ name: string; value: number }>(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.name).toBe('test');
             expect(result.value.value).toBe(42);
         }
@@ -390,8 +366,8 @@ describe('parseJson()', () => {
 
         const result = parseJson(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('PARSE_FAILED');
             expect(result.error.message).toBe('Failed to parse JSON.');
             expect(result.error.cause).toBeDefined();
@@ -403,13 +379,9 @@ describe('parseJson()', () => {
 
         const result = parseJson<number[]>(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
-            expect(result.value).toEqual([
-                1,
-                2,
-                3,
-            ]);
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
+            expect(result.value).toEqual([1, 2, 3]);
         }
     });
 
@@ -418,8 +390,8 @@ describe('parseJson()', () => {
 
         const result = parseJson<string>(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toBe('hello');
         }
     });
@@ -429,8 +401,8 @@ describe('parseJson()', () => {
 
         const result = parseJson(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('PARSE_FAILED');
         }
     });
@@ -440,8 +412,8 @@ describe('parseJson()', () => {
 
         const result = parseJson(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('PARSE_FAILED');
         }
     });
@@ -457,23 +429,19 @@ describe('stringifyJson()', () => {
 
         const result = stringifyJson(obj);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toBe('{"name":"test","value":42}');
         }
     });
 
     it('should stringify arrays', () => {
-        const obj = [
-            1,
-            2,
-            3,
-        ];
+        const obj = [1, 2, 3];
 
         const result = stringifyJson(obj);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toBe('[1,2,3]');
         }
     });
@@ -483,8 +451,8 @@ describe('stringifyJson()', () => {
 
         const result = stringifyJson(obj);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toBe('{"nullable":null}');
         }
     });
@@ -495,8 +463,8 @@ describe('stringifyJson()', () => {
 
         const result = stringifyJson(obj);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('SERIALIZE_FAILED');
             expect(result.error.message).toBe('Failed to serialize to JSON.');
             expect(result.error.cause).toBeDefined();
@@ -505,31 +473,30 @@ describe('stringifyJson()', () => {
 
     it('should stringify primitives', () => {
         const helloResult = stringifyJson('hello');
-        expect(helloResult.ok).toBe(true);
-        if (helloResult.ok) {
+        expect(helloResult.ok()).toBe(true);
+        if (helloResult.ok()) {
             expect(helloResult.value).toBe('"hello"');
         }
 
         const numberResult = stringifyJson(42);
-        expect(numberResult.ok).toBe(true);
-        if (numberResult.ok) {
+        expect(numberResult.ok()).toBe(true);
+        if (numberResult.ok()) {
             expect(numberResult.value).toBe('42');
         }
 
         const boolResult = stringifyJson(true);
-        expect(boolResult.ok).toBe(true);
-        if (boolResult.ok) {
+        expect(boolResult.ok()).toBe(true);
+        if (boolResult.ok()) {
             expect(boolResult.value).toBe('true');
         }
 
         const nullResult = stringifyJson(null);
-        expect(nullResult.ok).toBe(true);
-        if (nullResult.ok) {
+        expect(nullResult.ok()).toBe(true);
+        if (nullResult.ok()) {
             expect(nullResult.value).toBe('null');
         }
     });
 });
-
 
 // -----------------------------------------------------------------------------
 // Edge cases and integration tests
@@ -540,11 +507,11 @@ describe('serialization edge cases', () => {
         const obj = { text: 'Contains: colons and "quotes"' };
 
         const yamlResult = stringifyYaml(obj);
-        expect(yamlResult.ok).toBe(true);
-        if (yamlResult.ok) {
+        expect(yamlResult.ok()).toBe(true);
+        if (yamlResult.ok()) {
             const parsed = parseYaml<{ text: string }>(yamlResult.value);
-            expect(parsed.ok).toBe(true);
-            if (parsed.ok) {
+            expect(parsed.ok()).toBe(true);
+            if (parsed.ok()) {
                 expect(parsed.value.text).toBe('Contains: colons and "quotes"');
             }
         }
@@ -554,11 +521,11 @@ describe('serialization edge cases', () => {
         const obj = { text: 'Line 1\nLine 2\nLine 3' };
 
         const yamlResult = stringifyYaml(obj);
-        expect(yamlResult.ok).toBe(true);
-        if (yamlResult.ok) {
+        expect(yamlResult.ok()).toBe(true);
+        if (yamlResult.ok()) {
             const parsed = parseYaml<{ text: string }>(yamlResult.value);
-            expect(parsed.ok).toBe(true);
-            if (parsed.ok) {
+            expect(parsed.ok()).toBe(true);
+            if (parsed.ok()) {
                 expect(parsed.value.text).toBe('Line 1\nLine 2\nLine 3');
             }
         }
@@ -568,11 +535,11 @@ describe('serialization edge cases', () => {
         const obj = { emoji: '🔥 Fire emoji', japanese: 'こんにちは' };
 
         const jsonResult = stringifyJson(obj);
-        expect(jsonResult.ok).toBe(true);
-        if (jsonResult.ok) {
+        expect(jsonResult.ok()).toBe(true);
+        if (jsonResult.ok()) {
             const parsed = parseJson<typeof obj>(jsonResult.value);
-            expect(parsed.ok).toBe(true);
-            if (parsed.ok) {
+            expect(parsed.ok()).toBe(true);
+            if (parsed.ok()) {
                 expect(parsed.value.emoji).toBe('🔥 Fire emoji');
                 expect(parsed.value.japanese).toBe('こんにちは');
             }
@@ -584,11 +551,11 @@ describe('serialization edge cases', () => {
 
         // Test JSON
         const jsonResult = stringifyJson(obj);
-        expect(jsonResult.ok).toBe(true);
-        if (jsonResult.ok) {
+        expect(jsonResult.ok()).toBe(true);
+        if (jsonResult.ok()) {
             const parsed = parseJson<typeof obj>(jsonResult.value);
-            expect(parsed.ok).toBe(true);
-            if (parsed.ok) {
+            expect(parsed.ok()).toBe(true);
+            if (parsed.ok()) {
                 expect(parsed.value.enabled).toBe(true);
                 expect(parsed.value.disabled).toBe(false);
             }
@@ -596,11 +563,11 @@ describe('serialization edge cases', () => {
 
         // Test YAML
         const yamlResult = stringifyYaml(obj);
-        expect(yamlResult.ok).toBe(true);
-        if (yamlResult.ok) {
+        expect(yamlResult.ok()).toBe(true);
+        if (yamlResult.ok()) {
             const parsed = parseYaml<typeof obj>(yamlResult.value);
-            expect(parsed.ok).toBe(true);
-            if (parsed.ok) {
+            expect(parsed.ok()).toBe(true);
+            if (parsed.ok()) {
                 expect(parsed.value.enabled).toBe(true);
                 expect(parsed.value.disabled).toBe(false);
             }
@@ -611,11 +578,11 @@ describe('serialization edge cases', () => {
         const obj = { zero: 0, negative: -42, float: 3.14, large: 1000000 };
 
         const jsonResult = stringifyJson(obj);
-        expect(jsonResult.ok).toBe(true);
-        if (jsonResult.ok) {
+        expect(jsonResult.ok()).toBe(true);
+        if (jsonResult.ok()) {
             const parsed = parseJson<typeof obj>(jsonResult.value);
-            expect(parsed.ok).toBe(true);
-            if (parsed.ok) {
+            expect(parsed.ok()).toBe(true);
+            if (parsed.ok()) {
                 expect(parsed.value.zero).toBe(0);
                 expect(parsed.value.negative).toBe(-42);
                 expect(parsed.value.float).toBe(3.14);
@@ -638,11 +605,11 @@ describe('serialization edge cases', () => {
         };
 
         const yamlResult = stringifyYaml(obj);
-        expect(yamlResult.ok).toBe(true);
-        if (yamlResult.ok) {
+        expect(yamlResult.ok()).toBe(true);
+        if (yamlResult.ok()) {
             const parsed = parseYaml<typeof obj>(yamlResult.value);
-            expect(parsed.ok).toBe(true);
-            if (parsed.ok) {
+            expect(parsed.ok()).toBe(true);
+            if (parsed.ok()) {
                 expect(parsed.value.level1.level2.level3.level4.value).toBe('deep');
             }
         }

@@ -58,9 +58,7 @@ describe('getAncestorPaths', () => {
 
     it('should return ancestor paths for deeply nested', () => {
         expect(getAncestorPaths('project/cortex/arch')).toEqual(['project/cortex']);
-        expect(getAncestorPaths('a/b/c/d')).toEqual([
-            'a/b', 'a/b/c',
-        ]);
+        expect(getAncestorPaths('a/b/c/d')).toEqual(['a/b', 'a/b/c']);
     });
 });
 
@@ -69,8 +67,8 @@ describe('createCategory', () => {
         const storage = createMockStorage();
         const result = await createCategory(storage, 'project/cortex');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.path).toBe('project/cortex');
             expect(result.value.created).toBe(true);
         }
@@ -82,8 +80,8 @@ describe('createCategory', () => {
         });
         const result = await createCategory(storage, 'project/cortex');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.created).toBe(false);
         }
     });
@@ -92,8 +90,8 @@ describe('createCategory', () => {
         const storage = createMockStorage();
         const result = await createCategory(storage, '');
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_PATH');
         }
     });
@@ -123,8 +121,8 @@ describe('setDescription', () => {
 
         const result = await setDescription(storage, 'project/cortex', 'Test description');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.description).toBe('Test description');
         }
     });
@@ -139,13 +137,13 @@ describe('setDescription', () => {
                     capturedParent = parent;
                     capturedDesc = desc;
                     return ok(undefined);
-                },
+                }
             ),
         });
         const result = await setDescription(storage, 'project', 'Root category description');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.description).toBe('Root category description');
         }
         // Root category's parent is empty string (store root)
@@ -161,8 +159,8 @@ describe('setDescription', () => {
 
         const result = await setDescription(storage, 'project/cortex', longDesc);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('DESCRIPTION_TOO_LONG');
         }
     });
@@ -175,7 +173,7 @@ describe('setDescription', () => {
                 async (_parent: string, _path: string, desc: string | null) => {
                     capturedDesc = desc;
                     return ok(undefined);
-                },
+                }
             ),
         });
 
@@ -192,7 +190,7 @@ describe('setDescription', () => {
                 async (_parent: string, _path: string, desc: string | null) => {
                     capturedDesc = desc;
                     return ok(undefined);
-                },
+                }
             ),
         });
 
@@ -208,8 +206,8 @@ describe('setDescription', () => {
 
         const result = await setDescription(storage, 'project/missing', 'Test');
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('CATEGORY_NOT_FOUND');
         }
     });
@@ -222,7 +220,7 @@ describe('setDescription', () => {
                 async (_parent: string, _path: string, desc: string | null) => {
                     capturedDesc = desc;
                     return ok(undefined);
-                },
+                }
             ),
         });
 
@@ -239,15 +237,15 @@ describe('setDescription', () => {
                 async (_parent: string, _path: string, desc: string | null) => {
                     capturedDesc = desc;
                     return ok(undefined);
-                },
+                }
             ),
         });
         const exactlyMaxDesc = 'a'.repeat(500);
 
         const result = await setDescription(storage, 'project/cortex', exactlyMaxDesc);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.description).toBe(exactlyMaxDesc);
         }
         expect(capturedDesc as string | null).toBe(exactlyMaxDesc);
@@ -264,8 +262,8 @@ describe('setDescription', () => {
 
         const result = await setDescription(storage, 'project/cortex', 'Test');
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('STORAGE_ERROR');
             expect(result.error.message).toBe('Disk full');
         }
@@ -280,8 +278,8 @@ describe('deleteCategory', () => {
 
         const result = await deleteCategory(storage, 'project/cortex');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.deleted).toBe(true);
         }
     });
@@ -290,8 +288,8 @@ describe('deleteCategory', () => {
         const storage = createMockStorage();
         const result = await deleteCategory(storage, 'project');
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('ROOT_CATEGORY_REJECTED');
         }
     });
@@ -303,8 +301,8 @@ describe('deleteCategory', () => {
 
         const result = await deleteCategory(storage, 'project/missing');
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('CATEGORY_NOT_FOUND');
         }
     });
