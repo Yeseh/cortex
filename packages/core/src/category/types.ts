@@ -8,7 +8,7 @@
  * @module core/category/types
  */
 
-import type { Result } from '../types.ts';
+import type { Result } from '../result.ts';
 
 /**
  * Error codes for category operations.

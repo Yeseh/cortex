@@ -38,7 +38,7 @@ import { getParentPath } from './helpers.ts';
  */
 export const deleteCategory = async (
     storage: CategoryStorage,
-    path: string
+    path: string,
 ): Promise<Result<DeleteCategoryResult, CategoryError>> => {
     // Reject root categories
     if (isRootCategory(path)) {

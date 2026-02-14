@@ -40,7 +40,7 @@ import { getAncestorPaths } from './helpers.ts';
  */
 export const createCategory = async (
     storage: CategoryStorage,
-    path: string
+    path: string,
 ): Promise<Result<CreateCategoryResult, CategoryError>> => {
     // Validate path
     const segments = path.split('/').filter((s) => s.length > 0);
