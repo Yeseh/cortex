@@ -198,7 +198,7 @@ export interface IndexStorage {
      */
     write(
         name: StorageIndexName,
-        contents: CategoryIndex,
+        contents: CategoryIndex
     ): Promise<Result<void, StorageAdapterError>>;
 
     /**
@@ -420,7 +420,7 @@ export interface StorageAdapter {
      * @returns Result with file contents or null if missing
      */
     readIndexFile(
-        name: StorageIndexName,
+        name: StorageIndexName
     ): Promise<Result<CategoryIndex | null, StorageAdapterError>>;
 
     /**

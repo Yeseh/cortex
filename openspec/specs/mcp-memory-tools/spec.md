@@ -6,7 +6,7 @@ MCP tools for AI agents to manage persistent memories. Provides CRUD operations 
 ## Requirements
 ### Requirement: Add memory tool
 
-The MCP server SHALL provide an `add_memory` tool that creates a new memory with auto-creation of stores and categories.
+The MCP server SHALL provide an `add_memory` tool that creates a new memory with auto-creation of stores and categories. The tool SHALL accept an optional `citations` parameter — an array of strings referencing source material.
 
 #### Scenario: Adding a memory
 
@@ -25,12 +25,17 @@ The MCP server SHALL provide an `add_memory` tool that creates a new memory with
 
 #### Scenario: Memory with optional parameters
 
-- **WHEN** an agent provides `tags` and `expires_at` parameters
+- **WHEN** an agent provides `tags`, `expires_at`, and `citations` parameters
 - **THEN** the memory is created with the specified metadata
+
+#### Scenario: Adding a memory with citations
+
+- **WHEN** an agent calls `add_memory` with `citations: ["src/core/types.ts:17", "https://docs.example.com"]`
+- **THEN** the memory is created with those citations in its metadata
 
 ### Requirement: Get memory tool
 
-The MCP server SHALL provide a `get_memory` tool that retrieves memory content and metadata.
+The MCP server SHALL provide a `get_memory` tool that retrieves memory content and metadata. The response SHALL include the memory's `citations` array.
 
 #### Scenario: Retrieving a memory
 
@@ -47,9 +52,19 @@ The MCP server SHALL provide a `get_memory` tool that retrieves memory content a
 - **WHEN** an agent calls `get_memory` with `include_expired: false` (default)
 - **THEN** expired memories are not returned
 
+#### Scenario: Response includes citations
+
+- **WHEN** an agent calls `get_memory` for a memory with citations
+- **THEN** the response metadata includes the `citations` array
+
+#### Scenario: Response for memory without citations
+
+- **WHEN** an agent calls `get_memory` for a memory without citations
+- **THEN** the response metadata includes `citations` as an empty array
+
 ### Requirement: Update memory tool
 
-The MCP server SHALL provide an `update_memory` tool that modifies memory content or metadata.
+The MCP server SHALL provide an `update_memory` tool that modifies memory content or metadata. The tool SHALL accept an optional `citations` parameter with overwrite semantics.
 
 #### Scenario: Updating content
 
@@ -63,8 +78,23 @@ The MCP server SHALL provide an `update_memory` tool that modifies memory conten
 
 #### Scenario: Clearing expiry
 
-- **WHEN** an agent calls `update_memory` with `expires_at: null`
+- **WHEN** an agent calls `update_memory` with `clear_expiry: true`
 - **THEN** the expiry date is removed from the memory
+
+#### Scenario: Updating citations
+
+- **WHEN** an agent calls `update_memory` with `citations: ["new/path.ts:5"]`
+- **THEN** the citations array is replaced with the provided value
+
+#### Scenario: Clearing citations
+
+- **WHEN** an agent calls `update_memory` with `citations: []`
+- **THEN** all citations are removed from the memory
+
+#### Scenario: Preserving citations on unrelated update
+
+- **WHEN** an agent calls `update_memory` without a `citations` parameter
+- **THEN** the existing citations are preserved
 
 ### Requirement: Remove memory tool
 
@@ -96,7 +126,7 @@ The MCP server SHALL provide a `move_memory` tool that moves or renames a memory
 
 ### Requirement: List memories tool
 
-The MCP server SHALL provide a `list_memories` tool that lists memories in a category.
+The MCP server SHALL provide a `list_memories` tool that lists memories in a category. Each memory entry in the response SHALL include an optional `updated_at` field sourced from the category index.
 
 #### Scenario: Listing category contents
 
@@ -112,6 +142,11 @@ The MCP server SHALL provide a `list_memories` tool that lists memories in a cat
 
 - **WHEN** an agent calls `list_memories` with `include_expired: true`
 - **THEN** expired memories are included in the results
+
+#### Scenario: Response includes updated_at
+
+- **WHEN** `list_memories` returns memory entries
+- **THEN** each entry includes `updated_at` (ISO 8601 string or null) sourced from the index
 
 ### Requirement: Prune memories tool
 
@@ -196,4 +231,62 @@ The MCP server SHALL provide a `reindex_store` tool that rebuilds category index
 
 - **WHEN** an agent calls `reindex_store` and the reindex operation fails
 - **THEN** an appropriate error is returned with the failure message
+
+### Requirement: Get recent memories tool
+
+The MCP server SHALL provide a `cortex_get_recent_memories` tool that retrieves the most recently updated memories from a store, sorted by recency, with full content included.
+
+#### Scenario: Retrieving recent memories store-wide
+
+- **WHEN** an agent calls `cortex_get_recent_memories` with only a `store` parameter
+- **THEN** the tool returns up to `limit` memories (default 5) from across all categories
+- **AND** memories are sorted by `updated_at` descending (most recent first)
+- **AND** each memory includes its full content (raw markdown, no frontmatter)
+
+#### Scenario: Scoping to a category
+
+- **WHEN** an agent calls `cortex_get_recent_memories` with a `category` parameter
+- **THEN** only memories within that category and its subcategories are considered
+
+#### Scenario: Custom limit
+
+- **WHEN** an agent calls `cortex_get_recent_memories` with `limit: 10`
+- **THEN** at most 10 memories are returned
+
+#### Scenario: Fewer memories than limit
+
+- **WHEN** the store contains fewer memories than the requested limit
+- **THEN** all available memories are returned
+- **AND** `count` reflects the actual number
+
+#### Scenario: Empty store or category
+
+- **WHEN** the target store or category contains no memories
+- **THEN** the tool returns an empty array with `count: 0`
+
+#### Scenario: Non-existent category
+
+- **WHEN** an agent calls `cortex_get_recent_memories` with a category that does not exist
+- **THEN** an appropriate error is returned (consistent with `list_memories`)
+
+#### Scenario: Filtering expired memories
+
+- **WHEN** an agent calls `cortex_get_recent_memories` with `include_expired: false` (default)
+- **THEN** expired memories are excluded before sorting and limiting
+
+#### Scenario: Including expired memories
+
+- **WHEN** an agent calls `cortex_get_recent_memories` with `include_expired: true`
+- **THEN** expired memories are included in the results
+
+#### Scenario: Stale index entries without updatedAt
+
+- **WHEN** some index entries are missing `updatedAt` (stale indexes)
+- **THEN** those memories sort last (after all entries with timestamps)
+
+#### Scenario: Response format
+
+- **WHEN** the tool returns successfully
+- **THEN** the response includes `category` (path or "all"), `count`, and a `memories` array
+- **AND** each memory entry includes `path`, `content`, `updated_at`, `token_estimate`, and `tags`
 

@@ -114,18 +114,6 @@ export interface CategoryStorage {
      *
      * @param path - Category path (e.g., "project/cortex")
      * @returns Result with true if category exists, false otherwise
-     *
-     * @example
-     * ```typescript
-     * const result = await storage.exists('project/cortex');
-     * if (result.ok) {
-     *   console.log(result.value ? 'Exists' : 'Missing');
-     * }
-     * ```
-     *
-     * @edgeCases
-     * - Returns `ok(false)` when the directory is missing.
-     * - Returns `INVALID_PATH` when the path is empty or malformed.
      */
     exists(path: string): Promise<Result<boolean, CategoryError>>;
 
@@ -245,9 +233,7 @@ export const MAX_DESCRIPTION_LENGTH = 500;
  * Those operations discover root categories dynamically by reading the
  * store's root index, allowing stores to have any root-level categories.
  */
-export const ROOT_CATEGORIES = [
-    'human', 'persona',
-] as const;
+export const ROOT_CATEGORIES = ['human', 'persona'] as const;
 
 /** Type for root category names */
 export type RootCategory = (typeof ROOT_CATEGORIES)[number];

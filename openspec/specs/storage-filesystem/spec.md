@@ -3,9 +3,7 @@
 ## Purpose
 
 Defines the filesystem storage adapter that persists memories and indexes to disk using the canonical store layout.
-
 ## Requirements
-
 ### Requirement: ScopedStorageAdapter Interface
 
 The system SHALL provide a `ScopedStorageAdapter` interface representing a storage adapter scoped to a specific store. It SHALL have:
@@ -48,7 +46,7 @@ The system SHALL provide a storage adapter interface that composes four focused 
 
 ### Requirement: Filesystem adapter
 
-The system SHALL provide a filesystem adapter that implements `StorageAdapter` by composing four focused storage implementations.
+The system SHALL provide a filesystem adapter that implements `StorageAdapter` by composing four focused storage implementations. The memory serialization SHALL support a `citations` field in YAML frontmatter, serialized as a YAML array of strings under the `citations` key (snake_case on disk, camelCase in domain).
 
 #### Scenario: Writing a memory to disk
 
@@ -61,6 +59,21 @@ The system SHALL provide a filesystem adapter that implements `StorageAdapter` b
 - **WHEN** the filesystem adapter is examined
 - **THEN** it composes four separate storage implementations: `FilesystemMemoryStorage`, `FilesystemIndexStorage`, `FilesystemCategoryStorage`, and `FilesystemStoreStorage`
 - **AND** each implementation receives the shared `FilesystemContext` in its constructor
+
+#### Scenario: Serializing citations in frontmatter
+
+- **WHEN** a memory with citations is serialized to a file
+- **THEN** the frontmatter includes a `citations` key with the array of citation strings
+
+#### Scenario: Parsing citations from frontmatter
+
+- **WHEN** a memory file with a `citations` field in frontmatter is parsed
+- **THEN** the citations are deserialized into a `string[]` on the domain model
+
+#### Scenario: Parsing memory without citations field
+
+- **WHEN** a memory file without a `citations` field in frontmatter is parsed
+- **THEN** the `citations` field defaults to an empty array `[]`
 
 ### Requirement: Memory file location
 
@@ -192,3 +205,4 @@ The system SHALL provide a `FilesystemRegistry` class implementing the `Registry
 - **GIVEN** a loaded registry with store "default" at path "/home/user/.cortex"
 - **WHEN** `getStore("default")` is called
 - **THEN** it returns a `FilesystemStorageAdapter` configured for that path
+

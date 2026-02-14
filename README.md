@@ -1,4 +1,14 @@
-# Cortex
+<div align="center">
+  <img src="assets/logo-with-text.svg" alt="Current Logo" width="200" />
+  <p>
+    <strong>
+      A hierarchical memory system for AI coding agents 
+    </strong>
+  </p>
+</div>
+
+# About 
+> ⚠️ **Heads up:** this project is experimental and under active development. No guarantees it will work as expected.
 
 A hierarchical memory system for AI coding agents. Cortex provides persistent, structured storage that agents can use to maintain context across sessions.
 

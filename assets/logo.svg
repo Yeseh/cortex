@@ -1,0 +1,40 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="currentGradient" x1="50" y1="400" x2="450" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#190061" />
+      <stop offset="30%" stop-color="#5A1FC4" />
+      <stop offset="70%" stop-color="#0091FF" />
+      <stop offset="100%" stop-color="#00FFFF" />
+    </linearGradient>
+    
+    <filter id="innerGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur"/>
+      <feOffset in="blur" dx="0" dy="0" result="offsetBlur"/>
+      <feComposite in="offsetBlur" in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="shadowDiff"/>
+      <feFlood flood-color="#00FFFF" flood-opacity="0.5"/>
+      <feComposite in2="shadowDiff" operator="in"/>
+      <feMerge>
+        <feMergeNode in="SourceGraphic"/>
+        <feMergeNode/>
+      </feMerge>
+    </filter>
+    
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="10" />
+      <feOffset dx="0" dy="8" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.2"/>
+      </feComponentTransfer>
+      <feMerge> 
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/> 
+      </feMerge>
+    </filter>
+  </defs>
+
+  <g filter="url(#softShadow)">
+    <path filter="url(#innerGlow)" d="M128,256 C128,160 192,96 256,96 C320,96 384,160 384,256 C384,352 320,416 256,416 C192,416 128,352 128,256 Z M160,256 C160,320 208,384 256,384 C304,384 352,320 352,256 C352,192 304,128 256,128 C208,128 160,192 160,256 Z M216,176 C190,190 184,230 208,256 C232,282 280,282 304,256 C328,230 322,190 296,176 C270,162 242,162 216,176 Z M216,336 C190,322 184,282 208,256 C232,230 280,230 304,256 C328,282 322,322 296,336 C270,350 242,350 216,336 Z" fill="url(#currentGradient)" opacity="0.8" fill-rule="evenodd"/>
+    
+    <path filter="url(#innerGlow)" d="M256,192 C224,192 192,224 192,256 C192,288 224,320 256,320 C288,320 320,288 320,256 C320,224 288,192 256,192 Z M232,256 C232,242 242,232 256,232 C270,232 280,242 280,256 C280,270 270,280 256,280 C242,280 232,270 232,256 Z" fill="url(#currentGradient)" fill-rule="evenodd"/>
+  </g>
+</svg>
