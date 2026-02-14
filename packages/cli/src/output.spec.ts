@@ -41,8 +41,8 @@ describe('serializeMemoryToon', () => {
     test('encodes memory with all metadata fields', () => {
         const result = toonSerialize('memory', sampleMemory);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // TOON outputs YAML-like format with spaces after colons and nested structure
             expect(result.value).toContain('path: global/persona/test-memory');
             // Timestamps are quoted because they contain colons, nested under metadata
@@ -66,8 +66,8 @@ describe('serializeMemoryToon', () => {
         };
         const result = toonSerialize('memory', memory);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // TOON produces nested YAML-like structure, not dotted notation
             expect(result.value).toContain('metadata:');
             expect(result.value).toContain('createdAt:');
@@ -86,8 +86,8 @@ describe('serializeMemoryToon', () => {
         };
         const result = toonSerialize('memory', memory);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // Multiline content should be quoted (JSON-style)
             expect(result.value).toContain('"Line 1\\nLine 2\\nLine 3"');
         }
@@ -105,8 +105,8 @@ describe('serializeMemoryToon', () => {
         };
         const result = toonSerialize('memory', memory);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toContain('path: test/minimal');
             expect(result.value).toContain('createdAt:');
             expect(result.value).toContain('content: Minimal content');
@@ -131,8 +131,8 @@ describe('serializeMemoryToon', () => {
         const result = toonSerialize('memory', memory);
 
         // Serialization succeeds - validation is at object construction time
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toContain('path:');
         }
     });
@@ -149,8 +149,8 @@ describe('serializeMemoryToon', () => {
         const result = toonSerialize('memory', memory);
 
         // Invalid Date causes serialization to fail
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('SERIALIZE_FAILED');
         }
     });
@@ -160,8 +160,8 @@ describe('serializeCategoryToon', () => {
     test('encodes category with memories and subcategories', () => {
         const result = toonSerialize('category', sampleCategory);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toContain('path: global/persona');
             // Memories array with TOON array format
             expect(result.value).toContain('memories[2');
@@ -182,8 +182,8 @@ describe('serializeCategoryToon', () => {
         };
         const result = toonSerialize('category', category);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // Tabular format with tab-separated header
             expect(result.value).toMatch(/memories\[2\t\]\{path\ttokenEstimate\}:/);
             // Should contain memory paths in the rows
@@ -195,8 +195,8 @@ describe('serializeCategoryToon', () => {
     test('uses tabular format for subcategories array', () => {
         const result = toonSerialize('category', sampleCategory);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // Tabular format for subcategories with tab-separated format
             expect(result.value).toMatch(/subcategories\[1\t\]\{path\tmemoryCount\}:/);
             expect(result.value).toContain('global/persona/sub1');
@@ -212,8 +212,8 @@ describe('serializeCategoryToon', () => {
         };
         const result = toonSerialize('category', category);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // Empty arrays in TOON format show count of 0
             expect(result.value).toContain('memories[0');
         }
@@ -227,8 +227,8 @@ describe('serializeCategoryToon', () => {
         };
         const result = toonSerialize('category', category);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // Empty arrays in TOON format show count of 0
             expect(result.value).toContain('subcategories[0');
         }
@@ -244,7 +244,7 @@ describe('serializeCategoryToon', () => {
         const result = toonSerialize('category', category);
 
         // Serialization succeeds - validation is at object construction time
-        expect(result.ok).toBe(true);
+        expect(result.ok()).toBe(true);
     });
 });
 
@@ -256,8 +256,8 @@ describe('serializeStoreToon', () => {
         };
         const result = toonSerialize('store', store);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // TOON outputs YAML-like format with spaces after colons
             expect(result.value).toContain('name: my-store');
             expect(result.value).toContain('path: /data/my-store');
@@ -273,8 +273,8 @@ describe('serializeStoreToon', () => {
         const result = toonSerialize('store', store);
 
         // Serialization succeeds - validation is at object construction time
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toContain('name: Invalid Name!');
         }
     });
@@ -288,7 +288,7 @@ describe('serializeStoreToon', () => {
         const result = toonSerialize('store', store);
 
         // Serialization succeeds - validation is at object construction time
-        expect(result.ok).toBe(true);
+        expect(result.ok()).toBe(true);
     });
 });
 
@@ -302,8 +302,8 @@ describe('serializeStoreRegistryToon', () => {
         };
         const result = toonSerialize('store-registry', registry);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toContain('stores[2');
             expect(result.value).toContain('store-one');
             expect(result.value).toContain('store-two');
@@ -319,8 +319,8 @@ describe('serializeStoreRegistryToon', () => {
         };
         const result = toonSerialize('store-registry', registry);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // Tabular format: header with count and field names (tab-separated)
             expect(result.value).toMatch(/stores\[2\t\]\{name\tpath\}:/);
         }
@@ -332,8 +332,8 @@ describe('serializeStoreRegistryToon', () => {
         };
         const result = toonSerialize('store-registry', registry);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // Empty arrays in TOON format show count of 0
             expect(result.value).toContain('stores[0');
         }
@@ -350,8 +350,8 @@ describe('serializeStoreRegistryToon', () => {
         const result = toonSerialize('store-registry', registry);
 
         // Serialization succeeds - validation is at object construction time
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toContain('INVALID STORE');
         }
     });
@@ -365,8 +365,8 @@ describe('serializeStoreInitToon', () => {
         };
         const result = toonSerialize('store-init', storeInit);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // TOON outputs YAML-like format with spaces after colons
             expect(result.value).toContain('path: /initialized/store/path');
             expect(result.value).toContain('name: my-store');
@@ -382,7 +382,7 @@ describe('serializeStoreInitToon', () => {
         const result = toonSerialize('store-init', storeInit);
 
         // Serialization succeeds - validation is at object construction time
-        expect(result.ok).toBe(true);
+        expect(result.ok()).toBe(true);
     });
 });
 
@@ -398,8 +398,8 @@ describe('serializeInitToon', () => {
         };
         const result = toonSerialize('init', init);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // TOON outputs YAML-like format with spaces after colons
             expect(result.value).toContain('path: /project/root');
             expect(result.value).toContain('categories[3');
@@ -417,8 +417,8 @@ describe('serializeInitToon', () => {
         };
         const result = toonSerialize('init', init);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toContain('path: /project/empty');
             // Empty arrays in TOON format show count of 0
             expect(result.value).toContain('categories[0');
@@ -434,7 +434,7 @@ describe('serializeInitToon', () => {
         const result = toonSerialize('init', init);
 
         // Serialization succeeds - validation is at object construction time
-        expect(result.ok).toBe(true);
+        expect(result.ok()).toBe(true);
     });
 });
 
@@ -450,8 +450,8 @@ describe('TOON edge cases', () => {
         };
         const result = toonSerialize('memory', memory);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // Content with special chars should be quoted
             expect(result.value).toContain('"Content with \\"quotes\\" and : colons"');
         }
@@ -468,8 +468,8 @@ describe('TOON edge cases', () => {
         };
         const result = toonSerialize('memory', memory);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // Tab characters should be quoted/escaped
             expect(result.value).toContain('"Column1\\tColumn2\\tColumn3"');
         }
@@ -486,8 +486,8 @@ describe('TOON edge cases', () => {
         };
         const result = toonSerialize('memory', memory);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // Newlines should be quoted/escaped
             expect(result.value).toContain('\\r\\n');
         }
@@ -504,8 +504,8 @@ describe('TOON edge cases', () => {
         };
         const result = toonSerialize('memory', memory);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // Empty content should be represented
             expect(result.value).toContain('content:');
         }
@@ -524,8 +524,8 @@ describe('TOON edge cases', () => {
         };
         const result = toonSerialize('memory', memory);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toContain('Hello, world! Bonjour! Hola!');
         }
     });
@@ -542,8 +542,8 @@ describe('TOON edge cases', () => {
         };
         const result = toonSerialize('memory', memory);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // Timestamps are quoted, nested under metadata (not dotted)
             expect(result.value).toContain('expiresAt: "2025-01-15T10:00:00.000Z"');
         }
@@ -561,8 +561,8 @@ describe('TOON edge cases', () => {
         };
         const result = toonSerialize('category', category);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // Summary with special chars should be quoted
             expect(result.value).toContain('Summary with');
         }
@@ -583,8 +583,8 @@ describe('TOON edge cases', () => {
         };
         const result = toonSerialize('memory', memory);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // Nested tags under metadata
             expect(result.value).toContain('tags[3');
             expect(result.value).toContain('tag1');
@@ -604,8 +604,8 @@ describe('TOON edge cases', () => {
         };
         const result = toonSerialize('memory', memory);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // Empty tags array in TOON format shows count of 0
             expect(result.value).toContain('tags[0');
         }
@@ -623,8 +623,8 @@ describe('TOON edge cases', () => {
         };
         const result = toonSerialize('memory', memory);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // Nested under metadata (not dotted)
             expect(result.value).toContain('tokenEstimate: 999999');
         }
@@ -644,8 +644,8 @@ describe('TOON edge cases', () => {
         const result = toonSerialize('memory', memory);
 
         // Serialization succeeds - validation is at object construction time
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toContain('-5');
         }
     });
@@ -664,7 +664,7 @@ describe('TOON edge cases', () => {
         const result = toonSerialize('memory', memory);
 
         // Serialization succeeds - validation is at object construction time
-        expect(result.ok).toBe(true);
+        expect(result.ok()).toBe(true);
     });
 
     test('serializes invalid updatedAt date as SERIALIZE_FAILED', () => {
@@ -680,8 +680,8 @@ describe('TOON edge cases', () => {
         const result = toonSerialize('memory', memory);
 
         // Invalid Date causes serialization to fail
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('SERIALIZE_FAILED');
         }
     });
@@ -699,8 +699,8 @@ describe('TOON edge cases', () => {
         const result = toonSerialize('memory', memory);
 
         // Invalid Date causes serialization to fail
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('SERIALIZE_FAILED');
         }
     });
@@ -713,8 +713,8 @@ describe('TOON edge cases', () => {
         };
         const result = toonSerialize('category', category);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toContain('test/empty-sub');
             expect(result.value).toContain('0');
         }
@@ -730,8 +730,8 @@ describe('TOON edge cases', () => {
         const result = toonSerialize('category', category);
 
         // Serialization succeeds - validation is at object construction time
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toContain('-1');
         }
     });
@@ -746,7 +746,7 @@ describe('TOON edge cases', () => {
         const result = toonSerialize('category', category);
 
         // Serialization succeeds - validation is at object construction time
-        expect(result.ok).toBe(true);
+        expect(result.ok()).toBe(true);
     });
 
     test('serializes empty subcategory path without error (no validation)', () => {
@@ -759,7 +759,7 @@ describe('TOON edge cases', () => {
         const result = toonSerialize('category', category);
 
         // Serialization succeeds - validation is at object construction time
-        expect(result.ok).toBe(true);
+        expect(result.ok()).toBe(true);
     });
 
     test('serializes negative token estimate in category memory without error (no validation)', () => {
@@ -772,8 +772,8 @@ describe('TOON edge cases', () => {
         const result = toonSerialize('category', category);
 
         // Serialization succeeds - validation is at object construction time
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toContain('-10');
         }
     });
@@ -787,8 +787,8 @@ describe('TOON format output structure', () => {
         };
         const result = toonSerialize('store', store);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // Newline between fields for YAML-like output
             expect(result.value).toContain('\n');
             expect(result.value).toContain('name: test-store');
@@ -807,8 +807,8 @@ describe('TOON format output structure', () => {
         };
         const result = toonSerialize('memory', memory);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // TOON outputs nested YAML-like format, not inline object braces
             expect(result.value).not.toMatch(/metadata:\{/);
             // Should have nested indented structure
@@ -826,8 +826,8 @@ describe('TOON format output structure', () => {
         };
         const result = toonSerialize('store-registry', registry);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // Header format with tab-separated count: key[count\t]{fields}:
             expect(result.value).toMatch(/stores\[3\t\]\{name\tpath\}:/);
         }

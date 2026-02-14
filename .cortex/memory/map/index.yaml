@@ -1,6 +1,7 @@
 memories:
   - path: map/overview
-    token_estimate: 227
+    token_estimate: 235
+    updated_at: 2026-02-05T19:12:56.276Z
 subcategories:
   - path: map/cli
     memory_count: 3

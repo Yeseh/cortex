@@ -12,8 +12,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import * as fs from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { FilesystemStorageAdapter, serializeMemory } from '@yeseh/cortex-storage-fs';
-import type { Memory } from '@yeseh/cortex-core/memory';
+import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
+import { Memory, MemoryPath } from '@yeseh/cortex-core/memory';
 
 /**
  * CLI runner that spawns cortex as a subprocess.
@@ -128,8 +128,14 @@ const createMemoryFile = async (
     const createdAt = options.createdAt ?? new Date('2024-01-01T00:00:00.000Z');
     const updatedAt = options.updatedAt ?? new Date('2024-01-02T00:00:00.000Z');
 
-    const memory: Memory = {
-        metadata: {
+    const memoryPathResult = MemoryPath.fromString(slugPath);
+    if (!memoryPathResult.ok()) {
+        throw new Error(`Invalid memory path: ${memoryPathResult.error.message}`);
+    }
+
+    const memoryResult = Memory.init(
+        memoryPathResult.value,
+        {
             createdAt,
             updatedAt,
             tags,
@@ -138,20 +144,21 @@ const createMemoryFile = async (
             citations: [],
         },
         content,
-    };
-
-    const serialized = serializeMemory(memory);
-    if (!serialized.ok) {
-        throw new Error(`Failed to serialize memory: ${serialized.error.message}`);
+    );
+    if (!memoryResult.ok()) {
+        throw new Error(`Failed to create memory: ${memoryResult.error.message}`);
     }
 
     const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
-    const result = await adapter.writeMemoryFile(slugPath, serialized.value, {
-        allowIndexCreate: true,
-        allowIndexUpdate: true,
-    });
-    if (!result.ok) {
-        throw new Error(`Failed to write memory: ${result.error.message}`);
+    const writeResult = await adapter.memories.write(memoryResult.value);
+    if (!writeResult.ok()) {
+        throw new Error(`Failed to write memory: ${writeResult.error.message}`);
+    }
+
+    // Update indexes after writing the memory
+    const indexResult = await adapter.indexes.updateAfterMemoryWrite(memoryResult.value);
+    if (!indexResult.ok()) {
+        throw new Error(`Failed to update indexes: ${indexResult.error.message}`);
     }
 };
 
@@ -258,6 +265,10 @@ describe('Cortex CLI Integration Tests', () => {
                 { cwd: testProject },
             );
 
+            if (result.exitCode !== 0) {
+                console.error('STDERR:', result.stderr);
+                console.error('STDOUT:', result.stdout);
+            }
             expect(result.exitCode).toBe(0);
             expect(result.stdout).toContain('Added memory');
             expect(result.stdout).toContain('project/test-memory');
@@ -290,6 +301,58 @@ describe('Cortex CLI Integration Tests', () => {
             expect(content).toContain('tag1');
             expect(content).toContain('tag2');
             expect(content).toContain('tag3');
+        });
+
+        it('should add a memory with multiple -t flags', async () => {
+            const result = await runCortexCli(
+                [
+                    'memory',
+                    'add',
+                    'project/multi-tag-flags',
+                    '--content',
+                    'Content with multiple tag flags.',
+                    '-t',
+                    'first',
+                    '-t',
+                    'second',
+                    '-t',
+                    'third',
+                ],
+                { cwd: testProject },
+            );
+
+            expect(result.exitCode).toBe(0);
+
+            const content = await readMemoryFile(storeDir, 'project/multi-tag-flags');
+            expect(content).toContain('tags:');
+            expect(content).toContain('first');
+            expect(content).toContain('second');
+            expect(content).toContain('third');
+        });
+
+        it('should add a memory with mixed tag formats (comma-separated and multiple flags)', async () => {
+            const result = await runCortexCli(
+                [
+                    'memory',
+                    'add',
+                    'project/mixed-tags',
+                    '--content',
+                    'Content with mixed tag formats.',
+                    '-t',
+                    'alpha,beta',
+                    '-t',
+                    'gamma',
+                ],
+                { cwd: testProject },
+            );
+
+            expect(result.exitCode).toBe(0);
+
+            const content = await readMemoryFile(storeDir, 'project/mixed-tags');
+            expect(content).toContain('tags:');
+            expect(content).toContain('alpha');
+            expect(content).toContain('beta');
+            expect(content).toContain('gamma');
         });
 
         it('should add a memory with expiry date', async () => {
@@ -716,6 +779,54 @@ describe('Cortex CLI Integration Tests', () => {
             const content = await readMemoryFile(storeDir, 'project/updatable');
             expect(content).toContain('Original content.');
             expect(content).toContain('new-tag');
+        });
+
+        it('should update memory tags with multiple -t flags', async () => {
+            const result = await runCortexCli(
+                [
+                    'memory',
+                    'update',
+                    'project/updatable',
+                    '-t',
+                    'tag-a',
+                    '-t',
+                    'tag-b',
+                    '-t',
+                    'tag-c',
+                ],
+                { cwd: testProject },
+            );
+
+            expect(result.exitCode).toBe(0);
+
+            const content = await readMemoryFile(storeDir, 'project/updatable');
+            expect(content).toContain('tags:');
+            expect(content).toContain('tag-a');
+            expect(content).toContain('tag-b');
+            expect(content).toContain('tag-c');
+        });
+
+        it('should update memory tags with mixed formats (comma-separated and multiple flags)', async () => {
+            const result = await runCortexCli(
+                [
+                    'memory',
+                    'update',
+                    'project/updatable',
+                    '-t',
+                    'x,y',
+                    '-t',
+                    'z',
+                ],
+                { cwd: testProject },
+            );
+
+            expect(result.exitCode).toBe(0);
+
+            const content = await readMemoryFile(storeDir, 'project/updatable');
+            expect(content).toContain('tags:');
+            expect(content).toContain('x');
+            expect(content).toContain('y');
+            expect(content).toContain('z');
         });
     });
 

@@ -1,8 +1,11 @@
 memories:
   - path: standards/errors/error-handling/mapping
-    token_estimate: 71
+    token_estimate: 73
+    updated_at: 2026-02-13T19:52:57.473Z
   - path: standards/errors/error-handling/messages
-    token_estimate: 65
+    token_estimate: 66
+    updated_at: 2026-02-13T19:52:57.428Z
   - path: standards/errors/error-handling/structure
-    token_estimate: 78
+    token_estimate: 80
+    updated_at: 2026-02-13T19:52:57.405Z
 subcategories: []

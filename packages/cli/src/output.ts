@@ -6,7 +6,7 @@
  * at object construction time, not during serialization.
  */
 
-import type { Result } from '@yeseh/cortex-core';
+import { err, ok, type Result } from '@yeseh/cortex-core';
 import { serialize, type OutputFormat } from '@yeseh/cortex-core';
 
 // Re-export OutputFormat from core
@@ -79,9 +79,6 @@ export interface OutputSerializeError {
 /** Re-export toonOptions for backwards compatibility */
 export { toonOptions } from '@yeseh/cortex-core';
 
-const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
-const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
-
 /**
  * Serialize an output payload to the specified format.
  *
@@ -96,14 +93,14 @@ export const serializeOutput = (
     payload: OutputPayload,
     format: OutputFormat,
 ): Result<string, OutputSerializeError> => {
-    try {
-        const result = serialize(payload.value, format);
-        return ok(result);
+    const result = serialize(payload.value, format);
+
+    if (result.ok()) {
+        return ok(result.value);
     }
-    catch (error) {
-        return err({
-            code: 'SERIALIZE_FAILED',
-            message: error instanceof Error ? error.message : 'Serialization failed',
-        });
-    }
+
+    return err({
+        code: result.error.code === 'INVALID_FORMAT' ? 'INVALID_FORMAT' : 'SERIALIZE_FAILED',
+        message: result.error.message,
+    });
 };

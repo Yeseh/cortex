@@ -28,8 +28,8 @@ describe('server config loading', () => {
         it('should use defaults when no env vars are set', () => {
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.dataPath).toBe(expectedDefaultDataPath);
                 expect(result.value.port).toBe(3000);
                 expect(result.value.host).toBe('0.0.0.0');
@@ -43,8 +43,8 @@ describe('server config loading', () => {
         it('should return all default fields in the config object', () => {
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 const keys = Object.keys(result.value).sort();
                 expect(keys).toEqual([
                     'autoSummaryThreshold',
@@ -64,8 +64,8 @@ describe('server config loading', () => {
             process.env.CORTEX_DATA_PATH = '/custom/path';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.dataPath).toBe('/custom/path');
             }
         });
@@ -74,8 +74,8 @@ describe('server config loading', () => {
             process.env.CORTEX_PORT = '8080';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.port).toBe(8080);
             }
         });
@@ -84,8 +84,8 @@ describe('server config loading', () => {
             process.env.CORTEX_HOST = '127.0.0.1';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.host).toBe('127.0.0.1');
             }
         });
@@ -94,8 +94,8 @@ describe('server config loading', () => {
             process.env.CORTEX_DEFAULT_STORE = 'my-store';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.defaultStore).toBe('my-store');
             }
         });
@@ -104,8 +104,8 @@ describe('server config loading', () => {
             process.env.CORTEX_LOG_LEVEL = 'debug';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.logLevel).toBe('debug');
             }
         });
@@ -114,8 +114,8 @@ describe('server config loading', () => {
             process.env.CORTEX_OUTPUT_FORMAT = 'json';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.outputFormat).toBe('json');
             }
         });
@@ -124,8 +124,8 @@ describe('server config loading', () => {
             process.env.CORTEX_AUTO_SUMMARY_THRESHOLD = '1000';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.autoSummaryThreshold).toBe(1000);
             }
         });
@@ -134,8 +134,8 @@ describe('server config loading', () => {
             process.env.CORTEX_PORT = '9000';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(typeof result.value.port).toBe('number');
                 expect(result.value.port).toBe(9000);
             }
@@ -145,8 +145,8 @@ describe('server config loading', () => {
             process.env.CORTEX_AUTO_SUMMARY_THRESHOLD = '250';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(typeof result.value.autoSummaryThreshold).toBe('number');
                 expect(result.value.autoSummaryThreshold).toBe(250);
             }
@@ -163,8 +163,8 @@ describe('server config loading', () => {
 
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value).toEqual({
                     dataPath: '/data',
                     port: 4000,
@@ -181,8 +181,8 @@ describe('server config loading', () => {
             process.env.CORTEX_AUTO_SUMMARY_THRESHOLD = '0';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.autoSummaryThreshold).toBe(0);
             }
         });
@@ -193,8 +193,8 @@ describe('server config loading', () => {
             process.env.CORTEX_LOG_LEVEL = 'debug';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.logLevel).toBe('debug');
             }
         });
@@ -203,8 +203,8 @@ describe('server config loading', () => {
             process.env.CORTEX_LOG_LEVEL = 'info';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.logLevel).toBe('info');
             }
         });
@@ -213,8 +213,8 @@ describe('server config loading', () => {
             process.env.CORTEX_LOG_LEVEL = 'warn';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.logLevel).toBe('warn');
             }
         });
@@ -223,8 +223,8 @@ describe('server config loading', () => {
             process.env.CORTEX_LOG_LEVEL = 'error';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.logLevel).toBe('error');
             }
         });
@@ -235,8 +235,8 @@ describe('server config loading', () => {
             process.env.CORTEX_OUTPUT_FORMAT = 'yaml';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.outputFormat).toBe('yaml');
             }
         });
@@ -245,8 +245,8 @@ describe('server config loading', () => {
             process.env.CORTEX_OUTPUT_FORMAT = 'json';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.outputFormat).toBe('json');
             }
         });
@@ -255,8 +255,8 @@ describe('server config loading', () => {
             process.env.CORTEX_OUTPUT_FORMAT = 'toon';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.outputFormat).toBe('toon');
             }
         });
@@ -267,8 +267,8 @@ describe('server config loading', () => {
             process.env.CORTEX_PORT = '-1';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
                 expect(result.error.message).toBe('Invalid server configuration.');
                 expect(result.error.issues).toBeDefined();
@@ -280,8 +280,8 @@ describe('server config loading', () => {
             process.env.CORTEX_PORT = '0';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
             }
         });
@@ -290,8 +290,8 @@ describe('server config loading', () => {
             process.env.CORTEX_PORT = '3000.5';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
             }
         });
@@ -300,8 +300,8 @@ describe('server config loading', () => {
             process.env.CORTEX_PORT = 'abc';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
             }
         });
@@ -310,8 +310,8 @@ describe('server config loading', () => {
             process.env.CORTEX_LOG_LEVEL = 'verbose';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
                 expect(result.error.issues).toBeDefined();
             }
@@ -321,8 +321,8 @@ describe('server config loading', () => {
             process.env.CORTEX_OUTPUT_FORMAT = 'xml';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
                 expect(result.error.issues).toBeDefined();
             }
@@ -332,8 +332,8 @@ describe('server config loading', () => {
             process.env.CORTEX_AUTO_SUMMARY_THRESHOLD = '-1';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
             }
         });
@@ -342,8 +342,8 @@ describe('server config loading', () => {
             process.env.CORTEX_AUTO_SUMMARY_THRESHOLD = '100.5';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
             }
         });
@@ -352,8 +352,8 @@ describe('server config loading', () => {
             process.env.CORTEX_AUTO_SUMMARY_THRESHOLD = 'many';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
             }
         });
@@ -364,8 +364,8 @@ describe('server config loading', () => {
 
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.issues).toBeDefined();
                 expect(Array.isArray(result.error.issues)).toBe(true);
                 expect(result.error.issues!.length).toBeGreaterThanOrEqual(2);
@@ -377,26 +377,30 @@ describe('server config loading', () => {
         it('should return ok: true with value on success', () => {
             const result = loadServerConfig();
 
-            expect(result).toHaveProperty('ok', true);
-            expect(result).toHaveProperty('value');
-            expect(result).not.toHaveProperty('error');
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
+                expect(result.value).toBeDefined();
+                expect(result.error).toBeUndefined();
+            }
         });
 
         it('should return ok: false with error on failure', () => {
             process.env.CORTEX_PORT = 'invalid';
             const result = loadServerConfig();
 
-            expect(result).toHaveProperty('ok', false);
-            expect(result).toHaveProperty('error');
-            expect(result).not.toHaveProperty('value');
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
+                expect(result.error).toBeDefined();
+                expect(result.value).toBeUndefined();
+            }
         });
 
         it('should have error with code and message properties', () => {
             process.env.CORTEX_PORT = 'invalid';
             const result = loadServerConfig();
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error).toHaveProperty('code');
                 expect(result.error).toHaveProperty('message');
                 expect(result.error).toHaveProperty('issues');

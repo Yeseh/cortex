@@ -20,33 +20,31 @@
  *
  * // Legacy API: Read a memory file
  * const result = await adapter.readMemoryFile('project/cortex/config');
- * if (result.ok && result.value) {
+ * if (result.ok() && result.value) {
  *     console.log(result.value);
  * }
  *
  * // New ISP API: Use focused storage interfaces
- * const memoryResult = await adapter.memories.read('project/cortex/config');
+ * const memoryPath = MemoryPath.fromPath('project/cortex/config');
+ * if (memoryPath.ok()) {
+ *   const memoryResult = await adapter.memories.read(memoryPath.value);
+ * }
  * ```
  */
 
 import { resolve } from 'node:path';
-import type { MemorySlugPath, Result } from '@yeseh/cortex-core';
-import type {
-    StorageAdapter,
-    MemoryStorage,
-    IndexStorage,
-    ReindexResult,
-    StorageAdapterError,
-    StorageIndexName,
-} from '@yeseh/cortex-core/storage';
-import type { CategoryError, CategoryStorage } from '@yeseh/cortex-core/category';
-import type { CategoryIndex } from '@yeseh/cortex-core/index';
+import {
+    type MemoryStorage,
+    type IndexStorage,
+
+    type ScopedStorageAdapter,
+} from '@yeseh/cortex-core';
+import type { CategoryStorage } from '@yeseh/cortex-core/category';
 import type {
     FilesystemStorageAdapterOptions,
     FilesystemContext,
 } from './types.ts';
-import { normalizeExtension, ok } from './utils.ts';
-
+import { normalizeExtension } from './utils.ts';
 // Import ISP-compliant storage implementations
 import { FilesystemMemoryStorage } from './memory-storage.ts';
 import { FilesystemIndexStorage } from './index-storage.ts';
@@ -71,7 +69,7 @@ export { FilesystemRegistry } from './filesystem-registry.ts';
  * const adapter = new FilesystemStorageAdapter({ rootDirectory: '/path/to/storage' });
  *
  * // New ISP API (preferred)
- * await adapter.memories.write('project/config', '# Config');
+ * await adapter.memories.write(memory);
  * await adapter.indexes.reindex();
  *
  * // Legacy API (backward compatible)
@@ -79,7 +77,7 @@ export { FilesystemRegistry } from './filesystem-registry.ts';
  * await adapter.reindexCategoryIndexes();
  * ```
  */
-export class FilesystemStorageAdapter implements StorageAdapter {
+export class FilesystemStorageAdapter implements ScopedStorageAdapter{
     private readonly ctx: FilesystemContext;
 
     // ========================================================================
@@ -105,187 +103,6 @@ export class FilesystemStorageAdapter implements StorageAdapter {
         this.indexes = new FilesystemIndexStorage(this.ctx);
         this.categories = new FilesystemCategoryStorage(this.ctx);
     }
-
-    // ========================================================================
-    // StorageAdapter (Legacy) - Memory file operations
-    // ========================================================================
-
-    /**
-     * Reads a memory file from the filesystem.
-     *
-     * @param slugPath - Path to the memory (e.g., "project/cortex/config")
-     * @returns The file contents or null if not found
-     * @deprecated Use `adapter.memories.read()` instead
-     */
-    async readMemoryFile(
-        slugPath: MemorySlugPath,
-    ): Promise<Result<string | null, StorageAdapterError>> {
-        return this.memories.read(slugPath);
-    }
-
-    /**
-     * Writes a memory file to the filesystem.
-     *
-     * Creates parent directories if needed. Optionally updates category indexes.
-     *
-     * @param slugPath - Path to the memory (e.g., "project/cortex/config")
-     * @param contents - The content to write
-     * @param options - Options for index handling
-     * @deprecated Use `adapter.memories.write()` and `adapter.indexes.updateAfterMemoryWrite()` instead
-     */
-    async writeMemoryFile(
-        slugPath: MemorySlugPath,
-        contents: string,
-        options: { allowIndexCreate?: boolean; allowIndexUpdate?: boolean } = {},
-    ): Promise<Result<void, StorageAdapterError>> {
-        const writeResult = await this.memories.write(slugPath, contents);
-        if (!writeResult.ok) {
-            return writeResult;
-        }
-
-        if (options.allowIndexUpdate === false) {
-            return ok(undefined);
-        }
-
-        return this.indexes.updateAfterMemoryWrite(slugPath, contents, {
-            createWhenMissing: options.allowIndexCreate,
-        });
-    }
-
-    /**
-     * Removes a memory file from the filesystem.
-     *
-     * @param slugPath - Path to the memory to remove
-     * @deprecated Use `adapter.memories.remove()` instead
-     */
-    async removeMemoryFile(slugPath: MemorySlugPath): Promise<Result<void, StorageAdapterError>> {
-        return this.memories.remove(slugPath);
-    }
-
-    /**
-     * Moves a memory file from one location to another.
-     *
-     * @param sourceSlugPath - Source path of the memory
-     * @param destinationSlugPath - Destination path for the memory
-     * @deprecated Use `adapter.memories.move()` instead
-     */
-    async moveMemoryFile(
-        sourceSlugPath: MemorySlugPath,
-        destinationSlugPath: MemorySlugPath,
-    ): Promise<Result<void, StorageAdapterError>> {
-        return this.memories.move(sourceSlugPath, destinationSlugPath);
-    }
-
-    // ========================================================================
-    // StorageAdapter (Legacy) - Index operations
-    // ========================================================================
-
-    /**
-     * Reads an index file from the filesystem.
-     *
-     * @param name - Index name (category path, or empty string for root)
-     * @returns The file contents or null if not found
-     * @deprecated Use `adapter.indexes.read()` instead
-     */
-    async readIndexFile(
-        name: StorageIndexName,
-    ): Promise<Result<CategoryIndex | null, StorageAdapterError>> {
-        return (this.indexes as FilesystemIndexStorage).readIndexFile(name);
-    }
-
-    /**
-     * Writes an index file to the filesystem.
-     *
-     * @param name - Index name (category path, or empty string for root)
-     * @param contents - The content to write
-     * @deprecated Use `adapter.indexes.write()` instead
-     */
-    async writeIndexFile(
-        name: StorageIndexName,
-        contents: CategoryIndex,
-    ): Promise<Result<void, StorageAdapterError>> {
-        return (this.indexes as FilesystemIndexStorage).writeIndexFile(name, contents);
-    }
-
-    /**
-     * Reindexes all category indexes by scanning the filesystem.
-     *
-     * Walks the storage directory, collects all memory files,
-     * and rebuilds all index files from scratch.
-     * @deprecated Use `adapter.indexes.reindex()` instead
-     */
-    async reindexCategoryIndexes(): Promise<Result<ReindexResult, StorageAdapterError>> {
-        return this.indexes.reindex();
-    }
-
-    // ========================================================================
-    // CategoryStorage (Legacy) - Category operations
-    // ========================================================================
-
-    /**
-     * Checks if a category directory exists.
-     *
-     * @param path - Category path to check (e.g., "project/cortex")
-     * @deprecated Use `adapter.categories.exists()` instead
-     */
-    async categoryExists(path: string): Promise<Result<boolean, CategoryError>> {
-        return this.categories.exists(path);
-    }
-
-    /**
-     * Ensures a category directory exists, creating it if missing.
-     *
-     * @param path - Category path to create (e.g., "project/cortex")
-     * @deprecated Use `adapter.categories.ensure()` instead
-     */
-    async ensureCategoryDirectory(path: string): Promise<Result<void, CategoryError>> {
-        return this.categories.ensure(path);
-    }
-
-    /**
-     * Deletes a category directory and all its contents recursively.
-     *
-     * @param path - Category path to delete (e.g., "project/cortex")
-     * @deprecated Use `adapter.categories.delete()` instead
-     */
-    async deleteCategoryDirectory(path: string): Promise<Result<void, CategoryError>> {
-        return this.categories.delete(path);
-    }
-
-    /**
-     * Updates the description of a subcategory in its parent's index.
-     *
-     * @param parentPath - Path to the parent category (empty string for root)
-     * @param subcategoryPath - Full path to the subcategory
-     * @param description - New description or null to clear
-     * @deprecated Use `adapter.categories.updateSubcategoryDescription()` instead
-     */
-    async updateSubcategoryDescription(
-        parentPath: string,
-        subcategoryPath: string,
-        description: string | null,
-    ): Promise<Result<void, CategoryError>> {
-        return this.categories.updateSubcategoryDescription(
-            parentPath,
-            subcategoryPath,
-            description,
-        );
-    }
-
-    /**
-     * Removes a subcategory entry from its parent's index.
-     *
-     * @param parentPath - Path to the parent category (empty string for root)
-     * @param subcategoryPath - Full path to the subcategory to remove
-     * @deprecated Use `adapter.categories.removeSubcategoryEntry()` instead
-     */
-    async removeSubcategoryEntry(
-        parentPath: string,
-        subcategoryPath: string,
-    ): Promise<Result<void, CategoryError>> {
-        return this.categories.removeSubcategoryEntry(parentPath, subcategoryPath);
-    }
-
 }
 
 // Re-export types for convenience
@@ -329,3 +146,4 @@ export { parseMemory, serializeMemory } from './memories.ts';
 export { FilesystemMemoryStorage } from './memory-storage.ts';
 export { FilesystemIndexStorage } from './index-storage.ts';
 export { FilesystemCategoryStorage } from './category-storage.ts';
+

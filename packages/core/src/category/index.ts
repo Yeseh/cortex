@@ -4,6 +4,8 @@
  * @module core/category
  */
 
+export * from './category-path.ts';
+
 export type {
     CategoryErrorCode,
     CategoryError,
@@ -16,10 +18,7 @@ export type {
 export { MAX_DESCRIPTION_LENGTH, ROOT_CATEGORIES, type RootCategory } from './types.ts';
 
 export {
-    isRootCategory,
-    getParentPath,
-    getAncestorPaths,
     createCategory,
     setDescription,
     deleteCategory,
-} from './operations.ts';
+} from './operations/index.ts';

@@ -2,21 +2,22 @@
  * Core module exports
  */
 
-export * from './types.ts';
 export * from './tokens.ts';
-export * from './slug.ts';
 export * from './config.ts';
+export * from './result.ts';
+export * from './memory';
+export * from './category';
+export * from './store';
+export * from './index';
+export * from './storage/adapter.ts';
+
 export {
     serialize,
     deserialize,
-    parseYaml,
-    stringifyYaml,
-    parseJson,
-    stringifyJson,
     toonOptions,
     type OutputFormat,
     type SerializationError,
 } from './serialization.ts';
 
 // Validation schemas
-export { dateSchema, nonEmptyStringSchema, tagsSchema } from './valdiation/schemas.ts';
+export { dateSchema, nonEmptyStringSchema, tagsSchema } from './validation/schemas.ts';

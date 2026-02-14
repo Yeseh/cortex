@@ -91,7 +91,7 @@ export const createHealthRouter = (config: ServerConfig): Router => {
             const registry = new FilesystemRegistry(registryPath);
             const registryResult = await registry.load();
             // Treat REGISTRY_MISSING as 0 stores (like allowMissing: true did)
-            const storeCount = registryResult.ok ? Object.keys(registryResult.value).length : 0;
+            const storeCount = registryResult.ok() ? Object.keys(registryResult.value).length : 0;
 
             const response: HealthResponse = {
                 status: 'healthy',

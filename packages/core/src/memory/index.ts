@@ -19,47 +19,10 @@
  * import { parseMemory, serializeMemory } from '@yeseh/cortex-storage-fs';
  * ```
  */
-
-// Domain types
-export type { MemoryMetadata, Memory, MemoryErrorCode, MemoryError } from './types.ts';
-
-// Validation functions and types
-export { validateCategoryPath, validateMemorySlugPath } from './validation.ts';
-
-export type { MemoryPathValidationError } from './validation.ts';
-
-// Expiration utilities
-export { isExpired, isExpiredNow } from './expiration.ts';
-
-// Operations types and interface
-export type { MemorySerializer } from './operations.ts';
-
-// Domain operations
-export {
-    createMemory,
-    getMemory,
-    updateMemory,
-    moveMemory,
-    removeMemory,
-    listMemories,
-    pruneExpiredMemories,
-    getRecentMemories,
-} from './operations.ts';
-
-export type {
-    CreateMemoryInput,
-    UpdateMemoryInput,
-    GetMemoryOptions,
-    ListMemoriesOptions,
-    PruneOptions,
-    GetRecentMemoriesOptions,
-    ListedMemory,
-    ListedSubcategory,
-    ListMemoriesResult,
-    PrunedMemory,
-    PruneResult,
-    RecentMemory,
-    GetRecentMemoriesResult,
-} from './operations.ts';
-
+export * from '@/slug';
+export * from '@/result';
+export * from '@/memory/memory';
+export * from '@/memory/result';
+export * from '@/memory/memory-path';
+export * from '@/memory/operations';
 

@@ -8,7 +8,7 @@
 
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
-import { loadConfig, type CortexConfig, type ConfigLoadError, type Result } from '@yeseh/cortex-core';
+import { loadConfig, type CortexConfig, type ConfigLoadError, type Result, err, ok } from '@yeseh/cortex-core';
 import {
     resolveStore,
     resolveStorePath,
@@ -68,10 +68,6 @@ export interface StoreContextError {
         | StoreResolveError 
         | StoreNotFoundError;
 }
-
-const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
-const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
-
 /**
  * Default path to the global store.
  */
@@ -97,7 +93,7 @@ const resolveFromRegistry = async (
 ): Promise<Result<StoreContext, StoreContextError>> => {
     const registry = new FilesystemRegistry(registryPath);
     const registryResult = await registry.load();
-    if (!registryResult.ok) {
+    if (!registryResult.ok()) {
         return err({
             code: 'REGISTRY_LOAD_FAILED',
             message: `Failed to load store registry: ${registryResult.error.message}`,
@@ -106,7 +102,7 @@ const resolveFromRegistry = async (
     }
 
     const pathResult = resolveStorePath(registryResult.value, storeName);
-    if (!pathResult.ok) {
+    if (!pathResult.ok()) {
         return err({
             code: 'STORE_NOT_FOUND',
             message: pathResult.error.message,
@@ -144,7 +140,7 @@ const resolveDefault = async (
         config,
     });
 
-    if (!storeResult.ok) {
+    if (!storeResult.ok()) {
         return err({
             code: 'STORE_RESOLUTION_FAILED',
             message: storeResult.error.message,
@@ -173,13 +169,13 @@ const resolveDefault = async (
  * ```ts
  * // Resolve default store
  * const result = await resolveStoreContext(undefined);
- * if (result.ok) {
+ * if (result.ok()) {
  *   console.log(result.value.root); // '/path/to/.cortex/memory'
  * }
  *
  * // Resolve named store from registry
  * const result = await resolveStoreContext('work');
- * if (result.ok) {
+ * if (result.ok()) {
  *   console.log(result.value.root); // '/path/to/work/store'
  *   console.log(result.value.name); // 'work'
  * }
@@ -200,7 +196,7 @@ export const resolveStoreContext = async (
 
     // Otherwise, load config and use default resolution
     const configResult = await loadConfig({ cwd });
-    if (!configResult.ok) {
+    if (!configResult.ok()) {
         return err({
             code: 'CONFIG_LOAD_FAILED',
             message: `Failed to load config: ${configResult.error.message}`,
@@ -224,7 +220,7 @@ export const loadRegistry = async (
     const registry = new FilesystemRegistry(path);
     const result = await registry.load();
 
-    if (!result.ok) {
+    if (!result.ok()) {
         // For allowMissing: true behavior, return empty registry if missing
         if (result.error.code === 'REGISTRY_MISSING') {
             return ok({});
@@ -260,7 +256,7 @@ export const resolveStoreAdapter = async (
     if (storeName) {
         const registry = new FilesystemRegistry(registryPath);
         const registryResult = await registry.load();
-        if (!registryResult.ok) {
+        if (!registryResult.ok()) {
             return err({
                 code: 'REGISTRY_LOAD_FAILED',
                 message: `Failed to load store registry: ${registryResult.error.message}`,
@@ -269,7 +265,7 @@ export const resolveStoreAdapter = async (
         }
 
         const adapterResult = registry.getStore(storeName);
-        if (!adapterResult.ok) {
+        if (!adapterResult.ok()) {
             return err({
                 code: 'STORE_NOT_FOUND',
                 message: `Store '${storeName}' not found in registry`,
@@ -278,7 +274,7 @@ export const resolveStoreAdapter = async (
         }
 
         const pathResult = resolveStorePath(registryResult.value, storeName);
-        if (!pathResult.ok) {
+        if (!pathResult.ok()) {
             return err({
                 code: 'STORE_NOT_FOUND',
                 message: pathResult.error.message,
@@ -292,13 +288,13 @@ export const resolveStoreAdapter = async (
                 name: storeName,
                 scope: 'registry',
             },
-            adapter: adapterResult.value,
+            adapter: adapterResult.value!,
         });
     }
 
     // Otherwise, resolve default context and create adapter directly
     const contextResult = await resolveStoreContext(undefined, options);
-    if (!contextResult.ok) {
+    if (!contextResult.ok()) {
         return contextResult;
     }
 

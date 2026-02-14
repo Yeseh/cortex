@@ -1,14 +1,19 @@
 memories:
   - path: standards/errors/cli-mapping
-    token_estimate: 268
+    token_estimate: 278
+    updated_at: 2026-01-29T20:11:50.728Z
   - path: standards/errors/cli-storage-errors
     token_estimate: 346
+    updated_at: 2026-02-05T20:12:28.369Z
   - path: standards/errors/mcp-translation
     token_estimate: 143
+    updated_at: 2026-01-29T20:28:58.679Z
   - path: standards/errors/operation-results
-    token_estimate: 173
+    token_estimate: 179
+    updated_at: 2026-01-27T20:25:41.151Z
   - path: standards/errors/result-types
-    token_estimate: 388
+    token_estimate: 403
+    updated_at: 2026-02-05T19:21:10.821Z
 subcategories:
   - path: standards/errors/error-handling
     memory_count: 3

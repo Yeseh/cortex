@@ -1,9 +1,29 @@
 memories:
-  - path: todo/fix-prune-reindex-consistency
-    token_estimate: 144
+  - path: todo/add-concurrent-write-protection
+    token_estimate: 564
+    updated_at: 2026-02-14T21:33:43.075Z
+  - path: todo/add-path-normalization-double-slashes
+    token_estimate: 322
+    updated_at: 2026-02-14T21:33:30.965Z
+  - path: todo/decrease-mcp-fs-coupling
+    token_estimate: 304
+    updated_at: 2026-02-14T21:36:39.163Z
+  - path: todo/fix-index-update-error-messages
+    token_estimate: 443
+    updated_at: 2026-02-14T21:33:24.975Z
+  - path: todo/fix-mcp-create-store-registration
+    token_estimate: 368
+    updated_at: 2026-02-14T21:36:37.724Z
+  - path: todo/fix-store-init-index-creation
+    token_estimate: 405
+    updated_at: 2026-02-14T21:33:15.502Z
+  - path: todo/merge-categories-indexes
+    token_estimate: 314
+    updated_at: 2026-02-14T21:36:40.287Z
   - path: todo/refactor-index-storage-structured
-    token_estimate: 373
-    updated_at: 2026-02-13T21:47:02.743Z
-  - path: todo/remove-clear-expiry-flag
-    token_estimate: 130
+    token_estimate: 364
+    updated_at: 2026-02-14T21:36:41.436Z
+  - path: todo/review-registry-implementation
+    token_estimate: 457
+    updated_at: 2026-02-14T21:36:42.387Z
 subcategories: []

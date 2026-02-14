@@ -8,7 +8,8 @@
  * @module core/category/types
  */
 
-import type { Result } from '../types.ts';
+import type { Result } from '../result.ts';
+import type { CategoryPath } from './category-path.ts';
 
 /**
  * Error codes for category operations.
@@ -115,7 +116,7 @@ export interface CategoryStorage {
      * @param path - Category path (e.g., "project/cortex")
      * @returns Result with true if category exists, false otherwise
      */
-    exists(path: string): Promise<Result<boolean, CategoryError>>;
+    exists(path: CategoryPath): Promise<Result<boolean, CategoryError>>;
 
     /**
      * Ensures a category directory exists, creating it if missing.
@@ -135,7 +136,7 @@ export interface CategoryStorage {
      * - Calling with an existing path is a no-op and should succeed.
      * - Returns `INVALID_PATH` when the path is empty or malformed.
      */
-    ensure(path: string): Promise<Result<void, CategoryError>>;
+    ensure(path: CategoryPath): Promise<Result<void, CategoryError>>;
 
     /**
      * Deletes a category directory and all its contents recursively.
@@ -155,7 +156,7 @@ export interface CategoryStorage {
      * - Some implementations treat missing directories as a no-op success.
      * - Returns `INVALID_PATH` when the path is empty or malformed.
      */
-    delete(path: string): Promise<Result<void, CategoryError>>;
+    delete(path: CategoryPath): Promise<Result<void, CategoryError>>;
 
     /**
      * Updates the description of a subcategory in its parent's index.
@@ -181,10 +182,7 @@ export interface CategoryStorage {
      * - Passing `''` as `parentPath` updates the root index.
      * - Passing `null` clears the description field for the subcategory.
      */
-    updateSubcategoryDescription(
-        parentPath: string,
-        subcategoryPath: string,
-        description: string | null
+    updateSubcategoryDescription(categoryPath: CategoryPath, description: string | null
     ): Promise<Result<void, CategoryError>>;
 
     /**
@@ -206,10 +204,7 @@ export interface CategoryStorage {
      * - Passing `''` as `parentPath` removes a top-level entry from the root index.
      * - If the parent index is missing, implementations may return success.
      */
-    removeSubcategoryEntry(
-        parentPath: string,
-        subcategoryPath: string
-    ): Promise<Result<void, CategoryError>>;
+    removeSubcategoryEntry(categoryPath: CategoryPath): Promise<Result<void, CategoryError>>;
 }
 
 /**
@@ -233,7 +228,9 @@ export const MAX_DESCRIPTION_LENGTH = 500;
  * Those operations discover root categories dynamically by reading the
  * store's root index, allowing stores to have any root-level categories.
  */
-export const ROOT_CATEGORIES = ['human', 'persona'] as const;
+export const ROOT_CATEGORIES = [
+    'human', 'persona',
+] as const;
 
 /** Type for root category names */
 export type RootCategory = (typeof ROOT_CATEGORIES)[number];

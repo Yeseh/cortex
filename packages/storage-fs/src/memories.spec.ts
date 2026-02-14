@@ -17,8 +17,8 @@ describe('memory file parsing', () => {
 
         const result = parseMemory(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.metadata.createdAt.toISOString()).toBe('2024-01-01T00:00:00.000Z');
             expect(result.value.metadata.updatedAt.toISOString()).toBe('2024-01-02T00:00:00.000Z');
             expect(result.value.metadata.expiresAt?.toISOString()).toBe('2024-02-01T00:00:00.000Z');
@@ -42,8 +42,8 @@ describe('memory file parsing', () => {
 
         const result = parseMemory(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('MISSING_FIELD');
             expect(result.error.field).toBe('source');
         }
@@ -61,8 +61,8 @@ describe('memory file parsing', () => {
 
         const result = parseMemory(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('MISSING_FRONTMATTER');
         }
     });
@@ -79,8 +79,8 @@ describe('memory file parsing', () => {
 
         const result = parseMemory(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('MISSING_FRONTMATTER');
         }
     });
@@ -98,8 +98,8 @@ describe('memory file parsing', () => {
 
         const result = parseMemory(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_TIMESTAMP');
             expect(result.error.field).toBe('created_at');
         }
@@ -120,8 +120,8 @@ describe('memory file parsing', () => {
 
         const result = parseMemory(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.metadata.tags).toEqual([
                 'product', 'research',
             ]);
@@ -142,8 +142,8 @@ describe('memory file parsing', () => {
 
         const result = parseMemory(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.metadata.tags).toEqual([]);
             expect(result.value.content).toBe('No tags inline.');
         }
@@ -162,8 +162,8 @@ describe('memory file parsing', () => {
 
         const result = parseMemory(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.metadata.tags).toEqual([]);
             expect(result.value.content).toBe('No tags in list style.');
         }
@@ -182,8 +182,8 @@ describe('memory file parsing', () => {
 
         const result = parseMemory(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_SOURCE');
             expect(result.error.field).toBe('source');
         }
@@ -203,8 +203,8 @@ describe('memory file parsing', () => {
 
         const result = parseMemory(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_FRONTMATTER');
         }
     });
@@ -223,8 +223,8 @@ describe('memory file parsing', () => {
 
         const result = parseMemory(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_FRONTMATTER');
         }
     });
@@ -242,8 +242,8 @@ describe('memory file parsing', () => {
 
         const result = parseMemory(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.metadata.tags).toEqual(['personal']);
         }
     });
@@ -262,8 +262,8 @@ describe('memory file parsing', () => {
 
         const result = parseMemory(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_TAGS');
         }
     });
@@ -286,14 +286,14 @@ describe('memory file serialization', () => {
         };
 
         const serialized = serializeMemory(memory);
-        expect(serialized.ok).toBe(true);
-        if (!serialized.ok) {
+        expect(serialized.ok()).toBe(true);
+        if (!serialized.ok()) {
             return;
         }
 
         const reparsed = parseMemory(serialized.value);
-        expect(reparsed.ok).toBe(true);
-        if (reparsed.ok) {
+        expect(reparsed.ok()).toBe(true);
+        if (reparsed.ok()) {
             expect(reparsed.value.metadata.createdAt.toISOString()).toBe(
                 '2024-03-01T08:30:00.000Z',
             );
@@ -326,14 +326,14 @@ describe('memory file serialization', () => {
         };
 
         const serialized = serializeMemory(memory);
-        expect(serialized.ok).toBe(true);
-        if (!serialized.ok) {
+        expect(serialized.ok()).toBe(true);
+        if (!serialized.ok()) {
             return;
         }
 
         const reparsed = parseMemory(serialized.value);
-        expect(reparsed.ok).toBe(true);
-        if (reparsed.ok) {
+        expect(reparsed.ok()).toBe(true);
+        if (reparsed.ok()) {
             expect(reparsed.value.content).toBe('');
         }
     });
@@ -351,14 +351,14 @@ describe('memory file serialization', () => {
         };
 
         const serialized = serializeMemory(memory);
-        expect(serialized.ok).toBe(true);
-        if (!serialized.ok) {
+        expect(serialized.ok()).toBe(true);
+        if (!serialized.ok()) {
             return;
         }
 
         const reparsed = parseMemory(serialized.value);
-        expect(reparsed.ok).toBe(true);
-        if (reparsed.ok) {
+        expect(reparsed.ok()).toBe(true);
+        if (reparsed.ok()) {
             expect(reparsed.value.content).toBe('Leading newline content.');
         }
     });
@@ -377,8 +377,8 @@ describe('memory file serialization', () => {
 
         const result = serializeMemory(memory);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_TIMESTAMP');
             expect(result.error.field).toBe('created_at');
         }
@@ -400,8 +400,8 @@ describe('memory file serialization', () => {
             memory as unknown as Parameters<typeof serializeMemory>[0],
         );
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_TAGS');
             expect(result.error.field).toBe('tags');
         }
@@ -425,8 +425,8 @@ describe('memory file serialization', () => {
             memory as unknown as Parameters<typeof serializeMemory>[0],
         );
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_TAGS');
             expect(result.error.field).toBe('tags');
         }
@@ -446,8 +446,8 @@ describe('memory file serialization', () => {
 
         const result = serializeMemory(memory);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_SOURCE');
             expect(result.error.field).toBe('source');
         }
@@ -470,8 +470,8 @@ describe('memory citations', () => {
         ].join('\n');
 
         const result = parseMemory(raw);
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.metadata.citations).toEqual([
                 'src/types.ts:17',
                 'https://docs.example.com',
@@ -491,8 +491,8 @@ describe('memory citations', () => {
         ].join('\n');
 
         const result = parseMemory(raw);
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.metadata.citations).toEqual([]);
         }
     });
@@ -512,14 +512,14 @@ describe('memory citations', () => {
         };
 
         const serialized = serializeMemory(memory);
-        expect(serialized.ok).toBe(true);
-        if (!serialized.ok) {
+        expect(serialized.ok()).toBe(true);
+        if (!serialized.ok()) {
             return;
         }
 
         const reparsed = parseMemory(serialized.value);
-        expect(reparsed.ok).toBe(true);
-        if (reparsed.ok) {
+        expect(reparsed.ok()).toBe(true);
+        if (reparsed.ok()) {
             expect(reparsed.value.metadata.citations).toEqual([
                 'src/file.ts:10',
                 'https://example.com',
@@ -540,8 +540,8 @@ describe('memory citations', () => {
         };
 
         const result = serializeMemory(memory);
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).not.toContain('citations:');
         }
     });
@@ -560,9 +560,10 @@ describe('memory citations', () => {
         ].join('\n');
 
         const result = parseMemory(raw);
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_CITATIONS');
         }
     });
 });
+

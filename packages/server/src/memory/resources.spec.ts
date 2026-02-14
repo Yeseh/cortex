@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 import type { ServerConfig } from '../config.ts';
+import { MEMORY_SUBDIR } from '../config.ts';
 import {
     readMemoryContent,
     readCategoryListing,
@@ -18,9 +19,9 @@ import {
     MEMORY_URI_SCHEME,
     type CategoryListing,
 } from './resources.ts';
-import { FilesystemStorageAdapter, serializeMemory } from '@yeseh/cortex-storage-fs';
+import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 import type { Memory } from '@yeseh/cortex-core/memory';
-import type { CategoryIndex } from '@yeseh/cortex-core/index';
+import { createMemory } from '@yeseh/cortex-core/memory';
 
 // Test configuration
 const createTestConfig = (dataPath: string): ServerConfig => ({
@@ -47,32 +48,21 @@ const createTestDir = async (): Promise<string> => {
 const createMemoryFile = async (
     storeRoot: string,
     slugPath: string,
-    contents: Memory,
+    contents: Partial<Memory>,
 ): Promise<void> => {
+    // Use the proper core createMemory operation which updates indexes
     const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
-    const serialized = serializeMemory(contents);
-    if (!serialized.ok) {
-        throw new Error(`Failed to serialize: ${serialized.error.message}`);
-    }
-    const result = await adapter.writeMemoryFile(slugPath, serialized.value, {
-        allowIndexCreate: true,
-        allowIndexUpdate: true,
-    });
-    if (!result.ok) {
-        throw new Error(`Failed to write: ${result.error.message}`);
-    }
-};
 
-// Helper to create a category index directly
-const _createCategoryIndex = async (
-    storeRoot: string,
-    categoryPath: string,
-    index: CategoryIndex,
-): Promise<void> => {
-    const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
-    const result = await adapter.writeIndexFile(categoryPath, index);
-    if (!result.ok) {
-        throw new Error(`Failed to write index: ${result.error.message}`);
+    const result = await createMemory(adapter, slugPath, {
+        content: contents.content!,
+        tags: contents.metadata?.tags ?? [],
+        source: contents.metadata?.source ?? 'test',
+        citations: contents.metadata?.citations ?? [],
+        expiresAt: contents.metadata?.expiresAt,
+    });
+
+    if (!result.ok()) {
+        throw new Error(`Failed to create memory: ${result.error.message}`);
     }
 };
 
@@ -133,8 +123,8 @@ describe('parseUriVariables', () => {
         const variables = { store: 'my-store', 'path*': 'project/my-memory' };
         const result = parseUriVariables(variables, config);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.store).toBe('my-store');
             expect(result.value.path).toBe('project/my-memory');
             expect(result.value.isCategory).toBe(false);
@@ -145,8 +135,8 @@ describe('parseUriVariables', () => {
         const variables = { 'path*': 'project/my-memory' };
         const result = parseUriVariables(variables, config);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.store).toBe('default');
         }
     });
@@ -155,8 +145,8 @@ describe('parseUriVariables', () => {
         const variables = { store: 'default', 'path*': 'project/' };
         const result = parseUriVariables(variables, config);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.isCategory).toBe(true);
             expect(result.value.path).toBe('project');
         }
@@ -166,8 +156,8 @@ describe('parseUriVariables', () => {
         const variables = { store: 'default', 'path*': '' };
         const result = parseUriVariables(variables, config);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.isCategory).toBe(true);
             expect(result.value.path).toBe('');
         }
@@ -181,8 +171,8 @@ describe('parseUriVariables', () => {
         ] };
         const result = parseUriVariables(variables, config);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.path).toBe('project/subcategory/memory');
         }
     });
@@ -199,7 +189,7 @@ describe('readMemoryContent', () => {
 
     beforeEach(async () => {
         testDir = await createTestDir();
-        storeRoot = join(testDir, 'default');
+        storeRoot = join(testDir, MEMORY_SUBDIR);
         await mkdir(storeRoot, { recursive: true });
         adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
     });
@@ -222,8 +212,8 @@ describe('readMemoryContent', () => {
 
         const result = await readMemoryContent(adapter, 'default', 'project/test-memory');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.contents).toHaveLength(1);
             const text = getTextContent(result.value.contents[0]);
             expect(text).toBe('This is the memory content');
@@ -244,8 +234,8 @@ describe('readMemoryContent', () => {
 
         const result = await readMemoryContent(adapter, 'default', 'project/mime-test');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             const content = result.value.contents[0];
             expect(content).toBeDefined();
             expect(content!.mimeType).toBe('text/plain');
@@ -266,8 +256,8 @@ describe('readMemoryContent', () => {
 
         const result = await readMemoryContent(adapter, 'my-store', 'project/uri-test');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             const content = result.value.contents[0];
             expect(content).toBeDefined();
             expect(content!.uri).toBe('cortex://memory/my-store/project/uri-test');
@@ -292,8 +282,8 @@ describe('readMemoryContent', () => {
             'project/subcategory/deep-memory',
         );
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             const content = result.value.contents[0];
             expect(content).toBeDefined();
             const text = getTextContent(content);
@@ -305,8 +295,8 @@ describe('readMemoryContent', () => {
     it('should return error for non-existent memory', async () => {
         const result = await readMemoryContent(adapter, 'default', 'project/non-existent');
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.message).toContain('not found');
         }
     });
@@ -314,8 +304,8 @@ describe('readMemoryContent', () => {
     it('should return error for invalid memory path format', async () => {
         const result = await readMemoryContent(adapter, 'default', 'invalid');
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.message).toContain('Invalid memory path');
         }
     });
@@ -332,8 +322,7 @@ describe('readCategoryListing', () => {
 
     beforeEach(async () => {
         testDir = await createTestDir();
-        storeRoot = join(testDir, 'default');
-        await mkdir(storeRoot, { recursive: true });
+        storeRoot = join(testDir, MEMORY_SUBDIR);
         adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
     });
 
@@ -367,8 +356,8 @@ describe('readCategoryListing', () => {
 
         const result = await readCategoryListing(adapter, 'default', 'project');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             const content = result.value.contents[0];
             expect(content).toBeDefined();
             const text = getTextContent(content);
@@ -396,8 +385,8 @@ describe('readCategoryListing', () => {
 
         const result = await readCategoryListing(adapter, 'default', 'project');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             const content = result.value.contents[0];
             expect(content).toBeDefined();
             const text = getTextContent(content);
@@ -423,8 +412,8 @@ describe('readCategoryListing', () => {
 
         const result = await readCategoryListing(adapter, 'default', 'project');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             const content = result.value.contents[0];
             expect(content).toBeDefined();
             const text = getTextContent(content);
@@ -458,8 +447,8 @@ describe('readCategoryListing', () => {
 
         const result = await readCategoryListing(adapter, 'default', 'project');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             const content = result.value.contents[0];
             expect(content).toBeDefined();
             expect(content!.mimeType).toBe('application/json');
@@ -492,8 +481,8 @@ describe('readCategoryListing', () => {
 
         const result = await readCategoryListing(adapter, 'default', '');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             const content = result.value.contents[0];
             expect(content).toBeDefined();
             const text = getTextContent(content);
@@ -523,8 +512,8 @@ describe('readCategoryListing', () => {
 
         const result = await readCategoryListing(adapter, 'default', '');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             const content = result.value.contents[0];
             expect(content).toBeDefined();
             const text = getTextContent(content);
@@ -538,8 +527,8 @@ describe('readCategoryListing', () => {
     it('should return error for non-existent category', async () => {
         const result = await readCategoryListing(adapter, 'default', 'non-existent-category');
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.message).toContain('not found');
         }
     });
@@ -558,8 +547,8 @@ describe('readCategoryListing', () => {
 
         const result = await readCategoryListing(adapter, 'my-store', 'project');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             const content = result.value.contents[0];
             expect(content).toBeDefined();
             const text = getTextContent(content);
@@ -582,8 +571,8 @@ describe('readCategoryListing', () => {
 
         const result = await readCategoryListing(adapter, 'my-store', 'project');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             const content = result.value.contents[0];
             expect(content).toBeDefined();
             const text = getTextContent(content);
@@ -629,8 +618,8 @@ describe('listResources', () => {
 
         const result = await listResources(config);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.resources.length).toBeGreaterThan(0);
         }
     });
@@ -652,8 +641,8 @@ describe('listResources', () => {
 
         const result = await listResources(config);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             const rootResource = result.value.resources.find((r) =>
                 r.name.includes('Memory Store'),
             );
@@ -680,8 +669,8 @@ describe('listResources', () => {
 
         const result = await listResources(config);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             const categoryResource = result.value.resources.find(
                 (r) => r.name === 'Category: project',
             );
@@ -708,8 +697,8 @@ describe('listResources', () => {
 
         const result = await listResources(config);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             const memoryResource = result.value.resources.find(
                 (r) => r.name === 'Memory: project/memory-resource',
             );
@@ -736,8 +725,8 @@ describe('listResources', () => {
 
         const result = await listResources(config);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             const subResource = result.value.resources.find(
                 (r) => r.name === 'Category: project/sub',
             );
@@ -752,8 +741,8 @@ describe('listResources', () => {
 
         const result = await listResources(config);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // Should still have root resource
             expect(result.value.resources.length).toBe(1);
             expect(result.value.resources[0]!.name).toContain('Memory Store');
@@ -799,8 +788,8 @@ describe('listResources', () => {
 
         const result = await listResources(config);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             const categoryNames = result.value.resources
                 .filter((r) => r.name.startsWith('Category:'))
                 .map((r) => r.name);
@@ -817,8 +806,8 @@ describe('listResources', () => {
 
         const result = await listResources(config);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.resources).toHaveLength(1);
             expect(result.value.resources[0]!.name).toContain('Memory Store');
         }
@@ -841,8 +830,8 @@ describe('listResources', () => {
 
         const result = await listResources(config);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             const categoryResource = result.value.resources.find(
                 (r) => r.name === 'Category: custom',
             );
@@ -881,7 +870,7 @@ describe('error handling', () => {
 
     beforeEach(async () => {
         testDir = await createTestDir();
-        storeRoot = join(testDir, 'default');
+        storeRoot = join(testDir, MEMORY_SUBDIR);
         await mkdir(storeRoot, { recursive: true });
         adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
     });
@@ -894,21 +883,21 @@ describe('error handling', () => {
         // The path validation should reject invalid characters
         const result = await readMemoryContent(adapter, 'default', 'project/invalid..path');
 
-        expect(result.ok).toBe(false);
+        expect(result.ok()).toBe(false);
     });
 
     it('should handle path traversal attempts', async () => {
         const result = await readMemoryContent(adapter, 'default', 'project/../../../etc/passwd');
 
-        expect(result.ok).toBe(false);
+        expect(result.ok()).toBe(false);
     });
 
     it('should handle empty store name', async () => {
         const config = createTestConfig(testDir);
         const result = parseUriVariables({ store: '', 'path*': 'project/memory' }, config);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             // Empty store should fall back to default
             expect(result.value.store).toBe('default');
         }
@@ -927,7 +916,7 @@ describe('resource workflow', () => {
     beforeEach(async () => {
         testDir = await createTestDir();
         config = createTestConfig(testDir);
-        storeRoot = join(testDir, 'default');
+        storeRoot = join(testDir, MEMORY_SUBDIR);
         await mkdir(storeRoot, { recursive: true });
         // Create the store registry file needed by listResources
         await createStoreRegistry(testDir, 'default');
@@ -952,13 +941,13 @@ describe('resource workflow', () => {
 
         // Step 1: List all resources
         const listResult = await listResources(config);
-        expect(listResult.ok).toBe(true);
+        expect(listResult.ok()).toBe(true);
 
         // Step 2: Browse category listing
         const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
         const categoryResult = await readCategoryListing(adapter, 'default', 'project');
-        expect(categoryResult.ok).toBe(true);
-        if (categoryResult.ok) {
+        expect(categoryResult.ok()).toBe(true);
+        if (categoryResult.ok()) {
             const content = categoryResult.value.contents[0];
             expect(content).toBeDefined();
             const text = getTextContent(content);
@@ -969,8 +958,8 @@ describe('resource workflow', () => {
 
         // Step 3: Read specific memory
         const memoryResult = await readMemoryContent(adapter, 'default', 'project/workflow-memory');
-        expect(memoryResult.ok).toBe(true);
-        if (memoryResult.ok) {
+        expect(memoryResult.ok()).toBe(true);
+        if (memoryResult.ok()) {
             const text = getTextContent(memoryResult.value.contents[0]);
             expect(text).toBe('Workflow test content');
         }
@@ -992,18 +981,18 @@ describe('resource workflow', () => {
 
         // Check each level
         const level1Result = await readCategoryListing(adapter, 'default', 'project');
-        expect(level1Result.ok).toBe(true);
+        expect(level1Result.ok()).toBe(true);
 
         const level2Result = await readCategoryListing(adapter, 'default', 'project/level1');
-        expect(level2Result.ok).toBe(true);
+        expect(level2Result.ok()).toBe(true);
 
         const memoryResult = await readMemoryContent(
             adapter,
             'default',
             'project/level1/level2/deep-memory',
         );
-        expect(memoryResult.ok).toBe(true);
-        if (memoryResult.ok) {
+        expect(memoryResult.ok()).toBe(true);
+        if (memoryResult.ok()) {
             const text = getTextContent(memoryResult.value.contents[0]);
             expect(text).toBe('Deep nested content');
         }

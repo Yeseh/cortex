@@ -13,8 +13,8 @@ describe('store registry parsing', () => {
 
         const result = parseStoreRegistry(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toEqual({
                 primary: { path: '/var/lib/cortex' },
                 secondary: { path: '/var/lib/cortex-secondary' },
@@ -33,8 +33,8 @@ describe('store registry parsing', () => {
 
         const result = parseStoreRegistry(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toEqual({
                 local: { path: './data/.cortex' },
                 global: { path: 'C:/Cortex Global' },
@@ -51,8 +51,8 @@ describe('store registry parsing', () => {
 
         const result = parseStoreRegistry(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_STORES_SECTION');
             expect(result.error.line).toBe(1);
         }
@@ -67,8 +67,8 @@ describe('store registry parsing', () => {
 
         const result = parseStoreRegistry(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('UNEXPECTED_ENTRY');
             expect(result.error.line).toBe(2);
         }
@@ -84,8 +84,8 @@ describe('store registry parsing', () => {
 
         const result = parseStoreRegistry(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('DUPLICATE_STORE_NAME');
             expect(result.error.store).toBe('primary');
         }
@@ -100,8 +100,8 @@ describe('store registry parsing', () => {
 
         const result = parseStoreRegistry(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('MISSING_STORE_PATH');
             expect(result.error.store).toBe('primary');
         }
@@ -114,8 +114,8 @@ describe('store registry parsing', () => {
 
         const result = parseStoreRegistry(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_STORE_PATH');
             expect(result.error.store).toBe('primary');
         }
@@ -131,8 +131,8 @@ describe('store registry parsing', () => {
 
         const result = parseStoreRegistry(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('UNEXPECTED_ENTRY');
             expect(result.error.line).toBe(4);
         }
@@ -145,8 +145,8 @@ describe('store registry parsing', () => {
 
         const result = parseStoreRegistry(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_STORE_PATH');
             expect(result.error.store).toBe('primary');
         }
@@ -164,8 +164,8 @@ describe('description field parsing', () => {
 
         const result = parseStoreRegistry(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.default?.description).toBe('Default store for general memories');
         }
     });
@@ -180,8 +180,8 @@ describe('description field parsing', () => {
 
         const result = parseStoreRegistry(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.default?.description).toBe('Default store for general memories');
             expect(result.value.default?.path).toBe('/data/default');
         }
@@ -196,8 +196,8 @@ describe('description field parsing', () => {
 
         const result = parseStoreRegistry(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.default?.path).toBe('/data/default');
             expect(result.value.default?.description).toBeUndefined();
         }
@@ -213,8 +213,8 @@ describe('description field parsing', () => {
 
         const result = parseStoreRegistry(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.default?.description).toBe('');
         }
     });
@@ -229,8 +229,8 @@ describe('description field parsing', () => {
 
         const result = parseStoreRegistry(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.default?.description).toBe('A store with "special" chars');
         }
     });
@@ -247,8 +247,8 @@ describe('description field parsing', () => {
 
         const result = parseStoreRegistry(raw);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.default?.description).toBe('The default store');
             expect(result.value.project?.path).toBe('/data/project');
             expect(result.value.project?.description).toBeUndefined();
@@ -266,8 +266,8 @@ describe('description field parsing', () => {
 
         const result = parseStoreRegistry(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('UNEXPECTED_ENTRY');
             expect(result.error.store).toBe('default');
         }
@@ -283,8 +283,8 @@ describe('description field parsing', () => {
 
         const result = parseStoreRegistry(raw);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('UNEXPECTED_ENTRY');
         }
     });
@@ -298,8 +298,8 @@ describe('description field serialization', () => {
 
         const result = serializeStoreRegistry(registry);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toContain('description: "A test store"');
         }
     });
@@ -311,8 +311,8 @@ describe('description field serialization', () => {
 
         const result = serializeStoreRegistry(registry);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).not.toContain('description');
         }
     });
@@ -324,8 +324,8 @@ describe('description field serialization', () => {
 
         const result = serializeStoreRegistry(registry);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toContain('description: ""');
         }
     });
@@ -337,14 +337,14 @@ describe('description field serialization', () => {
         };
 
         const serialized = serializeStoreRegistry(original);
-        expect(serialized.ok).toBe(true);
-        if (!serialized.ok) {
+        expect(serialized.ok()).toBe(true);
+        if (!serialized.ok()) {
             return;
         }
 
         const parsed = parseStoreRegistry(serialized.value);
-        expect(parsed.ok).toBe(true);
-        if (parsed.ok) {
+        expect(parsed.ok()).toBe(true);
+        if (parsed.ok()) {
             expect(parsed.value.alpha?.path).toBe('/data/alpha');
             expect(parsed.value.alpha?.description).toBe('Alpha store');
             expect(parsed.value.beta?.path).toBe('/data/beta');
@@ -362,8 +362,8 @@ describe('resolveStorePath', () => {
 
         const result = resolveStorePath(registry, 'default');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toBe('/data/default');
         }
     });
@@ -375,8 +375,8 @@ describe('resolveStorePath', () => {
 
         const result = resolveStorePath(registry, 'unknown');
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('STORE_NOT_FOUND');
             expect(result.error.store).toBe('unknown');
             expect(result.error.message).toContain("'unknown'");
@@ -388,8 +388,8 @@ describe('resolveStorePath', () => {
 
         const result = resolveStorePath(registry, 'default');
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('STORE_NOT_FOUND');
         }
     });
@@ -401,8 +401,8 @@ describe('resolveStorePath', () => {
 
         const result = resolveStorePath(registry, 'default');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toBe('/data/default');
         }
     });

@@ -1,8 +1,11 @@
 memories:
   - path: map/storage-fs/concepts
-    token_estimate: 309
+    token_estimate: 319
+    updated_at: 2026-02-05T19:15:56.049Z
   - path: map/storage-fs/files
-    token_estimate: 326
+    token_estimate: 333
+    updated_at: 2026-02-05T19:15:23.897Z
   - path: map/storage-fs/summary-index
-    token_estimate: 73
+    token_estimate: 74
+    updated_at: 2026-02-13T19:56:05.514Z
 subcategories: []

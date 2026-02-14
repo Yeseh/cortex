@@ -59,7 +59,7 @@ export const registerStoreTools = (server: McpServer, config: ServerConfig): voi
         async () => {
             const registryPath = path.join(config.dataPath, 'stores.yaml');
             const result = await listStoresFromRegistry(registryPath);
-            if (!result.ok) {
+            if (!result.ok()) {
                 return {
                     content: [{ type: 'text', text: `Error: ${result.error.message}` }],
                     isError: true,
@@ -84,7 +84,7 @@ export const registerStoreTools = (server: McpServer, config: ServerConfig): voi
         },
         async ({ name }) => {
             const result = await createStore(config.dataPath, name);
-            if (!result.ok) {
+            if (!result.ok()) {
                 return {
                     content: [{ type: 'text', text: `Error: ${result.error.message}` }],
                     isError: true,

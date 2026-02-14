@@ -9,6 +9,9 @@
  * @module core/index/types
  */
 
+import type { CategoryPath } from '@/category/category-path';
+import type { MemoryPath } from '@/memory';
+
 /**
  * Entry for a memory within a category index.
  *
@@ -30,7 +33,7 @@
  */
 export interface IndexMemoryEntry {
     /** Full path to the memory (e.g., "project/cortex/conventions") */
-    path: string;
+    path: MemoryPath;
     /** Estimated token count for the memory content */
     tokenEstimate: number;
     /** Optional brief summary of memory contents (for listing displays) */
@@ -60,7 +63,7 @@ export interface IndexMemoryEntry {
  */
 export interface IndexSubcategoryEntry {
     /** Full path to the subcategory (e.g., "project/cortex") */
-    path: string;
+    path: CategoryPath;
     /** Total number of memories in this subcategory */
     memoryCount: number;
     /** Optional description (max 500 chars) for the subcategory */

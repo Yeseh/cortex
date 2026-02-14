@@ -18,12 +18,12 @@
 
 import { Command } from '@commander-js/extra-typings';
 
-import { addCommand } from './add/command.ts';
-import { showCommand } from './show/command.ts';
-import { updateCommand } from './update/command.ts';
-import { removeCommand } from './remove/command.ts';
-import { moveCommand } from './move/command.ts';
-import { listCommand } from './list/command.ts';
+import { addCommand } from './add.ts';
+import { showCommand } from './show.ts';
+import { updateCommand } from './update.ts';
+import { removeCommand } from './remove.ts';
+import { moveCommand } from './move.ts';
+import { listCommand } from './list.ts';
 
 /**
  * The `memory` command group.

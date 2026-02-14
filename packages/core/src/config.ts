@@ -5,7 +5,7 @@
 import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { isAbsolute, resolve } from 'node:path';
-import type { Result } from './types.ts';
+import { type Result, ok, err } from './result.ts';
 
 export type OutputFormat = 'yaml' | 'json';
 
@@ -36,9 +36,6 @@ export interface ConfigLoadOptions {
     localConfigPath?: string;
 }
 
-const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
-const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
-
 const configKeys = new Set([
     'output_format',
     'auto_summary_threshold',
@@ -54,21 +51,19 @@ const isNotFoundError = (error: unknown): boolean =>
 const parseScalarValue = (raw: string): string => {
     const trimmed = raw.trim();
     if (!trimmed || trimmed.startsWith('#')) {
-        return ''; 
+        return '';
     }
     const quotedMatch = /^(['"])(.*)\1(\s+#.*)?$/.exec(trimmed);
     if (quotedMatch) {
-        return quotedMatch[2] ?? ''; 
+        return quotedMatch[2] ?? '';
     }
     const commentMatch = /^(.*?)(\s+#.*)?$/.exec(trimmed);
     return (commentMatch?.[1] ?? '').trim();
 };
 
-const parseOutputFormat = (
-    value: string, line: number,
-): Result<OutputFormat, ConfigLoadError> => {
+const parseOutputFormat = (value: string, line: number): Result<OutputFormat, ConfigLoadError> => {
     if (value === 'yaml' || value === 'json') {
-        return ok(value); 
+        return ok(value);
     }
     return err({
         code: 'CONFIG_VALIDATION_FAILED',
@@ -78,15 +73,13 @@ const parseOutputFormat = (
     });
 };
 
-const parseBoolean = (
-    value: string, line: number,
-): Result<boolean, ConfigLoadError> => {
+const parseBoolean = (value: string, line: number): Result<boolean, ConfigLoadError> => {
     const normalized = value.trim().toLowerCase();
     if (normalized === 'true') {
-        return ok(true); 
+        return ok(true);
     }
     if (normalized === 'false') {
-        return ok(false); 
+        return ok(false);
     }
     return err({
         code: 'CONFIG_VALIDATION_FAILED',
@@ -96,9 +89,7 @@ const parseBoolean = (
     });
 };
 
-const parseNumber = (
-    value: string, line: number,
-): Result<number, ConfigLoadError> => {
+const parseNumber = (value: string, line: number): Result<number, ConfigLoadError> => {
     const trimmed = value.trim();
     const parsed = Number(trimmed);
     if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
@@ -107,7 +98,7 @@ const parseNumber = (
             message: 'auto_summary_threshold must be a whole number.',
             field: 'auto_summary_threshold',
             line,
-        }); 
+        });
     }
     if (parsed < 0) {
         return err({
@@ -115,7 +106,7 @@ const parseNumber = (
             message: 'auto_summary_threshold must be zero or greater.',
             field: 'auto_summary_threshold',
             line,
-        }); 
+        });
     }
     return ok(parsed);
 };
@@ -130,7 +121,7 @@ const parseConfigLine = (
             code: 'CONFIG_PARSE_FAILED',
             message: 'Invalid config entry.',
             line: lineNumber,
-        }); 
+        });
     }
     const key = match[1]?.trim();
     if (!key) {
@@ -138,7 +129,7 @@ const parseConfigLine = (
             code: 'CONFIG_PARSE_FAILED',
             message: 'Invalid config entry.',
             line: lineNumber,
-        }); 
+        });
     }
     return ok({ key, value: match[2] ?? '' });
 };
@@ -151,31 +142,25 @@ const applyConfigValue = (
 ): Result<void, ConfigLoadError> => {
     switch (key) {
         case 'output_format': {
-            const parsed = parseOutputFormat(
-                rawValue, lineNumber,
-            );
-            if (!parsed.ok) {
-                return parsed; 
+            const parsed = parseOutputFormat(rawValue, lineNumber);
+            if (!parsed.ok()) {
+                return parsed;
             }
             config.outputFormat = parsed.value;
             return ok(undefined);
         }
         case 'auto_summary_threshold': {
-            const parsed = parseNumber(
-                rawValue, lineNumber,
-            );
-            if (!parsed.ok) {
-                return parsed; 
+            const parsed = parseNumber(rawValue, lineNumber);
+            if (!parsed.ok()) {
+                return parsed;
             }
             config.autoSummaryThreshold = parsed.value;
             return ok(undefined);
         }
         case 'strict_local': {
-            const parsed = parseBoolean(
-                rawValue, lineNumber,
-            );
-            if (!parsed.ok) {
-                return parsed; 
+            const parsed = parseBoolean(rawValue, lineNumber);
+            if (!parsed.ok()) {
+                return parsed;
             }
             config.strictLocal = parsed.value;
             config.strict_local = parsed.value;
@@ -183,7 +168,7 @@ const applyConfigValue = (
         }
         default:
             return ok(undefined);
-    } 
+    }
 };
 
 const validateConfigKey = (
@@ -197,7 +182,7 @@ const validateConfigKey = (
             message: 'Config keys must be lowercase snake_case (e.g. output_format).',
             field: key,
             line: lineNumber,
-        }); 
+        });
     }
     if (!configKeys.has(key)) {
         return err({
@@ -205,7 +190,7 @@ const validateConfigKey = (
             message: `Unsupported config field: ${key}. Supported fields: output_format, auto_summary_threshold, strict_local.`,
             field: key,
             line: lineNumber,
-        }); 
+        });
     }
     if (seenKeys.has(key)) {
         return err({
@@ -213,7 +198,7 @@ const validateConfigKey = (
             message: `Duplicate config field: ${key}.`,
             field: key,
             line: lineNumber,
-        }); 
+        });
     }
     return ok(undefined);
 };
@@ -225,7 +210,7 @@ const parseConfigValue = (
 ): Result<string, ConfigLoadError> => {
     const parsed = parseScalarValue(rawValue);
     if (parsed) {
-        return ok(parsed); 
+        return ok(parsed);
     }
     return err({
         code: 'CONFIG_VALIDATION_FAILED',
@@ -235,26 +220,23 @@ const parseConfigValue = (
     });
 };
 
-const readAndParseConfig = async (path: string)
-: Promise<Result<CortexConfig, ConfigLoadError>> => {
+const readAndParseConfig = async (path: string): Promise<Result<CortexConfig, ConfigLoadError>> => {
     const readResult = await readConfigFile(path);
-    if (!readResult.ok) {
-        return readResult; 
+    if (!readResult.ok()) {
+        return readResult;
     }
     if (!readResult.value) {
-        return ok({}); 
+        return ok({});
     }
     const parsed = parseConfig(readResult.value);
-    if (!parsed.ok) {
-        return err({ ...parsed.error, path }); 
+    if (!parsed.ok()) {
+        return err({ ...parsed.error, path });
     }
     return ok(parsed.value);
 };
 
 export const parseConfig = (raw: string): Result<CortexConfig, ConfigLoadError> => {
-    const normalized = raw.replace(
-        /\r\n/g, '\n',
-    );
+    const normalized = raw.replace(/\r\n/g, '\n');
     const lines = normalized.split('\n');
     const config: CortexConfig = {};
     const seenKeys = new Set<string>();
@@ -262,64 +244,49 @@ export const parseConfig = (raw: string): Result<CortexConfig, ConfigLoadError> 
     for (let index = 0; index < lines.length; index += 1) {
         const rawLine = lines[index];
         if (rawLine === undefined) {
-            continue; 
+            continue;
         }
         const lineNumber = index + 1;
         const trimmed = rawLine.trim();
         if (!trimmed || trimmed.startsWith('#')) {
-            continue; 
+            continue;
         }
 
-        const parsedLine = parseConfigLine(
-            rawLine, lineNumber,
-        );
-        if (!parsedLine.ok) {
-            return parsedLine; 
+        const parsedLine = parseConfigLine(rawLine, lineNumber);
+        if (!parsedLine.ok()) {
+            return parsedLine;
         }
         const key = parsedLine.value.key;
-        const validated = validateConfigKey(
-            key, lineNumber, seenKeys,
-        );
-        if (!validated.ok) {
-            return validated; 
+        const validated = validateConfigKey(key, lineNumber, seenKeys);
+        if (!validated.ok()) {
+            return validated;
         }
         seenKeys.add(key);
 
-        const rawValue = parseConfigValue(
-            parsedLine.value.value, key, lineNumber,
-        );
-        if (!rawValue.ok) {
-            return rawValue; 
+        const rawValue = parseConfigValue(parsedLine.value.value, key, lineNumber);
+        if (!rawValue.ok()) {
+            return rawValue;
         }
-        const applied = applyConfigValue(
-            config, key, rawValue.value, lineNumber,
-        );
-        if (!applied.ok) {
-            return applied; 
+        const applied = applyConfigValue(config, key, rawValue.value, lineNumber);
+        if (!applied.ok()) {
+            return applied;
         }
     }
 
     return ok(config);
 };
 
-const resolveConfigPath = (
-    cwd: string, path: string,
-): string =>
-    isAbsolute(path) ? path : resolve(
-        cwd, path,
-    );
+const resolveConfigPath = (cwd: string, path: string): string =>
+    isAbsolute(path) ? path : resolve(cwd, path);
 
-const readConfigFile = async (path: string)
-: Promise<Result<string | null, ConfigLoadError>> => {
+const readConfigFile = async (path: string): Promise<Result<string | null, ConfigLoadError>> => {
     try {
-        const contents = await readFile(
-            path, 'utf8',
-        );
+        const contents = await readFile(path, 'utf8');
         return ok(contents);
     }
     catch (error) {
         if (isNotFoundError(error)) {
-            return ok(null); 
+            return ok(null);
         }
         return err({
             code: 'CONFIG_READ_FAILED',
@@ -327,33 +294,30 @@ const readConfigFile = async (path: string)
             path,
             cause: error,
         });
-    } 
+    }
 };
 
-export const loadConfig = async (options: ConfigLoadOptions = {})
-: Promise<Result<CortexConfig, ConfigLoadError>> => {
+export const loadConfig = async (
+    options: ConfigLoadOptions = {},
+): Promise<Result<CortexConfig, ConfigLoadError>> => {
     const cwd = options.cwd ?? process.cwd();
     const globalPath = resolveConfigPath(
         cwd,
-        options.globalConfigPath ?? resolve(
-            homedir(), '.config', 'cortex', 'config.yaml',
-        ),
+        options.globalConfigPath ?? resolve(homedir(), '.config', 'cortex', 'config.yaml'),
     );
     const localPath = resolveConfigPath(
         cwd,
-        options.localConfigPath ?? resolve(
-            cwd, '.cortex', 'config.yaml',
-        ),
+        options.localConfigPath ?? resolve(cwd, '.cortex', 'config.yaml'),
     );
 
     const globalConfig = await readAndParseConfig(globalPath);
-    if (!globalConfig.ok) {
-        return globalConfig; 
+    if (!globalConfig.ok()) {
+        return globalConfig;
     }
 
     const localConfig = await readAndParseConfig(localPath);
-    if (!localConfig.ok) {
-        return localConfig; 
+    if (!localConfig.ok()) {
+        return localConfig;
     }
 
     return ok({

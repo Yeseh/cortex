@@ -1,8 +1,10 @@
 memories:
   - path: standards/typescript/function-signatures
-    token_estimate: 155
+    token_estimate: 161
+    updated_at: 2026-01-27T20:21:03.674Z
   - path: standards/typescript/general
     token_estimate: 114
+    updated_at: 2026-01-29T19:53:54.872Z
 subcategories:
   - path: standards/typescript/types-vs-interfaces
     memory_count: 3

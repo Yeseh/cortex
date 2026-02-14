@@ -11,7 +11,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { z } from 'zod';
-import type { Result } from '@yeseh/cortex-core';
+import { err, ok, type Result } from '@yeseh/cortex-core';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 
 /**
@@ -101,7 +101,7 @@ export interface ListStoresResult {
  * @example
  * ```ts
  * const result = await listStores('./.cortex-data');
- * if (result.ok) {
+ * if (result.ok()) {
  *   console.log('Stores:', result.value); // ['default', 'project-a']
  * }
  * ```
@@ -113,22 +113,19 @@ export const listStores = async (dataPath: string)
             dataPath, { withFileTypes: true },
         );
         const stores = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
-        return { ok: true, value: stores };
+        return ok(stores);
     }
     catch (error) {
     // Handle ENOENT (data path doesn't exist yet) by returning empty array
         if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-            return { ok: true, value: [] }; 
+            return ok([]); 
         }
-        return {
-            ok: false,
-            error: {
-                code: 'STORE_LIST_FAILED',
-                message: `Failed to list stores: ${error instanceof Error ? error.message : String(error)}`,
-                cause: error,
-            },
-        };
-    } 
+        return err({
+            code: 'STORE_LIST_FAILED',
+            message: `Failed to list stores: ${error instanceof Error ? error.message : String(error)}`,
+            cause: error,
+        });
+    }
 };
 
 /**
@@ -144,7 +141,7 @@ export const listStores = async (dataPath: string)
  * @example
  * ```ts
  * const result = await createStore('./.cortex-data', 'my-project');
- * if (result.ok) {
+ * if (result.ok()) {
  *   console.log('Store created successfully');
  * } else if (result.error.code === 'STORE_ALREADY_EXISTS') {
  *   console.log('Store already exists');
@@ -158,13 +155,10 @@ export const createStore = async (
     // Validate store name format
     const nameValidation = storeNameSchema.safeParse(name);
     if (!nameValidation.success) {
-        return {
-            ok: false,
-            error: {
-                code: 'INVALID_STORE_NAME',
-                message: nameValidation.error.issues.map((i) => i.message).join('; '),
-            },
-        }; 
+        return err({
+            code: 'INVALID_STORE_NAME',
+            message: nameValidation.error.issues.map((i) => i.message).join('; '),
+        });
     }
 
     const storePath = path.join(
@@ -175,26 +169,20 @@ export const createStore = async (
     try {
         const stat = await fs.stat(storePath);
         if (stat.isDirectory()) {
-            return {
-                ok: false,
-                error: {
-                    code: 'STORE_ALREADY_EXISTS',
-                    message: `Store '${name}' already exists`,
-                },
-            }; 
+            return err({
+                code: 'STORE_ALREADY_EXISTS',
+                message: `Store '${name}' already exists`,
+            });
         }
     }
     catch (error) {
         // ENOENT is expected - store doesn't exist yet
         if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) {
-            return {
-                ok: false,
-                error: {
-                    code: 'STORE_CREATE_FAILED',
-                    message: `Failed to check store existence: ${error instanceof Error ? error.message : String(error)}`,
-                    cause: error,
-                },
-            }; 
+            return err({
+                code: 'STORE_CREATE_FAILED',
+                message: `Failed to check store existence: ${error instanceof Error ? error.message : String(error)}`,
+                cause: error,
+            });
         } 
     }
 
@@ -203,17 +191,14 @@ export const createStore = async (
         await fs.mkdir(
             storePath, { recursive: true },
         );
-        return { ok: true, value: undefined };
+        return ok(undefined);
     }
     catch (error) {
-        return {
-            ok: false,
-            error: {
-                code: 'STORE_CREATE_FAILED',
-                message: `Failed to create store '${name}': ${error instanceof Error ? error.message : String(error)}`,
-                cause: error,
-            },
-        }; 
+        return err({
+            code: 'STORE_CREATE_FAILED',
+            message: `Failed to create store '${name}': ${error instanceof Error ? error.message : String(error)}`,
+            cause: error,
+        }); 
     }
 };
 
@@ -230,7 +215,7 @@ export const createStore = async (
  * @example
  * ```ts
  * const result = await listStoresFromRegistry('/path/to/stores.yaml');
- * if (result.ok) {
+ * if (result.ok()) {
  *   console.log('Stores:', result.value.stores);
  *   // [{ name: 'default', path: '/path/to/default', description: 'Default store' }]
  * }
@@ -242,19 +227,16 @@ export const listStoresFromRegistry = async (
     const registry = new FilesystemRegistry(registryPath);
     const loadResult = await registry.load();
 
-    if (!loadResult.ok) {
+    if (!loadResult.ok()) {
         // Handle REGISTRY_MISSING as empty list (like allowMissing: true did)
         if (loadResult.error.code === 'REGISTRY_MISSING') {
-            return { ok: true, value: { stores: [] } };
+            return ok({ stores: [] });
         }
-        return {
-            ok: false,
-            error: {
-                code: 'STORE_LIST_FAILED',
-                message: `Failed to load store registry: ${loadResult.error.message}`,
-                cause: loadResult.error,
-            },
-        };
+        return err({
+            code: 'STORE_LIST_FAILED',
+            message: `Failed to load store registry: ${loadResult.error.message}`,
+            cause: loadResult.error,
+        });
     }
 
     const stores: StoreInfo[] = Object.entries(loadResult.value)
@@ -269,5 +251,5 @@ export const listStoresFromRegistry = async (
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
 
-    return { ok: true, value: { stores } };
+    return ok({ stores });
 };

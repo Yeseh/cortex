@@ -14,7 +14,7 @@
  * process.env.CORTEX_LOG_LEVEL = 'debug';
  *
  * const result = loadServerConfig();
- * if (result.ok) {
+ * if (result.ok()) {
  *   console.log(`Port: ${result.value.port}`); // 8080
  * }
  * ```
@@ -23,7 +23,7 @@
 import { z } from 'zod';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { Result } from '@yeseh/cortex-core';
+import { err, ok, type Result } from '@yeseh/cortex-core';
 /**
  * Default cortex config directory path.
  *
@@ -187,7 +187,7 @@ export interface ConfigLoadError {
  * @example
  * ```ts
  * const result = loadServerConfig();
- * if (result.ok) {
+ * if (result.ok()) {
  *   console.log(`Server will listen on ${result.value.host}:${result.value.port}`);
  *   console.log(`Memory stored at: ${getMemoryPath(result.value)}`);
  * } else {
@@ -214,15 +214,12 @@ export const loadServerConfig = (): Result<ServerConfig, ConfigLoadError> => {
     const result = schema.safeParse(rawConfig);
 
     if (!result.success) {
-        return {
-            ok: false,
-            error: {
-                code: 'CONFIG_VALIDATION_FAILED',
-                message: 'Invalid server configuration.',
-                issues: result.error.issues,
-            },
-        };
+        return err({
+            code: 'CONFIG_VALIDATION_FAILED',
+            message: 'Invalid server configuration.',
+            issues: result.error.issues,
+        });
     }
 
-    return { ok: true, value: result.data };
+    return ok(result.data);
 };

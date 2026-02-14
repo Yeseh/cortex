@@ -11,10 +11,17 @@
  * @see {@link FilesystemIndexStorage} - Related index storage implementation
  */
 
-import type { MemorySlugPath, Result } from '@yeseh/cortex-core';
+import { ok, err, Memory, type Result, type MemoryPath } from '@yeseh/cortex-core';
 import type { MemoryStorage, StorageAdapterError } from '@yeseh/cortex-core/storage';
 import type { FilesystemContext } from './types.ts';
-import { readMemory, writeMemory, removeMemory, moveMemory } from './memories.ts';
+import {
+    parseMemory,
+    readMemory,
+    removeMemory,
+    moveMemory,
+    serializeMemory,
+    writeMemory,
+} from './memories.ts';
 
 /**
  * Filesystem-based implementation of the MemoryStorage interface.
@@ -40,16 +47,21 @@ import { readMemory, writeMemory, removeMemory, moveMemory } from './memories.ts
  * const storage = new FilesystemMemoryStorage(ctx);
  *
  * // Write a memory file
- * await storage.write('project/cortex/architecture', `---
- * tags: [design, overview]
- * ---
- * # Architecture Overview
- * This document describes the system architecture...
- * `);
+ * const memoryResult = Memory.init('project/cortex/architecture', {
+ *   createdAt: new Date(),
+ *   updatedAt: new Date(),
+ *   tags: ['design', 'overview'],
+ *   source: 'user',
+ *   citations: [],
+ * }, '# Architecture Overview\n');
+ * if (memoryResult.ok()) {
+ *   await storage.write(memoryResult.value);
+ * }
  *
  * // Read a memory file
- * const result = await storage.read('project/cortex/architecture');
- * if (result.ok && result.value !== null) {
+ * const pathResult = MemoryPath.fromPath('project/cortex/architecture');
+ * const result = pathResult.ok() ? await storage.read(pathResult.value) : null;
+ * if (result.ok() && result.value !== null) {
  *     console.log('Memory contents:', result.value);
  * }
  *
@@ -81,12 +93,12 @@ export class FilesystemMemoryStorage implements MemoryStorage {
      * Returns null (not an error) if the memory file does not exist.
      *
      * @param slugPath - Memory identifier path (e.g., "project/cortex/architecture")
-     * @returns Result with file contents as a string, or null if the memory does not exist
+     * @returns Result with a Memory object, or null if the memory does not exist
      *
      * @example
      * ```typescript
      * const result = await storage.read('project/cortex/config');
-     * if (result.ok) {
+     * if (result.ok()) {
      *     if (result.value !== null) {
      *         console.log('Found memory:', result.value);
      *     } else {
@@ -97,8 +109,37 @@ export class FilesystemMemoryStorage implements MemoryStorage {
      * }
      * ```
      */
-    async read(slugPath: MemorySlugPath): Promise<Result<string | null, StorageAdapterError>> {
-        return readMemory(this.ctx, slugPath);
+    async read(slugPath: MemoryPath): Promise<Result<Memory | null, StorageAdapterError>> {
+        const readResult = await readMemory(this.ctx, slugPath);
+        if (!readResult.ok()) {
+            return readResult;
+        }
+        if (!readResult.value) {
+            return ok(null);
+        }
+
+        const parsed = parseMemory(readResult.value);
+        if (!parsed.ok()) {
+            return err({
+                code: 'IO_READ_ERROR',
+                message: `Failed to parse memory file: ${slugPath}.`,
+                path: slugPath.toString(),
+                cause: parsed.error,
+            });
+        }
+
+        const memoryResult = Memory.init(slugPath, parsed.value.metadata, parsed.value.content);
+
+        if (!memoryResult.ok()) {
+            return err({
+                code: 'IO_READ_ERROR',
+                message: memoryResult.error.message,
+                path: slugPath.toString(),
+                cause: memoryResult.error,
+            });
+        }
+
+        return ok(memoryResult.value);
     }
 
     /**
@@ -110,8 +151,7 @@ export class FilesystemMemoryStorage implements MemoryStorage {
      * Note: This method only writes the file. To update category indexes
      * after writing, use {@link FilesystemIndexStorage.updateAfterMemoryWrite}.
      *
-     * @param slugPath - Memory identifier path (e.g., "project/cortex/architecture")
-     * @param contents - The content to write (typically Markdown with optional frontmatter)
+     * @param memory - The Memory object to serialize and write
      * @returns Result indicating success or failure
      *
      * @example
@@ -124,16 +164,22 @@ export class FilesystemMemoryStorage implements MemoryStorage {
      * `;
      *
      * const result = await storage.write('project/cortex/api', content);
-     * if (!result.ok) {
+     * if (!result.ok()) {
      *     console.error('Write failed:', result.error.message);
      * }
      * ```
      */
-    async write(
-        slugPath: MemorySlugPath,
-        contents: string,
-    ): Promise<Result<void, StorageAdapterError>> {
-        return writeMemory(this.ctx, slugPath, contents);
+    async write(memory: Memory): Promise<Result<void, StorageAdapterError>> {
+        const serialized = serializeMemory(memory);
+        if (!serialized.ok()) {
+            return err({
+                code: 'IO_WRITE_ERROR',
+                message: `Failed to serialize memory: ${memory.path}.`,
+                path: memory.path.toString(),
+                cause: serialized.error,
+            });
+        }
+        return writeMemory(this.ctx, memory.path, serialized.value);
     }
 
     /**
@@ -152,12 +198,12 @@ export class FilesystemMemoryStorage implements MemoryStorage {
      * ```typescript
      * // Remove a memory (succeeds even if it doesn't exist)
      * const result = await storage.remove('project/cortex/old-doc');
-     * if (!result.ok) {
+     * if (!result.ok()) {
      *     console.error('Remove failed:', result.error.message);
      * }
      * ```
      */
-    async remove(slugPath: MemorySlugPath): Promise<Result<void, StorageAdapterError>> {
+    async remove(slugPath: MemoryPath): Promise<Result<void, StorageAdapterError>> {
         return removeMemory(this.ctx, slugPath);
     }
 
@@ -182,14 +228,14 @@ export class FilesystemMemoryStorage implements MemoryStorage {
      *     'project/cortex/overview',
      *     'project/cortex/docs/overview'
      * );
-     * if (!result.ok) {
+     * if (!result.ok()) {
      *     console.error('Move failed:', result.error.message);
      * }
      * ```
      */
     async move(
-        sourceSlugPath: MemorySlugPath,
-        destinationSlugPath: MemorySlugPath,
+        sourceSlugPath: MemoryPath,
+        destinationSlugPath: MemoryPath,
     ): Promise<Result<void, StorageAdapterError>> {
         return moveMemory(this.ctx, sourceSlugPath, destinationSlugPath);
     }

@@ -31,8 +31,8 @@ describe('store resolution', () => {
             globalStorePath: join(tempDir, 'global'),
         });
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(normalizePath(result.value.root)).toBe(normalizePath(localStore));
             expect(result.value.scope).toBe('local');
         }
@@ -48,8 +48,8 @@ describe('store resolution', () => {
             globalStorePath: globalStore,
         });
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(normalizePath(result.value.root)).toBe(normalizePath(globalStore));
             expect(result.value.scope).toBe('global');
         }
@@ -66,8 +66,8 @@ describe('store resolution', () => {
             globalStorePath: 'stores/.cortex',
         });
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(normalizePath(result.value.root)).toBe(normalizePath(globalStore));
             expect(result.value.scope).toBe('global');
         }
@@ -85,8 +85,8 @@ describe('store resolution', () => {
             config: { strict_local: true },
         });
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('LOCAL_STORE_MISSING');
             expect(normalizePath(result.error.path!)).toBe(
                 normalizePath(join(cwd, '.cortex', 'memory')),
@@ -104,8 +104,8 @@ describe('store resolution', () => {
             globalStorePath: globalStore,
         });
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('GLOBAL_STORE_MISSING');
             expect(normalizePath(result.error.path!)).toBe(normalizePath(globalStore));
         }

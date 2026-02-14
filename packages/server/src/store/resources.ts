@@ -17,7 +17,7 @@ import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import type { ReadResourceResult } from '@modelcontextprotocol/sdk/types.js';
 import type { Variables } from '@modelcontextprotocol/sdk/shared/uriTemplate.js';
 import type { ServerConfig } from '../config.ts';
-import type { Result } from '@yeseh/cortex-core';
+import { err, ok, type Result } from '@yeseh/cortex-core';
 import { listStores, storeNameSchema } from './tools.ts';
 
 /**
@@ -71,26 +71,20 @@ export const getStoreCategories = async (
         const categories = entries
             .filter((entry) => entry.isDirectory())
             .map((entry) => entry.name);
-        return { ok: true, value: categories };
+        return ok(categories); 
     }
     catch (error) {
         if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-            return {
-                ok: false,
-                error: {
-                    code: 'STORE_NOT_FOUND',
-                    message: `Store '${storeName}' not found`,
-                },
-            }; 
+            return err({
+                code: 'STORE_NOT_FOUND',
+                message: `Store '${storeName}' not found`,
+            }); 
         }
-        return {
-            ok: false,
-            error: {
-                code: 'STORE_READ_FAILED',
-                message: `Failed to read store: ${error instanceof Error ? error.message : String(error)}`,
-                cause: error,
-            },
-        };
+        return err({
+            code: 'STORE_READ_FAILED',
+            message: `Failed to read store: ${error instanceof Error ? error.message : String(error)}`,
+            cause: error,
+        });
     }
 };
 
@@ -122,7 +116,7 @@ export const registerStoreResources = (
         async (): Promise<ReadResourceResult> => {
             const result = await listStores(config.dataPath);
             // MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
-            if (!result.ok) {
+            if (!result.ok()) {
                 throw new McpError(
                     ErrorCode.InternalError, result.error.message,
                 ); 
@@ -144,7 +138,7 @@ export const registerStoreResources = (
             // List all stores as resources for discovery
                 const result = await listStores(config.dataPath);
                 // MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
-                if (!result.ok) {
+                if (!result.ok()) {
                     throw new McpError(
                         ErrorCode.InternalError, result.error.message,
                     ); 
@@ -160,7 +154,7 @@ export const registerStoreResources = (
             complete: {
                 name: async (): Promise<string[]> => {
                     const result = await listStores(config.dataPath);
-                    if (!result.ok) return [];
+                    if (!result.ok()) return [];
                     return result.value;
                 },
             },
@@ -200,7 +194,7 @@ export const registerStoreResources = (
                 config.dataPath, storeName,
             );
             // MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
-            if (!result.ok) {
+            if (!result.ok()) {
                 const errorCode =
                     result.error.code === 'STORE_NOT_FOUND'
                         ? ErrorCode.InvalidParams

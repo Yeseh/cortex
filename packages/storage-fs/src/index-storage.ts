@@ -11,18 +11,18 @@
  * @see {@link FilesystemMemoryStorage} - Related memory storage implementation
  */
 
-import type { MemorySlugPath, Result } from '@yeseh/cortex-core';
-import type { IndexStorage, ReindexResult, StorageAdapterError, StorageIndexName } from '@yeseh/cortex-core/storage';
+import type { CategoryPath, Result } from '@yeseh/cortex-core';
+import { err, ok, type Memory } from '@yeseh/cortex-core/memory';
+import type { IndexStorage, ReindexResult, StorageAdapterError } from '@yeseh/cortex-core/storage';
 import type { CategoryIndex } from '@yeseh/cortex-core/index';
 import type { FilesystemContext } from './types.ts';
 import {
     readIndexFile,
     writeIndexFile,
     reindexCategoryIndexes,
-    updateCategoryIndexes,
+    updateCategoryIndexesFromMemory,
 } from './indexes.ts';
 import { parseIndex, serializeIndex } from './index-serialization.ts';
-import { ok, err } from './utils.ts';
 
 /**
  * Filesystem-based implementation of the IndexStorage interface.
@@ -47,16 +47,12 @@ import { ok, err } from './utils.ts';
  *
  * // Read a category index
  * const result = await indexStorage.read('project/cortex');
- * if (result.ok && result.value !== null) {
+ * if (result.ok() && result.value !== null) {
  *     console.log('Index contents:', result.value);
  * }
  *
  * // Update index after writing a memory
- * await indexStorage.updateAfterMemoryWrite(
- *     'project/cortex/architecture',
- *     '# Architecture\n...',
- *     { createWhenMissing: true }
- * );
+ * await indexStorage.updateAfterMemoryWrite(memory, { createWhenMissing: true });
  *
  * // Rebuild all indexes (expensive operation)
  * await indexStorage.reindex();
@@ -95,9 +91,9 @@ export class FilesystemIndexStorage implements IndexStorage {
       * - Passing an empty string reads the root index file.
       * - Missing index files return `ok(null)` rather than an error.
       */
-    async read(name: StorageIndexName): Promise<Result<CategoryIndex | null, StorageAdapterError>> {
+    async read(name: CategoryPath): Promise<Result<CategoryIndex | null, StorageAdapterError>> {
         const contents = await readIndexFile(this.ctx, name);
-        if (!contents.ok) {
+        if (!contents.ok()) {
             return contents;
         }
         if (!contents.value) {
@@ -105,11 +101,11 @@ export class FilesystemIndexStorage implements IndexStorage {
         }
 
         const parsed = parseIndex(contents.value);
-        if (!parsed.ok) {
+        if (!parsed.ok()) {
             return err({
                 code: 'INDEX_ERROR',
                 message: `Failed to parse category index at ${name}.`,
-                path: name,
+                path: name.toString(),
                 cause: parsed.error,
             });
         }
@@ -125,7 +121,7 @@ export class FilesystemIndexStorage implements IndexStorage {
       * @deprecated Prefer {@link read} which returns structured data.
       */
     async readIndexFile(
-        name: StorageIndexName,
+        name: CategoryPath,
     ): Promise<Result<CategoryIndex | null, StorageAdapterError>> {
         return this.read(name);
     }
@@ -154,19 +150,19 @@ export class FilesystemIndexStorage implements IndexStorage {
       * - Serialization failures surface as `INDEX_ERROR` results.
       */
     async write(
-        name: StorageIndexName,
+        name: CategoryPath, 
         contents: CategoryIndex,
     ): Promise<Result<void, StorageAdapterError>> {
         const serialized = serializeIndex(contents);
-        if (!serialized.ok) {
+        if (!serialized.ok()) {
             return err({
                 code: 'INDEX_ERROR',
                 message: `Failed to serialize category index at ${name}.`,
-                path: name,
+                path: name.toString(),
                 cause: serialized.error,
             });
         }
-        return writeIndexFile(this.ctx, name, serialized.value);
+        return writeIndexFile(this.ctx, name.toString(), serialized.value);
     }
 
     /**
@@ -178,7 +174,7 @@ export class FilesystemIndexStorage implements IndexStorage {
       * @deprecated Prefer {@link write} which accepts structured data.
       */
     async writeIndexFile(
-        name: StorageIndexName,
+        name: CategoryPath,
         contents: CategoryIndex,
     ): Promise<Result<void, StorageAdapterError>> {
         return this.write(name, contents);
@@ -196,7 +192,7 @@ export class FilesystemIndexStorage implements IndexStorage {
      * @example
      * ```typescript
      * const result = await storage.reindex();
-     * if (result.ok) {
+     * if (result.ok()) {
      *   console.log(result.value.warnings);
      * }
      * ```
@@ -215,18 +211,14 @@ export class FilesystemIndexStorage implements IndexStorage {
      * This method handles incremental index updates when a memory file
      * is created or modified, avoiding full reindex operations.
      *
-     * @param slugPath - Memory identifier path that was written
-     * @param contents - The content that was written
+    * @param memory - The memory object that was written
      * @param options - Optional settings for index behavior
      * @param options.createWhenMissing - Create index entries for new categories (default: true)
      * @returns Result indicating success or failure
      *
      * @example
      * ```typescript
-     * await storage.updateAfterMemoryWrite(
-     *   'standards/typescript/formatting',
-     *   '---\ncreated_at: 2024-01-01T00:00:00.000Z\n---\nUse Prettier.'
-     * );
+    * await storage.updateAfterMemoryWrite(memory);
      * ```
      *
      * @edgeCases
@@ -234,10 +226,10 @@ export class FilesystemIndexStorage implements IndexStorage {
      * - Set `createWhenMissing` to false to avoid creating new indexes.
      */
     async updateAfterMemoryWrite(
-        slugPath: MemorySlugPath,
-        contents: string,
+        memory: Memory,
         options?: { createWhenMissing?: boolean },
     ): Promise<Result<void, StorageAdapterError>> {
-        return updateCategoryIndexes(this.ctx, slugPath, contents, options);
+        return updateCategoryIndexesFromMemory(this.ctx, memory, options);
     }
 }
+

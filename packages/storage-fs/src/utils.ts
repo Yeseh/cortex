@@ -5,18 +5,8 @@
  */
 
 import { extname, isAbsolute, relative, resolve, sep } from 'node:path';
-import type { Result } from '@yeseh/cortex-core';
+import { err, ok, type Result } from '@yeseh/cortex-core';
 import type { StorageAdapterError } from '@yeseh/cortex-core/storage';
-
-/**
- * Creates a successful Result.
- */
-export const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
-
-/**
- * Creates a failed Result.
- */
-export const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 /**
  * Checks if an error is a "not found" filesystem error.

@@ -20,7 +20,7 @@ import { mkdir, writeFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import { Command } from '@commander-js/extra-typings';
-import { mapCoreError } from '../../errors.ts';
+import { throwCoreError } from '../../errors.ts';
 import { serializeOutput, type OutputFormat, type OutputInit, type OutputPayload } from '../../output.ts';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { initializeStore } from '@yeseh/cortex-core/store';
@@ -105,7 +105,7 @@ export async function handleInit(
 
     // Check if already initialized (unless --force is specified)
     if (!options.force && (await pathExists(indexPath))) {
-        mapCoreError({
+        throwCoreError({
             code: 'ALREADY_INITIALIZED',
             message: `Global config store already exists at ${globalStorePath}. Use --force to reinitialize.`,
         });
@@ -131,14 +131,14 @@ export async function handleInit(
             { categories: [...DEFAULT_CATEGORIES] },
         );
 
-        if (!result.ok) {
+        if (!result.ok()) {
             // Handle STORE_ALREADY_EXISTS during --force scenario
             if (result.error.code === 'STORE_ALREADY_EXISTS' && options.force) {
                 // Store exists, that's okay with --force
                 // The store already has proper structure, nothing more to do
             }
             else {
-                mapCoreError({
+                throwCoreError({
                     code: 'INIT_FAILED',
                     message: result.error.message,
                 });
@@ -147,7 +147,7 @@ export async function handleInit(
         }
     }
     catch {
-        mapCoreError({
+        throwCoreError({
             code: 'INIT_FAILED',
             message: `Failed to initialize global config store at ${globalStorePath}.`,
         });
@@ -163,8 +163,8 @@ export async function handleInit(
     // Output result
     const format: OutputFormat = (options.format as OutputFormat) ?? 'yaml';
     const outputSerialized = serializeOutput(output, format);
-    if (!outputSerialized.ok) {
-        mapCoreError({ code: 'SERIALIZE_FAILED', message: outputSerialized.error.message });
+    if (!outputSerialized.ok()) {
+        throwCoreError({ code: 'SERIALIZE_FAILED', message: outputSerialized.error.message });
         return;
     }
 
