@@ -2,7 +2,12 @@
  * Store registry parsing and validation
  */
 
-import type { Result } from '../types.ts';
+import { ok } from '@/result.ts';
+import type { StoreResult } from './result.ts';
+import {
+    storeError,
+    type StoreRegistryParseError,
+} from './result.ts';
 
 export interface StoreDefinition {
     path: string;
@@ -11,26 +16,9 @@ export interface StoreDefinition {
 
 export type StoreRegistry = Record<string, StoreDefinition>;
 
-export type StoreRegistryParseErrorCode =
-    | 'MISSING_STORES_SECTION'
-    | 'INVALID_STORES_SECTION'
-    | 'INVALID_STORE_NAME'
-    | 'DUPLICATE_STORE_NAME'
-    | 'MISSING_STORE_PATH'
-    | 'INVALID_STORE_PATH'
-    | 'UNEXPECTED_ENTRY';
+export type { StoreRegistryParseErrorCode, StoreRegistryParseError } from './result.ts';
 
-export interface StoreRegistryParseError {
-    code: StoreRegistryParseErrorCode;
-    message: string;
-    line?: number;
-    store?: string;
-}
-
-type SerializeRegistryResult = Result<string, StoreRegistrySerializeError>;
-
-const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
-const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
+type SerializeRegistryResult = StoreResult<string, StoreRegistrySerializeError>;
 
 const storeNameSegment = '[a-z0-9]+(?:-[a-z0-9]+)*';
 const storeNamePattern = new RegExp(`^${storeNameSegment}$`);
@@ -104,29 +92,25 @@ const validateStoreIndent = (
     indent: number,
     storesIndent: number,
     line: number,
-): Result<void, StoreRegistryParseError> => {
+): StoreResult<void, StoreRegistryParseError> => {
     if (mode === 'stores' && indent <= storesIndent) {
-        return err({
-            code: 'UNEXPECTED_ENTRY',
-            message: "Store entries must be indented under 'stores:'.",
+        return storeError('UNEXPECTED_ENTRY', "Store entries must be indented under 'stores:'.", {
             line,
         });
     }
     if (mode === 'root' && indent !== 0) {
-        return err({
-            code: 'UNEXPECTED_ENTRY',
-            message: 'Store entries must be at the top level.',
+        return storeError('UNEXPECTED_ENTRY', 'Store entries must be at the top level.', {
             line,
         });
     }
     return ok(undefined);
 };
 
-const finalizeStore = (state: RegistryState): Result<RegistryState, StoreRegistryParseError> => {
+const finalizeStore = (
+    state: RegistryState,
+): StoreResult<RegistryState, StoreRegistryParseError> => {
     if (state.currentStore && !state.currentStore.path) {
-        return err({
-            code: 'MISSING_STORE_PATH',
-            message: 'Store entry must include a path.',
+        return storeError('MISSING_STORE_PATH', 'Store entry must include a path.', {
             line: state.currentStore.line,
             store: state.currentStore.name,
         });
@@ -157,27 +141,23 @@ const handleStoreHeader = (
     storeName: string,
     indent: number,
     line: number,
-): Result<RegistryState, StoreRegistryParseError> => {
+): StoreResult<RegistryState, StoreRegistryParseError> => {
     const nextMode = state.mode === 'unknown' ? 'root' : state.mode;
     const indentResult = validateStoreIndent(nextMode, indent, state.storesIndent, line);
-    if (!indentResult.ok) {
+    if (!indentResult.ok()) {
         return indentResult;
     }
     const finalized = finalizeStore({ ...state, mode: nextMode });
-    if (!finalized.ok) {
+    if (!finalized.ok()) {
         return finalized;
     }
     if (!isValidStoreName(storeName)) {
-        return err({
-            code: 'INVALID_STORE_NAME',
-            message: 'Store names must be lowercase slugs.',
+        return storeError('INVALID_STORE_NAME', 'Store names must be lowercase slugs.', {
             line,
         });
     }
     if (finalized.value.registry[storeName]) {
-        return err({
-            code: 'DUPLICATE_STORE_NAME',
-            message: `Duplicate store name: ${storeName}.`,
+        return storeError('DUPLICATE_STORE_NAME', `Duplicate store name: ${storeName}.`, {
             line,
             store: storeName,
         });
@@ -195,42 +175,38 @@ const handlePathValue = (
     pathValue: string,
     indent: number,
     line: number,
-): Result<RegistryState, StoreRegistryParseError> => {
+): StoreResult<RegistryState, StoreRegistryParseError> => {
     if (!state.currentStore) {
         if (state.mode === 'unknown') {
-            return err({
-                code: 'MISSING_STORES_SECTION',
-                message: "Registry must start with a store entry or a 'stores:' section.",
-                line,
-            });
+            return storeError(
+                'MISSING_STORES_SECTION',
+                "Registry must start with a store entry or a 'stores:' section.",
+                { line },
+            );
         }
-        return err({
-            code: 'UNEXPECTED_ENTRY',
-            message: 'Path entry must belong to a store definition.',
+        return storeError('UNEXPECTED_ENTRY', 'Path entry must belong to a store definition.', {
             line,
         });
     }
     if (indent <= state.currentStore.indent) {
-        return err({
-            code: 'INVALID_STORE_PATH',
-            message: 'Store path must be indented under the store name.',
-            line,
-            store: state.currentStore.name,
-        });
+        return storeError(
+            'INVALID_STORE_PATH',
+            'Store path must be indented under the store name.',
+            {
+                line,
+                store: state.currentStore.name,
+            },
+        );
     }
     if (state.currentStore.path) {
-        return err({
-            code: 'INVALID_STORE_PATH',
-            message: 'Store path is already defined.',
+        return storeError('INVALID_STORE_PATH', 'Store path is already defined.', {
             line,
             store: state.currentStore.name,
         });
     }
     const parsedPath = parsePathValue(pathValue);
     if (!parsedPath) {
-        return err({
-            code: 'INVALID_STORE_PATH',
-            message: 'Store path must be a non-empty string.',
+        return storeError('INVALID_STORE_PATH', 'Store path must be a non-empty string.', {
             line,
             store: state.currentStore.name,
         });
@@ -255,26 +231,28 @@ const handleDescriptionValue = (
     descValue: string,
     indent: number,
     line: number,
-): Result<RegistryState, StoreRegistryParseError> => {
+): StoreResult<RegistryState, StoreRegistryParseError> => {
     if (!state.currentStore) {
-        return err({
-            code: 'UNEXPECTED_ENTRY',
-            message: 'Description entry must belong to a store definition.',
-            line,
-        });
+        return storeError(
+            'UNEXPECTED_ENTRY',
+            'Description entry must belong to a store definition.',
+            {
+                line,
+            },
+        );
     }
     if (indent <= state.currentStore.indent) {
-        return err({
-            code: 'UNEXPECTED_ENTRY',
-            message: 'Store description must be indented under the store name.',
-            line,
-            store: state.currentStore.name,
-        });
+        return storeError(
+            'UNEXPECTED_ENTRY',
+            'Store description must be indented under the store name.',
+            {
+                line,
+                store: state.currentStore.name,
+            },
+        );
     }
     if (state.currentStore.description !== undefined) {
-        return err({
-            code: 'UNEXPECTED_ENTRY',
-            message: 'Store description is already defined.',
+        return storeError('UNEXPECTED_ENTRY', 'Store description is already defined.', {
             line,
             store: state.currentStore.name,
         });
@@ -291,7 +269,7 @@ const handleStoresSection = (
     state: RegistryState,
     rawLine: string,
     line: number,
-): Result<{ handled: boolean; state: RegistryState }, StoreRegistryParseError> => {
+): StoreResult<{ handled: boolean; state: RegistryState }, StoreRegistryParseError> => {
     if (state.mode !== 'unknown') {
         return ok({ handled: false, state });
     }
@@ -301,9 +279,7 @@ const handleStoresSection = (
     }
     const indent = match[1]?.length ?? 0;
     if (indent !== 0) {
-        return err({
-            code: 'INVALID_STORES_SECTION',
-            message: "'stores:' section must be at the top level.",
+        return storeError('INVALID_STORES_SECTION', "'stores:' section must be at the top level.", {
             line,
         });
     }
@@ -317,9 +293,9 @@ const readRegistryLine = (
     rawLine: string,
     lineNumber: number,
     state: RegistryState,
-): Result<RegistryState, StoreRegistryParseError> => {
+): StoreResult<RegistryState, StoreRegistryParseError> => {
     const storesResult = handleStoresSection(state, rawLine, lineNumber);
-    if (!storesResult.ok) {
+    if (!storesResult.ok()) {
         return storesResult;
     }
     if (storesResult.value.handled) {
@@ -343,21 +319,19 @@ const readRegistryLine = (
     }
 
     if (state.mode === 'unknown') {
-        return err({
-            code: 'MISSING_STORES_SECTION',
-            message: "Registry must start with a store entry or a 'stores:' section.",
-            line: lineNumber,
-        });
+        return storeError(
+            'MISSING_STORES_SECTION',
+            "Registry must start with a store entry or a 'stores:' section.",
+            { line: lineNumber },
+        );
     }
 
-    return err({
-        code: 'UNEXPECTED_ENTRY',
-        message: 'Unexpected registry entry.',
-        line: lineNumber,
-    });
+    return storeError('UNEXPECTED_ENTRY', 'Unexpected registry entry.', { line: lineNumber });
 };
 
-export const parseStoreRegistry = (raw: string): Result<StoreRegistry, StoreRegistryParseError> => {
+export const parseStoreRegistry = (
+    raw: string,
+): StoreResult<StoreRegistry, StoreRegistryParseError> => {
     const normalized = raw.replace(/\r\n/g, '\n');
     const lines = normalized.split('\n');
 
@@ -381,22 +355,22 @@ export const parseStoreRegistry = (raw: string): Result<StoreRegistry, StoreRegi
             continue;
         }
         const nextState = readRegistryLine(rawLine, lineNumber, state);
-        if (!nextState.ok) {
+        if (!nextState.ok()) {
             return nextState;
         }
         state = nextState.value;
     }
 
     if (!state.hasStoreEntries) {
-        return err({
-            code: 'MISSING_STORES_SECTION',
-            message: 'Registry must include at least one store entry.',
-            line: 1,
-        });
+        return storeError(
+            'MISSING_STORES_SECTION',
+            'Registry must include at least one store entry.',
+            { line: 1 },
+        );
     }
 
     const finalizeResult = finalizeStore(state);
-    if (!finalizeResult.ok) {
+    if (!finalizeResult.ok()) {
         return finalizeResult;
     }
 
@@ -440,10 +414,7 @@ const formatYamlScalar = (value: string): string => JSON.stringify(value);
 export const serializeStoreRegistry = (registry: StoreRegistry): SerializeRegistryResult => {
     const entries = Object.entries(registry).sort(([left], [right]) => left.localeCompare(right));
     if (entries.length === 0) {
-        return err({
-            code: 'EMPTY_REGISTRY',
-            message: 'Store registry must include at least one store.',
-        });
+        return storeError('EMPTY_REGISTRY', 'Store registry must include at least one store.');
     }
 
     const lines: string[] = ['stores:'];
@@ -451,17 +422,13 @@ export const serializeStoreRegistry = (registry: StoreRegistry): SerializeRegist
         name, definition,
     ] of entries) {
         if (!isValidStoreName(name)) {
-            return err({
-                code: 'INVALID_STORE_NAME',
-                message: 'Store name must be a lowercase slug.',
+            return storeError('INVALID_STORE_NAME', 'Store name must be a lowercase slug.', {
                 store: name,
             });
         }
         const path = definition.path?.trim() ?? '';
         if (!path) {
-            return err({
-                code: 'INVALID_STORE_PATH',
-                message: 'Store path must be a non-empty string.',
+            return storeError('INVALID_STORE_PATH', 'Store path must be a non-empty string.', {
                 store: name,
             });
         }
@@ -501,7 +468,7 @@ export interface StoreResolveError {
  * ```ts
  * const registry = { default: { path: '/path/to/default' } };
  * const result = resolveStorePath(registry, 'default');
- * if (result.ok) {
+ * if (result.ok()) {
  *   console.log(result.value); // '/path/to/default'
  * }
  * ```
@@ -509,14 +476,14 @@ export interface StoreResolveError {
 export const resolveStorePath = (
     registry: StoreRegistry,
     storeName: string,
-): Result<string, StoreResolveError> => {
+): StoreResult<string, StoreResolveError> => {
     const definition = registry[storeName];
     if (!definition) {
-        return err({
-            code: 'STORE_NOT_FOUND',
-            message: `Store '${storeName}' is not registered. Use 'cortex store list' to see available stores.`,
-            store: storeName,
-        });
+        return storeError(
+            'STORE_NOT_FOUND',
+            `Store '${storeName}' is not registered. Use 'cortex store list' to see available stores.`,
+            { store: storeName },
+        ) as StoreResult<string, StoreResolveError>;
     }
     return ok(definition.path);
 };

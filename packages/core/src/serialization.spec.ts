@@ -33,7 +33,11 @@ describe('serialize()', () => {
         });
 
         it('should serialize arrays to JSON', () => {
-            const obj = { items: [1, 2, 3] };
+            const obj = { items: [
+                1,
+                2,
+                3,
+            ] };
 
             const result = serialize(obj, 'json');
 
@@ -69,7 +73,11 @@ describe('serialize()', () => {
         });
 
         it('should serialize arrays to YAML', () => {
-            const obj = { items: ['a', 'b', 'c'] };
+            const obj = { items: [
+                'a',
+                'b',
+                'c',
+            ] };
 
             const result = serialize(obj, 'yaml');
 
@@ -105,7 +113,7 @@ describe('serialize()', () => {
             const obj = { name: 'test' };
 
             expect(() => serialize(obj, 'xml' as OutputFormat)).toThrow(
-                'Unsupported output format: xml'
+                'Unsupported output format: xml',
             );
         });
     });
@@ -177,7 +185,7 @@ describe('deserialize()', () => {
             const raw = '<xml>test</xml>';
 
             expect(() => deserialize(raw, 'xml' as 'json' | 'yaml')).toThrow(
-                'Unsupported input format: xml'
+                'Unsupported input format: xml',
             );
         });
     });
@@ -254,8 +262,16 @@ describe('parseYaml()', () => {
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            expect(result.value.items).toEqual(['first', 'second', 'third']);
-            expect(result.value.numbers).toEqual([1, 2, 3]);
+            expect(result.value.items).toEqual([
+                'first',
+                'second',
+                'third',
+            ]);
+            expect(result.value.numbers).toEqual([
+                1,
+                2,
+                3,
+            ]);
         }
     });
 
@@ -277,7 +293,11 @@ describe('parseYaml()', () => {
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            expect(result.value.tags).toEqual(['a', 'b', 'c']);
+            expect(result.value.tags).toEqual([
+                'a',
+                'b',
+                'c',
+            ]);
         }
     });
 });
@@ -322,7 +342,11 @@ describe('stringifyYaml()', () => {
     });
 
     it('should stringify arrays', () => {
-        const obj = { items: ['a', 'b', 'c'] };
+        const obj = { items: [
+            'a',
+            'b',
+            'c',
+        ] };
 
         const result = stringifyYaml(obj);
 
@@ -381,7 +405,11 @@ describe('parseJson()', () => {
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            expect(result.value).toEqual([1, 2, 3]);
+            expect(result.value).toEqual([
+                1,
+                2,
+                3,
+            ]);
         }
     });
 
@@ -436,7 +464,11 @@ describe('stringifyJson()', () => {
     });
 
     it('should stringify arrays', () => {
-        const obj = [1, 2, 3];
+        const obj = [
+            1,
+            2,
+            3,
+        ];
 
         const result = stringifyJson(obj);
 

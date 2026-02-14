@@ -31,7 +31,7 @@ describe('MemoryPath', () => {
             if (!result.ok()) {
                 expect(result.error.code).toBe('INVALID_PATH');
                 expect(result.error.message).toBe(
-                    'Memory slug path must include at least two segments.'
+                    'Memory slug path must include at least two segments.',
                 );
             }
         });

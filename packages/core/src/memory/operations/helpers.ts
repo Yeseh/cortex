@@ -34,7 +34,7 @@ import type { ListedMemory, ListedSubcategory } from './list.ts';
  */
 export const readCategoryIndex = async (
     storage: ScopedStorageAdapter,
-    categoryPath: string
+    categoryPath: string,
 ): Promise<Result<CategoryIndex | null, MemoryError>> => {
     const result = await storage.indexes.read(categoryPath);
     if (!result.ok()) {
@@ -65,7 +65,7 @@ export const readCategoryIndex = async (
  * ```
  */
 export const discoverRootCategories = async (
-    storage: ScopedStorageAdapter
+    storage: ScopedStorageAdapter,
 ): Promise<Result<string[], MemoryError>> => {
     const indexResult = await storage.indexes.read('');
     if (!indexResult.ok()) {
@@ -112,7 +112,7 @@ export const collectMemoriesFromCategory = async (
     categoryPath: string,
     includeExpired: boolean,
     now: Date,
-    visited: Set<string>
+    visited: Set<string>,
 ): Promise<MemoryResult<ListedMemory[]>> => {
     // Prevent cycles
     if (visited.has(categoryPath)) return ok([]);
@@ -178,7 +178,7 @@ export const collectMemoriesFromCategory = async (
             subcategory.path,
             includeExpired,
             now,
-            visited
+            visited,
         );
         if (subResult.ok()) {
             memories.push(...subResult.value);
@@ -207,7 +207,7 @@ export const collectMemoriesFromCategory = async (
  */
 export const collectDirectSubcategories = async (
     storage: ScopedStorageAdapter,
-    categoryPath: string
+    categoryPath: string,
 ): Promise<Result<ListedSubcategory[], MemoryError>> => {
     const indexResult = await storage.indexes.read(categoryPath);
     if (!indexResult.ok()) {
@@ -226,7 +226,7 @@ export const collectDirectSubcategories = async (
             path: subcategory.path,
             memoryCount: subcategory.memoryCount,
             description: subcategory.description,
-        }))
+        })),
     );
 };
 

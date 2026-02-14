@@ -12,8 +12,6 @@ export {
     resolveStorePath,
     type StoreDefinition,
     type StoreRegistry,
-    type StoreRegistryParseError,
-    type StoreRegistryParseErrorCode,
     type StoreRegistryLoadError,
     type StoreRegistryLoadErrorCode,
     type StoreRegistrySaveError,
@@ -24,13 +22,11 @@ export {
     type StoreResolveErrorCode,
 } from './registry.ts';
 
+export type { StoreRegistryParseError, StoreRegistryParseErrorCode } from './result.ts';
+
 // Re-export domain operations
-export {
-    initializeStore,
-    type InitStoreError,
-    type InitStoreErrorCode,
-    type InitStoreOptions,
-} from './operations.ts';
+export { initializeStore, type InitStoreOptions } from './operations/index.ts';
+export type { InitStoreError, InitStoreErrorCode } from './result.ts';
 
 // Re-export store resolution (for local/global fallback)
 export {

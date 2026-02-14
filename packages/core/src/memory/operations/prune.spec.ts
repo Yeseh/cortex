@@ -62,8 +62,8 @@ describe('pruneExpiredMemories', () => {
                         buildMemoryFixture(
                             pathToString(path),
                             { expiresAt: expiredAt },
-                            'Expired content'
-                        )
+                            'Expired content',
+                        ),
                     ),
                 remove: async () => {
                     deleteCalled = true;
@@ -102,8 +102,8 @@ describe('pruneExpiredMemories', () => {
                         buildMemoryFixture(
                             pathToString(path),
                             { expiresAt: expiredAt },
-                            'Expired content'
-                        )
+                            'Expired content',
+                        ),
                     ),
                 remove: async (path) => {
                     deletedPaths.push(pathToString(path));
@@ -146,8 +146,8 @@ describe('pruneExpiredMemories', () => {
                         buildMemoryFixture(
                             pathToString(path),
                             { expiresAt: expiredAt },
-                            'Expired content'
-                        )
+                            'Expired content',
+                        ),
                     ),
             },
         });
@@ -201,8 +201,8 @@ describe('pruneExpiredMemories', () => {
                         buildMemoryFixture(
                             pathToString(path),
                             { expiresAt: expiredAt },
-                            'Expired content'
-                        )
+                            'Expired content',
+                        ),
                     ),
                 remove: async () =>
                     err({
@@ -257,7 +257,7 @@ describe('pruneExpiredMemories', () => {
             [
                 { path: 'project', memoryCount: 1 },
                 { path: 'human', memoryCount: 1 },
-            ]
+            ],
         );
 
         const deletedPaths: string[] = [];
@@ -267,7 +267,7 @@ describe('pruneExpiredMemories', () => {
                     if (path === '') return ok(rootIndex);
                     if (path === 'project') {
                         return ok(
-                            buildIndex([{ path: 'project/expired1', tokenEstimate: 100 }], [])
+                            buildIndex([{ path: 'project/expired1', tokenEstimate: 100 }], []),
                         );
                     }
                     if (path === 'human') {
@@ -282,8 +282,8 @@ describe('pruneExpiredMemories', () => {
                         buildMemoryFixture(
                             pathToString(path),
                             { expiresAt: expiredAt },
-                            'Expired content'
-                        )
+                            'Expired content',
+                        ),
                     ),
                 remove: async (path) => {
                     deletedPaths.push(pathToString(path));
@@ -309,7 +309,7 @@ describe('pruneExpiredMemories', () => {
             [
                 { path: 'todo', memoryCount: 1 },
                 { path: 'issues', memoryCount: 1 },
-            ]
+            ],
         );
 
         const deletedPaths: string[] = [];
@@ -319,12 +319,12 @@ describe('pruneExpiredMemories', () => {
                     if (path === '') return ok(rootIndex);
                     if (path === 'todo') {
                         return ok(
-                            buildIndex([{ path: 'todo/expired-task', tokenEstimate: 50 }], [])
+                            buildIndex([{ path: 'todo/expired-task', tokenEstimate: 50 }], []),
                         );
                     }
                     if (path === 'issues') {
                         return ok(
-                            buildIndex([{ path: 'issues/old-issue', tokenEstimate: 75 }], [])
+                            buildIndex([{ path: 'issues/old-issue', tokenEstimate: 75 }], []),
                         );
                     }
                     return ok(null);
@@ -336,8 +336,8 @@ describe('pruneExpiredMemories', () => {
                         buildMemoryFixture(
                             pathToString(path),
                             { expiresAt: expiredAt },
-                            'Expired content'
-                        )
+                            'Expired content',
+                        ),
                     ),
                 remove: async (path) => {
                     deletedPaths.push(pathToString(path));
