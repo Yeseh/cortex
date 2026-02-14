@@ -1,56 +1,125 @@
 /**
  * Initialize store operation.
  *
+ * Provides the domain logic for creating new memory stores with proper directory
+ * structure, registry registration, and index initialization. This is the primary
+ * entry point for store creation in the Cortex system.
+ *
  * @module core/store/operations/initialize
  */
 
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { CategoryPath } from '@/category/index.ts';
 import type { Registry } from '@/storage/adapter.ts';
 import { ok } from '@/result.ts';
 import { isValidStoreName } from '@/store/registry.ts';
 import { storeError, type InitStoreError, type StoreResult } from '@/store/result.ts';
 import { buildEmptyIndex } from './helpers.ts';
 
-/** Options for store initialization. */
+/**
+ * Options for store initialization.
+ *
+ * Controls optional aspects of store creation including pre-seeded categories
+ * and metadata for the registry entry.
+ */
 export interface InitStoreOptions {
-    /** Categories to create in the store (creates directories and indexes) */
+    /**
+     * Categories to create in the store.
+     *
+     * Each category will have:
+     * - A directory created at `{storePath}/{category}`
+     * - An empty index file written via IndexStorage
+     * - An entry added to the root index's subcategories array
+     *
+     * Category names must be valid category path segments (lowercase letters,
+     * numbers, hyphens). Nested paths like 'project/cortex' are supported.
+     */
     categories?: string[];
-    /** Optional description for the store in the registry */
+
+    /**
+     * Human-readable description for the store.
+     *
+     * Stored in the registry and surfaced by CLI list commands. Useful for
+     * distinguishing between multiple stores (e.g., "Project-local memories"
+     * vs "Global user preferences").
+     */
     description?: string;
 }
 
 /**
  * Initializes a new store with proper directory structure and registry entry.
  *
- * This domain operation:
- * 1. Validates the store name
- * 2. Loads the registry and checks for name collision
- * 3. Creates the store directory
- * 4. Registers the store in the registry
- * 5. Creates a root index entry via IndexStorage
- * 6. Optionally creates category subdirectories with indexes
+ * This domain operation orchestrates the complete store creation workflow:
  *
- * @param registry - The registry to use for store registration
- * @param name - The store name (must be a valid lowercase slug)
- * @param path - The filesystem path for the store
- * @param options - Optional settings for categories and description
- * @returns Result indicating success or failure
+ * 1. **Validates the store name** - Must be a lowercase slug (letters, numbers, hyphens)
+ * 2. **Loads the registry** - Checks for name collisions with existing stores
+ * 3. **Creates the store directory** - Uses recursive mkdir for the store path
+ * 4. **Registers the store** - Adds entry to the persistent registry
+ * 5. **Creates root index** - Writes index at CategoryPath.root() with subcategory references
+ * 6. **Creates category subdirectories** - For each category in options, creates directory and index
  *
- * @example
+ * The operation is NOT atomic - partial failures may leave directories or registry
+ * entries that need manual cleanup. Future versions may add rollback support.
+ *
+ * @param registry - The registry instance for store registration. Must be loaded
+ *   or loadable (missing registry is handled gracefully).
+ * @param name - The store name. Must be a valid lowercase slug matching pattern
+ *   `^[a-z][a-z0-9-]*$`. Examples: 'cortex', 'my-project', 'user-data'.
+ * @param path - Absolute filesystem path where the store will be created.
+ *   The directory will be created if it doesn't exist.
+ * @param options - Optional configuration for categories and description.
+ * @returns Result with void on success, or InitStoreError on failure.
+ *
+ * @example Basic store creation
  * ```typescript
  * const registry = new FilesystemRegistry('/config/stores.yaml');
  * await registry.load();
  *
+ * const result = await initializeStore(registry, 'my-project', '/data/my-project');
+ *
+ * if (result.ok()) {
+ *   console.log('Store created with root index');
+ * }
+ * ```
+ *
+ * @example Store with pre-seeded categories
+ * ```typescript
  * const result = await initializeStore(
  *   registry,
- *   'my-project',
- *   '/path/to/store',
- *   { categories: ['global', 'projects'] }
+ *   'cortex',
+ *   '/home/user/.cortex/memory',
+ *   {
+ *     categories: ['standards', 'decisions', 'map', 'todo'],
+ *     description: 'Project-local knowledge base'
+ *   }
  * );
  *
  * if (result.ok()) {
- *   console.log('Store created successfully');
+ *   // Root index includes subcategory entries for each category
+ *   // Each category has its own empty index file
+ * }
+ * ```
+ *
+ * @example Error handling
+ * ```typescript
+ * const result = await initializeStore(registry, 'Invalid_Name', '/path');
+ *
+ * if (!result.ok()) {
+ *   switch (result.error.code) {
+ *     case 'INVALID_STORE_NAME':
+ *       console.error('Name must be lowercase slug');
+ *       break;
+ *     case 'STORE_ALREADY_EXISTS':
+ *       console.error('Store already registered');
+ *       break;
+ *     case 'STORE_CREATE_FAILED':
+ *       console.error('Could not create directory');
+ *       break;
+ *     case 'STORE_INDEX_FAILED':
+ *       console.error('Could not write index files');
+ *       break;
+ *   }
  * }
  * ```
  */
@@ -131,7 +200,7 @@ export const initializeStore = async (
         });
     }
     const adapter = adapterResult.value;
-    const rootIndexResult = await adapter.indexes.write('', rootIndex);
+    const rootIndexResult = await adapter.indexes.write(CategoryPath.root(), rootIndex);
     if (!rootIndexResult.ok()) {
         return storeError('STORE_INDEX_FAILED', `Failed to write root index at ${path}.`, {
             store: name,
@@ -146,7 +215,15 @@ export const initializeStore = async (
         try {
             await mkdir(categoryPath, { recursive: true });
             const categoryIndex = buildEmptyIndex();
-            const writeResult = await adapter.indexes.write(category, categoryIndex);
+            const categoryPathObj = CategoryPath.fromString(category);
+            if (!categoryPathObj.ok()) {
+                return storeError(
+                    'STORE_INDEX_FAILED',
+                    `Invalid category path '${category}'.`,
+                    { store: name, path: categoryPath, cause: categoryPathObj.error },
+                );
+            }
+            const writeResult = await adapter.indexes.write(categoryPathObj.value, categoryIndex);
             if (!writeResult.ok()) {
                 return storeError(
                     'STORE_INDEX_FAILED',

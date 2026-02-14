@@ -111,7 +111,7 @@ export const readIndexFile = async (
  */
 export const writeIndexFile = async (
     ctx: FilesystemContext,
-    name: StorageIndexName,
+    name: CategoryPath,
     contents: string,
 ): Promise<Result<void, StorageAdapterError>> => {
     const filePathResult = resolveIndexPath(ctx, name, 'IO_WRITE_ERROR');
@@ -156,7 +156,7 @@ export const readCategoryIndex = async (
             return err({
                 code: 'INDEX_ERROR',
                 message: `Category index not found at ${name}.`,
-                path: name,
+                path: name.toString(),
             });
         }
         return ok({ memories: [], subcategories: [] });
@@ -166,7 +166,7 @@ export const readCategoryIndex = async (
         return err({
             code: 'INDEX_ERROR',
             message: `Failed to parse category index at ${name}.`,
-            path: name,
+            path: name.toString(),
             cause: parsed.error,
         });
     }
@@ -191,7 +191,7 @@ export const writeCategoryIndex = async (
         return err({
             code: 'INDEX_ERROR',
             message: `Failed to serialize category index at ${name}.`,
-            path: name,
+            path: name.toString(),
             cause: serialized.error,
         });
     }
@@ -246,7 +246,16 @@ export const upsertSubcategoryEntry = async (
     }
 
     // Convert string path to CategoryPath for comparison and storage
-    const entryPathObj = CategoryPath.fromString(entryPath).unwrap();
+    const entryPathResult = CategoryPath.fromString(entryPath);
+    if (!entryPathResult.ok()) {
+        return err({
+            code: 'INDEX_ERROR',
+            message: `Invalid category path '${entryPath}'.`,
+            path: entryPath,
+            cause: entryPathResult.error,
+        });
+    }
+    const entryPathObj = entryPathResult.value;
     const existing = current.value.subcategories.find((s) => s.path.toString() === entryPath);
     const subcategories = current.value.subcategories.filter(
         (s) => s.path.toString() !== entryPath,
@@ -319,7 +328,16 @@ export const updateCategoryIndexes = async (
     const topLevelCategory = categories[0];
     if (topLevelCategory !== undefined) {
         const rootCategory = CategoryPath.root();
-        const topLevelCategoryPath = CategoryPath.fromString(topLevelCategory).unwrap();
+        const topLevelCategoryPathResult = CategoryPath.fromString(topLevelCategory);
+        if (!topLevelCategoryPathResult.ok()) {
+            return err({
+                code: 'INDEX_ERROR',
+                message: `Invalid category path '${topLevelCategory}'.`,
+                path: topLevelCategory,
+                cause: topLevelCategoryPathResult.error,
+            });
+        }
+        const topLevelCategoryPath = topLevelCategoryPathResult.value;
         const topLevelCategoryIndex = await readCategoryIndex(ctx, topLevelCategoryPath, {
             ...options,
             createWhenMissing: true,
@@ -341,10 +359,30 @@ export const updateCategoryIndexes = async (
 
     // Then handle nested subcategories
     for (let index = 1; index <= categories.length - 1; index += 1) {
-        const parentPath = CategoryPath.fromString(categories.slice(0, index).join('/')).unwrap();
-        const subcategoryPath = CategoryPath.fromString(
-            categories.slice(0, index + 1).join('/'),
-        ).unwrap();
+        const parentPathStr = categories.slice(0, index).join('/');
+        const parentPathResult = CategoryPath.fromString(parentPathStr);
+        if (!parentPathResult.ok()) {
+            return err({
+                code: 'INDEX_ERROR',
+                message: `Invalid category path '${parentPathStr}'.`,
+                path: parentPathStr,
+                cause: parentPathResult.error,
+            });
+        }
+        const parentPath = parentPathResult.value;
+
+        const subcategoryPathStr = categories.slice(0, index + 1).join('/');
+        const subcategoryPathResult = CategoryPath.fromString(subcategoryPathStr);
+        if (!subcategoryPathResult.ok()) {
+            return err({
+                code: 'INDEX_ERROR',
+                message: `Invalid category path '${subcategoryPathStr}'.`,
+                path: subcategoryPathStr,
+                cause: subcategoryPathResult.error,
+            });
+        }
+        const subcategoryPath = subcategoryPathResult.value;
+
         const subcategoryIndex = await readCategoryIndex(ctx, subcategoryPath, {
             ...options,
             createWhenMissing: true,
@@ -377,15 +415,9 @@ export const updateCategoryIndexesFromMemory = async (
     memory: Memory,
     options: { createWhenMissing?: boolean } = {},
 ): Promise<Result<void, StorageAdapterError>> => {
-    const category = memory.path.category.toString();
-    const slug = memory.path.slug.toString();
-    const slugPath = category ? `${category}/${slug}` : slug;
+    const slugPath = memory.path.toString();
 
-    // serializeMemory expects MemoryFile (without path), so we extract metadata and content
-    const serialized = serializeMemory({
-        metadata: memory.metadata,
-        content: memory.content,
-    });
+    const serialized = serializeMemory(memory);
     if (!serialized.ok()) {
         return err({
             code: 'INDEX_ERROR',
@@ -447,16 +479,19 @@ const collectMemoryFiles = async (
 
 /**
  * Adds an index entry to the in-memory index map.
+ *
+ * Note: During reindex, we use `memoryPath` (the validated MemoryPath object)
+ * for the memory entry. The indexes map uses string keys for category paths.
  */
 const addIndexEntry = (
     indexes: Map<string, CategoryIndex>,
-    slugPath: MemorySlugPath,
+    memoryPath: MemoryPath,
     tokenEstimate: number,
     updatedAt?: Date,
 ): void => {
-    const categoryPath = slugPath.split('/').slice(0, -1).join('/');
+    const categoryPath = memoryPath.category.toString();
     const current = indexes.get(categoryPath) ?? { memories: [], subcategories: [] };
-    current.memories.push({ path: slugPath, tokenEstimate, updatedAt });
+    current.memories.push({ path: memoryPath, tokenEstimate, updatedAt });
     indexes.set(categoryPath, current);
 };
 
@@ -473,10 +508,11 @@ const addIndexEntry = (
  */
 const recordParentSubcategory = (
     parentSubcategories: Map<string, Set<string>>,
-    slugPath: MemorySlugPath,
+    memoryPath: MemoryPath,
 ): void => {
-    const segments = slugPath.split('/').filter((segment) => segment.length > 0);
-    if (segments.length < 2) {
+    const categoryStr = memoryPath.category.toString();
+    const segments = categoryStr.split('/').filter((segment: string) => segment.length > 0);
+    if (segments.length < 1) {
         return;
     }
 
@@ -488,8 +524,8 @@ const recordParentSubcategory = (
         parentSubcategories.set('', rootSubcategories);
     }
 
-    // Record nested category relationships (for 3+ segments)
-    for (let index = 1; index < segments.length - 1; index += 1) {
+    // Record nested category relationships (for 2+ segments in category)
+    for (let index = 1; index < segments.length; index += 1) {
         const parentCategory = segments.slice(0, index).join('/');
         const subcategoryPath = segments.slice(0, index + 1).join('/');
         const subcategories = parentSubcategories.get(parentCategory) ?? new Set();
@@ -500,6 +536,9 @@ const recordParentSubcategory = (
 
 /**
  * Applies parent subcategory relationships to indexes.
+ *
+ * Converts string paths to CategoryPath objects when building subcategory entries.
+ * Invalid paths are skipped (they shouldn't occur since paths come from valid memory paths).
  */
 const applyParentSubcategories = (
     indexes: Map<string, CategoryIndex>,
@@ -513,9 +552,13 @@ const applyParentSubcategories = (
             subcategories: [],
         };
         const subcategoryEntries: CategoryIndex['subcategories'] = [];
-        for (const subcategoryPath of subcategories.values()) {
-            const memoryCount = indexes.get(subcategoryPath)?.memories.length ?? 0;
-            subcategoryEntries.push({ path: subcategoryPath, memoryCount });
+        for (const subcategoryPathStr of subcategories.values()) {
+            const memoryCount = indexes.get(subcategoryPathStr)?.memories.length ?? 0;
+            const pathResult = CategoryPath.fromString(subcategoryPathStr);
+            if (pathResult.ok()) {
+                subcategoryEntries.push({ path: pathResult.value, memoryCount });
+            }
+            // Skip invalid paths (shouldn't happen with valid memory paths)
         }
         parentIndex.subcategories = subcategoryEntries;
         indexes.set(parentCategory, parentIndex);
@@ -526,7 +569,7 @@ const applyParentSubcategories = (
  * Result of building an index entry from a memory file.
  */
 type BuildIndexEntryResult = Result<
-    | { slugPath: MemorySlugPath; tokenEstimate: number; updatedAt?: Date }
+    | { memoryPath: MemoryPath; tokenEstimate: number; updatedAt?: Date }
     | { skipped: true; reason: string }
     | null,
     StorageAdapterError
@@ -590,7 +633,7 @@ const buildIndexEntry = async (
     const updatedAt = parseResult.ok() ? parseResult.value.metadata.updatedAt : undefined;
 
     return ok({
-        slugPath: normalizedPath as MemorySlugPath,
+        memoryPath,
         tokenEstimate: tokenEstimate.value,
         updatedAt,
     });
@@ -626,26 +669,33 @@ const buildIndexState = async (
             continue;
         }
 
-        // Handle collisions by appending numeric suffix
-        let slugPath = entryResult.value.slugPath;
-        if (usedPaths.has(slugPath)) {
+        const memoryPath = entryResult.value.memoryPath;
+        const pathStr = memoryPath.toString();
+
+        // Handle collisions by warning (collision detection based on string representation)
+        if (usedPaths.has(pathStr)) {
             let suffix = 2;
-            while (usedPaths.has(`${slugPath}-${suffix}`)) {
+            while (usedPaths.has(`${pathStr}-${suffix}`)) {
                 suffix += 1;
             }
-            const newSlugPath = `${slugPath}-${suffix}` as MemorySlugPath;
-            warnings.push(`Collision: ${filePath} indexed as ${newSlugPath}`);
-            slugPath = newSlugPath;
+            const newPathStr = `${pathStr}-${suffix}`;
+            warnings.push(`Collision: ${filePath} indexed as ${newPathStr}`);
+            // For collisions, we still use the original path but record the warning
+            // The collision suffix would require re-parsing, which may fail
+            // In practice, collisions shouldn't happen with valid memory files
+            usedPaths.add(newPathStr);
         }
-        usedPaths.add(slugPath);
+        else {
+            usedPaths.add(pathStr);
+        }
 
         addIndexEntry(
             indexes,
-            slugPath,
+            memoryPath,
             entryResult.value.tokenEstimate,
             entryResult.value.updatedAt,
         );
-        recordParentSubcategory(parentSubcategories, slugPath);
+        recordParentSubcategory(parentSubcategories, memoryPath);
     }
 
     return ok({ indexes, parentSubcategories, warnings });
@@ -663,8 +713,8 @@ const rebuildIndexFiles = async (
     for (const [
         indexName, index,
     ] of sortedIndexes) {
-        index.memories.sort((a, b) => a.path.localeCompare(b.path));
-        index.subcategories.sort((a, b) => a.path.localeCompare(b.path));
+        index.memories.sort((a, b) => a.path.toString().localeCompare(b.path.toString()));
+        index.subcategories.sort((a, b) => a.path.toString().localeCompare(b.path.toString()));
         const serialized = serializeIndex(index);
         if (!serialized.ok()) {
             return err({

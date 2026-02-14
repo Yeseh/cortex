@@ -162,7 +162,7 @@ export class FilesystemIndexStorage implements IndexStorage {
                 cause: serialized.error,
             });
         }
-        return writeIndexFile(this.ctx, name.toString(), serialized.value);
+        return writeIndexFile(this.ctx, name, serialized.value);
     }
 
     /**
