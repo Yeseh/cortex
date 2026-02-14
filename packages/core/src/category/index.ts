@@ -22,4 +22,4 @@ export {
     createCategory,
     setDescription,
     deleteCategory,
-} from './operations.ts';
+} from './operations/index.ts';
