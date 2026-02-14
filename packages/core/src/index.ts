@@ -5,6 +5,11 @@
 export * from './tokens.ts';
 export * from './config.ts';
 export * from './result.ts';
+export * from './memory';
+export * from './category';
+export * from './store';
+export * from './index';
+
 export {
     serialize,
     deserialize,

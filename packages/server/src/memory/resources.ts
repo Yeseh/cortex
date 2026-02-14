@@ -20,7 +20,7 @@ import type {
     Resource,
 } from '@modelcontextprotocol/sdk/types.js';
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
-import type { Result } from '@yeseh/cortex-core';
+import { err, ok, type Result } from '@yeseh/cortex-core';
 import { getMemory } from '@yeseh/cortex-core/memory';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
@@ -51,13 +51,6 @@ const ROOT_CATEGORIES = [
  */
 const MEMORY_URI_SCHEME = 'cortex://memory';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
-const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
-
 /**
  * Resolves a scoped storage adapter for a store.
  *
@@ -72,7 +65,7 @@ const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
  * @example
  * ```ts
  * const result = await resolveAdapter(config, 'my-store');
- * if (result.ok) {
+ * if (result.ok()) {
  *     const memory = await result.value.memories.read('project/my-memory');
  * }
  * ```
@@ -86,7 +79,7 @@ const resolveAdapter = async (
     const registry = new FilesystemRegistry(registryPath);
 
     const loadResult = await registry.load();
-    if (!loadResult.ok) {
+    if (!loadResult.ok()) {
         if (loadResult.error.code === 'REGISTRY_MISSING') {
             return err(
                 new McpError(
@@ -104,7 +97,7 @@ const resolveAdapter = async (
     }
 
     const storeResult = registry.getStore(store);
-    if (!storeResult.ok) {
+    if (!storeResult.ok()) {
         return err(
             new McpError(ErrorCode.InvalidParams, storeResult.error.message),
         );
@@ -297,9 +290,9 @@ interface CategoryListing {
  * @example
  * ```ts
  * const adapterResult = await resolveAdapter(config, 'global');
- * if (adapterResult.ok) {
+ * if (adapterResult.ok()) {
  *     const result = await readMemoryContent(adapterResult.value, 'global', 'project/my-memory');
- *     if (result.ok) {
+ *     if (result.ok()) {
  *       console.log(result.value.contents[0].text);
  *     }
  * }
@@ -363,10 +356,10 @@ const readMemoryContent = async (
  * @example
  * ```ts
  * const adapterResult = await resolveAdapter(config, 'global');
- * if (adapterResult.ok) {
+ * if (adapterResult.ok()) {
  *     // List specific category
  *     const projectResult = await readCategoryListing(adapterResult.value, 'global', 'project');
- *     if (projectResult.ok) {
+ *     if (projectResult.ok()) {
  *       const listing = JSON.parse(projectResult.value.contents[0].text);
  *       console.log(listing.memories);  // Array of memory entries
  *     }
@@ -385,7 +378,7 @@ const readCategoryListing = async (
 
     // Read the category index
     const indexResult = await adapter.indexes.read(categoryPath);
-    if (!indexResult.ok) {
+    if (!indexResult.ok()) {
         return err(
             new McpError(
                 ErrorCode.InternalError,
@@ -447,7 +440,7 @@ const readRootCategoryListing = async (
     const subcategories: CategoryListing['subcategories'] = [];
 
     const rootIndexResult = await adapter.indexes.read('');
-    if (rootIndexResult.ok && rootIndexResult.value) {
+    if (rootIndexResult.ok() && rootIndexResult.value) {
         for (const sub of rootIndexResult.value.subcategories) {
             subcategories.push({
                 path: sub.path,
@@ -459,7 +452,7 @@ const readRootCategoryListing = async (
     else {
         for (const category of ROOT_CATEGORIES) {
             const indexResult = await adapter.indexes.read(category);
-            if (!indexResult.ok || !indexResult.value) {
+            if (!indexResult.ok() || !indexResult.value) {
                 // Category doesn't exist, skip it
                 continue;
             }
@@ -503,7 +496,7 @@ const readRootCategoryListing = async (
  * @example
  * ```ts
  * const result = await listResources(config);
- * if (result.ok) {
+ * if (result.ok()) {
  *   for (const resource of result.value.resources) {
  *     console.log(`${resource.name}: ${resource.uri}`);
  *   }
@@ -518,7 +511,7 @@ const listResources = async (
 
     // Resolve the adapter for this store
     const adapterResult = await resolveAdapter(config, store);
-    if (!adapterResult.ok) {
+    if (!adapterResult.ok()) {
         return err(adapterResult.error);
     }
     const adapter = adapterResult.value;
@@ -532,14 +525,14 @@ const listResources = async (
     });
 
     const rootIndexResult = await adapter.indexes.read('');
-    const rootCategories = rootIndexResult.ok && rootIndexResult.value
+    const rootCategories = rootIndexResult.ok() && rootIndexResult.value
         ? rootIndexResult.value.subcategories.map((sub) => sub.path)
         : [...ROOT_CATEGORIES];
 
     // Collect resources from all root categories
     for (const category of rootCategories) {
         const indexResult = await adapter.indexes.read(category);
-        if (!indexResult.ok || !indexResult.value) {
+        if (!indexResult.ok() || !indexResult.value) {
             continue;
         }
 
@@ -637,7 +630,7 @@ export const registerMemoryResources = (
         list: async () => {
             const result = await listResources(config);
             // MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
-            if (!result.ok) {
+            if (!result.ok()) {
                 throw result.error;
             }
             return result.value;
@@ -650,7 +643,7 @@ export const registerMemoryResources = (
             'path*': async (value: string): Promise<string[]> => {
                 // Autocomplete for paths within store
                 const adapterResult = await resolveAdapter(config, config.defaultStore);
-                if (!adapterResult.ok) {
+                if (!adapterResult.ok()) {
                     // Return empty completions on failure - don't throw in autocomplete
                     return [];
                 }
@@ -677,7 +670,7 @@ export const registerMemoryResources = (
                 else {
                     // Read the parent category index
                     const indexResult = await adapter.indexes.read(categoryPath);
-                    if (indexResult.ok && indexResult.value) {
+                    if (indexResult.ok() && indexResult.value) {
                         // Add matching subcategories
                         for (const sub of indexResult.value.subcategories) {
                             const subName = sub.path.split('/').pop() ?? '';
@@ -711,7 +704,7 @@ export const registerMemoryResources = (
         async (_uri: URL, variables: Variables): Promise<ReadResourceResult> => {
             const parsed = parseUriVariables(variables, config);
             // MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
-            if (!parsed.ok) {
+            if (!parsed.ok()) {
                 throw parsed.error;
             }
 
@@ -719,7 +712,7 @@ export const registerMemoryResources = (
 
             // Resolve adapter for the requested store
             const adapterResult = await resolveAdapter(config, store);
-            if (!adapterResult.ok) {
+            if (!adapterResult.ok()) {
                 throw adapterResult.error;
             }
             const adapter = adapterResult.value;
@@ -727,7 +720,7 @@ export const registerMemoryResources = (
             if (isCategory) {
                 const result = await readCategoryListing(adapter, store, path);
                 // MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
-                if (!result.ok) {
+                if (!result.ok()) {
                     throw result.error;
                 }
                 return result.value;
@@ -735,7 +728,7 @@ export const registerMemoryResources = (
             else {
                 const result = await readMemoryContent(adapter, store, path);
                 // MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
-                if (!result.ok) {
+                if (!result.ok()) {
                     throw result.error;
                 }
                 return result.value;

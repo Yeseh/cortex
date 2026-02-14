@@ -10,7 +10,6 @@ import {
     ok,
     err,
     createMockStorage,
-    mockSerializer,
     sampleMemory,
     expiredMemory,
 } from './test-helpers.spec.ts';
@@ -27,7 +26,7 @@ describe('updateMemory', () => {
                 },
             },
         });
-        const result = await updateMemory(storage, mockSerializer, 'project/test/memory', {
+        const result = await updateMemory(storage,  'project/test/memory', {
             content: 'Updated content',
         });
         expect(result.ok()).toBe(true);
@@ -46,7 +45,7 @@ describe('updateMemory', () => {
                 read: async () => ok(sampleMemory),
             },
         });
-        const result = await updateMemory(storage, mockSerializer, 'project/test/memory', {
+        const result = await updateMemory(storage, 'project/test/memory', {
             tags: [
                 'new', 'tags',
             ],
@@ -68,7 +67,7 @@ describe('updateMemory', () => {
             },
         });
         const newExpiry = new Date('2030-12-31T00:00:00Z');
-        const result = await updateMemory(storage, mockSerializer, 'project/test/memory', {
+        const result = await updateMemory(storage,  'project/test/memory', {
             expiresAt: newExpiry,
         });
         expect(result.ok()).toBe(true);
@@ -83,7 +82,7 @@ describe('updateMemory', () => {
                 read: async () => ok(expiredMemory),
             },
         });
-        const result = await updateMemory(storage, mockSerializer, 'project/test/memory', {
+        const result = await updateMemory(storage, 'project/test/memory', {
             expiresAt: null,
         });
         expect(result.ok()).toBe(true);
@@ -98,7 +97,7 @@ describe('updateMemory', () => {
                 read: async () => ok(expiredMemory),
             },
         });
-        const result = await updateMemory(storage, mockSerializer, 'project/test/memory', {
+        const result = await updateMemory(storage, 'project/test/memory', {
             content: 'Updated content only',
         });
         expect(result.ok()).toBe(true);
@@ -113,7 +112,7 @@ describe('updateMemory', () => {
                 read: async () => ok(sampleMemory),
             },
         });
-        const result = await updateMemory(storage, mockSerializer, 'project/test/memory', {
+        const result = await updateMemory(storage, 'project/test/memory', {
             content: 'New content',
             tags: ['updated'],
         });
@@ -133,7 +132,6 @@ describe('updateMemory', () => {
         const updateTime = new Date('2025-06-20T10:00:00Z');
         const result = await updateMemory(
             storage,
-            mockSerializer,
             'project/test/memory',
             { content: 'Updated' },
             updateTime,
@@ -151,7 +149,7 @@ describe('updateMemory', () => {
                 read: async () => ok(sampleMemory),
             },
         });
-        const result = await updateMemory(storage, mockSerializer, 'project/test/memory', {});
+        const result = await updateMemory(storage, 'project/test/memory', {});
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_INPUT');
@@ -160,7 +158,7 @@ describe('updateMemory', () => {
 
     it('should return MEMORY_NOT_FOUND when missing', async () => {
         const storage = createMockStorage();
-        const result = await updateMemory(storage, mockSerializer, 'project/test/memory', {
+        const result = await updateMemory(storage, 'project/test/memory', {
             content: 'Updated',
         });
         expect(result.ok()).toBe(false);
@@ -171,7 +169,7 @@ describe('updateMemory', () => {
 
     it('should return INVALID_PATH for malformed path', async () => {
         const storage = createMockStorage();
-        const result = await updateMemory(storage, mockSerializer, 'x', { content: 'Updated' });
+        const result = await updateMemory(storage, 'x', { content: 'Updated' });
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_PATH');
@@ -185,7 +183,7 @@ describe('updateMemory', () => {
                     err({ code: 'IO_READ_ERROR', message: 'IO error' } as StorageAdapterError),
             },
         });
-        const result = await updateMemory(storage, mockSerializer, 'project/test/memory', {
+        const result = await updateMemory(storage, 'project/test/memory', {
             content: 'Updated',
         });
         expect(result.ok()).toBe(false);
@@ -202,7 +200,7 @@ describe('updateMemory', () => {
                     err({ code: 'IO_WRITE_ERROR', message: 'Disk full' } as StorageAdapterError),
             },
         });
-        const result = await updateMemory(storage, mockSerializer, 'project/test/memory', {
+        const result = await updateMemory(storage, 'project/test/memory', {
             content: 'Updated',
         });
         expect(result.ok()).toBe(false);

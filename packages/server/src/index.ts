@@ -15,7 +15,7 @@
  * ```ts
  * // Programmatic server creation
  * const result = await createServer();
- * if (result.ok) {
+ * if (result.ok()) {
  *   const { config, close } = result.value;
  *   console.log(`Server running on port ${config.port}`);
  *
@@ -36,7 +36,7 @@ import { createHealthRouter } from './health.ts';
 import { registerMemoryTools } from './memory/index.ts';
 import { registerStoreTools } from './store/index.ts';
 import { registerCategoryTools } from './category/index.ts';
-import type { Result } from '@yeseh/cortex-core';
+import { err, ok, type Result } from '@yeseh/cortex-core';
 
 /**
  * Complete Cortex server instance with all components.
@@ -108,7 +108,7 @@ export interface ServerStartError {
  * ```ts
  * // Basic usage
  * const result = await createServer();
- * if (!result.ok) {
+ * if (!result.ok()) {
  *   console.error('Failed to start:', result.error.message);
  *   process.exit(1);
  * }
@@ -121,7 +121,7 @@ export interface ServerStartError {
  * ```ts
  * // With graceful shutdown
  * const result = await createServer();
- * if (result.ok) {
+ * if (result.ok()) {
  *   const server = result.value;
  *
  *   process.on('SIGTERM', async () => {
@@ -136,7 +136,7 @@ export interface ServerStartError {
  * ```ts
  * // For testing - access internal components
  * const result = await createServer();
- * if (result.ok) {
+ * if (result.ok()) {
  *   const { app, mcpContext } = result.value;
  *
  *   // Add test middleware
@@ -150,15 +150,12 @@ export interface ServerStartError {
 export const createServer = async (): Promise<Result<CortexServer, ServerStartError>> => {
     // Load config
     const configResult = loadServerConfig();
-    if (!configResult.ok) {
-        return {
-            ok: false,
-            error: {
-                code: 'CONFIG_INVALID',
-                message: `Configuration error: ${configResult.error.message}`,
-                cause: new Error(configResult.error.message),
-            },
-        };
+    if (!configResult.ok()) {
+        return err({
+            code: 'CONFIG_INVALID',
+            message: `Configuration error: ${configResult.error.message}`,
+            cause: new Error(configResult.error.message),
+        });
     }
     const config = configResult.value;
 
@@ -209,7 +206,7 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
         await new Promise<void>((resolve) => httpServer.close(() => resolve()));
     };
 
-    return { ok: true, value: { app, httpServer, mcpContext, config, close } };
+    return ok({ app, httpServer, mcpContext, config, close });
 };
 
 // Start server if this is the main module
@@ -222,7 +219,7 @@ if (import.meta.main) {
 
     createServer()
         .then((result) => {
-            if (!result.ok) {
+            if (!result.ok()) {
                 console.error('Failed to start server:', result.error.message);
                 process.exit(1);
             }

@@ -15,8 +15,6 @@ import type {
 } from '@/storage/adapter.ts';
 import { err, ok } from '@/result.ts';
 import { Memory, type MemoryMetadata } from '@/memory/memory.ts';
-import { memoryError } from '@/memory/result.ts';
-import type { MemorySerializer } from '@/serializer.ts';
 import type { CategoryIndex } from '@/index/types.ts';
 import type { CategoryStorage } from '@/category/types.ts';
 import type { StoreRegistry } from '@/store/registry.ts';
@@ -130,8 +128,3 @@ export const memoryWithExpiry = buildMemoryFixture(
     },
     'Memory with future expiry',
 );
-
-export const mockSerializer: MemorySerializer = {
-    parse: () => memoryError('INVALID_INPUT', 'Mock serializer not implemented.'),
-    serialize: () => memoryError('INVALID_INPUT', 'Mock serializer not implemented.'),
-};

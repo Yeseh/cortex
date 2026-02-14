@@ -10,7 +10,6 @@ import { Memory } from '@/memory/memory.ts';
 import type { MemoryError } from '@/memory/result.ts';
 import { memoryError } from '@/memory/result.ts';
 import { ok } from '@/result.ts';
-import type { MemorySerializer } from '../../serializer.ts';
 import { MemoryPath } from '@/memory/memory-path.ts';
 
 /** Input for updating an existing memory */
@@ -76,7 +75,6 @@ export interface UpdateMemoryInput {
  */
 export const updateMemory = async (
     storage: ScopedStorageAdapter,
-    _serializer: MemorySerializer,
     slugPath: string,
     updates: UpdateMemoryInput,
     now?: Date,

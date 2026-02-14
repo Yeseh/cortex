@@ -14,7 +14,7 @@
  * import { loadServerConfig } from './config';
  *
  * const configResult = loadServerConfig();
- * if (configResult.ok) {
+ * if (configResult.ok()) {
  *   const server = createMcpServer();
  *   registerMemoryTools(server, configResult.value);
  *   registerMemoryResources(server, configResult.value);
@@ -51,6 +51,6 @@ export {
     listMemoriesHandler,
     pruneMemoriesHandler,
     getRecentMemoriesHandler,
-} from './tools.ts';
+} from './tools/index.ts';
 
 export { registerMemoryResources } from './resources.ts';

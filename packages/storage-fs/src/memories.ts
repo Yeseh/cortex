@@ -9,9 +9,8 @@
 
 import { access, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import type { MemoryIdentity, MemorySlugPath, Result } from '@yeseh/cortex-core';
+import type {  Result } from '@yeseh/cortex-core';
 import type { StorageAdapterError } from '@yeseh/cortex-core/storage';
-import { validateMemorySlugPath } from '@yeseh/cortex-core/memory';
 import type {
     Memory,
     MemoryError,

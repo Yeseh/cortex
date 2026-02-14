@@ -22,7 +22,7 @@ import {
     setCategoryDescriptionHandler,
     deleteCategoryHandler,
 } from './tools.ts';
-import { addMemoryHandler, removeMemoryHandler } from '../memory/tools.ts';
+import { addMemoryHandler, removeMemoryHandler } from '../memory/tools/index.ts';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 
 const STORE = 'default';
@@ -45,7 +45,7 @@ const createTestDir = async (): Promise<string> => {
     await mkdir(memoryDir, { recursive: true });
     const registry = { default: { path: memoryDir } };
     const serialized = serializeStoreRegistry(registry);
-    if (!serialized.ok) {
+    if (!serialized.ok()) {
         throw new Error(`Failed to serialize registry: ${serialized.error.message}`);
     }
     await writeFile(join(testDir, 'stores.yaml'), serialized.value);
@@ -108,8 +108,8 @@ describe('Category Descriptions Validation', () => {
             const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
             const indexResult = await adapter.readIndexFile('');
 
-            expect(indexResult.ok).toBe(true);
-            if (indexResult.ok && indexResult.value) {
+            expect(indexResult.ok()).toBe(true);
+            if (indexResult.ok() && indexResult.value) {
                 const entry = indexResult.value.subcategories.find(
                     (subcategory) => subcategory.path === 'domain',
                 );
@@ -271,8 +271,8 @@ describe('Category Descriptions Validation', () => {
             const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
             const existsResult = await adapter.categories.exists('project/persist');
 
-            expect(existsResult.ok).toBe(true);
-            if (existsResult.ok) {
+            expect(existsResult.ok()).toBe(true);
+            if (existsResult.ok()) {
                 expect(existsResult.value).toBe(true);
             }
         });
@@ -494,9 +494,9 @@ describe('Category Descriptions Validation', () => {
             const beforeGrandchild = await adapter.categories.exists(
                 'project/parent/child/grandchild',
             );
-            expect(beforeParent.ok && beforeParent.value).toBe(true);
-            expect(beforeChild.ok && beforeChild.value).toBe(true);
-            expect(beforeGrandchild.ok && beforeGrandchild.value).toBe(true);
+            expect(beforeParent.ok() && beforeParent.value).toBe(true);
+            expect(beforeChild.ok() && beforeChild.value).toBe(true);
+            expect(beforeGrandchild.ok() && beforeGrandchild.value).toBe(true);
 
             // Delete parent - should delete all nested
             const result = await deleteCategoryHandler(
@@ -510,9 +510,9 @@ describe('Category Descriptions Validation', () => {
             const afterParent = await adapter.categories.exists('project/parent');
             const afterChild = await adapter.categories.exists('project/parent/child');
             const afterGrandchild = await adapter.categories.exists('project/parent/child/grandchild');
-            expect(afterParent.ok && afterParent.value).toBe(false);
-            expect(afterChild.ok && afterChild.value).toBe(false);
-            expect(afterGrandchild.ok && afterGrandchild.value).toBe(false);
+            expect(afterParent.ok() && afterParent.value).toBe(false);
+            expect(afterChild.ok() && afterChild.value).toBe(false);
+            expect(afterGrandchild.ok() && afterGrandchild.value).toBe(false);
         });
 
         it('should delete category with memories', async () => {
@@ -535,7 +535,7 @@ describe('Category Descriptions Validation', () => {
 
             // Verify category exists before delete
             const beforeResult = await adapter.categories.exists('project/with-memories');
-            expect(beforeResult.ok && beforeResult.value).toBe(true);
+            expect(beforeResult.ok() && beforeResult.value).toBe(true);
 
             // Delete category
             const result = await deleteCategoryHandler(
@@ -547,13 +547,13 @@ describe('Category Descriptions Validation', () => {
 
             // Verify category is gone from filesystem
             const afterResult = await adapter.categories.exists('project/with-memories');
-            expect(afterResult.ok && afterResult.value).toBe(false);
+            expect(afterResult.ok() && afterResult.value).toBe(false);
 
             // Verify memories are also gone
             const mem1 = await adapter.readMemoryFile('project/with-memories/mem1');
             const mem2 = await adapter.readMemoryFile('project/with-memories/mem2');
-            expect(mem1.ok && mem1.value === null).toBe(true);
-            expect(mem2.ok && mem2.value === null).toBe(true);
+            expect(mem1.ok() && mem1.value === null).toBe(true);
+            expect(mem2.ok() && mem2.value === null).toBe(true);
         });
 
         it('should delete category with nested subcategories and memories', async () => {
@@ -582,9 +582,9 @@ describe('Category Descriptions Validation', () => {
             const beforeComplex = await adapter.categories.exists('project/complex');
             const beforeSub1 = await adapter.categories.exists('project/complex/sub1');
             const beforeSub2 = await adapter.categories.exists('project/complex/sub2');
-            expect(beforeComplex.ok && beforeComplex.value).toBe(true);
-            expect(beforeSub1.ok && beforeSub1.value).toBe(true);
-            expect(beforeSub2.ok && beforeSub2.value).toBe(true);
+            expect(beforeComplex.ok() && beforeComplex.value).toBe(true);
+            expect(beforeSub1.ok() && beforeSub1.value).toBe(true);
+            expect(beforeSub2.ok() && beforeSub2.value).toBe(true);
 
             // Delete parent
             const result = await deleteCategoryHandler(
@@ -598,17 +598,17 @@ describe('Category Descriptions Validation', () => {
             const afterComplex = await adapter.categories.exists('project/complex');
             const afterSub1 = await adapter.categories.exists('project/complex/sub1');
             const afterSub2 = await adapter.categories.exists('project/complex/sub2');
-            expect(afterComplex.ok && afterComplex.value).toBe(false);
-            expect(afterSub1.ok && afterSub1.value).toBe(false);
-            expect(afterSub2.ok && afterSub2.value).toBe(false);
+            expect(afterComplex.ok() && afterComplex.value).toBe(false);
+            expect(afterSub1.ok() && afterSub1.value).toBe(false);
+            expect(afterSub2.ok() && afterSub2.value).toBe(false);
 
             // Memories should also be gone
             const mem1 = await adapter.readMemoryFile('project/complex/mem1');
             const mem2 = await adapter.readMemoryFile('project/complex/sub1/mem2');
             const mem3 = await adapter.readMemoryFile('project/complex/sub2/mem3');
-            expect(mem1.ok && mem1.value === null).toBe(true);
-            expect(mem2.ok && mem2.value === null).toBe(true);
-            expect(mem3.ok && mem3.value === null).toBe(true);
+            expect(mem1.ok() && mem1.value === null).toBe(true);
+            expect(mem2.ok() && mem2.value === null).toBe(true);
+            expect(mem3.ok() && mem3.value === null).toBe(true);
         });
 
         it('should delete deeply nested category without affecting siblings', async () => {
@@ -655,8 +655,8 @@ describe('Category Descriptions Validation', () => {
 
             // Verify it exists
             const beforeResult = await adapter.categories.exists('project/todelete');
-            expect(beforeResult.ok).toBe(true);
-            if (beforeResult.ok) {
+            expect(beforeResult.ok()).toBe(true);
+            if (beforeResult.ok()) {
                 expect(beforeResult.value).toBe(true);
             }
 
@@ -665,8 +665,8 @@ describe('Category Descriptions Validation', () => {
 
             // Verify it's gone
             const afterResult = await adapter.categories.exists('project/todelete');
-            expect(afterResult.ok).toBe(true);
-            if (afterResult.ok) {
+            expect(afterResult.ok()).toBe(true);
+            if (afterResult.ok()) {
                 expect(afterResult.value).toBe(false);
             }
         });

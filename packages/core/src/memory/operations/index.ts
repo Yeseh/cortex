@@ -41,3 +41,5 @@ export type { PruneOptions, PrunedMemory, PruneResult } from './prune.ts';
 // Recent memories operation
 export { getRecentMemories } from './recent.ts';
 export type { GetRecentMemoriesOptions, RecentMemory, GetRecentMemoriesResult } from './recent.ts';
+
+export type { MemoryError, MemoryResult } from './result.ts';

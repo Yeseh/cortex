@@ -170,8 +170,8 @@ describe(
                 );
                 const result = await listStores(nonExistentPath);
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
+                expect(result.ok()).toBe(true);
+                if (result.ok()) {
                     expect(result.value).toEqual([]); 
                 }
             },
@@ -181,8 +181,8 @@ describe(
             'should return empty array when data path is empty', async () => {
                 const result = await listStores(testDir);
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
+                expect(result.ok()).toBe(true);
+                if (result.ok()) {
                     expect(result.value).toEqual([]); 
                 }
             },
@@ -203,8 +203,8 @@ describe(
 
                 const result = await listStores(testDir);
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
+                expect(result.ok()).toBe(true);
+                if (result.ok()) {
                     expect(result.value).toHaveLength(3);
                     expect(result.value).toContain('store-a');
                     expect(result.value).toContain('store-b');
@@ -232,8 +232,8 @@ describe(
 
                 const result = await listStores(testDir);
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
+                expect(result.ok()).toBe(true);
+                if (result.ok()) {
                     expect(result.value).toEqual(['real-store']); 
                 }
             },
@@ -250,8 +250,8 @@ describe(
 
                 const result = await listStores(filePath);
 
-                expect(result.ok).toBe(false);
-                if (!result.ok) {
+                expect(result.ok()).toBe(false);
+                if (!result.ok()) {
                     expect(result.error.code).toBe('STORE_LIST_FAILED');
                     expect(result.error.message).toContain('Failed to list stores');
                 }
@@ -272,8 +272,8 @@ describe(
 
                 const result = await listStores(testDir);
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
+                expect(result.ok()).toBe(true);
+                if (result.ok()) {
                     expect(result.value).toHaveLength(3);
                     expect(result.value).toContain('project-alpha');
                     expect(result.value).toContain('project_beta');
@@ -308,8 +308,8 @@ describe(
                             testDir, 'my-store',
                         );
 
-                        expect(result.ok).toBe(true);
-                        if (result.ok) {
+                        expect(result.ok()).toBe(true);
+                        if (result.ok()) {
                             expect(result.value).toBeUndefined(); 
                         }
 
@@ -330,7 +330,7 @@ describe(
                             nestedPath, 'deep-store',
                         );
 
-                        expect(result.ok).toBe(true);
+                        expect(result.ok()).toBe(true);
 
                         // Verify directory was created
                         const stat = await fs.stat(path.join(
@@ -346,7 +346,7 @@ describe(
                             testDir, '123store',
                         );
 
-                        expect(result.ok).toBe(true);
+                        expect(result.ok()).toBe(true);
 
                         // Verify directory was created
                         const stat = await fs.stat(path.join(
@@ -362,7 +362,7 @@ describe(
                             testDir, 'My-Store_V2',
                         );
 
-                        expect(result.ok).toBe(true);
+                        expect(result.ok()).toBe(true);
 
                         // Verify directory was created
                         const stat = await fs.stat(path.join(
@@ -387,8 +387,8 @@ describe(
                             testDir, 'existing-store',
                         );
 
-                        expect(result.ok).toBe(false);
-                        if (!result.ok) {
+                        expect(result.ok()).toBe(false);
+                        if (!result.ok()) {
                             expect(result.error.code).toBe('STORE_ALREADY_EXISTS');
                             expect(result.error.message).toBe("Store 'existing-store' already exists");
                         }
@@ -401,15 +401,15 @@ describe(
                         const first = await createStore(
                             testDir, 'new-store',
                         );
-                        expect(first.ok).toBe(true);
+                        expect(first.ok()).toBe(true);
 
                         // Try to create again
                         const second = await createStore(
                             testDir, 'new-store',
                         );
 
-                        expect(second.ok).toBe(false);
-                        if (!second.ok) {
+                        expect(second.ok()).toBe(false);
+                        if (!second.ok()) {
                             expect(second.error.code).toBe('STORE_ALREADY_EXISTS'); 
                         }
                     },
@@ -425,8 +425,8 @@ describe(
                             testDir, '',
                         );
 
-                        expect(result.ok).toBe(false);
-                        if (!result.ok) {
+                        expect(result.ok()).toBe(false);
+                        if (!result.ok()) {
                             expect(result.error.code).toBe('INVALID_STORE_NAME');
                             expect(result.error.message).toContain('Store name must not be empty');
                         }
@@ -439,8 +439,8 @@ describe(
                             testDir, '-invalid',
                         );
 
-                        expect(result.ok).toBe(false);
-                        if (!result.ok) {
+                        expect(result.ok()).toBe(false);
+                        if (!result.ok()) {
                             expect(result.error.code).toBe('INVALID_STORE_NAME');
                             expect(result.error.message).toContain('Store name must start with alphanumeric');
                         }
@@ -453,8 +453,8 @@ describe(
                             testDir, '_invalid',
                         );
 
-                        expect(result.ok).toBe(false);
-                        if (!result.ok) {
+                        expect(result.ok()).toBe(false);
+                        if (!result.ok()) {
                             expect(result.error.code).toBe('INVALID_STORE_NAME');
                             expect(result.error.message).toContain('Store name must start with alphanumeric');
                         }
@@ -467,8 +467,8 @@ describe(
                             testDir, 'my store',
                         );
 
-                        expect(result.ok).toBe(false);
-                        if (!result.ok) {
+                        expect(result.ok()).toBe(false);
+                        if (!result.ok()) {
                             expect(result.error.code).toBe('INVALID_STORE_NAME'); 
                         }
                     },
@@ -480,8 +480,8 @@ describe(
                             testDir, 'store@name',
                         );
 
-                        expect(result.ok).toBe(false);
-                        if (!result.ok) {
+                        expect(result.ok()).toBe(false);
+                        if (!result.ok()) {
                             expect(result.error.code).toBe('INVALID_STORE_NAME'); 
                         }
                     },
@@ -493,8 +493,8 @@ describe(
                             testDir, 'store.name',
                         );
 
-                        expect(result.ok).toBe(false);
-                        if (!result.ok) {
+                        expect(result.ok()).toBe(false);
+                        if (!result.ok()) {
                             expect(result.error.code).toBe('INVALID_STORE_NAME'); 
                         }
                     },
@@ -552,8 +552,8 @@ describe(
                             testDir, '-invalid',
                         );
 
-                        expect(result.ok).toBe(false);
-                        if (!result.ok) {
+                        expect(result.ok()).toBe(false);
+                        if (!result.ok()) {
                             expect(result.error).toHaveProperty('code');
                             expect(result.error).toHaveProperty('message');
                         }
@@ -604,8 +604,8 @@ describe(
                     testDir, 'stores.yaml',
                 ));
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
+                expect(result.ok()).toBe(true);
+                if (result.ok()) {
                     expect(result.value.stores).toHaveLength(2);
                     const defaultStore = result.value.stores.find((s) => s.name === 'default');
                     expect(defaultStore?.description).toBe('Default store for general memories');
@@ -633,8 +633,8 @@ describe(
                     testDir, 'stores.yaml',
                 ));
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
+                expect(result.ok()).toBe(true);
+                if (result.ok()) {
                     expect(result.value.stores).toHaveLength(1);
                     expect(result.value.stores[0]?.description).toBeUndefined();
                 }
@@ -647,8 +647,8 @@ describe(
                     testDir, 'nonexistent.yaml',
                 ));
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
+                expect(result.ok()).toBe(true);
+                if (result.ok()) {
                     expect(result.value.stores).toEqual([]);
                 }
             },
@@ -676,8 +676,8 @@ describe(
                     testDir, 'stores.yaml',
                 ));
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
+                expect(result.ok()).toBe(true);
+                if (result.ok()) {
                     expect(result.value.stores.map((s) => s.name)).toEqual([
                         'alpha',
                         'middle',
@@ -708,8 +708,8 @@ describe(
                     testDir, 'stores.yaml',
                 ));
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
+                expect(result.ok()).toBe(true);
+                if (result.ok()) {
                     const withDesc = result.value.stores.find((s) => s.name === 'with-desc');
                     const withoutDesc = result.value.stores.find((s) => s.name === 'without-desc');
                     expect(withDesc?.description).toBe('Has description');

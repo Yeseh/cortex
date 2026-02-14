@@ -37,7 +37,7 @@ const createTestDir = async (): Promise<string> => {
     await mkdir(memoryDir, { recursive: true });
     const registry = { default: { path: memoryDir } };
     const serialized = serializeStoreRegistry(registry);
-    if (!serialized.ok) {
+    if (!serialized.ok()) {
         throw new Error(`Failed to serialize registry: ${serialized.error.message}`);
     }
     await writeFile(join(testDir, 'stores.yaml'), serialized.value);

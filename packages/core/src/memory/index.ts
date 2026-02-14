@@ -21,6 +21,7 @@
  */
 export * from '@/slug';
 export * from '@/memory/memory';
+export * from '@/memory/result';
 export * from '@/memory/memory-path';
 
 // Domain operations

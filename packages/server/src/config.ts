@@ -14,7 +14,7 @@
  * process.env.CORTEX_LOG_LEVEL = 'debug';
  *
  * const result = loadServerConfig();
- * if (result.ok) {
+ * if (result.ok()) {
  *   console.log(`Port: ${result.value.port}`); // 8080
  * }
  * ```
@@ -187,7 +187,7 @@ export interface ConfigLoadError {
  * @example
  * ```ts
  * const result = loadServerConfig();
- * if (result.ok) {
+ * if (result.ok()) {
  *   console.log(`Server will listen on ${result.value.host}:${result.value.port}`);
  *   console.log(`Memory stored at: ${getMemoryPath(result.value)}`);
  * } else {

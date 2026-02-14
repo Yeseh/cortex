@@ -17,7 +17,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { join } from 'node:path';
-import type { Result } from '@yeseh/cortex-core';
+import { err, ok, type Result } from '@yeseh/cortex-core';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 import type { CategoryStorage } from '@yeseh/cortex-core/category';
@@ -136,13 +136,6 @@ interface McpToolResponse {
     content: { type: 'text'; text: string }[];
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
-const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
-
 /**
  * Resolves the store adapter from the registry.
  *
@@ -162,7 +155,7 @@ const resolveStoreAdapter = async (
     const registry = new FilesystemRegistry(registryPath);
     const registryResult = await registry.load();
 
-    if (!registryResult.ok) {
+    if (!registryResult.ok()) {
         // Map REGISTRY_MISSING to appropriate error
         if (registryResult.error.code === 'REGISTRY_MISSING') {
             return err(
@@ -178,7 +171,7 @@ const resolveStoreAdapter = async (
     }
 
     const storeResult = registry.getStore(storeName);
-    if (!storeResult.ok) {
+    if (!storeResult.ok()) {
         return err(new McpError(ErrorCode.InvalidParams, storeResult.error.message));
     }
 
@@ -247,14 +240,14 @@ export const createCategoryHandler = async (
     input: CreateCategoryInput,
 ): Promise<McpToolResponse> => {
     const adapterResult = await resolveStoreAdapter(ctx.config, input.store);
-    if (!adapterResult.ok) {
+    if (!adapterResult.ok()) {
         throw adapterResult.error;
     }
 
     const port = createCategoryStoragePort(adapterResult.value);
     const result = await createCategory(port, input.path);
 
-    if (!result.ok) {
+    if (!result.ok()) {
         if (result.error.code === 'INVALID_PATH') {
             throw new McpError(ErrorCode.InvalidParams, result.error.message);
         }
@@ -307,7 +300,7 @@ export const setCategoryDescriptionHandler = async (
     input: SetCategoryDescriptionInput,
 ): Promise<McpToolResponse> => {
     const adapterResult = await resolveStoreAdapter(ctx.config, input.store);
-    if (!adapterResult.ok) {
+    if (!adapterResult.ok()) {
         throw adapterResult.error;
     }
 
@@ -315,13 +308,13 @@ export const setCategoryDescriptionHandler = async (
 
     // MCP convenience: auto-create category if it doesn't exist
     const createResult = await createCategory(port, input.path);
-    if (!createResult.ok && createResult.error.code !== 'INVALID_PATH') {
+    if (!createResult.ok() && createResult.error.code !== 'INVALID_PATH') {
         throw new McpError(ErrorCode.InternalError, createResult.error.message);
     }
 
     const result = await setDescription(port, input.path, input.description);
 
-    if (!result.ok) {
+    if (!result.ok()) {
         if (result.error.code === 'DESCRIPTION_TOO_LONG') {
             throw new McpError(ErrorCode.InvalidParams, result.error.message);
         }
@@ -370,14 +363,14 @@ export const deleteCategoryHandler = async (
     input: DeleteCategoryInput,
 ): Promise<McpToolResponse> => {
     const adapterResult = await resolveStoreAdapter(ctx.config, input.store);
-    if (!adapterResult.ok) {
+    if (!adapterResult.ok()) {
         throw adapterResult.error;
     }
 
     const port = createCategoryStoragePort(adapterResult.value);
     const result = await deleteCategory(port, input.path);
 
-    if (!result.ok) {
+    if (!result.ok()) {
         if (result.error.code === 'ROOT_CATEGORY_REJECTED') {
             throw new McpError(ErrorCode.InvalidParams, result.error.message);
         }
