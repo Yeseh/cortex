@@ -28,7 +28,7 @@ describe('initializeStore', () => {
 
             const result = await initializeStore(registry, 'my-store', storePath);
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             // Verify store directory was created
             const stat = await fs.stat(storePath);
@@ -50,7 +50,7 @@ describe('initializeStore', () => {
                 ],
             });
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             // Verify category directories were created
             const globalStat = await fs.stat(join(storePath, 'global'));
@@ -97,8 +97,8 @@ describe('initializeStore', () => {
 
             // Reload registry and verify store is registered
             const loadResult = await registry.load();
-            expect(loadResult.ok).toBe(true);
-            if (loadResult.ok) {
+            expect(loadResult.ok()).toBe(true);
+            if (loadResult.ok()) {
                 expect(loadResult.value['registered-store']).toBeDefined();
                 expect(loadResult.value['registered-store']?.path).toBe(storePath);
             }
@@ -113,8 +113,8 @@ describe('initializeStore', () => {
             });
 
             const loadResult = await registry.load();
-            expect(loadResult.ok).toBe(true);
-            if (loadResult.ok) {
+            expect(loadResult.ok()).toBe(true);
+            if (loadResult.ok()) {
                 expect(loadResult.value['described-store']?.description).toBe(
                     'A test store with description',
                 );
@@ -128,7 +128,7 @@ describe('initializeStore', () => {
 
             const result = await initializeStore(registry, 'fresh-store', storePath);
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             // Verify registry file was created
             const registryExists = await fs
@@ -139,8 +139,8 @@ describe('initializeStore', () => {
 
             // Verify store is in registry
             const loadResult = await registry.load();
-            expect(loadResult.ok).toBe(true);
-            if (loadResult.ok) {
+            expect(loadResult.ok()).toBe(true);
+            if (loadResult.ok()) {
                 expect(loadResult.value['fresh-store']).toBeDefined();
             }
         });
@@ -151,7 +151,7 @@ describe('initializeStore', () => {
 
             const result = await initializeStore(registry, 'simple', storePath);
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
         });
 
         it('should handle store names with numbers', async () => {
@@ -160,7 +160,7 @@ describe('initializeStore', () => {
 
             const result = await initializeStore(registry, 'project123', storePath);
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
         });
 
         it('should handle store names with hyphens', async () => {
@@ -169,7 +169,7 @@ describe('initializeStore', () => {
 
             const result = await initializeStore(registry, 'my-project-v2', storePath);
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
         });
 
         it('should create store with empty categories array', async () => {
@@ -180,7 +180,7 @@ describe('initializeStore', () => {
                 categories: [],
             });
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             // Only root index should exist
             const rootIndex = await fs.readFile(join(storePath, 'index.yaml'), 'utf8');
@@ -195,8 +195,8 @@ describe('initializeStore', () => {
 
             const result = await initializeStore(registry, 'MyStore', storePath);
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('INVALID_STORE_NAME');
                 expect(result.error.store).toBe('MyStore');
             }
@@ -208,8 +208,8 @@ describe('initializeStore', () => {
 
             const result = await initializeStore(registry, 'my store', storePath);
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('INVALID_STORE_NAME');
             }
         });
@@ -220,8 +220,8 @@ describe('initializeStore', () => {
 
             const result = await initializeStore(registry, 'my_store!', storePath);
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('INVALID_STORE_NAME');
             }
         });
@@ -232,8 +232,8 @@ describe('initializeStore', () => {
 
             const result = await initializeStore(registry, 'my_store', storePath);
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('INVALID_STORE_NAME');
             }
         });
@@ -244,8 +244,8 @@ describe('initializeStore', () => {
 
             const result = await initializeStore(registry, '', storePath);
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('INVALID_STORE_NAME');
             }
         });
@@ -256,8 +256,8 @@ describe('initializeStore', () => {
 
             const result = await initializeStore(registry, '-store', storePath);
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('INVALID_STORE_NAME');
             }
         });
@@ -268,8 +268,8 @@ describe('initializeStore', () => {
 
             const result = await initializeStore(registry, 'store-', storePath);
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('INVALID_STORE_NAME');
             }
         });
@@ -280,8 +280,8 @@ describe('initializeStore', () => {
 
             const result = await initializeStore(registry, 'my--store', storePath);
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('INVALID_STORE_NAME');
             }
         });
@@ -295,13 +295,13 @@ describe('initializeStore', () => {
 
             // Create the first store
             const firstResult = await initializeStore(registry, 'existing-store', storePath1);
-            expect(firstResult.ok).toBe(true);
+            expect(firstResult.ok()).toBe(true);
 
             // Try to create a store with the same name
             const secondResult = await initializeStore(registry, 'existing-store', storePath2);
 
-            expect(secondResult.ok).toBe(false);
-            if (!secondResult.ok) {
+            expect(secondResult.ok()).toBe(false);
+            if (!secondResult.ok()) {
                 expect(secondResult.error.code).toBe('STORE_ALREADY_EXISTS');
                 expect(secondResult.error.store).toBe('existing-store');
                 expect(secondResult.error.message).toContain('already registered');
@@ -318,8 +318,8 @@ describe('initializeStore', () => {
 
             const result = await initializeStore(registry, 'pre-existing', storePath);
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('STORE_ALREADY_EXISTS');
             }
         });
@@ -332,7 +332,7 @@ describe('initializeStore', () => {
 
             const result = await initializeStore(registry, 'nested-store', nestedPath);
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             const stat = await fs.stat(nestedPath);
             expect(stat.isDirectory()).toBe(true);
@@ -347,7 +347,7 @@ describe('initializeStore', () => {
 
             const result = await initializeStore(registry, 'pre-existing-dir', storePath);
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             // Verify index was created
             const indexContent = await fs.readFile(join(storePath, 'index.yaml'), 'utf8');
@@ -367,14 +367,14 @@ describe('initializeStore', () => {
             const result2 = await initializeStore(registry, 'store2', store2Path);
             const result3 = await initializeStore(registry, 'store3', store3Path);
 
-            expect(result1.ok).toBe(true);
-            expect(result2.ok).toBe(true);
-            expect(result3.ok).toBe(true);
+            expect(result1.ok()).toBe(true);
+            expect(result2.ok()).toBe(true);
+            expect(result3.ok()).toBe(true);
 
             // Verify all stores are in registry
             const loadResult = await registry.load();
-            expect(loadResult.ok).toBe(true);
-            if (loadResult.ok) {
+            expect(loadResult.ok()).toBe(true);
+            if (loadResult.ok()) {
                 expect(Object.keys(loadResult.value)).toHaveLength(3);
                 expect(loadResult.value['store1']).toBeDefined();
                 expect(loadResult.value['store2']).toBeDefined();
@@ -392,12 +392,12 @@ describe('initializeStore', () => {
 
             const result = await initializeStore(registry, 'new-store', newStorePath);
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             // Verify both stores are in registry
             const loadResult = await registry.load();
-            expect(loadResult.ok).toBe(true);
-            if (loadResult.ok) {
+            expect(loadResult.ok()).toBe(true);
+            if (loadResult.ok()) {
                 expect(loadResult.value['existing']).toBeDefined();
                 expect(loadResult.value['existing']?.path).toBe('/existing/path');
                 expect(loadResult.value['new-store']).toBeDefined();
@@ -456,8 +456,8 @@ describe('initializeStore', () => {
 
             const result = await initializeStore(registry, 'INVALID', join(tempDir, 'x'));
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.store).toBe('INVALID');
                 expect(result.error.message).toContain('INVALID');
             }
@@ -469,10 +469,11 @@ describe('initializeStore', () => {
             await initializeStore(registry, 'duplicate', join(tempDir, 'dup1'));
             const result = await initializeStore(registry, 'duplicate', join(tempDir, 'dup2'));
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.store).toBe('duplicate');
             }
         });
     });
 });
+

@@ -17,9 +17,8 @@ import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import type { ReadResourceResult } from '@modelcontextprotocol/sdk/types.js';
 import type { Variables } from '@modelcontextprotocol/sdk/shared/uriTemplate.js';
 import type { ServerConfig } from '../config.ts';
-import { ok, type Result } from '@yeseh/cortex-core';
+import { err, ok, type Result } from '@yeseh/cortex-core';
 import { listStores, storeNameSchema } from './tools.ts';
-import { err } from '../../../storage-fs/src/utils.ts';
 
 /**
  * Extracts a single string value from a Variables entry.

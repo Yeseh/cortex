@@ -5,9 +5,8 @@
  */
 
 import { ok, err, type Result } from '../../result.ts';
+import { CategoryPath } from '../category-path.ts';
 import type { CategoryStorage, CategoryError, DeleteCategoryResult } from '../types.ts';
-import { isRootCategory } from './helpers.ts';
-import { getParentPath } from './helpers.ts';
 
 /**
  * Deletes a category and all its contents recursively.
@@ -40,8 +39,17 @@ export const deleteCategory = async (
     storage: CategoryStorage,
     path: string,
 ): Promise<Result<DeleteCategoryResult, CategoryError>> => {
-    // Reject root categories
-    if (isRootCategory(path)) {
+    const pathResult = CategoryPath.fromString(path);
+    if (!pathResult.ok()) {
+        return err({
+            code: 'INVALID_PATH',
+            message: `Invalid category path: ${path}`,
+            path,
+        });
+    };
+
+    // Reject root (top-level) categories
+    if (pathResult.value.depth === 1) {
         return err({
             code: 'ROOT_CATEGORY_REJECTED',
             message: 'Cannot delete root category',
@@ -50,7 +58,7 @@ export const deleteCategory = async (
     }
 
     // Check category exists
-    const existsResult = await storage.exists(path);
+    const existsResult = await storage.exists(pathResult.value);
     if (!existsResult.ok()) {
         return existsResult;
     }
@@ -63,14 +71,13 @@ export const deleteCategory = async (
     }
 
     // Delete the category directory recursively
-    const deleteResult = await storage.delete(path);
+    const deleteResult = await storage.delete(pathResult.value);
     if (!deleteResult.ok()) {
         return deleteResult;
     }
 
     // Remove from parent's subcategories list
-    const parentPath = getParentPath(path);
-    const removeResult = await storage.removeSubcategoryEntry(parentPath, path);
+    const removeResult = await storage.removeSubcategoryEntry(pathResult.value);
     if (!removeResult.ok()) {
         return removeResult;
     }

@@ -26,7 +26,7 @@ describe('FilesystemRegistry', () => {
 
             const result = await registry.initialize();
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             // Verify file was created
             const content = await fs.readFile(registryPath, 'utf8');
@@ -39,7 +39,7 @@ describe('FilesystemRegistry', () => {
 
             const result = await registry.initialize();
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             const content = await fs.readFile(nestedPath, 'utf8');
             expect(content).toBe('stores:\n');
@@ -52,7 +52,7 @@ describe('FilesystemRegistry', () => {
             const registry = new FilesystemRegistry(registryPath);
             const result = await registry.initialize();
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             // Verify file was not changed
             const content = await fs.readFile(registryPath, 'utf8');
@@ -73,8 +73,8 @@ describe('FilesystemRegistry', () => {
             const registry = new FilesystemRegistry(registryPath);
             const result = await registry.load();
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value).toHaveProperty('default');
                 expect(result.value).toHaveProperty('work');
                 expect(result.value.default?.path).toBe(`${tempDir}/default`);
@@ -87,8 +87,8 @@ describe('FilesystemRegistry', () => {
 
             const result = await registry.load();
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('REGISTRY_MISSING');
             }
         });
@@ -99,8 +99,8 @@ describe('FilesystemRegistry', () => {
             const registry = new FilesystemRegistry(registryPath);
             const result = await registry.load();
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('REGISTRY_PARSE_FAILED');
             }
         });
@@ -116,7 +116,7 @@ describe('FilesystemRegistry', () => {
 
             const result = await registry.save(storeRegistry);
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             // Verify file was created
             const content = await fs.readFile(registryPath, 'utf8');
@@ -131,7 +131,7 @@ describe('FilesystemRegistry', () => {
 
             const result = await registry.save(storeRegistry);
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             const content = await fs.readFile(nestedPath, 'utf8');
             expect(content).toContain('test:');
@@ -145,7 +145,7 @@ describe('FilesystemRegistry', () => {
 
             const result = await registry.save(storeRegistry);
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             const content = await fs.readFile(registryPath, 'utf8');
             expect(content).toContain('new:');
@@ -160,7 +160,7 @@ describe('FilesystemRegistry', () => {
 
             // getStore should work without calling load()
             const storeResult = registry.getStore('mystore');
-            expect(storeResult.ok).toBe(true);
+            expect(storeResult.ok()).toBe(true);
         });
     });
 
@@ -185,8 +185,8 @@ describe('FilesystemRegistry', () => {
 
             const result = registry.getStore('mystore');
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value).toHaveProperty('memories');
                 expect(result.value).toHaveProperty('indexes');
                 expect(result.value).toHaveProperty('categories');
@@ -202,8 +202,8 @@ describe('FilesystemRegistry', () => {
 
             const result = registry.getStore('nonexistent');
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('STORE_NOT_FOUND');
                 expect(result.error.store).toBe('nonexistent');
             }
@@ -220,9 +220,9 @@ describe('FilesystemRegistry', () => {
             await registry.load();
 
             const storeResult = registry.getStore('workingstore');
-            expect(storeResult.ok).toBe(true);
+            expect(storeResult.ok()).toBe(true);
 
-            if (storeResult.ok) {
+            if (storeResult.ok()) {
                 // Test that the adapter actually works
                 // Memory files require YAML frontmatter with all required metadata
                 const memoryContent = [
@@ -239,14 +239,15 @@ describe('FilesystemRegistry', () => {
                     'test/memory',
                     memoryContent,
                 );
-                expect(writeResult.ok).toBe(true);
+                expect(writeResult.ok()).toBe(true);
 
                 const readResult = await storeResult.value.memories.read('test/memory');
-                expect(readResult.ok).toBe(true);
-                if (readResult.ok) {
+                expect(readResult.ok()).toBe(true);
+                if (readResult.ok()) {
                     expect(readResult.value).toBe(memoryContent);
                 }
             }
         });
     });
 });
+

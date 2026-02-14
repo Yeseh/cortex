@@ -11,7 +11,7 @@
  * @example
  * ```ts
  * const result = await runAddCommand(options);
- * if (!result.ok) {
+ * if (!result.ok()) {
  *     mapCoreError(result.error);
  * }
  * ```
@@ -89,7 +89,7 @@ const ARGUMENT_ERROR_CODES = new Set([
  * ```ts
  * // In a command action handler
  * const result = await runShowCommand(options);
- * if (!result.ok) {
+ * if (!result.ok()) {
  *     mapCoreError(result.error);
  *     // Never reaches here - mapCoreError always throws
  * }

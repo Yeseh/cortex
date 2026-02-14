@@ -61,7 +61,9 @@ describe('cortex_get_recent_memories tool', () => {
             metadata: {
                 createdAt: now,
                 updatedAt: now,
-                tags: ['tag2', 'tag3'],
+                tags: [
+                    'tag2', 'tag3',
+                ],
                 source: 'test',
                 citations: [],
             },
@@ -81,7 +83,9 @@ describe('cortex_get_recent_memories tool', () => {
 
         expect(output.memories[0]!.path).toBe('project/newest');
         expect(output.memories[0]!.content).toBe('Newest memory');
-        expect(output.memories[0]!.tags).toEqual(['tag2', 'tag3']);
+        expect(output.memories[0]!.tags).toEqual([
+            'tag2', 'tag3',
+        ]);
         expect(output.memories[0]!.token_estimate).toBeGreaterThan(0);
         expect(output.memories[0]!.updated_at).toBeDefined();
 

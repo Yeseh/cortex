@@ -7,9 +7,6 @@
  * @module core/category/operations
  */
 
-// Pure helpers
-export { isRootCategory, getParentPath, getAncestorPaths } from './helpers.ts';
-
 // Create operation
 export { createCategory } from './create.ts';
 

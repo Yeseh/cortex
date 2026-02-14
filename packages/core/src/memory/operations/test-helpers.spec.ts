@@ -18,6 +18,8 @@ import { Memory, type MemoryMetadata } from '@/memory/memory.ts';
 import type { CategoryIndex } from '@/index/types.ts';
 import type { CategoryStorage } from '@/category/types.ts';
 import type { StoreRegistry } from '@/store/registry.ts';
+import { CategoryPath } from '@/category/category-path.ts';
+import { MemoryPath } from '@/memory/memory-path.ts';
 
 
 // ============================================================================
@@ -73,6 +75,18 @@ export const createMockStorage = (
         ...overrides.stores,
     } as StoreStorage,
 });
+
+// ============================================================================
+// Path Helpers
+// ============================================================================
+
+export const categoryPath = (path: string): CategoryPath => (
+    path === '' ? CategoryPath.root() : CategoryPath.fromString(path).unwrap()
+);
+
+export const memoryPath = (path: string): MemoryPath => (
+    MemoryPath.fromString(path).unwrap()
+);
 
 // Re-export for convenience in tests
 export { ok, err };

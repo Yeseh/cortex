@@ -41,7 +41,9 @@ describe('cortex_add_memory tool', () => {
             store: 'default',
             path: 'project/tagged-memory',
             content: 'Content with tags',
-            tags: ['test', 'example'],
+            tags: [
+                'test', 'example',
+            ],
         };
 
         const result = await addMemoryHandler({ config }, input);
@@ -56,7 +58,9 @@ describe('cortex_add_memory tool', () => {
             },
         );
         const output = JSON.parse(getResult.content[0]!.text);
-        expect(output.metadata.tags).toEqual(['test', 'example']);
+        expect(output.metadata.tags).toEqual([
+            'test', 'example',
+        ]);
     });
 
     it('should create a memory with expiration', async () => {

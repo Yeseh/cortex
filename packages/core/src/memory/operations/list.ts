@@ -13,11 +13,13 @@ import {
     collectMemoriesFromCategory,
     collectDirectSubcategories,
 } from './helpers.ts';
+import type { MemoryPath } from '../memory-path.ts';
+import { CategoryPath } from '@/category/category-path.ts';
 
 /** Options for listing memories */
 export interface ListMemoriesOptions {
     /** Category to list (undefined = all root categories) */
-    category?: string;
+    category?: CategoryPath;
     /** Include expired memories (default: false) */
     includeExpired?: boolean;
     /** Current time for expiration check */
@@ -27,7 +29,7 @@ export interface ListMemoriesOptions {
 /** A memory entry in list results */
 export interface ListedMemory {
     /** Full path to the memory */
-    path: string;
+    path: MemoryPath;
     /** Estimated token count */
     tokenEstimate: number;
     /** Brief summary if available */
@@ -43,7 +45,7 @@ export interface ListedMemory {
 /** A subcategory entry in list results */
 export interface ListedSubcategory {
     /** Full path to the subcategory */
-    path: string;
+    path: CategoryPath;
     /** Total memories in this subcategory */
     memoryCount: number;
     /** Category description if set */
@@ -53,7 +55,7 @@ export interface ListedSubcategory {
 /** Result of listing memories */
 export interface ListMemoriesResult {
     /** Category that was listed (empty string for root) */
-    category: string;
+    category: CategoryPath;
     /** Memories found */
     memories: ListedMemory[];
     /** Direct subcategories */
@@ -94,7 +96,7 @@ export const listMemories = async (
 ): Promise<Result<ListMemoriesResult, MemoryError>> => {
     const includeExpired = options?.includeExpired ?? false;
     const now = options?.now ?? new Date();
-    const category = options?.category ?? '';
+    const category = options?.category ?? CategoryPath.root();
 
     const visited = new Set<string>();
     const memories: ListedMemory[] = [];

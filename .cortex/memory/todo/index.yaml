@@ -2,8 +2,14 @@ memories:
   - path: todo/create-category-error-type
     token_estimate: 411
     updated_at: 2026-02-14T13:53:54.162Z
+  - path: todo/decrease-mcp-fs-coupling
+    token_estimate: 290
+    updated_at: 2026-02-14T17:59:14.018Z
   - path: todo/fix-prune-reindex-consistency
     token_estimate: 144
+  - path: todo/merge-categories-indexes
+    token_estimate: 300
+    updated_at: 2026-02-14T17:59:09.372Z
   - path: todo/refactor-incomplete-files
     token_estimate: 400
     updated_at: 2026-02-14T13:49:31.563Z
@@ -12,6 +18,9 @@ memories:
     updated_at: 2026-02-13T21:47:02.743Z
   - path: todo/remove-clear-expiry-flag
     token_estimate: 130
+  - path: todo/review-registry-implementation
+    token_estimate: 446
+    updated_at: 2026-02-14T17:59:54.844Z
   - path: todo/storage-fs-domain-objects
     token_estimate: 502
     updated_at: 2026-02-14T13:54:02.905Z

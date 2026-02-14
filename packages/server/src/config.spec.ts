@@ -377,18 +377,22 @@ describe('server config loading', () => {
         it('should return ok: true with value on success', () => {
             const result = loadServerConfig();
 
-            expect(result).toHaveProperty('ok', true);
-            expect(result).toHaveProperty('value');
-            expect(result).not.toHaveProperty('error');
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
+                expect(result.value).toBeDefined();
+                expect(result.error).toBeUndefined();
+            }
         });
 
         it('should return ok: false with error on failure', () => {
             process.env.CORTEX_PORT = 'invalid';
             const result = loadServerConfig();
 
-            expect(result).toHaveProperty('ok', false);
-            expect(result).toHaveProperty('error');
-            expect(result).not.toHaveProperty('value');
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
+                expect(result.error).toBeDefined();
+                expect(result.value).toBeUndefined();
+            }
         });
 
         it('should have error with code and message properties', () => {

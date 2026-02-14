@@ -6,6 +6,7 @@
 
 import { describe, expect, it, mock } from 'bun:test';
 import type { CategoryError } from '../types.ts';
+import type { CategoryPath } from '../category-path.ts';
 import { createMockStorage, ok, err } from './test-helpers.spec.ts';
 import { setDescription } from './set-description.ts';
 
@@ -24,16 +25,16 @@ describe('setDescription', () => {
     });
 
     it('should set description on root categories', async () => {
-        let capturedParent: string | null = null;
+        let capturedPath: string | null = null;
         let capturedDesc: string | null = null;
         const storage = createMockStorage({
             exists: mock(async () => ok(true)),
             updateSubcategoryDescription: mock(
-                async (parent: string, _path: string, desc: string | null) => {
-                    capturedParent = parent;
+                async (path: CategoryPath, desc: string | null) => {
+                    capturedPath = path.toString();
                     capturedDesc = desc;
                     return ok(undefined);
-                }
+                },
             ),
         });
         const result = await setDescription(storage, 'project', 'Root category description');
@@ -42,8 +43,7 @@ describe('setDescription', () => {
         if (result.ok()) {
             expect(result.value.description).toBe('Root category description');
         }
-        // Root category's parent is empty string (store root)
-        expect(capturedParent as string | null).toBe('');
+        expect(capturedPath as string | null).toBe('project');
         expect(capturedDesc as string | null).toBe('Root category description');
     });
 
@@ -66,10 +66,10 @@ describe('setDescription', () => {
         const storage = createMockStorage({
             exists: mock(async () => ok(true)),
             updateSubcategoryDescription: mock(
-                async (_parent: string, _path: string, desc: string | null) => {
+                async (_path: CategoryPath, desc: string | null) => {
                     capturedDesc = desc;
                     return ok(undefined);
-                }
+                },
             ),
         });
 
@@ -83,10 +83,10 @@ describe('setDescription', () => {
         const storage = createMockStorage({
             exists: mock(async () => ok(true)),
             updateSubcategoryDescription: mock(
-                async (_parent: string, _path: string, desc: string | null) => {
+                async (_path: CategoryPath, desc: string | null) => {
                     capturedDesc = desc;
                     return ok(undefined);
-                }
+                },
             ),
         });
 
@@ -113,10 +113,10 @@ describe('setDescription', () => {
         const storage = createMockStorage({
             exists: mock(async () => ok(true)),
             updateSubcategoryDescription: mock(
-                async (_parent: string, _path: string, desc: string | null) => {
+                async (_path: CategoryPath, desc: string | null) => {
                     capturedDesc = desc;
                     return ok(undefined);
-                }
+                },
             ),
         });
 
@@ -130,10 +130,10 @@ describe('setDescription', () => {
         const storage = createMockStorage({
             exists: mock(async () => ok(true)),
             updateSubcategoryDescription: mock(
-                async (_parent: string, _path: string, desc: string | null) => {
+                async (_path: CategoryPath, desc: string | null) => {
                     capturedDesc = desc;
                     return ok(undefined);
-                }
+                },
             ),
         });
         const exactlyMaxDesc = 'a'.repeat(500);

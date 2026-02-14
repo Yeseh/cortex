@@ -41,7 +41,7 @@ export const getMemory = async (
     path: string,
     options?: GetMemoryOptions,
 ): Promise<MemoryResult<Memory>> => {
-    const pathResult = MemoryPath.fromPath(path); 
+    const pathResult = MemoryPath.fromString(path); 
     if (!pathResult.ok()) {
         return memoryError('INVALID_PATH', pathResult.error.message, {
             path: path,

@@ -5,7 +5,8 @@
  */
 
 import { z } from 'zod';
-import { listMemories } from '@yeseh/cortex-core';
+import { listMemories, type MemoryError } from '@yeseh/cortex-core';
+import { CategoryPath } from '@yeseh/cortex-core/category';
 import { storeNameSchema } from '../../store/tools.ts';
 import {
     type ToolContext,
@@ -43,8 +44,22 @@ export const listMemoriesHandler = async (
         throw adapterResult.error;
     }
 
+    const categoryResult = input.category
+        ? CategoryPath.fromString(input.category)
+        : undefined;
+
+    if (categoryResult && !categoryResult.ok()) {
+        const error: MemoryError = {
+            code: 'INVALID_PATH',
+            message: 'Invalid category path.',
+            path: input.category,
+            cause: categoryResult.error,
+        };
+        throw translateMemoryError(error);
+    }
+
     const result = await listMemories(adapterResult.value, {
-        category: input.category,
+        category: categoryResult?.value,
         includeExpired: input.include_expired,
     });
 
@@ -54,10 +69,10 @@ export const listMemoriesHandler = async (
 
     const listResult = result.value;
     const output = {
-        category: listResult.category || 'all',
+        category: listResult.category.isRoot ? 'all' : listResult.category.toString(),
         count: listResult.memories.length,
         memories: listResult.memories.map((m) => ({
-            path: m.path,
+            path: m.path.toString(),
             token_estimate: m.tokenEstimate,
             summary: m.summary,
             expires_at: m.expiresAt?.toISOString(),
@@ -65,7 +80,7 @@ export const listMemoriesHandler = async (
             updated_at: m.updatedAt?.toISOString(),
         })),
         subcategories: listResult.subcategories.map((s) => ({
-            path: s.path,
+            path: s.path.toString(),
             memory_count: s.memoryCount,
             description: s.description,
         })),

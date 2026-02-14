@@ -37,12 +37,12 @@ describe('filesystem storage adapter', () => {
 
         const writeResult = await adapter.writeMemoryFile('working/storage-test', content);
 
-        expect(writeResult.ok).toBe(true);
+        expect(writeResult.ok()).toBe(true);
 
         const readResult = await adapter.readMemoryFile('working/storage-test');
 
-        expect(readResult.ok).toBe(true);
-        if (readResult.ok) {
+        expect(readResult.ok()).toBe(true);
+        if (readResult.ok()) {
             expect(readResult.value).toContain('Filesystem payload');
             expect(readResult.value).toContain('---'); // Has frontmatter
         }
@@ -68,8 +68,8 @@ describe('filesystem storage adapter', () => {
 
         const result = await adapter.readMemoryFile('working/missing-file');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toBeNull();
         }
     });
@@ -79,8 +79,8 @@ describe('filesystem storage adapter', () => {
 
         const readResult = await adapter.readMemoryFile('../escape');
 
-        expect(readResult.ok).toBe(false);
-        if (!readResult.ok) {
+        expect(readResult.ok()).toBe(false);
+        if (!readResult.ok()) {
             expect(readResult.error.code).toBe('IO_READ_ERROR');
             expect(readResult.error.message).toContain('Path escapes storage root');
         }
@@ -88,8 +88,8 @@ describe('filesystem storage adapter', () => {
         const content = createMemoryContent('nope');
         const writeResult = await adapter.writeMemoryFile('../escape', content);
 
-        expect(writeResult.ok).toBe(false);
-        if (!writeResult.ok) {
+        expect(writeResult.ok()).toBe(false);
+        if (!writeResult.ok()) {
             expect(writeResult.error.code).toBe('IO_WRITE_ERROR');
             expect(writeResult.error.message).toContain('Invalid memory slug path');
         }
@@ -101,8 +101,8 @@ describe('filesystem storage adapter', () => {
 
         const result = await adapter.writeMemoryFile('global/index', content);
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.message).toContain('reserved');
         }
     });
@@ -112,21 +112,21 @@ describe('filesystem storage adapter', () => {
 
         // Write root index (empty string = STORE_ROOT/index.yaml)
         const writeRootResult = await adapter.writeIndexFile('', { memories: [], subcategories: [] });
-        expect(writeRootResult.ok).toBe(true);
+        expect(writeRootResult.ok()).toBe(true);
 
         const readRootResult = await adapter.readIndexFile('');
-        expect(readRootResult.ok).toBe(true);
-        if (readRootResult.ok) {
+        expect(readRootResult.ok()).toBe(true);
+        if (readRootResult.ok()) {
             expect(readRootResult.value).toEqual({ memories: [], subcategories: [] });
         }
 
         // Write category index (global = STORE_ROOT/global/index.yaml)
         const writeCatResult = await adapter.writeIndexFile('global', { memories: [], subcategories: [] });
-        expect(writeCatResult.ok).toBe(true);
+        expect(writeCatResult.ok()).toBe(true);
 
         const readCatResult = await adapter.readIndexFile('global');
-        expect(readCatResult.ok).toBe(true);
-        if (readCatResult.ok) {
+        expect(readCatResult.ok()).toBe(true);
+        if (readCatResult.ok()) {
             expect(readCatResult.value).toEqual({ memories: [], subcategories: [] });
         }
     });
@@ -158,8 +158,8 @@ describe('filesystem storage adapter', () => {
 
         const result = await adapter.readIndexFile('missing-index');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toBeNull();
         }
     });
@@ -169,8 +169,8 @@ describe('filesystem storage adapter', () => {
 
         const readResult = await adapter.readIndexFile('../escape-index');
 
-        expect(readResult.ok).toBe(false);
-        if (!readResult.ok) {
+        expect(readResult.ok()).toBe(false);
+        if (!readResult.ok()) {
             expect(readResult.error.code).toBe('IO_READ_ERROR');
             expect(readResult.error.message).toContain('Path escapes storage root');
         }
@@ -220,8 +220,8 @@ describe('CategoryStorage implementation', () => {
 
         const result = await adapter.categories.exists('project/test');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toBe(false);
         }
     });
@@ -232,8 +232,8 @@ describe('CategoryStorage implementation', () => {
         await adapter.categories.ensure('project/test');
         const result = await adapter.categories.exists('project/test');
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value).toBe(true);
         }
     });
@@ -243,9 +243,9 @@ describe('CategoryStorage implementation', () => {
 
         const result = await adapter.categories.ensure('project/test/nested');
 
-        expect(result.ok).toBe(true);
+        expect(result.ok()).toBe(true);
         const exists = await adapter.categories.exists('project/test/nested');
-        expect(exists.ok && exists.value).toBe(true);
+        expect(exists.ok() && exists.value).toBe(true);
     });
 
     it('should delete category directory recursively', async () => {
@@ -258,9 +258,9 @@ describe('CategoryStorage implementation', () => {
         // Delete parent
         const result = await adapter.categories.delete('project/test');
 
-        expect(result.ok).toBe(true);
+        expect(result.ok()).toBe(true);
         const exists = await adapter.categories.exists('project/test');
-        expect(exists.ok && exists.value).toBe(false);
+        expect(exists.ok() && exists.value).toBe(false);
     });
 
     it('should update subcategory description', async () => {
@@ -280,12 +280,12 @@ describe('CategoryStorage implementation', () => {
             'Test description',
         );
 
-        expect(result.ok).toBe(true);
+        expect(result.ok()).toBe(true);
 
         // Verify
         const indexResult = await adapter.readIndexFile('project');
-        expect(indexResult.ok).toBe(true);
-        if (indexResult.ok && indexResult.value) {
+        expect(indexResult.ok()).toBe(true);
+        if (indexResult.ok() && indexResult.value) {
             expect(indexResult.value.subcategories[0]?.description).toBe('Test description');
         }
     });
@@ -303,12 +303,12 @@ describe('CategoryStorage implementation', () => {
         // Clear description
         const result = await adapter.updateSubcategoryDescription('project', 'project/test', null);
 
-        expect(result.ok).toBe(true);
+        expect(result.ok()).toBe(true);
 
         // Verify description is removed
         const indexResult = await adapter.readIndexFile('project');
-        expect(indexResult.ok).toBe(true);
-        if (indexResult.ok && indexResult.value) {
+        expect(indexResult.ok()).toBe(true);
+        if (indexResult.ok() && indexResult.value) {
             expect(indexResult.value.subcategories[0]?.description).toBeUndefined();
         }
     });
@@ -327,12 +327,12 @@ describe('CategoryStorage implementation', () => {
             'New description',
         );
 
-        expect(result.ok).toBe(true);
+        expect(result.ok()).toBe(true);
 
         // Verify entry was created
         const indexResult = await adapter.readIndexFile('project');
-        expect(indexResult.ok).toBe(true);
-        if (indexResult.ok && indexResult.value) {
+        expect(indexResult.ok()).toBe(true);
+        if (indexResult.ok() && indexResult.value) {
             const entry = indexResult.value.subcategories.find((s) => s.path === 'project/new');
             expect(entry).toBeDefined();
             expect(entry?.description).toBe('New description');
@@ -356,12 +356,12 @@ describe('CategoryStorage implementation', () => {
         // Remove entry
         const result = await adapter.removeSubcategoryEntry('project', 'project/remove');
 
-        expect(result.ok).toBe(true);
+        expect(result.ok()).toBe(true);
 
         // Verify
         const indexResult = await adapter.readIndexFile('project');
-        expect(indexResult.ok).toBe(true);
-        if (indexResult.ok && indexResult.value) {
+        expect(indexResult.ok()).toBe(true);
+        if (indexResult.ok() && indexResult.value) {
             expect(indexResult.value.subcategories).toHaveLength(1);
             expect(indexResult.value.subcategories[0]?.path).toBe('project/keep');
         }
@@ -386,12 +386,12 @@ describe('CategoryStorage implementation', () => {
             allowIndexCreate: true,
             allowIndexUpdate: true,
         });
-        expect(writeResult.ok).toBe(true);
+        expect(writeResult.ok()).toBe(true);
 
         // Verify the description is preserved in the root index
         const indexResult = await adapter.readIndexFile('');
-        expect(indexResult.ok).toBe(true);
-        if (indexResult.ok && indexResult.value) {
+        expect(indexResult.ok()).toBe(true);
+        if (indexResult.ok() && indexResult.value) {
             const projectEntry = indexResult.value.subcategories.find((s) => s.path === 'project');
             expect(projectEntry).toBeDefined();
             expect(projectEntry?.description).toBe('Project memories');
@@ -399,3 +399,4 @@ describe('CategoryStorage implementation', () => {
         }
     });
 });
+

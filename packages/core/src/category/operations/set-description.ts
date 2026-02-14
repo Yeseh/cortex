@@ -5,9 +5,9 @@
  */
 
 import { ok, err, type Result } from '../../result.ts';
+import { CategoryPath } from '../category-path.ts';
 import type { CategoryStorage, CategoryError, SetDescriptionResult } from '../types.ts';
 import { MAX_DESCRIPTION_LENGTH } from '../types.ts';
-import { getParentPath } from './helpers.ts';
 
 /**
  * Sets or clears a category's description.
@@ -58,8 +58,17 @@ export const setDescription = async (
         });
     }
 
+    const pathResult = CategoryPath.fromString(path);
+    if (!pathResult.ok()) {
+        return err({
+            code: 'INVALID_PATH',
+            message: `Invalid category path: ${path}`,
+            path,
+        });
+    }
+
     // Check category exists
-    const existsResult = await storage.exists(path);
+    const existsResult = await storage.exists(pathResult.value);
     if (!existsResult.ok()) {
         return existsResult;
     }
@@ -72,12 +81,10 @@ export const setDescription = async (
     }
 
     // Update description in parent index
-    const parentPath = getParentPath(path);
     const finalDescription = trimmed.length > 0 ? trimmed : null;
 
     const updateResult = await storage.updateSubcategoryDescription(
-        parentPath,
-        path,
+        pathResult.value,
         finalDescription,
     );
     if (!updateResult.ok()) {

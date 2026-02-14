@@ -125,8 +125,8 @@ describe('moveMemory', () => {
                         : ok(null),
             },
             categories: {
-                ensure: async (path: string) => {
-                    ensuredCategory = path;
+                ensure: async (path) => {
+                    ensuredCategory = path.toString();
                     return ok(undefined);
                 },
             },

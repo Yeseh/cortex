@@ -81,16 +81,21 @@ export class Memory {
         this.content = content;
     }
 
-    static init(path: string, metadata: MemoryMetadata, content: string): MemoryResult<Memory> {
-        const pathResult = MemoryPath.fromPath(path);
-        if (!pathResult.ok()) {
-            return memoryError('INVALID_PATH', pathResult.error.message, {
-                path,
-            });
+    static init(
+        path: string | MemoryPath, 
+        metadata: MemoryMetadata, 
+        content: string): MemoryResult<Memory> {
+        if (typeof path === 'string') {
+            const pathResult = MemoryPath.fromString(path);
+            if (!pathResult.ok()) {
+                return memoryError('INVALID_PATH', pathResult.error.message, {
+                    path,
+                });
+            }
+            path = pathResult.value;
         }
 
-
-        return ok(new Memory(pathResult.value, metadata, content)); 
+        return ok(new Memory(path, metadata, content)); 
     }
 
     /**

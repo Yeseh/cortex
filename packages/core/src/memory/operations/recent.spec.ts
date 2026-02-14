@@ -7,7 +7,14 @@ import { describe, it, expect } from 'bun:test';
 import type { Memory } from '@/memory/memory.ts';
 import type { MemoryPath } from '@/memory/memory-path.ts';
 import { getRecentMemories } from './recent.ts';
-import { ok, buildIndex, buildMemoryFixture, createMockStorage } from './test-helpers.spec.ts';
+import {
+    ok,
+    buildIndex,
+    buildMemoryFixture,
+    createMockStorage,
+    categoryPath,
+    memoryPath,
+} from './test-helpers.spec.ts';
 
 const pathToString = (memoryPath: MemoryPath): string => (
     `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`
@@ -58,29 +65,30 @@ describe('getRecentMemories', () => {
                 read: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
             },
             indexes: {
-                read: async (name: string) => {
-                    if (name === '') {
+                read: async (path) => {
+                    const key = path.toString();
+                    if (key === '') {
                         return ok(
                             buildIndex(
                                 [],
                                 [
-                                    { path: 'project', memoryCount: 2 },
-                                    { path: 'notes', memoryCount: 1 },
+                                    { path: categoryPath('project'), memoryCount: 2 },
+                                    { path: categoryPath('notes'), memoryCount: 1 },
                                 ],
                             ),
                         );
                     }
-                    if (name === 'project') {
+                    if (key === 'project') {
                         return ok(
                             buildIndex(
                                 [
                                     {
-                                        path: 'project/memory1',
+                                        path: memoryPath('project/memory1'),
                                         tokenEstimate: 50,
                                         updatedAt: new Date('2025-01-03T10:00:00.000Z'),
                                     },
                                     {
-                                        path: 'project/memory2',
+                                        path: memoryPath('project/memory2'),
                                         tokenEstimate: 60,
                                         updatedAt: new Date('2025-01-05T10:00:00.000Z'),
                                     },
@@ -89,11 +97,11 @@ describe('getRecentMemories', () => {
                             ),
                         );
                     }
-                    if (name === 'notes') {
+                    if (key === 'notes') {
                         return ok(
                             buildIndex(
                                 [{
-                                    path: 'notes/note1',
+                                    path: memoryPath('notes/note1'),
                                     tokenEstimate: 40,
                                     updatedAt: new Date('2025-01-04T10:00:00.000Z'),
                                 }],
@@ -143,18 +151,18 @@ describe('getRecentMemories', () => {
                 read: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
             },
             indexes: {
-                read: async (name: string) => {
-                    if (name === 'project/cortex') {
+                read: async (path) => {
+                    if (path.toString() === 'project/cortex') {
                         return ok(
                             buildIndex(
                                 [
                                     {
-                                        path: 'project/cortex/memory1',
+                                        path: memoryPath('project/cortex/memory1'),
                                         tokenEstimate: 50,
                                         updatedAt: new Date('2025-01-03T10:00:00.000Z'),
                                     },
                                     {
-                                        path: 'project/cortex/memory2',
+                                        path: memoryPath('project/cortex/memory2'),
                                         tokenEstimate: 60,
                                         updatedAt: new Date('2025-01-05T10:00:00.000Z'),
                                     },
@@ -208,26 +216,27 @@ describe('getRecentMemories', () => {
                 read: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
             },
             indexes: {
-                read: async (name: string) => {
-                    if (name === '') {
-                        return ok(buildIndex([], [{ path: 'notes', memoryCount: 3 }]));
+                read: async (path) => {
+                    const key = path.toString();
+                    if (key === '') {
+                        return ok(buildIndex([], [{ path: categoryPath('notes'), memoryCount: 3 }]));
                     }
-                    if (name === 'notes') {
+                    if (key === 'notes') {
                         return ok(
                             buildIndex(
                                 [
                                     {
-                                        path: 'notes/note1',
+                                        path: memoryPath('notes/note1'),
                                         tokenEstimate: 10,
                                         updatedAt: new Date('2025-01-01T10:00:00.000Z'),
                                     },
                                     {
-                                        path: 'notes/note2',
+                                        path: memoryPath('notes/note2'),
                                         tokenEstimate: 10,
                                         updatedAt: new Date('2025-01-02T10:00:00.000Z'),
                                     },
                                     {
-                                        path: 'notes/note3',
+                                        path: memoryPath('notes/note3'),
                                         tokenEstimate: 10,
                                         updatedAt: new Date('2025-01-03T10:00:00.000Z'),
                                     },
@@ -267,15 +276,16 @@ describe('getRecentMemories', () => {
                 read: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
             },
             indexes: {
-                read: async (name: string) => {
-                    if (name === '') {
-                        return ok(buildIndex([], [{ path: 'notes', memoryCount: 1 }]));
+                read: async (path) => {
+                    const key = path.toString();
+                    if (key === '') {
+                        return ok(buildIndex([], [{ path: categoryPath('notes'), memoryCount: 1 }]));
                     }
-                    if (name === 'notes') {
+                    if (key === 'notes') {
                         return ok(
                             buildIndex(
                                 [{
-                                    path: 'notes/note1',
+                                    path: memoryPath('notes/note1'),
                                     tokenEstimate: 10,
                                     updatedAt: new Date('2025-01-01T10:00:00.000Z'),
                                 }],
@@ -336,21 +346,22 @@ describe('getRecentMemories', () => {
                 read: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
             },
             indexes: {
-                read: async (name: string) => {
-                    if (name === '') {
-                        return ok(buildIndex([], [{ path: 'notes', memoryCount: 2 }]));
+                read: async (path) => {
+                    const key = path.toString();
+                    if (key === '') {
+                        return ok(buildIndex([], [{ path: categoryPath('notes'), memoryCount: 2 }]));
                     }
-                    if (name === 'notes') {
+                    if (key === 'notes') {
                         return ok(
                             buildIndex(
                                 [
                                     {
-                                        path: 'notes/active',
+                                        path: memoryPath('notes/active'),
                                         tokenEstimate: 10,
                                         updatedAt: new Date('2025-01-05T10:00:00.000Z'),
                                     },
                                     {
-                                        path: 'notes/expired',
+                                        path: memoryPath('notes/expired'),
                                         tokenEstimate: 10,
                                         updatedAt: new Date('2025-01-03T10:00:00.000Z'),
                                     },
@@ -396,21 +407,22 @@ describe('getRecentMemories', () => {
                 read: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
             },
             indexes: {
-                read: async (name: string) => {
-                    if (name === '') {
-                        return ok(buildIndex([], [{ path: 'notes', memoryCount: 2 }]));
+                read: async (path) => {
+                    const key = path.toString();
+                    if (key === '') {
+                        return ok(buildIndex([], [{ path: categoryPath('notes'), memoryCount: 2 }]));
                     }
-                    if (name === 'notes') {
+                    if (key === 'notes') {
                         return ok(
                             buildIndex(
                                 [
                                     {
-                                        path: 'notes/active',
+                                        path: memoryPath('notes/active'),
                                         tokenEstimate: 10,
                                         updatedAt: new Date('2025-01-05T10:00:00.000Z'),
                                     },
                                     {
-                                        path: 'notes/expired',
+                                        path: memoryPath('notes/expired'),
                                         tokenEstimate: 10,
                                         updatedAt: new Date('2025-01-03T10:00:00.000Z'),
                                     },
@@ -465,26 +477,27 @@ describe('getRecentMemories', () => {
                 read: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
             },
             indexes: {
-                read: async (name: string) => {
-                    if (name === '') {
-                        return ok(buildIndex([], [{ path: 'notes', memoryCount: 3 }]));
+                read: async (path) => {
+                    const key = path.toString();
+                    if (key === '') {
+                        return ok(buildIndex([], [{ path: categoryPath('notes'), memoryCount: 3 }]));
                     }
-                    if (name === 'notes') {
+                    if (key === 'notes') {
                         // Note: 'stale' entry is missing updated_at
                         return ok(
                             buildIndex(
                                 [
                                     {
-                                        path: 'notes/recent',
+                                        path: memoryPath('notes/recent'),
                                         tokenEstimate: 10,
                                         updatedAt: new Date('2025-01-05T10:00:00.000Z'),
                                     },
                                     {
-                                        path: 'notes/stale',
+                                        path: memoryPath('notes/stale'),
                                         tokenEstimate: 10,
                                     },
                                     {
-                                        path: 'notes/middle',
+                                        path: memoryPath('notes/middle'),
                                         tokenEstimate: 10,
                                         updatedAt: new Date('2025-01-04T10:00:00.000Z'),
                                     },
@@ -533,24 +546,25 @@ describe('getRecentMemories', () => {
                 read: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
             },
             indexes: {
-                read: async (name: string) => {
-                    if (name === 'project/cortex') {
+                read: async (path) => {
+                    const key = path.toString();
+                    if (key === 'project/cortex') {
                         return ok(
                             buildIndex(
                                 [{
-                                    path: 'project/cortex/memory2',
+                                    path: memoryPath('project/cortex/memory2'),
                                     tokenEstimate: 20,
                                     updatedAt: new Date('2025-01-04T10:00:00.000Z'),
                                 }],
-                                [{ path: 'project/cortex/deep', memoryCount: 1 }],
+                                [{ path: categoryPath('project/cortex/deep'), memoryCount: 1 }],
                             ),
                         );
                     }
-                    if (name === 'project/cortex/deep') {
+                    if (key === 'project/cortex/deep') {
                         return ok(
                             buildIndex(
                                 [{
-                                    path: 'project/cortex/deep/memory1',
+                                    path: memoryPath('project/cortex/deep/memory1'),
                                     tokenEstimate: 20,
                                     updatedAt: new Date('2025-01-05T10:00:00.000Z'),
                                 }],

@@ -11,6 +11,9 @@ import {
     removeSubcategoryEntry,
 } from './categories.ts';
 import type { FilesystemContext } from './types.ts';
+import { CategoryPath } from '../../core/src/category/category-path.ts';
+
+const categoryPath = (path: string): CategoryPath => CategoryPath.fromString(path).unwrap();
 
 describe('categories module', () => {
     let tempDir: string;
@@ -37,8 +40,8 @@ describe('categories module', () => {
 
             const result = await categoryExists(ctx, 'exists');
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value).toBe(true);
             }
         });
@@ -46,8 +49,8 @@ describe('categories module', () => {
         it('should return false for non-existing directory', async () => {
             const result = await categoryExists(ctx, 'does-not-exist');
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value).toBe(false);
             }
         });
@@ -57,8 +60,8 @@ describe('categories module', () => {
 
             const result = await categoryExists(ctx, 'a/b/c');
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value).toBe(true);
             }
         });
@@ -68,8 +71,8 @@ describe('categories module', () => {
 
             const result = await categoryExists(ctx, 'a/b/c');
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value).toBe(false);
             }
         });
@@ -79,7 +82,7 @@ describe('categories module', () => {
         it('should create a new directory', async () => {
             const result = await ensureCategoryDirectory(ctx, 'new-dir');
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             const stats = await fs.stat(join(tempDir, 'new-dir'));
             expect(stats.isDirectory()).toBe(true);
@@ -88,7 +91,7 @@ describe('categories module', () => {
         it('should create nested directories', async () => {
             const result = await ensureCategoryDirectory(ctx, 'a/b/c/d');
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             const stats = await fs.stat(join(tempDir, 'a', 'b', 'c', 'd'));
             expect(stats.isDirectory()).toBe(true);
@@ -99,7 +102,7 @@ describe('categories module', () => {
 
             const result = await ensureCategoryDirectory(ctx, 'already-exists');
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
         });
     });
 
@@ -107,9 +110,9 @@ describe('categories module', () => {
         it('should delete existing directory', async () => {
             await fs.mkdir(join(tempDir, 'to-delete'), { recursive: true });
 
-            const result = await deleteCategoryDirectory(ctx, 'to-delete');
+            const result = await deleteCategoryDirectory(ctx, categoryPath('to-delete'));
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
             await expect(fs.access(join(tempDir, 'to-delete'))).rejects.toThrow();
         });
 
@@ -118,16 +121,16 @@ describe('categories module', () => {
             await fs.writeFile(join(tempDir, 'with-contents', 'file.txt'), 'test');
             await fs.writeFile(join(tempDir, 'with-contents', 'sub', 'nested.txt'), 'nested');
 
-            const result = await deleteCategoryDirectory(ctx, 'with-contents');
+            const result = await deleteCategoryDirectory(ctx, categoryPath('with-contents'));
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
             await expect(fs.access(join(tempDir, 'with-contents'))).rejects.toThrow();
         });
 
         it('should succeed for non-existing directory', async () => {
-            const result = await deleteCategoryDirectory(ctx, 'does-not-exist');
+            const result = await deleteCategoryDirectory(ctx, categoryPath('does-not-exist'));
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
         });
     });
 
@@ -137,12 +140,11 @@ describe('categories module', () => {
 
             const result = await updateSubcategoryDescription(
                 ctx,
-                'parent',
-                'parent/child',
+                categoryPath('parent/child'),
                 'Test description',
             );
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             const content = await fs.readFile(join(tempDir, 'parent', 'index.yaml'), 'utf8');
             expect(content).toContain('parent/child');
@@ -162,12 +164,11 @@ describe('categories module', () => {
 
             const result = await updateSubcategoryDescription(
                 ctx,
-                'parent2',
-                'parent2/child',
+                categoryPath('parent2/child'),
                 'New description',
             );
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             const content = await fs.readFile(join(tempDir, 'parent2', 'index.yaml'), 'utf8');
             expect(content).toContain('New description');
@@ -187,12 +188,11 @@ describe('categories module', () => {
 
             const result = await updateSubcategoryDescription(
                 ctx,
-                'parent3',
-                'parent3/child',
+                categoryPath('parent3/child'),
                 null,
             );
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             const content = await fs.readFile(join(tempDir, 'parent3', 'index.yaml'), 'utf8');
             expect(content).not.toContain('To be removed');
@@ -201,12 +201,11 @@ describe('categories module', () => {
         it('should handle root parent (empty string)', async () => {
             const result = await updateSubcategoryDescription(
                 ctx,
-                '',
-                'top-level',
+                categoryPath('top-level'),
                 'Root level category',
             );
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             const content = await fs.readFile(join(tempDir, 'index.yaml'), 'utf8');
             expect(content).toContain('top-level');
@@ -216,9 +215,9 @@ describe('categories module', () => {
         it('should sort subcategories alphabetically', async () => {
             await fs.mkdir(join(tempDir, 'parent4'), { recursive: true });
 
-            await updateSubcategoryDescription(ctx, 'parent4', 'parent4/zebra', 'Z');
-            await updateSubcategoryDescription(ctx, 'parent4', 'parent4/alpha', 'A');
-            await updateSubcategoryDescription(ctx, 'parent4', 'parent4/beta', 'B');
+            await updateSubcategoryDescription(ctx, categoryPath('parent4/zebra'), 'Z');
+            await updateSubcategoryDescription(ctx, categoryPath('parent4/alpha'), 'A');
+            await updateSubcategoryDescription(ctx, categoryPath('parent4/beta'), 'B');
 
             const content = await fs.readFile(join(tempDir, 'parent4', 'index.yaml'), 'utf8');
             const alphaPos = content.indexOf('alpha');
@@ -243,9 +242,9 @@ describe('categories module', () => {
             ].join('\n');
             await fs.writeFile(join(tempDir, 'parent5', 'index.yaml'), initialIndex);
 
-            const result = await removeSubcategoryEntry(ctx, 'parent5', 'parent5/remove');
+            const result = await removeSubcategoryEntry(ctx, categoryPath('parent5/remove'));
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             const content = await fs.readFile(join(tempDir, 'parent5', 'index.yaml'), 'utf8');
             expect(content).toContain('parent5/keep');
@@ -253,9 +252,9 @@ describe('categories module', () => {
         });
 
         it('should succeed if parent index does not exist', async () => {
-            const result = await removeSubcategoryEntry(ctx, 'nonexistent', 'nonexistent/child');
+            const result = await removeSubcategoryEntry(ctx, categoryPath('nonexistent/child'));
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
         });
 
         it('should succeed if subcategory not in index', async () => {
@@ -268,9 +267,9 @@ describe('categories module', () => {
             ].join('\n');
             await fs.writeFile(join(tempDir, 'parent6', 'index.yaml'), initialIndex);
 
-            const result = await removeSubcategoryEntry(ctx, 'parent6', 'parent6/missing');
+            const result = await removeSubcategoryEntry(ctx, categoryPath('parent6/missing'));
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             const content = await fs.readFile(join(tempDir, 'parent6', 'index.yaml'), 'utf8');
             expect(content).toContain('parent6/other');
@@ -285,9 +284,9 @@ describe('categories module', () => {
             ].join('\n');
             await fs.writeFile(join(tempDir, 'index.yaml'), initialIndex);
 
-            const result = await removeSubcategoryEntry(ctx, '', 'root-child');
+            const result = await removeSubcategoryEntry(ctx, categoryPath('root-child'));
 
-            expect(result.ok).toBe(true);
+            expect(result.ok()).toBe(true);
 
             const content = await fs.readFile(join(tempDir, 'index.yaml'), 'utf8');
             expect(content).not.toContain('root-child');
@@ -295,3 +294,4 @@ describe('categories module', () => {
     });
 
 });
+

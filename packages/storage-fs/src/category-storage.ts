@@ -22,6 +22,7 @@ import {
     updateSubcategoryDescription as updateSubcategoryDescriptionOp,
     removeSubcategoryEntry as removeSubcategoryEntryOp,
 } from './categories.ts';
+import type { CategoryPath } from '../../core/src/category/category-path.ts';
 
 /**
  * Filesystem-based implementation of the CategoryStorage interface.
@@ -48,7 +49,7 @@ import {
  *
  * // Check if category exists
  * const existsResult = await storage.exists('project/cortex');
- * if (existsResult.ok && existsResult.value) {
+ * if (existsResult.ok() && existsResult.value) {
  *     console.log('Category exists');
  * }
  *
@@ -86,7 +87,7 @@ export class FilesystemCategoryStorage implements CategoryStorage {
      * @example
      * ```typescript
      * const result = await storage.exists('project/cortex');
-     * if (result.ok) {
+     * if (result.ok()) {
      *     console.log(result.value ? 'Exists' : 'Not found');
      * }
      * ```
@@ -95,8 +96,8 @@ export class FilesystemCategoryStorage implements CategoryStorage {
      * - Returns `ok(false)` when the directory is missing.
      * - Returns `STORAGE_ERROR` on underlying filesystem access issues.
      */
-    async exists(path: string): Promise<Result<boolean, CategoryError>> {
-        return existsOp(this.ctx, path);
+    async exists(path: CategoryPath): Promise<Result<boolean, CategoryError>> {
+        return existsOp(this.ctx, path.toString());
     }
 
     /**
@@ -118,8 +119,8 @@ export class FilesystemCategoryStorage implements CategoryStorage {
      * - Calling with an existing path is a no-op and should succeed.
      * - Returns `STORAGE_ERROR` on permission or filesystem failures.
      */
-    async ensure(path: string): Promise<Result<void, CategoryError>> {
-        return ensureOp(this.ctx, path);
+    async ensure(path: CategoryPath): Promise<Result<void, CategoryError>> {
+        return ensureOp(this.ctx, path.toString());
     }
 
     /**
@@ -145,7 +146,7 @@ export class FilesystemCategoryStorage implements CategoryStorage {
      * - Missing directories are treated as successful no-ops.
      * - Returns `STORAGE_ERROR` when deletion fails (e.g., permissions).
      */
-    async delete(path: string): Promise<Result<void, CategoryError>> {
+    async delete(path: CategoryPath): Promise<Result<void, CategoryError>> {
         return deleteCategoryDirectoryOp(this.ctx, path);
     }
 
@@ -155,8 +156,7 @@ export class FilesystemCategoryStorage implements CategoryStorage {
      * Creates the parent's index file and subcategory entry if they don't exist.
      * Use this to add human-readable descriptions to category listings.
      *
-     * @param parentPath - Path to the parent category (empty string for root)
-     * @param subcategoryPath - Full path to the subcategory being described
+     * @param categoryPath - Full path to the subcategory being described
      * @param description - New description, or null to clear the description
      * @returns Result indicating success or failure
      *
@@ -182,11 +182,10 @@ export class FilesystemCategoryStorage implements CategoryStorage {
      * - Passing `null` clears the description field.
      */
     async updateSubcategoryDescription(
-        parentPath: string,
-        subcategoryPath: string,
+        categoryPath: CategoryPath,
         description: string | null,
     ): Promise<Result<void, CategoryError>> {
-        return updateSubcategoryDescriptionOp(this.ctx, parentPath, subcategoryPath, description);
+        return updateSubcategoryDescriptionOp(this.ctx, categoryPath, description);
     }
 
     /**
@@ -195,7 +194,7 @@ export class FilesystemCategoryStorage implements CategoryStorage {
      * Only removes the index entry, not the actual category directory.
      * Returns success if the parent index doesn't exist (idempotent).
      *
-     * @param parentPath - Path to the parent category (empty string for root)
+     * @param path - Path to the parent category (empty string for root)
      * @param subcategoryPath - Full path to the subcategory to remove from index
      * @returns Result indicating success or failure
      *
@@ -212,10 +211,9 @@ export class FilesystemCategoryStorage implements CategoryStorage {
      * - If the parent index is missing, this is treated as a no-op success.
      * - Only the index entry is removed; the directory remains.
      */
-    async removeSubcategoryEntry(
-        parentPath: string,
-        subcategoryPath: string,
+    async removeSubcategoryEntry(path: CategoryPath,
     ): Promise<Result<void, CategoryError>> {
-        return removeSubcategoryEntryOp(this.ctx, parentPath, subcategoryPath);
+        return removeSubcategoryEntryOp(this.ctx, path);
     }
 }
+

@@ -169,13 +169,13 @@ const resolveDefault = async (
  * ```ts
  * // Resolve default store
  * const result = await resolveStoreContext(undefined);
- * if (result.ok) {
+ * if (result.ok()) {
  *   console.log(result.value.root); // '/path/to/.cortex/memory'
  * }
  *
  * // Resolve named store from registry
  * const result = await resolveStoreContext('work');
- * if (result.ok) {
+ * if (result.ok()) {
  *   console.log(result.value.root); // '/path/to/work/store'
  *   console.log(result.value.name); // 'work'
  * }
@@ -196,7 +196,7 @@ export const resolveStoreContext = async (
 
     // Otherwise, load config and use default resolution
     const configResult = await loadConfig({ cwd });
-    if (!configResult.ok) {
+    if (!configResult.ok()) {
         return err({
             code: 'CONFIG_LOAD_FAILED',
             message: `Failed to load config: ${configResult.error.message}`,
@@ -265,7 +265,7 @@ export const resolveStoreAdapter = async (
         }
 
         const adapterResult = registry.getStore(storeName);
-        if (!adapterResult.ok) {
+        if (!adapterResult.ok()) {
             return err({
                 code: 'STORE_NOT_FOUND',
                 message: `Store '${storeName}' not found in registry`,

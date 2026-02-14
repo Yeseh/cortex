@@ -5,8 +5,8 @@
  */
 
 import { ok, err, type Result } from '../../result.ts';
+import { CategoryPath } from '../category-path.ts';
 import type { CategoryStorage, CategoryError, CreateCategoryResult } from '../types.ts';
-import { getAncestorPaths } from './helpers.ts';
 
 /**
  * Creates a category and its parent hierarchy, excluding root categories.
@@ -43,17 +43,17 @@ export const createCategory = async (
     path: string,
 ): Promise<Result<CreateCategoryResult, CategoryError>> => {
     // Validate path
-    const segments = path.split('/').filter((s) => s.length > 0);
-    if (segments.length === 0) {
+    const pathResult = CategoryPath.fromString(path);
+    if (!pathResult.ok()) {
         return err({
             code: 'INVALID_PATH',
-            message: 'Category path cannot be empty',
+            message: `Invalid category path: ${path}`,
             path,
         });
-    }
+    };
 
     // Check if already exists
-    const existsResult = await storage.exists(path);
+    const existsResult = await storage.exists(pathResult.value);
     if (!existsResult.ok()) {
         return existsResult;
     }
@@ -61,23 +61,25 @@ export const createCategory = async (
         return ok({ path, created: false });
     }
 
-    // Create parent categories (excluding root)
-    const ancestors = getAncestorPaths(path);
-    for (const ancestor of ancestors) {
-        const ancestorExists = await storage.exists(ancestor);
-        if (!ancestorExists.ok()) {
-            return ancestorExists;
+    // Create parent categories (excluding depth-1 root categories)
+    let currentPath = pathResult.value;
+    while (currentPath.parent && currentPath.parent.depth > 1) {
+        const parentPath = currentPath.parent;
+        const parentExists = await storage.exists(parentPath);
+        if (!parentExists.ok()) {
+            return parentExists;
         }
-        if (!ancestorExists.value) {
-            const ensureResult = await storage.ensure(ancestor);
-            if (!ensureResult.ok()) {
-                return ensureResult;
+        if (!parentExists.value) {
+            const ensureParentResult = await storage.ensure(parentPath);
+            if (!ensureParentResult.ok()) {
+                return ensureParentResult;
             }
         }
+        currentPath = parentPath; // Move up to check next ancestor
     }
 
     // Create the target category
-    const ensureResult = await storage.ensure(path);
+    const ensureResult = await storage.ensure(pathResult.value);
     if (!ensureResult.ok()) {
         return ensureResult;
     }

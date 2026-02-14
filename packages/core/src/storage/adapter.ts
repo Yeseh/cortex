@@ -29,13 +29,7 @@ import type {
     StoreRegistrySaveError,
 } from '../store/registry.ts';
 import type { MemoryPath } from '@/memory/memory-path.ts';
-
-/**
- * Index file identifier type.
- *
- * Used to reference different index files within a store.
- */
-export type StorageIndexName = string;
+import type { CategoryPath } from '@/category/category-path.ts';
 
 /**
  * Error codes for storage adapter operations.
@@ -165,7 +159,7 @@ export interface IndexStorage {
     /**
      * Reads the contents of an index file.
      *
-     * @param name - Index identifier (category path, or empty string for root)
+     * @param path - Index identifier (category path, or empty string for root)
      * @returns Result with file contents, or null if the index does not exist
      *
      * @example
@@ -178,14 +172,14 @@ export interface IndexStorage {
      * - Passing an empty string reads the root index.
      * - When the index file is missing, the result is `ok(null)` rather than an error.
      */
-    read(name: StorageIndexName): Promise<Result<CategoryIndex | null, StorageAdapterError>>;
+    read(category: CategoryPath): Promise<Result<CategoryIndex | null, StorageAdapterError>>;
 
     /**
      * Writes contents to an index file.
      *
      * Creates the file if it does not exist. Overwrites existing content.
      *
-     * @param name - Index identifier (category path, or empty string for root)
+     * @param path - Index identifier (category path, or empty string for root)
      * @param contents - The content to write
      * @returns Result indicating success or failure
      *
@@ -195,12 +189,10 @@ export interface IndexStorage {
      * ```
      *
      * @edgeCases
-     * - Writing to the root index uses an empty string as the name.
+     * - Writing to the root index uses an empty string as the path.
      * - Serialization failures (e.g., invalid paths or counts) surface as `INDEX_ERROR`.
      */
-    write(
-        name: StorageIndexName,
-        contents: CategoryIndex
+    write(path: CategoryPath, contents: CategoryIndex
     ): Promise<Result<void, StorageAdapterError>>;
 
     /**

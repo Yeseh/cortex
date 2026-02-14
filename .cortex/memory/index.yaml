@@ -17,4 +17,4 @@ subcategories:
   - path: standup
     memory_count: 2
   - path: todo
-    memory_count: 6
+    memory_count: 9

@@ -20,34 +20,9 @@
  * ```
  */
 export * from '@/slug';
+export * from '@/result';
 export * from '@/memory/memory';
 export * from '@/memory/result';
 export * from '@/memory/memory-path';
+export * from '@/memory/operations';
 
-// Domain operations
-export {
-    createMemory,
-    getMemory,
-    updateMemory,
-    moveMemory,
-    removeMemory,
-    listMemories,
-    pruneExpiredMemories,
-    getRecentMemories,
-} from './operations/index.ts';
-
-export type {
-    CreateMemoryInput,
-    UpdateMemoryInput,
-    GetMemoryOptions,
-    ListMemoriesOptions,
-    PruneOptions,
-    GetRecentMemoriesOptions,
-    ListedMemory,
-    ListedSubcategory,
-    ListMemoriesResult,
-    PrunedMemory,
-    PruneResult,
-    RecentMemory,
-    GetRecentMemoriesResult,
-} from './operations/index.ts';

@@ -30,7 +30,9 @@ describe('memory citations', () => {
             store: 'default',
             path: 'project/with-citations',
             content: 'Memory with citations',
-            citations: ['src/types.ts:17', 'https://docs.example.com'],
+            citations: [
+                'src/types.ts:17', 'https://docs.example.com',
+            ],
         };
 
         const result = await addMemoryHandler({ config }, input);
@@ -41,7 +43,9 @@ describe('memory citations', () => {
             { store: 'default', path: 'project/with-citations' },
         );
         const output = JSON.parse(getResult.content[0]!.text);
-        expect(output.metadata.citations).toEqual(['src/types.ts:17', 'https://docs.example.com']);
+        expect(output.metadata.citations).toEqual([
+            'src/types.ts:17', 'https://docs.example.com',
+        ]);
     });
 
     it('should return citations in get response', async () => {
@@ -52,7 +56,9 @@ describe('memory citations', () => {
                 updatedAt: new Date('2024-01-02'),
                 tags: [],
                 source: 'test',
-                citations: ['README.md', 'https://example.com/doc'],
+                citations: [
+                    'README.md', 'https://example.com/doc',
+                ],
             },
             content: 'Content with citations',
         });
@@ -63,7 +69,9 @@ describe('memory citations', () => {
         );
         const output = JSON.parse(result.content[0]!.text);
 
-        expect(output.metadata.citations).toEqual(['README.md', 'https://example.com/doc']);
+        expect(output.metadata.citations).toEqual([
+            'README.md', 'https://example.com/doc',
+        ]);
     });
 
     it('should update citations with overwrite semantics', async () => {
@@ -82,7 +90,9 @@ describe('memory citations', () => {
         const updateInput: UpdateMemoryInput = {
             store: 'default',
             path: 'project/update-citations',
-            citations: ['new-citation-1.ts', 'new-citation-2.ts'],
+            citations: [
+                'new-citation-1.ts', 'new-citation-2.ts',
+            ],
         };
 
         await updateMemoryHandler({ config }, updateInput);
@@ -92,7 +102,9 @@ describe('memory citations', () => {
             { store: 'default', path: 'project/update-citations' },
         );
         const output = JSON.parse(getResult.content[0]!.text);
-        expect(output.metadata.citations).toEqual(['new-citation-1.ts', 'new-citation-2.ts']);
+        expect(output.metadata.citations).toEqual([
+            'new-citation-1.ts', 'new-citation-2.ts',
+        ]);
     });
 
     it('should return empty citations array for memory without citations', async () => {

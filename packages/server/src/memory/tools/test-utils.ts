@@ -9,10 +9,8 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { ServerConfig } from '../../config.ts';
 import { MEMORY_SUBDIR } from '../../config.ts';
-import { serializeStoreRegistry } from '@yeseh/cortex-core/store';
-import { FilesystemStorageAdapter, serializeMemory } from '@yeseh/cortex-storage-fs';
-import type { Memory } from '@yeseh/cortex-core/memory';
-import { MemoryPath } from '@yeseh/cortex-core/memory';
+import { type Memory, serializeStoreRegistry } from '@yeseh/cortex-core';
+import { serializeMemory } from '@yeseh/cortex-storage-fs';
 
 // Test configuration
 export const createTestConfig = (dataPath: string): ServerConfig => ({
@@ -76,20 +74,6 @@ export const createMemoryFile = async (
     slugPath: string,
     contents: Partial<Memory>,
 ): Promise<void> => {
-    const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
-    const pathResult = MemoryPath.fromPath(slugPath);
-    if (!pathResult.ok()) {
-        throw new Error(`Invalid memory path: ${pathResult.error.message}`);
-    }
-    const serialized = serializeMemory({ path: pathResult.value, ...contents } as Memory);
-    if (!serialized.ok()) {
-        throw new Error(`Failed to serialize: ${serialized.error.message}`);
-    }
-    const result = await adapter.writeMemoryFile(slugPath, serialized.value, {
-        allowIndexCreate: true,
-        allowIndexUpdate: true,
-    });
-    if (!result.ok()) {
-        throw new Error(`Failed to write: ${result.error.message}`);
-    }
+    const serialized = serializeMemory({metadata: contents.metadata!, content: contents.content!});
+    await writeFile(join(storeRoot, `${slugPath}.yaml`), serialized.value ?? '');
 };

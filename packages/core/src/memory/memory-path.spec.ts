@@ -5,7 +5,7 @@ import { MemoryPath } from '@/memory/memory-path.ts';
 describe('MemoryPath', () => {
     describe('fromPath', () => {
         it('should parse category and slug segments', () => {
-            const result = MemoryPath.fromPath('project/alpha');
+            const result = MemoryPath.fromString('project/alpha');
 
             expect(result.ok()).toBe(true);
             if (result.ok()) {
@@ -15,7 +15,7 @@ describe('MemoryPath', () => {
         });
 
         it('should ignore empty path segments', () => {
-            const result = MemoryPath.fromPath('/project//alpha/');
+            const result = MemoryPath.fromString('/project//alpha/');
 
             expect(result.ok()).toBe(true);
             if (result.ok()) {
@@ -25,7 +25,7 @@ describe('MemoryPath', () => {
         });
 
         it('should reject paths with fewer than two segments', () => {
-            const result = MemoryPath.fromPath('project');
+            const result = MemoryPath.fromString('project');
 
             expect(result.ok()).toBe(false);
             if (!result.ok()) {

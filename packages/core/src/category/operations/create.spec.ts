@@ -6,6 +6,7 @@
 
 import { describe, expect, it, mock } from 'bun:test';
 import { createMockStorage, ok } from './test-helpers.spec.ts';
+import type { CategoryPath } from '../category-path.ts';
 import { createCategory } from './create.ts';
 
 describe('createCategory', () => {
@@ -45,8 +46,8 @@ describe('createCategory', () => {
     it('should not create root categories in ancestors', async () => {
         const ensureCalls: string[] = [];
         const storage = createMockStorage({
-            ensure: mock(async (path: string) => {
-                ensureCalls.push(path);
+            ensure: mock(async (path: CategoryPath) => {
+                ensureCalls.push(path.toString());
                 return ok(undefined);
             }),
         });

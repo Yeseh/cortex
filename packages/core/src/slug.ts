@@ -30,4 +30,8 @@ export class Slug {
     toString(): string {
         return this.#value;
     }
+
+    equals(other: Slug): boolean { 
+        return this.#value === other.#value;
+    }
 };

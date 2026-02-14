@@ -19,14 +19,11 @@
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import type { Result } from '@yeseh/cortex-core';
+import { err, ok, type Result } from '@yeseh/cortex-core';
 import type { Registry, RegistryError, ScopedStorageAdapter, StoreNotFoundError } from '@yeseh/cortex-core/storage';
 import type { StoreRegistry } from '@yeseh/cortex-core/store';
 import { parseStoreRegistry, serializeStoreRegistry } from '@yeseh/cortex-core/store';
 import { FilesystemStorageAdapter } from './index.ts';
-
-const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
-const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 /**
  * Checks if an error is a "file not found" error (ENOENT).
@@ -63,7 +60,7 @@ const isNotFoundError = (error: unknown): boolean => {
  * await registry.load();
  *
  * const adapter = registry.getStore('my-project');
- * if (adapter.ok) {
+ * if (adapter.ok()) {
  *   const memory = await adapter.value.memories.read('category/memory');
  *   console.log(memory.value);
  * }
@@ -74,7 +71,7 @@ const isNotFoundError = (error: unknown): boolean => {
  * // Adding a new store
  * const registry = new FilesystemRegistry('/config/stores.yaml');
  * const current = await registry.load();
- * if (current.ok) {
+ * if (current.ok()) {
  *   await registry.save({
  *     ...current.value,
  *     'new-store': { path: '/data/new-store' }
@@ -113,7 +110,7 @@ export class FilesystemRegistry implements Registry {
      * @example
      * ```typescript
      * const result = await registry.initialize();
-     * if (result.ok) {
+     * if (result.ok()) {
      *   console.log('Registry ready');
      * } else if (result.error.code === 'REGISTRY_WRITE_FAILED') {
      *   console.error('Permission denied:', result.error.path);
@@ -178,7 +175,7 @@ export class FilesystemRegistry implements Registry {
      * @example
      * ```typescript
      * const result = await registry.load();
-     * if (result.ok) {
+     * if (result.ok()) {
      *   console.log('Loaded stores:', Object.keys(result.value));
      * } else if (result.error.code === 'REGISTRY_MISSING') {
      *   await registry.initialize();
@@ -208,7 +205,7 @@ export class FilesystemRegistry implements Registry {
         }
 
         const parsed = parseStoreRegistry(contents);
-        if (!parsed.ok) {
+        if (!parsed.ok()) {
             return err({
                 code: 'REGISTRY_PARSE_FAILED',
                 message: `Failed to parse store registry at ${this.registryPath}`,
@@ -236,14 +233,14 @@ export class FilesystemRegistry implements Registry {
      * // Remove a store from the registry
      * const { deletedStore, ...remaining } = currentRegistry;
      * const result = await registry.save(remaining);
-     * if (!result.ok) {
+     * if (!result.ok()) {
      *   console.error('Save failed:', result.error.message);
      * }
      * ```
      */
     async save(registry: StoreRegistry): Promise<Result<void, RegistryError>> {
         const serialized = serializeStoreRegistry(registry);
-        if (!serialized.ok) {
+        if (!serialized.ok()) {
             return err({
                 code: 'REGISTRY_WRITE_FAILED',
                 message: 'Failed to serialize store registry',
@@ -284,7 +281,7 @@ export class FilesystemRegistry implements Registry {
      * await registry.load(); // Required before getStore
      *
      * const adapter = registry.getStore('my-project');
-     * if (adapter.ok) {
+     * if (adapter.ok()) {
      *   // Read a memory
      *   const memory = await adapter.value.memories.read('notes/todo');
      *
@@ -321,3 +318,4 @@ export class FilesystemRegistry implements Registry {
         });
     }
 }
+

@@ -77,8 +77,8 @@ describe('reindexCategoryIndexes', () => {
         // Reindex
         const result = await reindexCategoryIndexes(ctx);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.warnings).toEqual([]);
         }
 
@@ -146,8 +146,8 @@ describe('reindexCategoryIndexes', () => {
         // Reindex
         const result = await reindexCategoryIndexes(ctx);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.warnings).toEqual([]);
         }
 
@@ -186,8 +186,8 @@ describe('reindexCategoryIndexes', () => {
         // Reindex
         const result = await reindexCategoryIndexes(ctx);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.warnings).toEqual([]);
         }
 
@@ -200,8 +200,8 @@ describe('reindexCategoryIndexes', () => {
         // Empty temp dir - no memory files, no index files
         const result = await reindexCategoryIndexes(ctx);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.warnings).toEqual([]);
         }
 
@@ -231,8 +231,8 @@ describe('reindexCategoryIndexes', () => {
         // Reindex
         const result = await reindexCategoryIndexes(ctx);
 
-        expect(result.ok).toBe(true);
-        if (result.ok) {
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
             expect(result.value.warnings).toEqual([]);
         }
 
@@ -275,13 +275,13 @@ describe('reindexCategoryIndexes', () => {
         // Reindex
         const result = await reindexCategoryIndexes(ctx);
 
-        expect(result.ok).toBe(true);
+        expect(result.ok()).toBe(true);
 
         // Read and verify the index
         const indexResult = await readCategoryIndex(ctx, 'project');
 
-        expect(indexResult.ok).toBe(true);
-        if (indexResult.ok) {
+        expect(indexResult.ok()).toBe(true);
+        if (indexResult.ok()) {
             const index = indexResult.value;
             expect(index.memories).toHaveLength(2);
 
@@ -314,13 +314,13 @@ describe('reindexCategoryIndexes', () => {
         // Reindex should succeed, but entry should have undefined updatedAt
         const result = await reindexCategoryIndexes(ctx);
 
-        expect(result.ok).toBe(true);
+        expect(result.ok()).toBe(true);
 
         // Read and verify the index
         const indexResult = await readCategoryIndex(ctx, 'project');
 
-        expect(indexResult.ok).toBe(true);
-        if (indexResult.ok) {
+        expect(indexResult.ok()).toBe(true);
+        if (indexResult.ok()) {
             const index = indexResult.value;
             expect(index.memories).toHaveLength(1);
 
@@ -370,13 +370,13 @@ describe('updateCategoryIndexes', () => {
             { createWhenMissing: true },
         );
 
-        expect(result.ok).toBe(true);
+        expect(result.ok()).toBe(true);
 
         // Read the category index
         const indexResult = await readCategoryIndex(ctx, 'project/cortex');
-        expect(indexResult.ok).toBe(true);
+        expect(indexResult.ok()).toBe(true);
 
-        if (indexResult.ok) {
+        if (indexResult.ok()) {
             const index = indexResult.value;
             expect(index.memories).toHaveLength(1);
             const entry = index.memories[0];
@@ -426,13 +426,13 @@ describe('updateCategoryIndexes', () => {
             { createWhenMissing: true },
         );
 
-        expect(updateResult.ok).toBe(true);
+        expect(updateResult.ok()).toBe(true);
 
         // Verify the index has the updated timestamp
         const indexResult = await readCategoryIndex(ctx, 'project');
-        expect(indexResult.ok).toBe(true);
+        expect(indexResult.ok()).toBe(true);
 
-        if (indexResult.ok) {
+        if (indexResult.ok()) {
             const index = indexResult.value;
             expect(index.memories).toHaveLength(1);
             const entry = index.memories[0];
@@ -461,10 +461,11 @@ describe('updateCategoryIndexes', () => {
             { createWhenMissing: true },
         );
 
-        expect(result.ok).toBe(false);
-        if (!result.ok) {
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
             expect(result.error.code).toBe('INDEX_ERROR');
         }
     });
 });
+
 

@@ -9,6 +9,10 @@ export class CategoryPath {
         this.#segments = segments;
     }
 
+    static root() : CategoryPath {
+        return new CategoryPath([]);
+    }
+
     static fromString(path: string): Result<CategoryPath, MemoryError> {
         const segments = path.split('/');
 
@@ -29,7 +33,7 @@ export class CategoryPath {
     }
 
     get isRoot(): boolean {
-        return this.#segments.length === 1;
+        return this.#segments.length === 0;
     }
 
     get root(): CategoryPath {
@@ -49,8 +53,25 @@ export class CategoryPath {
 
     toString(): string {
         if (this.isRoot) {
-            return this.#segments[0]!.toString();
+            return '';
         }
         return this.#segments.map((s) => s.toString()).join('/');
+    }
+
+    equals(other: CategoryPath): boolean {
+        if (this.depth !== other.depth) {
+            return false;
+        }   
+
+        if (this.isRoot && other.isRoot) {
+            return true;
+        }
+
+        for (let i = 0; i < this.depth; i++) {
+            if (!this.#segments[i]!.equals(other.#segments[i]!)) {
+                return false;
+            }  
+        }
+        return true;
     }
 };

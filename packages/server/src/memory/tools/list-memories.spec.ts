@@ -10,6 +10,9 @@ import { MEMORY_SUBDIR } from '../../config.ts';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 import { createMemoryFile, createTestConfig, createTestDir } from './test-utils.ts';
 import { listMemoriesHandler, type ListMemoriesInput } from './list-memories.ts';
+import { CategoryPath } from '@yeseh/cortex-core';
+
+const categoryPath = (path: string): CategoryPath => CategoryPath.fromString(path).unwrap();
 
 describe('cortex_list_memories tool', () => {
     let testDir: string;
@@ -140,11 +143,11 @@ describe('cortex_list_memories tool', () => {
         const storeRoot = join(testDir, MEMORY_SUBDIR);
         const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
 
-        await adapter.writeIndexFile('project', {
+        await adapter.indexes.write(categoryPath('project'), {
             memories: [],
             subcategories: [
-                { path: 'project/cortex', memoryCount: 0, description: 'Cortex memory system' },
-                { path: 'project/other', memoryCount: 0 },
+                { path: categoryPath('project/cortex'), memoryCount: 0, description: 'Cortex memory system' },
+                { path: categoryPath('project/other'), memoryCount: 0 },
             ],
         });
 

@@ -11,9 +11,9 @@
  * @see {@link FilesystemMemoryStorage} - Related memory storage implementation
  */
 
-import type { Result } from '@yeseh/cortex-core';
-import type { Memory } from '@yeseh/cortex-core/memory';
-import type { IndexStorage, ReindexResult, StorageAdapterError, StorageIndexName } from '@yeseh/cortex-core/storage';
+import type { CategoryPath, Result } from '@yeseh/cortex-core';
+import { err, ok, type Memory } from '@yeseh/cortex-core/memory';
+import type { IndexStorage, ReindexResult, StorageAdapterError } from '@yeseh/cortex-core/storage';
 import type { CategoryIndex } from '@yeseh/cortex-core/index';
 import type { FilesystemContext } from './types.ts';
 import {
@@ -23,7 +23,6 @@ import {
     updateCategoryIndexesFromMemory,
 } from './indexes.ts';
 import { parseIndex, serializeIndex } from './index-serialization.ts';
-import { ok, err } from './utils.ts';
 
 /**
  * Filesystem-based implementation of the IndexStorage interface.
@@ -48,7 +47,7 @@ import { ok, err } from './utils.ts';
  *
  * // Read a category index
  * const result = await indexStorage.read('project/cortex');
- * if (result.ok && result.value !== null) {
+ * if (result.ok() && result.value !== null) {
  *     console.log('Index contents:', result.value);
  * }
  *
@@ -92,9 +91,9 @@ export class FilesystemIndexStorage implements IndexStorage {
       * - Passing an empty string reads the root index file.
       * - Missing index files return `ok(null)` rather than an error.
       */
-    async read(name: StorageIndexName): Promise<Result<CategoryIndex | null, StorageAdapterError>> {
+    async read(name: CategoryPath): Promise<Result<CategoryIndex | null, StorageAdapterError>> {
         const contents = await readIndexFile(this.ctx, name);
-        if (!contents.ok) {
+        if (!contents.ok()) {
             return contents;
         }
         if (!contents.value) {
@@ -102,11 +101,11 @@ export class FilesystemIndexStorage implements IndexStorage {
         }
 
         const parsed = parseIndex(contents.value);
-        if (!parsed.ok) {
+        if (!parsed.ok()) {
             return err({
                 code: 'INDEX_ERROR',
                 message: `Failed to parse category index at ${name}.`,
-                path: name,
+                path: name.toString(),
                 cause: parsed.error,
             });
         }
@@ -122,7 +121,7 @@ export class FilesystemIndexStorage implements IndexStorage {
       * @deprecated Prefer {@link read} which returns structured data.
       */
     async readIndexFile(
-        name: StorageIndexName,
+        name: CategoryPath,
     ): Promise<Result<CategoryIndex | null, StorageAdapterError>> {
         return this.read(name);
     }
@@ -151,19 +150,19 @@ export class FilesystemIndexStorage implements IndexStorage {
       * - Serialization failures surface as `INDEX_ERROR` results.
       */
     async write(
-        name: StorageIndexName,
+        name: CategoryPath, 
         contents: CategoryIndex,
     ): Promise<Result<void, StorageAdapterError>> {
         const serialized = serializeIndex(contents);
-        if (!serialized.ok) {
+        if (!serialized.ok()) {
             return err({
                 code: 'INDEX_ERROR',
                 message: `Failed to serialize category index at ${name}.`,
-                path: name,
+                path: name.toString(),
                 cause: serialized.error,
             });
         }
-        return writeIndexFile(this.ctx, name, serialized.value);
+        return writeIndexFile(this.ctx, name.toString(), serialized.value);
     }
 
     /**
@@ -175,7 +174,7 @@ export class FilesystemIndexStorage implements IndexStorage {
       * @deprecated Prefer {@link write} which accepts structured data.
       */
     async writeIndexFile(
-        name: StorageIndexName,
+        name: CategoryPath,
         contents: CategoryIndex,
     ): Promise<Result<void, StorageAdapterError>> {
         return this.write(name, contents);
@@ -193,7 +192,7 @@ export class FilesystemIndexStorage implements IndexStorage {
      * @example
      * ```typescript
      * const result = await storage.reindex();
-     * if (result.ok) {
+     * if (result.ok()) {
      *   console.log(result.value.warnings);
      * }
      * ```
@@ -233,3 +232,4 @@ export class FilesystemIndexStorage implements IndexStorage {
         return updateCategoryIndexesFromMemory(this.ctx, memory, options);
     }
 }
+

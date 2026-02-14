@@ -141,7 +141,7 @@ const createMemoryFile = async (
     };
 
     const serialized = serializeMemory(memory);
-    if (!serialized.ok) {
+    if (!serialized.ok()) {
         throw new Error(`Failed to serialize memory: ${serialized.error.message}`);
     }
 
@@ -150,7 +150,7 @@ const createMemoryFile = async (
         allowIndexCreate: true,
         allowIndexUpdate: true,
     });
-    if (!result.ok) {
+    if (!result.ok()) {
         throw new Error(`Failed to write memory: ${result.error.message}`);
     }
 };

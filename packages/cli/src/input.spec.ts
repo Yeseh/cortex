@@ -25,8 +25,8 @@ describe('resolveMemoryContentInput', () => {
                 content: 'Hello, world!',
             });
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.content).toBe('Hello, world!');
                 expect(result.value.source).toBe('flag');
             }
@@ -37,8 +37,8 @@ describe('resolveMemoryContentInput', () => {
                 content: '',
             });
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.content).toBe('');
                 expect(result.value.source).toBe('flag');
             }
@@ -54,8 +54,8 @@ describe('resolveMemoryContentInput', () => {
                 filePath,
             });
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.content).toBe('File content here');
                 expect(result.value.source).toBe('file');
             }
@@ -66,8 +66,8 @@ describe('resolveMemoryContentInput', () => {
                 filePath: join(tempDir, 'nonexistent.txt'),
             });
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('FILE_READ_FAILED');
                 expect(result.error.path).toContain('nonexistent.txt');
             }
@@ -78,8 +78,8 @@ describe('resolveMemoryContentInput', () => {
                 filePath: '   ',
             });
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('INVALID_FILE_PATH');
             }
         });
@@ -92,8 +92,8 @@ describe('resolveMemoryContentInput', () => {
                 filePath: `  ${filePath}  `,
             });
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.content).toBe('Trimmed content');
             }
         });
@@ -113,8 +113,8 @@ describe('resolveMemoryContentInput', () => {
                 stdin: mockStdin,
             });
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.content).toBe('Stdin content');
                 expect(result.value.source).toBe('stdin');
             }
@@ -127,8 +127,8 @@ describe('resolveMemoryContentInput', () => {
                 stdin: mockStdin,
             });
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.content).toBeNull();
                 expect(result.value.source).toBe('none');
             }
@@ -142,8 +142,8 @@ describe('resolveMemoryContentInput', () => {
                 stdinRequested: true,
             });
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.content).toBe('Requested stdin');
                 expect(result.value.source).toBe('stdin');
             }
@@ -158,8 +158,8 @@ describe('resolveMemoryContentInput', () => {
                 stdinRequested: false,
             });
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.content).toBeNull();
                 expect(result.value.source).toBe('none');
             }
@@ -174,8 +174,8 @@ describe('resolveMemoryContentInput', () => {
                 stdinRequested: true,
             });
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.content).toBe('Required stdin');
                 expect(result.value.source).toBe('stdin');
             }
@@ -189,8 +189,8 @@ describe('resolveMemoryContentInput', () => {
                 filePath: '/some/file.txt',
             });
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('MULTIPLE_CONTENT_SOURCES');
             }
         });
@@ -201,8 +201,8 @@ describe('resolveMemoryContentInput', () => {
                 stdinRequested: true,
             });
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('MULTIPLE_CONTENT_SOURCES');
             }
         });
@@ -213,8 +213,8 @@ describe('resolveMemoryContentInput', () => {
                 stdinRequested: true,
             });
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('MULTIPLE_CONTENT_SOURCES');
             }
         });
@@ -226,8 +226,8 @@ describe('resolveMemoryContentInput', () => {
                 stdinRequested: true,
             });
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('MULTIPLE_CONTENT_SOURCES');
             }
         });
@@ -243,8 +243,8 @@ describe('resolveMemoryContentInput', () => {
                 requireContent: true,
             });
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('MISSING_CONTENT');
             }
         });
@@ -258,8 +258,8 @@ describe('resolveMemoryContentInput', () => {
                 requireContent: false,
             });
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.content).toBeNull();
                 expect(result.value.source).toBe('none');
             }
@@ -274,8 +274,8 @@ describe('resolveMemoryContentInput', () => {
                 filePath: join(tempDir, 'file.txt'),
             });
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('MULTIPLE_CONTENT_SOURCES');
             }
         });
@@ -294,8 +294,8 @@ describe('resolveMemoryContentInput', () => {
                 stdin: mockStdin,
             });
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.content).toBe('chunk1chunk2chunk3');
             }
         });
@@ -314,8 +314,8 @@ describe('resolveMemoryContentInput', () => {
                 stdin: mockStdin,
             });
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.content).toBe('test data');
             }
         });
@@ -328,8 +328,8 @@ describe('resolveMemoryContentInput', () => {
                 stdin: mockStdin,
             });
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value.content).toBeNull();
                 expect(result.value.source).toBe('none');
             }

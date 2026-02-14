@@ -9,7 +9,7 @@ import { memoryError } from '@/memory/result.ts';
 import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
 import type { MemoryError } from '@/memory/result.ts';
 import { discoverRootCategories, collectMemoriesFromCategory } from './helpers.ts';
-import { MemoryPath } from '@/memory/memory-path.ts';
+import { type MemoryPath } from '@/memory/memory-path.ts';
 
 /** Options for pruning expired memories */
 export interface PruneOptions {
@@ -22,7 +22,7 @@ export interface PruneOptions {
 /** A pruned memory entry */
 export interface PrunedMemory {
     /** Path of the pruned memory */
-    path: string;
+    path: MemoryPath;
     /** When it expired */
     expiresAt: Date;
 }
@@ -99,18 +99,10 @@ export const pruneExpiredMemories = async (
 
     // 3. Delete each expired memory
     for (const memory of expiredMemories) {
-        const memoryPathResult = MemoryPath.fromPath(memory.path);
-        if (!memoryPathResult.ok()) {
-            return memoryError('INVALID_PATH', `Invalid memory path: ${memory.path}`, {
-                path: memory.path,
-                cause: memoryPathResult.error,
-            });
-        }
-
-        const removeResult = await storage.memories.remove(memoryPathResult.value);
+        const removeResult = await storage.memories.remove(memory.path);
         if (!removeResult.ok()) {
             return memoryError('STORAGE_ERROR', `Failed to remove expired memory: ${memory.path}`, {
-                path: memory.path,
+                path: memory.path.toString(),
                 cause: removeResult.error,
             });
         }

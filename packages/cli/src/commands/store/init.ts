@@ -94,7 +94,7 @@ const detectGitRepoName = async (cwd: string): Promise<string | null> => {
     const result = await runGitCommand([
         'rev-parse', '--show-toplevel',
     ], cwd);
-    if (!result.ok) {
+    if (!result.ok()) {
         return null;
     }
     return basename(result.value);

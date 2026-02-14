@@ -29,7 +29,7 @@ export const removeMemory = async (
     slugPath: string,
 ): Promise<Result<void, MemoryError>> => {
     // 1. Validate path
-    const pathResult = MemoryPath.fromPath(slugPath);    
+    const pathResult = MemoryPath.fromString(slugPath);    
     if (!pathResult.ok()) {
         return memoryError('INVALID_PATH', pathResult.error.message, {
             path: slugPath,

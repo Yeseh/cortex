@@ -94,7 +94,7 @@ export async function handleShow(
     // 3. Build output
     const memory = readResult.value;
     const tokenEstimateResult = defaultTokenizer.estimateTokens(memory.content);
-    const tokenEstimate = tokenEstimateResult.ok ? tokenEstimateResult.value : undefined;
+    const tokenEstimate = tokenEstimateResult.ok() ? tokenEstimateResult.value : undefined;
 
     const outputMemory: OutputMemory = {
         path: memory.path.toString(),

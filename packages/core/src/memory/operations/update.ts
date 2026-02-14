@@ -80,7 +80,7 @@ export const updateMemory = async (
     now?: Date,
 ): Promise<Result<Memory, MemoryError>> => {
     // 1. Validate path
-    const pathResult = MemoryPath.fromPath(slugPath);
+    const pathResult = MemoryPath.fromString(slugPath);
     if (!pathResult.ok()) {
         return memoryError('INVALID_PATH', pathResult.error.message, {
             path: slugPath,

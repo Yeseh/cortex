@@ -37,14 +37,14 @@ export const moveMemory = async (
     toPath: string,
 ): Promise<Result<void, MemoryError>> => {
     // 1. Validate both paths
-    const fromResult = MemoryPath.fromPath(fromPath);
+    const fromResult = MemoryPath.fromString(fromPath);
     if (!fromResult.ok()) {
         return memoryError('INVALID_PATH', fromResult.error.message, {
             path: fromPath,
         });
     }
 
-    const toResult = MemoryPath.fromPath(toPath);
+    const toResult = MemoryPath.fromString(toPath);
     if (!toResult.ok()) {
         return memoryError('INVALID_PATH', toResult.error.message, {
             path: toPath,
@@ -88,7 +88,7 @@ export const moveMemory = async (
 
     // 4. Create destination category
     const destCategory = getCategoryFromSlugPath(toPath);
-    const ensureResult = await storage.categories.ensure(destCategory);
+    const ensureResult = await storage.categories.ensure(toResult.value.category);
     if (!ensureResult.ok()) {
         return memoryError('STORAGE_ERROR', `Failed to create destination category: ${destCategory}`, {
             cause: ensureResult.error,

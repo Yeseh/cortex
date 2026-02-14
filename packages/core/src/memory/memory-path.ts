@@ -13,7 +13,7 @@ export class MemoryPath {
         this.slug = slug;
     }
 
-    static fromPath(path: string): MemoryResult<MemoryPath> {
+    static fromString(path: string): MemoryResult<MemoryPath> {
         const segments = path.split('/').filter((s) => s.length > 0);
         if (segments.length < 2) {
             return memoryError('INVALID_PATH', 'Memory slug path must include at least two segments.');
@@ -50,5 +50,9 @@ export class MemoryPath {
 
     toString(): string {
         return `${this.category.toString()}/${this.slug.toString()}`;
+    }
+
+    equals(other: MemoryPath): boolean {   
+        return this.category.equals(other.category) && this.slug.equals(other.slug);
     }
 };

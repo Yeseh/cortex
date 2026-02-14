@@ -7,7 +7,7 @@
 import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
 import { ok, type Result } from '@/result.ts';
 import { discoverRootCategories } from './helpers.ts';
-import { MemoryPath } from '../memory-path.ts';
+import { type MemoryPath } from '../memory-path.ts';
 import { CategoryPath } from '@/category/category-path.ts';
 import { memoryError, type MemoryError } from '../result.ts';
 
@@ -82,23 +82,15 @@ export const getRecentMemories = async (
 
     // 1. Collect all index entries from the category tree
     type IndexEntryWithCategory = {
-        entry: { path: string; updatedAt?: Date; tokenEstimate: number; summary?: string };
+        entry: { path: MemoryPath; updatedAt?: Date; tokenEstimate: number; summary?: string };
         categoryPath: CategoryPath;
     };
 
     const allEntries: IndexEntryWithCategory[] = [];
 
     const collectEntriesFromCategory = async (
-        catPath: string,
+        catPath: CategoryPath,
     ): Promise<Result<void, MemoryError>> => {
-        const categoryPath = CategoryPath.fromString(catPath);
-        if (!categoryPath.ok()) {
-            return memoryError('INVALID_SLUG', `Invalid category path: ${catPath}`, {
-                path: catPath,
-                cause: categoryPath.error,
-            });
-        }
-
         const indexResult = await storage.indexes.read(catPath);
         if (!indexResult.ok()) {
             return memoryError('STORAGE_ERROR', `Failed to read index: ${catPath}`, {
@@ -115,7 +107,7 @@ export const getRecentMemories = async (
         for (const entry of index.memories) {
             allEntries.push({ 
                 entry,
-                categoryPath: categoryPath.value});
+                categoryPath: catPath});
         }
 
         // Recurse into subcategories
@@ -131,8 +123,16 @@ export const getRecentMemories = async (
 
     // Determine which categories to walk
     if (category) {
+        const categoryPathResult = CategoryPath.fromString(category);
+        if (!categoryPathResult.ok()) {
+            return memoryError('INVALID_PATH', `Invalid category path: ${category}`, {
+                path: category,
+                cause: categoryPathResult.error,
+            });
+        }
+
         // Specific category requested
-        const collectResult = await collectEntriesFromCategory(category);
+        const collectResult = await collectEntriesFromCategory(categoryPathResult.value);
         if (!collectResult.ok()) {
             return collectResult;
         }
@@ -175,9 +175,8 @@ export const getRecentMemories = async (
         if (memories.length >= limit) break;
 
         // Read the memory to check expiration and get content
-        // TODO: Index should return valid MemoryPath objects to avoid this parsing step
         const readResult = await storage.memories.read(
-            MemoryPath.fromPath(entryWithCat.entry.path).unwrap(),
+            entryWithCat.entry.path,
         );
 
         if (!readResult.ok() || !readResult.value) {
@@ -194,7 +193,7 @@ export const getRecentMemories = async (
 
         // Add to results
         memories.push({
-            path: entryWithCat.entry.path,
+            path: entryWithCat.entry.path.toString(),
             content: memory.content,
             updatedAt: entryWithCat.entry.updatedAt ?? null,
             tokenEstimate: entryWithCat.entry.tokenEstimate,

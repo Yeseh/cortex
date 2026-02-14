@@ -7,6 +7,7 @@
 import { describe, expect, it, mock } from 'bun:test';
 import { createMockStorage, ok } from './test-helpers.spec.ts';
 import { deleteCategory } from './delete.ts';
+import type { CategoryPath } from '../category-path.ts';
 
 describe('deleteCategory', () => {
     it('should delete existing category', async () => {
@@ -46,10 +47,10 @@ describe('deleteCategory', () => {
     });
 
     it('should remove entry from parent index', async () => {
-        let removedPath: string | null = null;
+        let removedPath: CategoryPath | null = null;
         const storage = createMockStorage({
             exists: mock(async () => ok(true)),
-            removeSubcategoryEntry: mock(async (_parent: string, path: string) => {
+            removeSubcategoryEntry: mock(async (path: CategoryPath) => {
                 removedPath = path;
                 return ok(undefined);
             }),
@@ -57,6 +58,6 @@ describe('deleteCategory', () => {
 
         await deleteCategory(storage, 'project/cortex');
 
-        expect(removedPath as string | null).toBe('project/cortex');
+        expect(removedPath!.toString()).toBe('project/cortex');
     });
 });

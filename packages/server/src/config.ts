@@ -23,7 +23,7 @@
 import { z } from 'zod';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { Result } from '@yeseh/cortex-core';
+import { err, ok, type Result } from '@yeseh/cortex-core';
 /**
  * Default cortex config directory path.
  *
@@ -214,15 +214,12 @@ export const loadServerConfig = (): Result<ServerConfig, ConfigLoadError> => {
     const result = schema.safeParse(rawConfig);
 
     if (!result.success) {
-        return {
-            ok: false,
-            error: {
-                code: 'CONFIG_VALIDATION_FAILED',
-                message: 'Invalid server configuration.',
-                issues: result.error.issues,
-            },
-        };
+        return err({
+            code: 'CONFIG_VALIDATION_FAILED',
+            message: 'Invalid server configuration.',
+            issues: result.error.issues,
+        });
     }
 
-    return { ok: true, value: result.data };
+    return ok(result.data);
 };

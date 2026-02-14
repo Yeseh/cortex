@@ -3,7 +3,7 @@
  */
 
 import { readFile } from 'node:fs/promises';
-import type { Result } from '@yeseh/cortex-core';
+import { err, ok, type Result } from '@yeseh/cortex-core';
 
 export type MemoryContentSource = 'flag' | 'file' | 'stdin' | 'none';
 
@@ -36,9 +36,6 @@ export interface MemoryContentInputError {
 
 type ContentInputResult = Result<MemoryContentInputResult, MemoryContentInputError>;
 type OptionalContentResult = Result<MemoryContentInputResult | null, MemoryContentInputError>;
-
-const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
-const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 const readStdin = async (stdin: NodeJS.ReadableStream): Promise<string> => {
     if ('setEncoding' in stdin && typeof stdin.setEncoding === 'function') {
@@ -114,7 +111,7 @@ export const resolveMemoryContentInput = async (
     }
 
     const fileResult = await resolveFileContent(options.filePath);
-    if (!fileResult.ok) {
+    if (!fileResult.ok()) {
         return fileResult;
     }
     if (fileResult.value) {
@@ -123,7 +120,7 @@ export const resolveMemoryContentInput = async (
 
     if (!requireStdinFlag || stdinRequested) {
         const stdinResult = await resolveStdinContent(options.stdin);
-        if (!stdinResult.ok) {
+        if (!stdinResult.ok()) {
             return stdinResult;
         }
         if (stdinResult.value) {

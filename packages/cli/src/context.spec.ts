@@ -338,14 +338,14 @@ describe('context', () => {
                 const result = await resolveStoreContext(undefined, {});
                 // Should not throw, result depends on actual system state
                 expect(result).toBeDefined();
-                expect(typeof result.ok).toBe('boolean');
+                expect(typeof result.ok).toBe('function');
             });
 
             it('should handle undefined options', async () => {
                 const result = await resolveStoreContext(undefined);
                 // Should not throw, result depends on actual system state
                 expect(result).toBeDefined();
-                expect(typeof result.ok).toBe('boolean');
+                expect(typeof result.ok).toBe('function');
             });
 
             it('should handle storeName with empty string as undefined', async () => {
@@ -464,7 +464,7 @@ describe('context', () => {
             // Result depends on whether default registry exists
             // The important thing is it doesn't throw and returns a Result
             expect(result).toBeDefined();
-            expect(typeof result.ok).toBe('boolean');
+            expect(typeof result.ok).toBe('function');
         });
 
         it('should handle registry with comments', async () => {

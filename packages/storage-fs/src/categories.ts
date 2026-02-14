@@ -9,11 +9,11 @@
 
 import { access, mkdir, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import type { Result } from '@yeseh/cortex-core';
-import type { CategoryError } from '@yeseh/cortex-core/category';
+import { ok, err, type Result, type CategoryError } from '@yeseh/cortex-core';
 import type { FilesystemContext } from './types.ts';
-import { err, isNotFoundError, ok } from './utils.ts';
+import { isNotFoundError } from './utils.ts';
 import { readCategoryIndex, writeCategoryIndex } from './indexes.ts';
+import type { CategoryPath } from '../../core/src/category/category-path.ts';
 
 /**
  * Creates a CategoryError from components.
@@ -87,9 +87,9 @@ export const ensure = async (
  */
 export const deleteCategoryDirectory = async (
     ctx: FilesystemContext,
-    path: string,
+    path: CategoryPath,
 ): Promise<Result<void, CategoryError>> => {
-    const dirPath = resolve(ctx.storeRoot, path);
+    const dirPath = resolve(ctx.storeRoot, path.toString());
     try {
         await rm(dirPath, { recursive: true });
         return ok(undefined);
@@ -101,8 +101,8 @@ export const deleteCategoryDirectory = async (
         return err(
             toCategoryError(
                 'STORAGE_ERROR',
-                `Failed to delete category directory: ${path}`,
-                path,
+                `Failed to delete category directory: ${path.toString()}`,
+                path.toString(),
                 error,
             ),
         );
@@ -130,25 +130,26 @@ export { deleteCategoryDirectory as delete };
  * Creates the parent index and subcategory entry if they don't exist.
  *
  * @param ctx - Filesystem context with configuration
- * @param parentPath - Path to the parent category (empty string for root)
- * @param subcategoryPath - Full path to the subcategory
+ * @param categoryPath - Full path to the subcategory
  * @param description - New description or null to clear
  * @returns Success or error
  */
 export const updateSubcategoryDescription = async (
     ctx: FilesystemContext,
-    parentPath: string,
-    subcategoryPath: string,
+    categoryPath: CategoryPath,
     description: string | null,
 ): Promise<Result<void, CategoryError>> => {
-    const indexName = parentPath === '' ? '' : parentPath;
+    const parent = categoryPath.parent;
+    const indexName = !parent || parent.isRoot ? '' : parent.toString();
+    const subcategoryPath = categoryPath.toString();
+
     const currentResult = await readCategoryIndex(ctx, indexName, { createWhenMissing: true });
-    if (!currentResult.ok) {
+    if (!currentResult.ok()) {
         return err(
             toCategoryError(
                 'STORAGE_ERROR',
-                `Failed to read parent index: ${parentPath}`,
-                parentPath,
+                `Failed to read parent index: ${indexName}`,
+                indexName,
                 currentResult.error,
             ),
         );
@@ -158,9 +159,11 @@ export const updateSubcategoryDescription = async (
     const subcategories = [...currentIndex.subcategories];
 
     // Find existing entry or create new one
-    let entryIndex = subcategories.findIndex((s) => s.path === subcategoryPath);
+    let entryIndex = subcategories.findIndex(
+        (subcategory) => subcategory.path.toString() === subcategoryPath,
+    );
     if (entryIndex === -1) {
-        subcategories.push({ path: subcategoryPath, memoryCount: 0 });
+        subcategories.push({ path: categoryPath, memoryCount: 0 });
         entryIndex = subcategories.length - 1;
     }
 
@@ -176,18 +179,18 @@ export const updateSubcategoryDescription = async (
     }
 
     // Sort and write back
-    subcategories.sort((a, b) => a.path.localeCompare(b.path));
+    subcategories.sort((a, b) => a.path.toString().localeCompare(b.path.toString()));
     const writeResult = await writeCategoryIndex(ctx, indexName, {
         memories: currentIndex.memories,
         subcategories,
     });
 
-    if (!writeResult.ok) {
+    if (!writeResult.ok()) {
         return err(
             toCategoryError(
                 'STORAGE_ERROR',
-                `Failed to write parent index: ${parentPath}`,
-                parentPath,
+                `Failed to write parent index: ${indexName}`,
+                indexName,
                 writeResult.error,
             ),
         );
@@ -202,26 +205,26 @@ export const updateSubcategoryDescription = async (
  * Returns success if the parent index doesn't exist.
  *
  * @param ctx - Filesystem context with configuration
- * @param parentPath - Path to the parent category (empty string for root)
- * @param subcategoryPath - Full path to the subcategory to remove
+ * @param categoryPath - Full path to the subcategory to remove
  * @returns Success or error
  */
 export const removeSubcategoryEntry = async (
     ctx: FilesystemContext,
-    parentPath: string,
-    subcategoryPath: string,
+    categoryPath: CategoryPath,
 ): Promise<Result<void, CategoryError>> => {
-    const indexName = parentPath === '' ? '' : parentPath;
+    const parent = categoryPath.parent;
+    const indexName = !parent || parent.isRoot ? '' : parent.toString();
+    const subcategoryPath = categoryPath.toString();
     const currentResult = await readCategoryIndex(ctx, indexName, { createWhenMissing: false });
 
-    if (!currentResult.ok) {
+    if (!currentResult.ok()) {
         // If we can't read the index, just return ok (nothing to remove)
         return ok(undefined);
     }
 
     const currentIndex = currentResult.value;
     const subcategories = currentIndex.subcategories.filter(
-        (subcategory) => subcategory.path !== subcategoryPath,
+        (subcategory) => subcategory.path.toString() !== subcategoryPath,
     );
 
     const writeResult = await writeCategoryIndex(ctx, indexName, {
@@ -229,12 +232,12 @@ export const removeSubcategoryEntry = async (
         subcategories,
     });
 
-    if (!writeResult.ok) {
+    if (!writeResult.ok()) {
         return err(
             toCategoryError(
                 'STORAGE_ERROR',
-                `Failed to update parent index: ${parentPath}`,
-                parentPath,
+                `Failed to update parent index: ${indexName || 'root'}`,
+                indexName || 'root',
                 writeResult.error,
             ),
         );
@@ -242,4 +245,5 @@ export const removeSubcategoryEntry = async (
 
     return ok(undefined);
 };
+
 

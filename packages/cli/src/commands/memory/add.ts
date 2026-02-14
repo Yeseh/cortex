@@ -56,7 +56,7 @@ const resolveAdapter = async (
     }
 
     const adapterResult = await resolveStoreAdapter(storeName);
-    if (!adapterResult.ok) {
+    if (!adapterResult.ok()) {
         throwCoreError(adapterResult.error ?? {
             code: 'STORE_RESOLUTION_FAILED',
             message: 'Failed to resolve store adapter.',
@@ -85,7 +85,7 @@ const resolveContent = async (
         requireContent: true,
     });
 
-    if (!contentResult.ok) {
+    if (!contentResult.ok()) {
         throwCoreError(contentResult.error ?? {
             code: 'CONTENT_INPUT_FAILED',
             message: 'Failed to resolve memory content input.',

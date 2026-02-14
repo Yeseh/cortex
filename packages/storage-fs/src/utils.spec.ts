@@ -14,8 +14,8 @@ describe('utils module', () => {
         it('should create a successful Result', () => {
             const result = ok('test value');
 
-            expect(result.ok).toBe(true);
-            if (result.ok) {
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
                 expect(result.value).toBe('test value');
             }
         });
@@ -40,8 +40,8 @@ describe('utils module', () => {
         it('should create a failed Result', () => {
             const result = err({ code: 'TEST_ERROR', message: 'Test error' });
 
-            expect(result.ok).toBe(false);
-            if (!result.ok) {
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
                 expect(result.error.code).toBe('TEST_ERROR');
             }
         });
@@ -123,8 +123,8 @@ describe('utils module', () => {
             try {
                 const result = resolveStoragePath(tempDir, 'category/memory', 'IO_READ_ERROR');
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
+                expect(result.ok()).toBe(true);
+                if (result.ok()) {
                     expect(result.value).toBe(resolve(tempDir, 'category/memory'));
                 }
             }
@@ -142,8 +142,8 @@ describe('utils module', () => {
             try {
                 const result = resolveStoragePath(tempDir, 'a/b/c/d', 'IO_READ_ERROR');
 
-                expect(result.ok).toBe(true);
-                if (result.ok) {
+                expect(result.ok()).toBe(true);
+                if (result.ok()) {
                     expect(result.value).toBe(resolve(tempDir, 'a/b/c/d'));
                 }
             }
@@ -161,8 +161,8 @@ describe('utils module', () => {
             try {
                 const result = resolveStoragePath(tempDir, '../escape', 'IO_READ_ERROR');
 
-                expect(result.ok).toBe(false);
-                if (!result.ok) {
+                expect(result.ok()).toBe(false);
+                if (!result.ok()) {
                     expect(result.error.code).toBe('IO_READ_ERROR');
                     expect(result.error.message).toContain('Path escapes storage root');
                 }
@@ -185,8 +185,8 @@ describe('utils module', () => {
                     'IO_WRITE_ERROR',
                 );
 
-                expect(result.ok).toBe(false);
-                if (!result.ok) {
+                expect(result.ok()).toBe(false);
+                if (!result.ok()) {
                     expect(result.error.code).toBe('IO_WRITE_ERROR');
                 }
             }
@@ -204,8 +204,8 @@ describe('utils module', () => {
             try {
                 const result = resolveStoragePath(tempDir, '../bad', 'IO_WRITE_ERROR');
 
-                expect(result.ok).toBe(false);
-                if (!result.ok) {
+                expect(result.ok()).toBe(false);
+                if (!result.ok()) {
                     expect(result.error.code).toBe('IO_WRITE_ERROR');
                 }
             }
@@ -257,3 +257,4 @@ describe('utils module', () => {
         });
     });
 });
+

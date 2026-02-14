@@ -14,8 +14,8 @@ import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
 import type { CategoryIndex } from '@/index/types.ts';
 import { memoryError, type MemoryError, type MemoryResult } from '@/memory/result.ts';
 import { ok } from '@/result.ts';
-import { MemoryPath } from '@/memory/memory-path.ts';
 import type { ListedMemory, ListedSubcategory } from './list.ts';
+import { CategoryPath } from '@/category/category-path.ts';
 
 /**
  * Reads a category index from storage.
@@ -34,7 +34,7 @@ import type { ListedMemory, ListedSubcategory } from './list.ts';
  */
 export const readCategoryIndex = async (
     storage: ScopedStorageAdapter,
-    categoryPath: string,
+    categoryPath: CategoryPath,
 ): Promise<Result<CategoryIndex | null, MemoryError>> => {
     const result = await storage.indexes.read(categoryPath);
     if (!result.ok()) {
@@ -59,15 +59,15 @@ export const readCategoryIndex = async (
  * @example
  * ```typescript
  * const result = await discoverRootCategories(storage);
- * if (result.ok) {
+ * if (result.ok()) {
  *     console.log('Root categories:', result.value); // ['project', 'human', 'standards']
  * }
  * ```
  */
 export const discoverRootCategories = async (
     storage: ScopedStorageAdapter,
-): Promise<Result<string[], MemoryError>> => {
-    const indexResult = await storage.indexes.read('');
+): Promise<Result<CategoryPath[], MemoryError>> => {
+    const indexResult = await storage.indexes.read(CategoryPath.root());
     if (!indexResult.ok()) {
         return memoryError('STORAGE_ERROR', 'Failed to read index: root', {
             cause: indexResult.error,
@@ -109,14 +109,14 @@ export const discoverRootCategories = async (
  */
 export const collectMemoriesFromCategory = async (
     storage: ScopedStorageAdapter,
-    categoryPath: string,
+    categoryPath: CategoryPath,
     includeExpired: boolean,
     now: Date,
     visited: Set<string>,
 ): Promise<MemoryResult<ListedMemory[]>> => {
     // Prevent cycles
-    if (visited.has(categoryPath)) return ok([]);
-    visited.add(categoryPath);
+    if (visited.has(categoryPath.toString())) return ok([]);
+    visited.add(categoryPath.toString());
 
     // Read index
     const indexResult = await storage.indexes.read(categoryPath);
@@ -135,15 +135,11 @@ export const collectMemoriesFromCategory = async (
 
     // Process memories in this category
     for (const entry of index.memories) {
-        const memoryPathResult = MemoryPath.fromPath(entry.path);
-        if (!memoryPathResult.ok()) {
-            continue;
-        }
-        if (memoryPathResult.value.category.toString() !== categoryPath) {
+        if (entry.path.category.toString() !== categoryPath.toString()) {
             continue;
         }
 
-        const readResult = await storage.memories.read(memoryPathResult.value);
+        const readResult = await storage.memories.read(entry.path);
         if (!readResult.ok()) {
             // Skip memories that can't be read
             continue;
@@ -207,7 +203,7 @@ export const collectMemoriesFromCategory = async (
  */
 export const collectDirectSubcategories = async (
     storage: ScopedStorageAdapter,
-    categoryPath: string,
+    categoryPath: CategoryPath,
 ): Promise<Result<ListedSubcategory[], MemoryError>> => {
     const indexResult = await storage.indexes.read(categoryPath);
     if (!indexResult.ok()) {

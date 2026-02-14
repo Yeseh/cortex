@@ -9,9 +9,8 @@
 
 import YAML from 'yaml';
 import { z } from 'zod';
-import type { Result } from '@yeseh/cortex-core';
+import { CategoryPath, err, MemoryPath, ok, type Result } from '@yeseh/cortex-core';
 import type { CategoryIndex } from '@yeseh/cortex-core/index';
-import { ok, err } from './utils.ts';
 
 /**
  * Error type for index serialization/deserialization operations.
@@ -81,7 +80,7 @@ export const parseIndex = (raw: string): Result<CategoryIndex, IndexSerializatio
 
     return ok({
         memories: parsed.data.memories.map((memory) => ({
-            path: memory.path,
+            path: MemoryPath.fromString(memory.path).unwrap(),
             tokenEstimate: memory.token_estimate,
             ...(memory.summary ? { summary: memory.summary } : {}),
             ...(memory.updated_at
@@ -94,7 +93,7 @@ export const parseIndex = (raw: string): Result<CategoryIndex, IndexSerializatio
                 : {}),
         })),
         subcategories: parsed.data.subcategories.map((subcategory) => ({
-            path: subcategory.path,
+            path: CategoryPath.fromString(subcategory.path).unwrap(),
             memoryCount: subcategory.memory_count,
             ...(subcategory.description ? { description: subcategory.description } : {}),
         })),

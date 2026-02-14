@@ -16,15 +16,18 @@ import type {
     MemoryError,
     MemoryErrorCode,
     MemoryMetadata,
+    MemoryPath,
+    MemoryResult,
 } from '@yeseh/cortex-core/memory';
-import { dateSchema, nonEmptyStringSchema, tagsSchema } from '@yeseh/cortex-core';
+import { dateSchema, nonEmptyStringSchema, tagsSchema, ok, err } from '@yeseh/cortex-core';
 import z from 'zod';
 import * as yaml from 'yaml';
 import type { FilesystemContext, StringOrNullResult } from './types.ts';
-import { err, isNotFoundError, ok, resolveStoragePath } from './utils.ts';
+import { isNotFoundError, resolveStoragePath } from './utils.ts';
 
 export type ParseMetadataResult = Result<MemoryMetadata, MemoryError>;
 export type SerializeMemoryResult = Result<string, MemoryError>;
+export type MemoryFile = Omit<Memory, 'path' | 'isExpired'> ;
 
 /**
  * Schema for validating individual citation strings.
@@ -84,27 +87,6 @@ const FrontmatterSchema = z.object({
     citations: citationsSchema,
 });
 
-/**
- * Validates a slug path and returns the memory identity.
- * Prevents 'index' as a slug to avoid collision with index files.
- */
-export const validateSlugPath = (
-    slugPath: string,
-    failure: { code: StorageAdapterError['code']; message: string; path: string },
-): Result<MemoryIdentity, StorageAdapterError> => {
-    const identity = validateMemorySlugPath(slugPath);
-    if (!identity.ok) {
-        return err({ ...failure, cause: identity.error });
-    }
-    // Prevent 'index' as memory slug to avoid collision with index files
-    if (identity.value.slug === 'index') {
-        return err({
-            ...failure,
-            message: 'Memory slug "index" is reserved for index files.',
-        });
-    }
-    return ok(identity.value);
-};
 
 /**
  * Maps a serialization error field to the appropriate MemoryErrorCode.
@@ -237,7 +219,7 @@ const parseMetadata = (frontmatterLines: string[]): ParseMetadataResult => {
  */
 export const resolveMemoryPath = (
     ctx: FilesystemContext,
-    slugPath: MemorySlugPath,
+    slugPath: MemoryPath,
     errorCode: StorageAdapterError['code'],
 ): Result<string, StorageAdapterError> => {
     return resolveStoragePath(ctx.storeRoot, `${slugPath}${ctx.memoryExtension}`, errorCode);
@@ -267,7 +249,7 @@ export const resolveMemoryPath = (
  * };
  *
  * const result = serializeMemory(memory);
- * if (result.ok) {
+ * if (result.ok()) {
  *     console.log(result.value);
  *     // ---
  *     // created_at: 2024-01-01T00:00:00.000Z
@@ -282,7 +264,7 @@ export const resolveMemoryPath = (
  * }
  * ```
  */
-export const serializeMemory = (memory: Memory): SerializeMemoryResult => {
+export const serializeMemory = (memory: MemoryFile): SerializeMemoryResult => {
 // Convert camelCase from internal API to snake_case for validation/serialization
     const snakeCaseMetadata = {
         created_at: memory.metadata.createdAt,
@@ -335,10 +317,10 @@ export const serializeMemory = (memory: Memory): SerializeMemoryResult => {
  */
 export const readMemory = async (
     ctx: FilesystemContext,
-    slugPath: MemorySlugPath,
+    slugPath: MemoryPath,
 ): Promise<StringOrNullResult> => {
     const filePathResult = resolveMemoryPath(ctx, slugPath, 'IO_READ_ERROR');
-    if (!filePathResult.ok) {
+    if (!filePathResult.ok()) {
         return filePathResult;
     }
     const filePath = filePathResult.value;
@@ -371,11 +353,11 @@ export const readMemory = async (
  */
 export const writeMemory = async (
     ctx: FilesystemContext,
-    slugPath: MemorySlugPath,
+    slugPath: MemoryPath,
     memory: string,
 ): Promise<Result<void, StorageAdapterError>> => {
     const parsed = parseMemory(memory);
-    if (!parsed.ok) {
+    if (!parsed.ok()) {
         return err({
             code: 'IO_WRITE_ERROR',
             message: 'Failed to parse memory for writing.',
@@ -383,23 +365,14 @@ export const writeMemory = async (
         });
     }
 
-    const identityResult = validateSlugPath(slugPath, {
-        code: 'IO_WRITE_ERROR',
-        message: 'Invalid memory slug path.',
-        path: slugPath,
-    });
-    if (!identityResult.ok) {
-        return identityResult;
-    }
-
     const filePathResult = resolveMemoryPath(ctx, slugPath, 'IO_WRITE_ERROR');
-    if (!filePathResult.ok) {
+    if (!filePathResult.ok()) {
         return filePathResult;
     }
 
     const filePath = filePathResult.value;
     const serializedResult = serializeMemory(parsed.value);
-    if (!serializedResult.ok) {
+    if (!serializedResult.ok()) {
         return err({
             code: 'IO_WRITE_ERROR',
             message: 'Failed to serialize memory for writing.',
@@ -431,19 +404,10 @@ export const writeMemory = async (
  */
 export const removeMemory = async (
     ctx: FilesystemContext,
-    slugPath: MemorySlugPath,
+    slugPath: MemoryPath,
 ): Promise<Result<void, StorageAdapterError>> => {
-    const identityResult = validateSlugPath(slugPath, {
-        code: 'IO_WRITE_ERROR',
-        message: 'Invalid memory slug path.',
-        path: slugPath,
-    });
-    if (!identityResult.ok) {
-        return identityResult;
-    }
-
     const filePathResult = resolveMemoryPath(ctx, slugPath, 'IO_WRITE_ERROR');
-    if (!filePathResult.ok) {
+    if (!filePathResult.ok()) {
         return filePathResult;
     }
     const filePath = filePathResult.value;
@@ -476,34 +440,16 @@ export const removeMemory = async (
  */
 export const moveMemory = async (
     ctx: FilesystemContext,
-    sourceSlugPath: MemorySlugPath,
-    destinationSlugPath: MemorySlugPath,
+    sourceSlugPath: MemoryPath,
+    destinationSlugPath: MemoryPath,
 ): Promise<Result<void, StorageAdapterError>> => {
-    const sourceIdentityResult = validateSlugPath(sourceSlugPath, {
-        code: 'IO_WRITE_ERROR',
-        message: 'Invalid source memory slug path.',
-        path: sourceSlugPath,
-    });
-    if (!sourceIdentityResult.ok) {
-        return sourceIdentityResult;
-    }
-
-    const destinationIdentityResult = validateSlugPath(destinationSlugPath, {
-        code: 'IO_WRITE_ERROR',
-        message: 'Invalid destination memory slug path.',
-        path: destinationSlugPath,
-    });
-    if (!destinationIdentityResult.ok) {
-        return destinationIdentityResult;
-    }
-
     const sourcePathResult = resolveMemoryPath(ctx, sourceSlugPath, 'IO_WRITE_ERROR');
-    if (!sourcePathResult.ok) {
+    if (!sourcePathResult.ok()) {
         return sourcePathResult;
     }
 
     const destinationPathResult = resolveMemoryPath(ctx, destinationSlugPath, 'IO_WRITE_ERROR');
-    if (!destinationPathResult.ok) {
+    if (!destinationPathResult.ok()) {
         return destinationPathResult;
     }
 
@@ -560,7 +506,7 @@ export const moveMemory = async (
  * `;
  *
  * const result = parseMemory(raw);
- * if (result.ok) {
+ * if (result.ok()) {
  *     console.log(result.value.metadata.tags);      // ['example', 'test']
  *     console.log(result.value.metadata.citations); // ['docs/architecture.md', 'https://github.com/org/repo/issues/42']
  *     console.log(result.value.content);            // 'This is the memory content.\n'
@@ -582,12 +528,12 @@ export const moveMemory = async (
  * `;
  *
  * const result = parseMemory(rawNoCitations);
- * if (result.ok) {
+ * if (result.ok()) {
  *     console.log(result.value.metadata.citations); // [] (defaults to empty)
  * }
  * ```
  */
-export const parseMemory = (raw: string): Result<Memory, MemoryError> => {
+export const parseMemory = (raw: string): MemoryResult<MemoryFile> => {
     const normalized = raw.replace(/\r\n/g, '\n');
     const lines = normalized.split('\n');
 
@@ -622,11 +568,11 @@ export const parseMemory = (raw: string): Result<Memory, MemoryError> => {
 
     const frontmatterLines = lines.slice(1, endIndex);
     const content = lines.slice(endIndex + 1).join('\n');
-
     const parsedMetadata = parseMetadata(frontmatterLines);
-    if (!parsedMetadata.ok) {
+    if (!parsedMetadata.ok()) {
         return err(parsedMetadata.error);
     }
 
     return ok({ metadata: parsedMetadata.value, content });
 };
+
