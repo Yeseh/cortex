@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/logo-with-text.svg" alt="Current Logo" width="200" />
+  <img src="assets/logo.svg" alt="Current Logo" width="200" />
   <p>
     <strong>
       A hierarchical memory system for AI coding agents 
