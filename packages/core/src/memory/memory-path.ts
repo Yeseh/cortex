@@ -52,6 +52,13 @@ export class MemoryPath {
         return `${this.category.toString()}/${this.slug.toString()}`;
     }
 
+    [Symbol.toPrimitive](hint: string): string {
+        if (hint === 'string') {
+            return this.toString();
+        }
+        return this.toString();
+    }
+
     equals(other: MemoryPath): boolean {   
         return this.category.equals(other.category) && this.slug.equals(other.slug);
     }

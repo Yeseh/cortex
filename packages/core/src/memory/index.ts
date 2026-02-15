@@ -19,10 +19,9 @@
  * import { parseMemory, serializeMemory } from '@yeseh/cortex-storage-fs';
  * ```
  */
-export * from '@/slug';
-export * from '@/result';
-export * from '@/memory/memory';
-export * from '@/memory/result';
-export * from '@/memory/memory-path';
-export * from '@/memory/operations';
-
+export * from '../slug.ts';
+export * from '../result.ts';
+export * from './memory.ts';
+export * from './result.ts';
+export * from './memory-path.ts';
+export * from './operations/index.ts';

@@ -9,24 +9,32 @@ export class CategoryPath {
         this.#segments = segments;
     }
 
-    static root() : CategoryPath {
+    static root(): CategoryPath {
         return new CategoryPath([]);
     }
 
     static fromString(path: string): Result<CategoryPath, MemoryError> {
+        // Empty string represents the root category
+        if (path.trim() === '') {
+            return ok(CategoryPath.root());
+        }
+
         const segments = path.split('/');
 
         return CategoryPath.fromSegments(segments);
     }
 
     static fromSegments(segments: string[]): Result<CategoryPath, MemoryError> {
-        const slugSegments = segments 
+        const slugSegments = segments
             .map((s) => Slug.from(s))
             .filter((r) => r.ok())
             .map((r) => r.value);
 
         if (slugSegments.length === 0) {
-            return memoryError('INVALID_PATH', 'Memory slug path must include at least one segment with valid slugs');
+            return memoryError(
+                'INVALID_PATH',
+                'Memory slug path must include at least one segment with valid slugs'
+            );
         }
 
         return ok(new CategoryPath(slugSegments));
@@ -37,7 +45,7 @@ export class CategoryPath {
     }
 
     get root(): CategoryPath {
-        return new CategoryPath(this.#segments.slice(0, 1)); 
+        return new CategoryPath(this.#segments.slice(0, 1));
     }
 
     get parent(): CategoryPath | null {
@@ -61,7 +69,7 @@ export class CategoryPath {
     equals(other: CategoryPath): boolean {
         if (this.depth !== other.depth) {
             return false;
-        }   
+        }
 
         if (this.isRoot && other.isRoot) {
             return true;
@@ -70,8 +78,15 @@ export class CategoryPath {
         for (let i = 0; i < this.depth; i++) {
             if (!this.#segments[i]!.equals(other.#segments[i]!)) {
                 return false;
-            }  
+            }
         }
         return true;
     }
-};
+
+    [Symbol.toPrimitive](hint: string): string {
+        if (hint === 'string') {
+            return this.toString();
+        }
+        return this.toString();
+    }
+}

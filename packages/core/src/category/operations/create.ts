@@ -40,7 +40,7 @@ import type { CategoryStorage, CategoryError, CreateCategoryResult } from '../ty
  */
 export const createCategory = async (
     storage: CategoryStorage,
-    path: string,
+    path: string
 ): Promise<Result<CreateCategoryResult, CategoryError>> => {
     // Validate path
     const pathResult = CategoryPath.fromString(path);
@@ -50,7 +50,16 @@ export const createCategory = async (
             message: `Invalid category path: ${path}`,
             path,
         });
-    };
+    }
+
+    // Cannot create root category (it always exists implicitly)
+    if (pathResult.value.isRoot) {
+        return err({
+            code: 'INVALID_PATH',
+            message: 'Cannot create root category',
+            path,
+        });
+    }
 
     // Check if already exists
     const existsResult = await storage.exists(pathResult.value);

@@ -15,8 +15,8 @@ memories:
     token_estimate: 368
     updated_at: 2026-02-14T21:36:37.724Z
   - path: todo/fix-store-init-index-creation
-    token_estimate: 405
-    updated_at: 2026-02-14T21:33:15.502Z
+    token_estimate: 273
+    updated_at: 2026-02-14T21:58:09.448Z
   - path: todo/merge-categories-indexes
     token_estimate: 314
     updated_at: 2026-02-14T21:36:40.287Z

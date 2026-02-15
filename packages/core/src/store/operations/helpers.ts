@@ -5,6 +5,7 @@
  */
 
 import type { CategoryIndex } from '@/index/types.ts';
+import { CategoryPath } from '@/category/category-path.ts';
 
 /**
  * Creates an empty category index with optional subcategories.
@@ -19,8 +20,16 @@ import type { CategoryIndex } from '@/index/types.ts';
  */
 export const buildEmptyIndex = (subcategories: string[] = []): CategoryIndex => ({
     memories: [],
-    subcategories: subcategories.map((name) => ({
-        path: name,
-        memoryCount: 0,
-    })),
+    subcategories: subcategories
+        .map((name) => {
+            const pathResult = CategoryPath.fromString(name);
+            if (!pathResult.ok()) {
+                return null;
+            }
+            return {
+                path: pathResult.value,
+                memoryCount: 0,
+            };
+        })
+        .filter((entry): entry is NonNullable<typeof entry> => entry !== null),
 });

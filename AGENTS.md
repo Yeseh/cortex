@@ -69,13 +69,14 @@ Cortex follows **ports and adapters** (hexagonal) architecture.
 
 ```
 src/{module}/
-├── index.ts           # Barrel exports (selective, explicit)
-├── types.ts           # Port interface, error codes, result types
-├── operations.ts      # Pure business logic (storage port as first param)
-└── operations.spec.ts # Tests with mock factory
+├── operations/                # Pure business logic functions (storage port as first param) 
+├── | {operation}.ts           # Dedicated file for each operation with JSDoc and edge case handling
+├── | {operation}.spec.ts      # Colocated tests for each operation
+├── index.ts                   # Barrel exports (selective, explicit)
+├── types.ts                   # Port interface, error codes, result types
 ```
 
-When `operations.ts` exceeds ~500 lines, split into named files (`create.ts`, `delete.ts`, etc.) with colocated `*.spec.ts` files.
+When logic implementation become big single files can be split into subdirectories (e.g., `memory/operations/addMemory.ts`), but avoid generic files like `memory.ts` that mix multiple operations. 
 
 ### Type conventions
 
@@ -83,19 +84,6 @@ When `operations.ts` exceeds ~500 lines, split into named files (`create.ts`, `d
 - Use `interface` for contracts/ports meant to be implemented
 - Use discriminated union error codes (e.g., `MemoryErrorCode`, `CategoryErrorCode`)
 - Error messages MUST include actionable guidance for the caller
-
-### Function signatures
-
-```typescript
-// Business logic: storage port always first
-export const operationName = async (
-    storage: StoragePort,
-    ...params: T[]
-): Promise<Result<OperationResult, DomainError>> => { ... };
-
-// Pure helpers: no storage, synchronous
-export const isRootCategory = (path: string): boolean => { ... };
-```
 
 ### Naming conventions
 

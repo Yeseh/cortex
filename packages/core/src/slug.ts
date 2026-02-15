@@ -31,6 +31,13 @@ export class Slug {
         return this.#value;
     }
 
+    [Symbol.toPrimitive](hint: string): string {
+        if (hint === 'string') {
+            return this.toString();
+        }
+        return this.toString();
+    }
+
     equals(other: Slug): boolean { 
         return this.#value === other.#value;
     }

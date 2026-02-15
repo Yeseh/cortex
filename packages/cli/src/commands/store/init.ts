@@ -58,7 +58,7 @@ export interface InitHandlerDeps {
  */
 const runGitCommand = (
     args: string[],
-    cwd: string,
+    cwd: string
 ): Promise<{ ok: true; value: string } | { ok: false }> => {
     return new Promise((resolvePromise) => {
         const proc = spawn('git', args, { cwd });
@@ -70,8 +70,7 @@ const runGitCommand = (
         proc.on('close', (code: number | null) => {
             if (code === 0) {
                 resolvePromise({ ok: true, value: stdout.trim() });
-            }
-            else {
+            } else {
                 resolvePromise({ ok: false });
             }
         });
@@ -91,10 +90,8 @@ const runGitCommand = (
  * @returns The repository directory name, or `null` if not in a git repository
  */
 const detectGitRepoName = async (cwd: string): Promise<string | null> => {
-    const result = await runGitCommand([
-        'rev-parse', '--show-toplevel',
-    ], cwd);
-    if (!result.ok()) {
+    const result = await runGitCommand(['rev-parse', '--show-toplevel'], cwd);
+    if (!result.ok) {
         return null;
     }
     return basename(result.value);
@@ -119,10 +116,7 @@ const detectGitRepoName = async (cwd: string): Promise<string | null> => {
  * @throws {InvalidArgumentError} When the name is invalid
  * @throws {CommanderError} When git detection fails and no name provided
  */
-async function resolveStoreName(
-    cwd: string,
-    explicitName?: string,
-): Promise<string> {
+async function resolveStoreName(cwd: string, explicitName?: string): Promise<string> {
     // 1. Use explicit name if provided
     if (explicitName) {
         const trimmed = explicitName.trim();
@@ -130,7 +124,10 @@ async function resolveStoreName(
             throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name is required.' });
         }
         if (!isValidStoreName(trimmed)) {
-            throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug.' });
+            throwCoreError({
+                code: 'INVALID_STORE_NAME',
+                message: 'Store name must be a lowercase slug.',
+            });
         }
         return trimmed;
     }
@@ -139,15 +136,24 @@ async function resolveStoreName(
     const gitName = await detectGitRepoName(cwd);
     if (gitName) {
         // Convert to valid store name (lowercase slug)
-        const normalized = gitName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        const normalized = gitName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '');
         if (!isValidStoreName(normalized)) {
-            throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Could not derive valid store name from git repo.' });
+            throwCoreError({
+                code: 'INVALID_STORE_NAME',
+                message: 'Could not derive valid store name from git repo.',
+            });
         }
         return normalized;
     }
 
     // 3. Error: require --name
-    throwCoreError({ code: 'GIT_REPO_REQUIRED', message: 'Not in a git repository. Use --name to specify the store name.' });
+    throwCoreError({
+        code: 'GIT_REPO_REQUIRED',
+        message: 'Not in a git repository. Use --name to specify the store name.',
+    });
 }
 
 /**
@@ -160,7 +166,7 @@ async function resolveStoreName(
 function writeOutput(
     output: OutputStoreInit,
     format: OutputFormat,
-    stdout: NodeJS.WritableStream,
+    stdout: NodeJS.WritableStream
 ): void {
     const serialized = serializeOutput({ kind: 'store-init', value: output }, format);
     if (!serialized.ok()) {
@@ -187,7 +193,7 @@ function writeOutput(
 export async function handleInit(
     targetPath: string | undefined,
     options: InitCommandOptions = {},
-    deps: InitHandlerDeps = {},
+    deps: InitHandlerDeps = {}
 ): Promise<void> {
     const cwd = deps.cwd ?? process.cwd();
     const registryPath = getDefaultRegistryPath();
@@ -196,20 +202,19 @@ export async function handleInit(
     const storeName = await resolveStoreName(cwd, options.name);
 
     // 2. Resolve target path (default to .cortex in cwd)
-    const rootPath = targetPath
-        ? resolveUserPath(targetPath.trim(), cwd)
-        : resolve(cwd, '.cortex');
+    const rootPath = targetPath ? resolveUserPath(targetPath.trim(), cwd) : resolve(cwd, '.cortex');
 
     // 3. Use initializeStore to handle directory creation, index, and registration
     const registry = new FilesystemRegistry(registryPath);
     const result = await initializeStore(registry, storeName, rootPath);
     if (!result.ok()) {
         // Map InitStoreError to CLI error
-        const errorCode = result.error.code === 'STORE_ALREADY_EXISTS'
-            ? 'STORE_ALREADY_EXISTS'
-            : result.error.code === 'INVALID_STORE_NAME'
-                ? 'INVALID_STORE_NAME'
-                : 'STORE_INIT_FAILED';
+        const errorCode =
+            result.error.code === 'STORE_ALREADY_EXISTS'
+                ? 'STORE_ALREADY_EXISTS'
+                : result.error.code === 'INVALID_STORE_NAME'
+                  ? 'INVALID_STORE_NAME'
+                  : 'STORE_INIT_FAILED';
         throwCoreError({ code: errorCode, message: result.error.message });
     }
 

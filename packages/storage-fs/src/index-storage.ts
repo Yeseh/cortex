@@ -70,27 +70,27 @@ export class FilesystemIndexStorage implements IndexStorage {
     constructor(private readonly ctx: FilesystemContext) {}
 
     /**
-      * Reads the contents of a category index file.
-      *
-      * Index files contain YAML-formatted category metadata including
-      * memory entries and subcategory references.
-      *
-      * @param name - Index identifier (category path, or empty string for root index)
-      * @returns Result with parsed CategoryIndex, or null if the index does not exist
-      *
-      * @example
-      * ```typescript
-      * // Read root index
-      * const rootResult = await storage.read('');
-      *
-      * // Read category index
-      * const categoryResult = await storage.read('project/cortex');
-      * ```
-      *
-      * @edgeCases
-      * - Passing an empty string reads the root index file.
-      * - Missing index files return `ok(null)` rather than an error.
-      */
+     * Reads the contents of a category index file.
+     *
+     * Index files contain YAML-formatted category metadata including
+     * memory entries and subcategory references.
+     *
+     * @param name - Index identifier (category path, or empty string for root index)
+     * @returns Result with parsed CategoryIndex, or null if the index does not exist
+     *
+     * @example
+     * ```typescript
+     * // Read root index
+     * const rootResult = await storage.read('');
+     *
+     * // Read category index
+     * const categoryResult = await storage.read('project/cortex');
+     * ```
+     *
+     * @edgeCases
+     * - Passing an empty string reads the root index file.
+     * - Missing index files return `ok(null)` rather than an error.
+     */
     async read(name: CategoryPath): Promise<Result<CategoryIndex | null, StorageAdapterError>> {
         const contents = await readIndexFile(this.ctx, name);
         if (!contents.ok()) {
@@ -113,45 +113,45 @@ export class FilesystemIndexStorage implements IndexStorage {
     }
 
     /**
-      * Reads the deprecated index file API.
-      *
-      * This method returns the structured {@link CategoryIndex} (or null when
-      * missing), not raw YAML contents. It is retained for compatibility only.
-      *
-      * @deprecated Prefer {@link read} which returns structured data.
-      */
+     * Reads the deprecated index file API.
+     *
+     * This method returns the structured {@link CategoryIndex} (or null when
+     * missing), not raw YAML contents. It is retained for compatibility only.
+     *
+     * @deprecated Prefer {@link read} which returns structured data.
+     */
     async readIndexFile(
-        name: CategoryPath,
+        name: CategoryPath
     ): Promise<Result<CategoryIndex | null, StorageAdapterError>> {
         return this.read(name);
     }
 
     /**
-      * Writes contents to a category index file.
-      *
-      * Creates the file if it does not exist. Overwrites existing content.
-      * Parent directories are created as needed.
-      *
-      * @param name - Index identifier (category path, or empty string for root index)
-      * @param contents - The CategoryIndex to write
-      * @returns Result indicating success or failure
-      *
-      * @example
-      * ```typescript
-      * const index: CategoryIndex = {
-      *   memories: [{ path: 'project/cortex/architecture', tokenEstimate: 120 }],
-      *   subcategories: [{ path: 'project/cortex/decisions', memoryCount: 3 }],
-      * };
-      * await storage.write('project/cortex', index);
-      * ```
-      *
-      * @edgeCases
-      * - Writing to the root index uses `''` as the name.
-      * - Serialization failures surface as `INDEX_ERROR` results.
-      */
+     * Writes contents to a category index file.
+     *
+     * Creates the file if it does not exist. Overwrites existing content.
+     * Parent directories are created as needed.
+     *
+     * @param name - Index identifier (category path, or empty string for root index)
+     * @param contents - The CategoryIndex to write
+     * @returns Result indicating success or failure
+     *
+     * @example
+     * ```typescript
+     * const index: CategoryIndex = {
+     *   memories: [{ path: 'project/cortex/architecture', tokenEstimate: 120 }],
+     *   subcategories: [{ path: 'project/cortex/decisions', memoryCount: 3 }],
+     * };
+     * await storage.write('project/cortex', index);
+     * ```
+     *
+     * @edgeCases
+     * - Writing to the root index uses `''` as the name.
+     * - Serialization failures surface as `INDEX_ERROR` results.
+     */
     async write(
-        name: CategoryPath, 
-        contents: CategoryIndex,
+        name: CategoryPath,
+        contents: CategoryIndex
     ): Promise<Result<void, StorageAdapterError>> {
         const serialized = serializeIndex(contents);
         if (!serialized.ok()) {
@@ -162,20 +162,20 @@ export class FilesystemIndexStorage implements IndexStorage {
                 cause: serialized.error,
             });
         }
-        return writeIndexFile(this.ctx, name.toString(), serialized.value);
+        return writeIndexFile(this.ctx, name, serialized.value);
     }
 
     /**
-      * Writes the deprecated index file API.
-      *
-      * This method accepts a structured {@link CategoryIndex}, not raw YAML
-      * contents. It is retained for compatibility only.
-      *
-      * @deprecated Prefer {@link write} which accepts structured data.
-      */
+     * Writes the deprecated index file API.
+     *
+     * This method accepts a structured {@link CategoryIndex}, not raw YAML
+     * contents. It is retained for compatibility only.
+     *
+     * @deprecated Prefer {@link write} which accepts structured data.
+     */
     async writeIndexFile(
         name: CategoryPath,
-        contents: CategoryIndex,
+        contents: CategoryIndex
     ): Promise<Result<void, StorageAdapterError>> {
         return this.write(name, contents);
     }
@@ -211,14 +211,14 @@ export class FilesystemIndexStorage implements IndexStorage {
      * This method handles incremental index updates when a memory file
      * is created or modified, avoiding full reindex operations.
      *
-    * @param memory - The memory object that was written
+     * @param memory - The memory object that was written
      * @param options - Optional settings for index behavior
      * @param options.createWhenMissing - Create index entries for new categories (default: true)
      * @returns Result indicating success or failure
      *
      * @example
      * ```typescript
-    * await storage.updateAfterMemoryWrite(memory);
+     * await storage.updateAfterMemoryWrite(memory);
      * ```
      *
      * @edgeCases
@@ -227,9 +227,8 @@ export class FilesystemIndexStorage implements IndexStorage {
      */
     async updateAfterMemoryWrite(
         memory: Memory,
-        options?: { createWhenMissing?: boolean },
+        options?: { createWhenMissing?: boolean }
     ): Promise<Result<void, StorageAdapterError>> {
         return updateCategoryIndexesFromMemory(this.ctx, memory, options);
     }
 }
-
