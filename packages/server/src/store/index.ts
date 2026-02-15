@@ -24,8 +24,10 @@
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import * as path from 'node:path';
+import { initializeStore } from '@yeseh/cortex-core/store';
+import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import type { ServerConfig } from '../config.ts';
-import { listStoresFromRegistry, createStore, storeNameSchema } from './tools.ts';
+import { listStoresFromRegistry, storeNameSchema } from './tools.ts';
 import { registerStoreResources } from './resources.ts';
 
 /**
@@ -83,7 +85,15 @@ export const registerStoreTools = (server: McpServer, config: ServerConfig): voi
             },
         },
         async ({ name }) => {
-            const result = await createStore(config.dataPath, name);
+            const registryPath = path.join(config.dataPath, 'stores.yaml');
+            const registry = new FilesystemRegistry(registryPath);
+            const storePath = path.join(config.dataPath, name);
+
+            // Delegate to core's initializeStore which handles:
+            // 1. Creating the store directory
+            // 2. Registering the store in stores.yaml
+            // 3. Creating the root category index
+            const result = await initializeStore(registry, name, storePath);
             if (!result.ok()) {
                 return {
                     content: [{ type: 'text', text: `Error: ${result.error.message}` }],
@@ -101,7 +111,7 @@ export const registerStoreTools = (server: McpServer, config: ServerConfig): voi
 };
 
 // Re-export tools for direct usage
-export { listStores, listStoresFromRegistry, createStore, storeNameSchema, createStoreInputSchema } from './tools.ts';
+export { listStores, listStoresFromRegistry, storeNameSchema, createStoreInputSchema } from './tools.ts';
 export type { StoreToolError, StoreToolErrorCode, CreateStoreInput, StoreInfo, ListStoresResult } from './tools.ts';
 
 // Re-export resources

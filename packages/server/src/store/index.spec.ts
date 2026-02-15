@@ -239,7 +239,7 @@ describe('store tool registration', () => {
             expect(result).toHaveProperty('content');
             expect(result.isError).toBe(true);
             expect(result.content[0]?.text).toContain('Error:');
-            expect(result.content[0]?.text).toContain('Store name must start with alphanumeric');
+            expect(result.content[0]?.text).toContain('invalid');
         });
 
         it('should execute create_store tool with empty name and return error', async () => {
@@ -253,12 +253,17 @@ describe('store tool registration', () => {
             expect(result).toHaveProperty('content');
             expect(result.isError).toBe(true);
             expect(result.content[0]?.text).toContain('Error:');
-            expect(result.content[0]?.text).toContain('Store name must not be empty');
+            expect(result.content[0]?.text).toContain('invalid');
         });
 
         it('should execute create_store tool with existing store name and return error', async () => {
-            // Create an existing store
-            await fs.mkdir(path.join(testDir, 'existing-store'));
+            // Create a registry with an existing store entry
+            const registryContent = [
+                'stores:',
+                '  existing-store:',
+                `    path: "${path.join(testDir, 'existing-store').replace(/\\/g, '/')}"`,
+            ].join('\n');
+            await fs.writeFile(path.join(testDir, 'stores.yaml'), registryContent);
 
             registerStoreTools(server, config);
 
@@ -270,7 +275,7 @@ describe('store tool registration', () => {
             expect(result).toHaveProperty('content');
             expect(result.isError).toBe(true);
             expect(result.content[0]?.text).toContain('Error:');
-            expect(result.content[0]?.text).toContain('already exists');
+            expect(result.content[0]?.text).toContain('already');
         });
 
         it('should return error from list_stores when registry is malformed', async () => {
@@ -314,21 +319,21 @@ describe('store tool registration', () => {
             expect(() => JSON.parse(result.content[0]!.text)).not.toThrow();
         });
 
-        it('should create store with special valid characters in name', async () => {
+        it('should create store with kebab-case name', async () => {
             registerStoreTools(server, config);
 
             const registeredTools = getRegisteredTools(server);
             const createStoreTool = registeredTools['cortex_create_store'];
 
-            const result = await createStoreTool!.handler({ name: 'My-Store_V2' }, {});
+            const result = await createStoreTool!.handler({ name: 'my-store-v2' }, {});
 
             expect(result.isError).toBeUndefined();
 
             const parsed = JSON.parse(result.content[0]!.text);
-            expect(parsed.created).toBe('My-Store_V2');
+            expect(parsed.created).toBe('my-store-v2');
 
             // Verify the store was created
-            const stat = await fs.stat(path.join(testDir, 'My-Store_V2'));
+            const stat = await fs.stat(path.join(testDir, 'my-store-v2'));
             expect(stat.isDirectory()).toBe(true);
         });
 

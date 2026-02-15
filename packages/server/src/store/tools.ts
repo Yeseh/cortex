@@ -1,15 +1,18 @@
 /**
- * Store management tool implementations for the MCP server.
+ * Store listing utilities and validation schemas for MCP tools.
  *
- * This module provides functions for listing and creating memory stores.
- * Stores are directories within the configured data path that contain
- * memory entries organized by category.
+ * This module provides:
+ * - Functions for listing stores from filesystem or registry
+ * - Validation schemas for store names and tool inputs
+ * - Types for store information and listing results
+ *
+ * Store creation is handled by {@link @yeseh/cortex-core/store#initializeStore}
+ * in the tool registration layer, keeping this module focused on read operations.
  *
  * @module server/store/tools
  */
 
 import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
 import { z } from 'zod';
 import { err, ok, type Result } from '@yeseh/cortex-core';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
@@ -18,15 +21,8 @@ import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
  * Error codes for store tool operations.
  *
  * - `STORE_LIST_FAILED` - Could not read the data directory
- * - `STORE_CREATE_FAILED` - Could not create the store directory
- * - `STORE_ALREADY_EXISTS` - Store with the given name already exists
- * - `INVALID_STORE_NAME` - Store name contains invalid characters
  */
-export type StoreToolErrorCode =
-    | 'STORE_LIST_FAILED'
-    | 'STORE_CREATE_FAILED'
-    | 'STORE_ALREADY_EXISTS'
-    | 'INVALID_STORE_NAME';
+export type StoreToolErrorCode = 'STORE_LIST_FAILED';
 
 /**
  * Error details for store tool failures.
@@ -125,80 +121,6 @@ export const listStores = async (dataPath: string)
             message: `Failed to list stores: ${error instanceof Error ? error.message : String(error)}`,
             cause: error,
         });
-    }
-};
-
-/**
- * Creates a new memory store directory.
- *
- * Validates the store name format, checks if the store already exists,
- * and creates the directory at `${dataPath}/${name}`.
- *
- * @param dataPath - Directory where stores are persisted
- * @param name - Name of the store to create
- * @returns Result indicating success or error
- *
- * @example
- * ```ts
- * const result = await createStore('./.cortex-data', 'my-project');
- * if (result.ok()) {
- *   console.log('Store created successfully');
- * } else if (result.error.code === 'STORE_ALREADY_EXISTS') {
- *   console.log('Store already exists');
- * }
- * ```
- */
-export const createStore = async (
-    dataPath: string,
-    name: string,
-): Promise<Result<void, StoreToolError>> => {
-    // Validate store name format
-    const nameValidation = storeNameSchema.safeParse(name);
-    if (!nameValidation.success) {
-        return err({
-            code: 'INVALID_STORE_NAME',
-            message: nameValidation.error.issues.map((i) => i.message).join('; '),
-        });
-    }
-
-    const storePath = path.join(
-        dataPath, name,
-    );
-
-    // Check if store already exists
-    try {
-        const stat = await fs.stat(storePath);
-        if (stat.isDirectory()) {
-            return err({
-                code: 'STORE_ALREADY_EXISTS',
-                message: `Store '${name}' already exists`,
-            });
-        }
-    }
-    catch (error) {
-        // ENOENT is expected - store doesn't exist yet
-        if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) {
-            return err({
-                code: 'STORE_CREATE_FAILED',
-                message: `Failed to check store existence: ${error instanceof Error ? error.message : String(error)}`,
-                cause: error,
-            });
-        } 
-    }
-
-    // Create the store directory
-    try {
-        await fs.mkdir(
-            storePath, { recursive: true },
-        );
-        return ok(undefined);
-    }
-    catch (error) {
-        return err({
-            code: 'STORE_CREATE_FAILED',
-            message: `Failed to create store '${name}': ${error instanceof Error ? error.message : String(error)}`,
-            cause: error,
-        }); 
     }
 };
 
