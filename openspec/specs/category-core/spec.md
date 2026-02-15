@@ -5,12 +5,18 @@ TBD - created by archiving change add-category-descriptions. Update Purpose afte
 ## Requirements
 ### Requirement: Category storage port interface
 
-The category module SHALL define a `CategoryStoragePort` interface for abstract storage access.
+The category module SHALL define a `CategoryStorage` interface for abstract storage access. Methods SHALL use backend-agnostic names: `exists(path)`, `ensure(path)`, `delete(path)`, `updateSubcategoryDescription(parentPath, subcategoryPath, description)`, `removeSubcategoryEntry(parentPath, subcategoryPath)`. Index read/write operations are NOT part of `CategoryStorage` — they belong to `IndexStorage`.
 
 #### Scenario: Port interface definition
 
 - **WHEN** the category module is initialized
-- **THEN** it requires a `CategoryStoragePort` implementation with methods for reading/writing indexes, updating descriptions, and managing directories
+- **THEN** it requires a `CategoryStorage` implementation with methods `exists`, `ensure`, `delete`, `updateSubcategoryDescription`, and `removeSubcategoryEntry`
+- **AND** method names do not reference filesystem concepts like "directory"
+
+#### Scenario: No index operations on CategoryStorage
+
+- **WHEN** a consumer needs to read or write category indexes
+- **THEN** they use `IndexStorage`, not `CategoryStorage`
 
 ### Requirement: Create category operation
 

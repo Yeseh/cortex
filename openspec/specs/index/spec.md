@@ -6,34 +6,17 @@ Defines the category index structure and storage location for organizing memorie
 ## Requirements
 ### Requirement: Index file structure
 
-The system SHALL store category indexes in YAML with memory entries and subcategory references. Index serialization uses the standard `yaml` library, producing valid YAML that is semantically equivalent but may differ in whitespace or formatting from hand-crafted YAML. Memory entries SHALL include an optional `updated_at` timestamp for recency-based sorting.
+The system SHALL store category indexes as structured `CategoryIndex` data. The serialization format (currently YAML) is an internal concern of the storage adapter. Core domain operations work exclusively with structured `CategoryIndex` objects and never handle raw serialized content.
 
 #### Scenario: Reading a category index
 
-- **WHEN** a category index is loaded
-- **THEN** the system returns memory and subcategory metadata
-
-#### Scenario: Index format uses standard YAML
-
-- **WHEN** a category index is serialized
-- **THEN** the output is valid YAML produced by the `yaml` library
-- **AND** the output can be parsed by any standard YAML parser
+- **WHEN** a category index is loaded via `IndexStorage.read()`
+- **THEN** the system returns a structured `CategoryIndex` object with memory entries and subcategory metadata
 
 #### Scenario: Round-trip equivalence
 
-- **WHEN** a category index is serialized and then parsed
-- **THEN** the parsed data is semantically equivalent to the original
-
-#### Scenario: Memory entry with updatedAt
-
-- **WHEN** a memory entry in the index includes an `updated_at` field
-- **THEN** the system parses it as an ISO 8601 date and exposes it as `updatedAt` on `IndexMemoryEntry`
-
-#### Scenario: Memory entry without updatedAt
-
-- **WHEN** a memory entry in the index omits the `updated_at` field
-- **THEN** the `updatedAt` field on `IndexMemoryEntry` is `undefined`
-- **AND** the entry remains valid
+- **WHEN** a `CategoryIndex` is written via `IndexStorage.write()` and then read back via `IndexStorage.read()`
+- **THEN** the returned data is semantically equivalent to the original
 
 ### Requirement: Manual reindex
 
@@ -138,15 +121,6 @@ The index module SHALL follow project documentation standards with comprehensive
 
 - **WHEN** an `IndexParseError` or `IndexSerializeError` is returned
 - **THEN** the error code is documented with conditions under which it occurs
-
-### Requirement: Index file name constant
-
-The index file name `index.yaml` SHALL be exported as a named constant `INDEX_FILE_NAME` from the index module.
-
-#### Scenario: Referencing index file name
-
-- **WHEN** code needs the index file name
-- **THEN** it imports `INDEX_FILE_NAME` from the index module rather than using a hardcoded string
 
 ### Requirement: Error type forward compatibility
 
