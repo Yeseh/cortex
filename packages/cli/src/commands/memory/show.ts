@@ -26,7 +26,7 @@ import { throwCoreError } from '../../errors.ts';
 import { resolveStoreAdapter } from '../../context.ts';
 
 import { getMemory } from '@yeseh/cortex-core/memory';
-import { defaultTokenizer } from '@yeseh/cortex-core';
+import { defaultTokenizer, type CortexContext } from '@yeseh/cortex-core';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 import { serializeOutput, type OutputMemory, type OutputFormat } from '../../output.ts';
 
@@ -49,7 +49,36 @@ export interface ShowHandlerDeps {
     stdout?: NodeJS.WritableStream;
     /** Pre-resolved adapter for testing */
     adapter?: ScopedStorageAdapter;
+    /** CortexContext for store resolution (preferred over direct adapter injection) */
+    ctx?: CortexContext;
 }
+
+const resolveAdapter = async (
+    storeName: string | undefined,
+    deps: ShowHandlerDeps,
+): Promise<ScopedStorageAdapter> => {
+    // Use pre-resolved adapter if provided (for testing)
+    if (deps.adapter) {
+        return deps.adapter;
+    }
+
+    // Use CortexContext if provided (preferred path)
+    if (deps.ctx && storeName) {
+        const result = deps.ctx.cortex.getStore(storeName);
+        if (!result.ok()) {
+            throwCoreError(result.error);
+        }
+        return result.value;
+    }
+
+    // Fall back to existing resolution (for backward compatibility)
+    const storeResult = await resolveStoreAdapter(storeName);
+    if (!storeResult.ok()) {
+        throwCoreError(storeResult.error);
+    }
+
+    return storeResult.value.adapter;
+};
 
 /**
  * Handles the show command execution.
@@ -76,13 +105,9 @@ export async function handleShow(
     deps: ShowHandlerDeps = {},
 ): Promise<void> {
     // 1. Resolve store context
-    const storeResult = await resolveStoreAdapter(storeName);
-    if (!storeResult.ok()) {
-        throwCoreError(storeResult.error);
-    }
+    const adapter = await resolveAdapter(storeName, deps);
 
     // 2. Read the memory
-    const adapter = deps.adapter ?? storeResult.value.adapter;
     const readResult = await getMemory(adapter, path, {
         includeExpired: options.includeExpired ?? false,
         now: new Date(),

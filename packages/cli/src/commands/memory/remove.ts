@@ -17,14 +17,43 @@ import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
 import { resolveStoreAdapter } from '../../context.ts';
 import { removeMemory, MemoryPath } from '@yeseh/cortex-core/memory';
-import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
+import { type ScopedStorageAdapter, type CortexContext } from '@yeseh/cortex-core';
 
 /** Dependencies injected into the handler for testability */
 export interface RemoveHandlerDeps {
     stdout?: NodeJS.WritableStream;
     /** Pre-resolved adapter for testing */
     adapter?: ScopedStorageAdapter;
+    /** CortexContext for store resolution (preferred over direct adapter injection) */
+    ctx?: CortexContext;
 }
+
+const resolveAdapter = async (
+    storeName: string | undefined,
+    deps: RemoveHandlerDeps,
+): Promise<ScopedStorageAdapter> => {
+    // Use pre-resolved adapter if provided (for testing)
+    if (deps.adapter) {
+        return deps.adapter;
+    }
+
+    // Use CortexContext if provided (preferred path)
+    if (deps.ctx && storeName) {
+        const result = deps.ctx.cortex.getStore(storeName);
+        if (!result.ok()) {
+            throwCoreError(result.error);
+        }
+        return result.value;
+    }
+
+    // Fall back to existing resolution (for backward compatibility)
+    const storeResult = await resolveStoreAdapter(storeName);
+    if (!storeResult.ok()) {
+        throwCoreError(storeResult.error);
+    }
+
+    return storeResult.value.adapter;
+};
 
 /**
  * Handler for the memory remove command.
@@ -40,13 +69,9 @@ export async function handleRemove(
     deps: RemoveHandlerDeps = {},
 ): Promise<void> {
     // 1. Resolve store context
-    const storeResult = await resolveStoreAdapter(storeName);
-    if (!storeResult.ok()) {
-        throwCoreError(storeResult.error);
-    }
+    const adapter = await resolveAdapter(storeName, deps);
 
     // 2. Remove the memory file
-    const adapter = deps.adapter ?? storeResult.value.adapter;
     const removeResult = await removeMemory(adapter, path);
     if (!removeResult.ok()) {
         throwCoreError(removeResult.error);

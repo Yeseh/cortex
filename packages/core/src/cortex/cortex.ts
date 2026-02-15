@@ -296,3 +296,29 @@ export class Cortex {
         return ok(this.adapterFactory(definition.path));
     }
 }
+
+/**
+ * Shared context object passed to CLI and MCP handlers.
+ *
+ * Provides access to the Cortex root client and allows for future
+ * extensions like logging, user context, or request tracing.
+ *
+ * @example
+ * ```typescript
+ * // In CLI handler
+ * async function handleAdd(ctx: CortexContext, path: string, options: AddOptions) {
+ *     const storeResult = ctx.cortex.getStore(storeName);
+ *     // ...
+ * }
+ *
+ * // In MCP tool handler
+ * async function handleAddMemory(ctx: CortexContext, input: AddMemoryInput) {
+ *     const storeResult = ctx.cortex.getStore(input.store);
+ *     // ...
+ * }
+ * ```
+ */
+export interface CortexContext {
+    /** Root Cortex client instance */
+    cortex: Cortex;
+}

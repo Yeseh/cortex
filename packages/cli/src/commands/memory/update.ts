@@ -30,7 +30,7 @@ import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
 import { resolveStoreAdapter } from '../../context.ts';
 import { updateMemory, type UpdateMemoryInput } from '@yeseh/cortex-core/memory';
-import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
+import { type ScopedStorageAdapter, type CortexContext } from '@yeseh/cortex-core';
 import { resolveMemoryContentInput } from '../../input.ts';
 
 /** Options parsed by Commander for the update command */
@@ -55,16 +55,29 @@ export interface UpdateHandlerDeps {
     now?: Date;
     /** Pre-resolved adapter for testing */
     adapter?: ScopedStorageAdapter;
+    /** CortexContext for store resolution (preferred over direct adapter injection) */
+    ctx?: CortexContext;
 }
 
 const resolveAdapter = async (
     storeName: string | undefined,
     deps: UpdateHandlerDeps,
 ): Promise<ScopedStorageAdapter> => {
+    // Use pre-resolved adapter if provided (for testing)
     if (deps.adapter) {
         return deps.adapter;
     }
 
+    // Use CortexContext if provided (preferred path)
+    if (deps.ctx && storeName) {
+        const result = deps.ctx.cortex.getStore(storeName);
+        if (!result.ok()) {
+            throwCoreError(result.error);
+        }
+        return result.value;
+    }
+
+    // Fall back to existing resolution (for backward compatibility)
     const storeResult = await resolveStoreAdapter(storeName);
     if (!storeResult.ok()) {
         throwCoreError(

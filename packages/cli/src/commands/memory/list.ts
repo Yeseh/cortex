@@ -32,7 +32,7 @@ import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
 import { resolveStoreAdapter } from '../../context.ts';
 
-import { CategoryPath, listMemories, type ScopedStorageAdapter } from '@yeseh/cortex-core';
+import { CategoryPath, listMemories, type ScopedStorageAdapter, type CortexContext } from '@yeseh/cortex-core';
 import type { OutputFormat } from '../../output.ts';
 import { toonOptions } from '../../output.ts';
 import { encode as toonEncode } from '@toon-format/toon';
@@ -60,7 +60,36 @@ export interface ListHandlerDeps {
     now?: Date;
     /** Pre-resolved adapter for testing */
     adapter?: ScopedStorageAdapter;
+    /** CortexContext for store resolution (preferred over direct adapter injection) */
+    ctx?: CortexContext;
 }
+
+const resolveAdapter = async (
+    storeName: string | undefined,
+    deps: ListHandlerDeps,
+): Promise<ScopedStorageAdapter> => {
+    // Use pre-resolved adapter if provided (for testing)
+    if (deps.adapter) {
+        return deps.adapter;
+    }
+
+    // Use CortexContext if provided (preferred path)
+    if (deps.ctx && storeName) {
+        const result = deps.ctx.cortex.getStore(storeName);
+        if (!result.ok()) {
+            throwCoreError(result.error);
+        }
+        return result.value;
+    }
+
+    // Fall back to existing resolution (for backward compatibility)
+    const storeResult = await resolveStoreAdapter(storeName);
+    if (!storeResult.ok()) {
+        throwCoreError(storeResult.error);
+    }
+
+    return storeResult.value.adapter;
+};
 
 /**
  * Entry representing a memory in the list output.
@@ -90,10 +119,6 @@ export interface ListResult {
     subcategories: ListSubcategoryEntry[];
 }
 
-
-/**
- * Formats the output based on the specified format.
- */
 const formatOutput = (result: ListResult, format: OutputFormat): string => {
     const outputMemories = result.memories.map((memory) => ({
         path: memory.path,
@@ -189,13 +214,9 @@ export async function handleList(
     deps: ListHandlerDeps = {},
 ): Promise<void> {
     // 1. Resolve store context
-    const storeResult = await resolveStoreAdapter(storeName);
-    if (!storeResult.ok()) {
-        throwCoreError(storeResult.error);
-    }
+    const adapter = await resolveAdapter(storeName, deps);
 
     const now = deps.now ?? new Date();
-    const adapter = deps.adapter ?? storeResult.value.adapter;
 
     const categoryResult = CategoryPath.fromString(category ?? '');
     if (!categoryResult.ok()) {

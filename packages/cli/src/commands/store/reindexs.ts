@@ -18,6 +18,7 @@ import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
 import { resolveStoreAdapter } from '../../context.ts';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
+import { type CortexContext } from '@yeseh/cortex-core';
 
 /**
  * Dependencies for the reindex command handler.
@@ -28,6 +29,8 @@ export interface ReindexHandlerDeps {
     stdout?: NodeJS.WritableStream;
     /** Pre-resolved adapter for testing */
     adapter?: ScopedStorageAdapter;
+    /** CortexContext for store resolution (preferred) */
+    ctx?: CortexContext;
 }
 
 /**
@@ -47,14 +50,35 @@ export async function handleReindex(
     storeName: string | undefined,
     deps: ReindexHandlerDeps = {},
 ): Promise<void> {
-    // 1. Resolve store context
-    const storeResult = await resolveStoreAdapter(storeName);
-    if (!storeResult.ok()) {
-        throwCoreError(storeResult.error);
+    // 1. Resolve store adapter
+    let adapter: ScopedStorageAdapter;
+    let storeRoot: string;
+
+    // Use pre-resolved adapter if provided (testing)
+    if (deps.adapter) {
+        adapter = deps.adapter;
+        storeRoot = storeName ?? 'test-store';
+    }
+    // Use CortexContext if provided with store name
+    else if (deps.ctx && storeName) {
+        const result = deps.ctx.cortex.getStore(storeName);
+        if (!result.ok()) {
+            throwCoreError(result.error);
+        }
+        adapter = result.value;
+        storeRoot = storeName;
+    }
+    // Fall back to legacy resolveStoreAdapter
+    else {
+        const storeResult = await resolveStoreAdapter(storeName);
+        if (!storeResult.ok()) {
+            throwCoreError(storeResult.error);
+        }
+        adapter = storeResult.value.adapter;
+        storeRoot = storeResult.value.context.root;
     }
 
-    // 2. Create adapter and reindex
-    const adapter = deps.adapter ?? storeResult.value.adapter;
+    // 2. Reindex
     const reindexResult = await adapter.indexes.reindex();
     if (!reindexResult.ok()) {
         throwCoreError({ code: 'REINDEX_FAILED', message: reindexResult.error.message });
@@ -62,7 +86,7 @@ export async function handleReindex(
 
     // 3. Output result
     const out = deps.stdout ?? process.stdout;
-    out.write(`Reindexed category indexes for ${storeResult.value.context.root}.\n`);
+    out.write(`Reindexed category indexes for ${storeRoot}.\n`);
 }
 
 /**

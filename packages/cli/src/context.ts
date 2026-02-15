@@ -8,7 +8,17 @@
 
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
-import { loadConfig, type CortexConfig, type ConfigLoadError, type Result, err, ok } from '@yeseh/cortex-core';
+import {
+    loadConfig,
+    Cortex,
+    type CortexContext,
+    type CortexConfig,
+    type CortexError,
+    type ConfigLoadError,
+    type Result,
+    err,
+    ok,
+} from '@yeseh/cortex-core';
 import {
     resolveStore,
     resolveStorePath,
@@ -16,7 +26,11 @@ import {
     type StoreRegistry,
     type StoreResolveError,
 } from '@yeseh/cortex-core/store';
-import { FilesystemRegistry, FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
+import {
+    FilesystemRegistry,
+    FilesystemStorageAdapter,
+    createFilesystemAdapterFactory,
+} from '@yeseh/cortex-storage-fs';
 import type { RegistryError, ScopedStorageAdapter, StoreNotFoundError } from '@yeseh/cortex-core/storage';
 
 /**
@@ -66,7 +80,8 @@ export interface StoreContextError {
         | StoreResolutionError 
         | RegistryError 
         | StoreResolveError 
-        | StoreNotFoundError;
+        | StoreNotFoundError
+        | CortexError;
 }
 /**
  * Default path to the global store.
@@ -310,4 +325,56 @@ export const resolveStoreAdapter = async (
             categories: fsAdapter.categories,
         },
     });
+};
+
+/**
+ * Creates a CortexContext for CLI usage.
+ *
+ * This loads the Cortex configuration from the default config directory
+ * and provides a context for command handlers. The context wraps a Cortex
+ * instance that can resolve stores by name.
+ *
+ * @param configDir - Optional config directory (defaults to ~/.config/cortex)
+ * @returns Result with CortexContext or error
+ *
+ * @example
+ * ```typescript
+ * // Create context with default config location
+ * const result = await createCortexContext();
+ * if (result.ok()) {
+ *     const storeResult = result.value.cortex.getStore('my-store');
+ *     if (storeResult.ok()) {
+ *         // Use adapter...
+ *     }
+ * }
+ *
+ * // Create context with custom config directory
+ * const result = await createCortexContext('/custom/config/path');
+ * ```
+ */
+export const createCortexContext = async (
+    configDir?: string,
+): Promise<Result<CortexContext, StoreContextError>> => {
+    const dir = configDir ?? resolve(homedir(), '.config', 'cortex');
+
+    const cortexResult = await Cortex.fromConfig(dir, createFilesystemAdapterFactory());
+    if (!cortexResult.ok()) {
+        // Handle case where config doesn't exist yet - create minimal Cortex
+        if (cortexResult.error.code === 'CONFIG_NOT_FOUND') {
+            const cortex = Cortex.init({
+                rootDirectory: dir,
+                registry: {},
+                adapterFactory: createFilesystemAdapterFactory(),
+            });
+            return ok({ cortex });
+        }
+
+        return err({
+            code: 'CONFIG_LOAD_FAILED',
+            message: cortexResult.error.message,
+            cause: cortexResult.error,
+        });
+    }
+
+    return ok({ cortex: cortexResult.value });
 };

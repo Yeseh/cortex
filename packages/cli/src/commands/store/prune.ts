@@ -26,6 +26,7 @@ import {
     pruneExpiredMemories,
 } from '@yeseh/cortex-core/memory';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
+import { type CortexContext } from '@yeseh/cortex-core';
 
 /**
  * Options for the prune command.
@@ -46,6 +47,8 @@ export interface PruneHandlerDeps {
     now?: Date;
     /** Pre-resolved adapter for testing */
     adapter?: ScopedStorageAdapter;
+    /** CortexContext for store resolution (preferred) */
+    ctx?: CortexContext;
 }
 
 /**
@@ -93,9 +96,19 @@ export async function handlePrune(
     const now = deps.now ?? new Date();
     let adapter: ScopedStorageAdapter;
 
+    // Use pre-resolved adapter if provided (testing)
     if (deps.adapter) {
         adapter = deps.adapter;
     }
+    // Use CortexContext if provided with store name
+    else if (deps.ctx && storeName) {
+        const result = deps.ctx.cortex.getStore(storeName);
+        if (!result.ok()) {
+            throwCoreError(result.error);
+        }
+        adapter = result.value;
+    }
+    // Fall back to legacy resolveStoreAdapter
     else {
         const storeResult = await resolveStoreAdapter(storeName);
         if (!storeResult.ok()) {
