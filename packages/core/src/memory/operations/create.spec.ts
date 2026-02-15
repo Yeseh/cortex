@@ -163,6 +163,10 @@ describe('createMemory', () => {
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
             expect(result.error.code).toBe('STORAGE_ERROR');
+            expect(result.error.message).toContain('project/test/memory');
+            expect(result.error.message).toContain('Index error');
+            expect(result.error.message).toContain('cortex store reindex');
+            expect(result.error.path).toBe('project/test/memory');
         }
     });
 

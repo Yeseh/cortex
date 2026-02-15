@@ -208,5 +208,31 @@ describe('updateMemory', () => {
             expect(result.error.code).toBe('STORAGE_ERROR');
         }
     });
+
+    it('should return STORAGE_ERROR when index update fails', async () => {
+        const storage = createMockStorage({
+            memories: {
+                read: async () => ok(sampleMemory),
+            },
+            indexes: {
+                updateAfterMemoryWrite: async () =>
+                    err({
+                        code: 'INDEX_ERROR',
+                        message: 'Index error',
+                    } as StorageAdapterError),
+            },
+        });
+        const result = await updateMemory(storage, 'project/test/memory', {
+            content: 'Updated',
+        });
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
+            expect(result.error.code).toBe('STORAGE_ERROR');
+            expect(result.error.message).toContain('project/test/memory');
+            expect(result.error.message).toContain('Index error');
+            expect(result.error.message).toContain('cortex store reindex');
+            expect(result.error.path).toBe('project/test/memory');
+        }
+    });
 });
 

@@ -106,9 +106,16 @@ export const moveMemory = async (
     // 6. Reindex using storage.indexes.reindex()
     const reindexResult = await storage.indexes.reindex();
     if (!reindexResult.ok()) {
-        return memoryError('STORAGE_ERROR', 'Failed to reindex after move', {
-            cause: reindexResult.error,
-        });
+        const reason = reindexResult.error.message ?? 'Unknown error';
+        return memoryError(
+            'STORAGE_ERROR',
+            `Memory moved from "${fromPath}" to "${toPath}" but index update failed: ${reason}. ` +
+                'Run "cortex store reindex" to rebuild indexes.',
+            {
+                path: toPath,
+                cause: reindexResult.error,
+            },
+        );
     }
 
     return ok(undefined);
