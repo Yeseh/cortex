@@ -303,7 +303,7 @@ export const resolveStoreAdapter = async (
                 name: storeName,
                 scope: 'registry',
             },
-            adapter: adapterResult.value!,
+            adapter: adapterResult.value,
         });
     }
 

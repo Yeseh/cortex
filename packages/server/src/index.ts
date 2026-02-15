@@ -161,6 +161,9 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
         createFilesystemAdapterFactory(),
     );
     const cortex = cortexResult.ok() ? cortexResult.value : undefined;
+    if (!cortexResult.ok()) {
+        console.warn(`Cortex config not loaded from ${config.dataPath}: ${cortexResult.error.message}. Using FilesystemRegistry fallback.`);
+    }
 
     // Create MCP context
     const mcpContext = createMcpContext();

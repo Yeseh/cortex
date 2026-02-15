@@ -484,23 +484,6 @@ export interface CortexOptions {
 }
 
 /**
- * Context object passed to CLI and MCP handlers.
- * Provides access to the root Cortex client.
- *
- * The Cortex type is imported from cortex module when available.
- * For now, use a forward reference pattern.
- */
-export interface CortexContext {
-    /** The root Cortex client instance */
-    cortex: {
-        rootDirectory: string;
-        settings: CortexSettings;
-        registry: RegistryData;
-        getStore(name: string): Result<ScopedStorageAdapter, StoreNotFoundError>;
-    };
-}
-
-/**
  * Registry service interface for managing store configurations.
  *
  * The registry is a central configuration file that maps store names to their

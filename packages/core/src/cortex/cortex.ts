@@ -137,7 +137,7 @@ export class Cortex {
     ): Promise<Result<Cortex, CortexError>> {
         // Expand ~ to home directory
         const resolvedDir = configDir.startsWith('~')
-            ? join(homedir(), configDir.slice(1))
+            ? join(homedir(), configDir.slice(configDir[1] === '/' || configDir[1] === '\\' ? 2 : 1))
             : resolve(configDir);
 
         const configPath = join(resolvedDir, 'config.yaml');
