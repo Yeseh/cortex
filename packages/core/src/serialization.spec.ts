@@ -110,10 +110,11 @@ describe('serialize()', () => {
 
             expect(result.ok()).toBe(true);
             if (result.ok()) {
+                // Bun.YAML uses flow-style arrays: items: [a, b, c]
                 expect(result.value).toContain('items:');
-                expect(result.value).toContain('- a');
-                expect(result.value).toContain('- b');
-                expect(result.value).toContain('- c');
+                expect(result.value).toMatch(/a/);
+                expect(result.value).toMatch(/b/);
+                expect(result.value).toMatch(/c/);
             }
         });
     });

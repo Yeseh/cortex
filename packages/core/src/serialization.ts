@@ -7,7 +7,6 @@
  * @module serialization
  */
 
-import YAML from 'yaml';
 import * as TOON from '@toon-format/toon';
 import { ok, err, type Result } from './result.ts';
 
@@ -56,7 +55,7 @@ Result<string, SerializationError> => {
             case 'json':
                 return ok(JSON.stringify(obj));
             case 'yaml':
-                return ok(YAML.stringify(obj));
+                return ok(Bun.YAML.stringify(obj));
             case 'toon':
                 return ok(TOON.encode(obj, toonOptions));
             default:
@@ -94,7 +93,7 @@ export const deserialize = <T = unknown>(raw: string, format: 'yaml' | 'json' | 
             case 'json':
                 return ok(JSON.parse(raw) as T);
             case 'yaml':
-                return ok(YAML.parse(raw) as T);
+                return ok(Bun.YAML.parse(raw) as T);
             case 'toon':
                 return ok(TOON.decode(raw) as T);
             default:
