@@ -177,7 +177,7 @@ describe('moveMemory', () => {
         }
     });
 
-    it('should return STORAGE_ERROR when reindex fails', async () => {
+    it('should return STORAGE_ERROR with actionable message when reindex fails', async () => {
         const storage = createMockStorage({
             memories: {
                 read: async (path) =>
@@ -197,6 +197,11 @@ describe('moveMemory', () => {
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
             expect(result.error.code).toBe('STORAGE_ERROR');
+            expect(result.error.message).toContain('project/src/memory');
+            expect(result.error.message).toContain('project/dest/memory');
+            expect(result.error.message).toContain('Reindex failed');
+            expect(result.error.message).toContain('cortex store reindex');
+            expect(result.error.path).toBe('project/dest/memory');
         }
     });
 });

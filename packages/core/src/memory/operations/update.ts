@@ -152,9 +152,14 @@ export const updateMemory = async (
     // 6. Update indexes
     const indexResult = await storage.indexes.updateAfterMemoryWrite(updatedMemory);
     if (!indexResult.ok()) {
-        return memoryError('STORAGE_ERROR', 'Failed to update indexes', {
-            cause: indexResult.error,
-        });
+        const reason = indexResult.error.message ?? 'Unknown error';
+        return memoryError('STORAGE_ERROR',
+            `Memory updated but index update failed for "${slugPath}": ${reason}. ` +
+            'Run "cortex store reindex" to rebuild indexes.',
+            {
+                path: slugPath,
+                cause: indexResult.error,
+            });
     }
 
     // 7. Return updated memory
