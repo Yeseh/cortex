@@ -16,7 +16,7 @@
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
 import { resolveStoreAdapter } from '../../context.ts';
-import { moveMemory } from '@yeseh/cortex-core/memory';
+import { moveMemory, MemoryPath } from '@yeseh/cortex-core/memory';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 
 /** Dependencies injected into the handler for testability */
@@ -54,9 +54,16 @@ export async function handleMove(
         throwCoreError(moveResult.error);
     }
 
-    // 3. Output success message
+    // 3. Output success message with normalized paths
+    // The paths were already validated by moveMemory, so these will succeed
+    const normalizedFrom = MemoryPath.fromString(from);
+    const normalizedTo = MemoryPath.fromString(to);
     const out = deps.stdout ?? process.stdout;
-    out.write(`Moved memory from ${from} to ${to}.\n`);
+    
+    // Use normalized paths if parsing succeeded, fall back to original
+    const fromDisplay = normalizedFrom.ok() ? normalizedFrom.value.toString() : from;
+    const toDisplay = normalizedTo.ok() ? normalizedTo.value.toString() : to;
+    out.write(`Moved memory from ${fromDisplay} to ${toDisplay}.\n`);
 }
 
 /**

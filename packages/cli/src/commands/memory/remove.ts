@@ -16,7 +16,7 @@
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
 import { resolveStoreAdapter } from '../../context.ts';
-import { removeMemory } from '@yeseh/cortex-core/memory';
+import { removeMemory, MemoryPath } from '@yeseh/cortex-core/memory';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 
 /** Dependencies injected into the handler for testability */
@@ -52,9 +52,11 @@ export async function handleRemove(
         throwCoreError(removeResult.error);
     }
 
-    // 3. Output success message
+    // 3. Output success message with normalized path
     const out = deps.stdout ?? process.stdout;
-    out.write(`Removed memory at ${path}.\n`);
+    const normalizedPath = MemoryPath.fromString(path);
+    const pathDisplay = normalizedPath.ok() ? normalizedPath.value.toString() : path;
+    out.write(`Removed memory at ${pathDisplay}.\n`);
 }
 
 /**

@@ -49,7 +49,7 @@ export interface CreateMemoryInput {
  * @param path - Memory path (e.g., "project/cortex/config")
  * @param input - Memory creation input
  * @param now - Current time (defaults to new Date())
- * @returns Result indicating success or failure with MemoryError
+ * @returns Result containing the created Memory object on success, or MemoryError on failure
  *
  * @example
  * ```typescript
@@ -65,7 +65,7 @@ export const createMemory = async (
     path: string,
     input: CreateMemoryInput,
     now?: Date,
-): Promise<MemoryResult<void>> => {
+): Promise<MemoryResult<Memory>> => {
     const timestamp = now ?? new Date();
     const memoryResult = Memory.init(
         path,
@@ -106,5 +106,5 @@ export const createMemory = async (
             });
     }
 
-    return ok(undefined);
+    return ok(memory);
 };

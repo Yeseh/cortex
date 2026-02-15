@@ -193,4 +193,33 @@ describe('createMemory', () => {
         expect(writtenMemory?.metadata.createdAt).toEqual(customTime);
         expect(writtenMemory?.metadata.updatedAt).toEqual(customTime);
     });
+
+    it('should return the created Memory object', async () => {
+        const storage = createMockStorage();
+        const result = await createMemory(storage, 'project/test/memory', {
+            content: 'Test content',
+            source: 'test',
+        });
+
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
+            expect(result.value).toBeDefined();
+            expect(result.value.path.toString()).toBe('project/test/memory');
+            expect(result.value.content).toBe('Test content');
+        }
+    });
+
+    it('should return Memory with normalized path when input has double slashes', async () => {
+        const storage = createMockStorage();
+        const result = await createMemory(storage, 'project//test//memory', {
+            content: 'Test content',
+            source: 'test',
+        });
+
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
+            // Path should be normalized - double slashes removed
+            expect(result.value.path.toString()).toBe('project/test/memory');
+        }
+    });
 });
