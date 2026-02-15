@@ -1,10 +1,10 @@
 /**
- * MCP server instance and Streamable HTTP transport setup.
+ * MCP server instance and Web Standard Streamable HTTP transport setup.
  *
  * This module provides factory functions for creating the MCP server
  * and transport layer used by the Cortex memory system. It configures
  * the server with the appropriate name and version, and sets up
- * stateless HTTP transport for containerized deployments.
+ * stateless Web Standard HTTP transport for containerized deployments.
  *
  * @module server/mcp
  *
@@ -14,15 +14,15 @@
  * const ctx = createMcpContext();
  * await ctx.server.connect(ctx.transport);
  *
- * // Handle incoming MCP requests
- * app.post('/mcp', async (req, res) => {
- *   await ctx.transport.handleRequest(req, res, req.body);
+ * // Handle incoming MCP requests (returns a Response object)
+ * app.post('/mcp', async (req) => {
+ *   return ctx.transport.handleRequest(req);
  * });
  * ```
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { SERVER_NAME, SERVER_VERSION } from './config.ts';
 
 /**
@@ -36,7 +36,7 @@ export interface McpContext {
     /** MCP server instance for tool registration and execution */
     server: McpServer;
     /** HTTP transport for handling MCP protocol messages */
-    transport: StreamableHTTPServerTransport;
+    transport: WebStandardStreamableHTTPServerTransport;
 }
 
 /**
@@ -61,7 +61,7 @@ export const createMcpServer = (): McpServer => {
 };
 
 /**
- * Creates a Streamable HTTP transport for stateless MCP communication.
+ * Creates a Web Standard Streamable HTTP transport for stateless MCP communication.
  *
  * The transport is configured in stateless mode (no session ID generation),
  * which is appropriate for containerized deployments where requests may
@@ -74,12 +74,12 @@ export const createMcpServer = (): McpServer => {
  * const transport = createMcpTransport();
  * await server.connect(transport);
  *
- * // In Express route handler
- * await transport.handleRequest(req, res, req.body);
+ * // In Bun/Web Standard route handler (returns Response)
+ * const response = await transport.handleRequest(req);
  * ```
  */
-export const createMcpTransport = (): StreamableHTTPServerTransport => {
-    return new StreamableHTTPServerTransport({
+export const createMcpTransport = (): WebStandardStreamableHTTPServerTransport => {
+    return new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: undefined, // stateless mode
     }); 
 };

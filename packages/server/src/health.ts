@@ -1,7 +1,7 @@
 /**
  * Health check endpoint handler for container orchestration.
  *
- * This module provides a health check router for Kubernetes, Docker,
+ * This module provides a health check response function for Kubernetes, Docker,
  * and other container orchestration systems. The endpoint reports
  * server status, version, and store count for monitoring dashboards.
  *
@@ -9,16 +9,20 @@
  *
  * @example
  * ```ts
- * // Mount health router in Express app
+ * // Use with Bun.serve routes
  * const config = loadServerConfig().value;
- * app.use('/health', createHealthRouter(config));
+ * Bun.serve({
+ *     routes: {
+ *         '/health': { GET: async () => createHealthResponse(config) },
+ *     },
+ *     fetch: () => new Response('Not Found', { status: 404 }),
+ * });
  *
  * // Check health: GET /health
  * // Response: { status: "healthy", version: "1.0.0", ... }
  * ```
  */
 
-import { Router, type Request, type Response } from 'express';
 import { resolve } from 'node:path';
 import { SERVER_VERSION, type ServerConfig } from './config.ts';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
@@ -49,26 +53,31 @@ export interface HealthResponse {
 }
 
 /**
- * Creates a health check router for container orchestration.
+ * Creates a health check response for container orchestration.
  *
- * The router provides a single GET endpoint that returns server health
- * information. It attempts to load the store registry to report the
- * current store count, but gracefully handles missing registries.
+ * This function returns a JSON response with server health information.
+ * It attempts to load the store registry to report the current store count,
+ * but gracefully handles missing registries.
  *
  * @param config - Server configuration (required, must be valid)
- * @returns Express router for mounting at the health endpoint
+ * @returns Promise resolving to Web Standard Response with health status
  *
  * @example
  * ```ts
- * import express from 'express';
- * import { createHealthRouter } from './health.ts';
+ * import { createHealthResponse } from './health.ts';
  * import { loadServerConfig } from './config.ts';
  *
- * const app = express();
  * const config = loadServerConfig().value!;
  *
- * // Mount at /health
- * app.use('/health', createHealthRouter(config));
+ * // Use with Bun.serve routes
+ * Bun.serve({
+ *     routes: {
+ *         '/health': {
+ *             GET: async () => createHealthResponse(config),
+ *         },
+ *     },
+ *     fetch: () => new Response('Not Found', { status: 404 }),
+ * });
  *
  * // Kubernetes liveness probe configuration:
  * // livenessProbe:
@@ -77,32 +86,20 @@ export interface HealthResponse {
  * //     port: 3000
  * ```
  */
-export const createHealthRouter = (config: ServerConfig): Router => {
-    const router = Router();
+export const createHealthResponse = async (config: ServerConfig): Promise<Response> => {
+    // Try to load store registry and count stores
+    const registryPath = resolve(config.dataPath, 'stores.yaml');
+    const registry = new FilesystemRegistry(registryPath);
+    const registryResult = await registry.load();
+    // Treat REGISTRY_MISSING as 0 stores (like allowMissing: true did)
+    const storeCount = registryResult.ok() ? Object.keys(registryResult.value).length : 0;
 
-    router.get(
-        '/', async (
-            _req: Request, res: Response,
-        ) => {
-        // Try to load store registry and count stores
-            const registryPath = resolve(
-                config.dataPath, 'stores.yaml',
-            );
-            const registry = new FilesystemRegistry(registryPath);
-            const registryResult = await registry.load();
-            // Treat REGISTRY_MISSING as 0 stores (like allowMissing: true did)
-            const storeCount = registryResult.ok() ? Object.keys(registryResult.value).length : 0;
+    const response: HealthResponse = {
+        status: 'healthy',
+        version: SERVER_VERSION,
+        dataPath: config.dataPath,
+        storeCount,
+    };
 
-            const response: HealthResponse = {
-                status: 'healthy',
-                version: SERVER_VERSION,
-                dataPath: config.dataPath,
-                storeCount,
-            };
-
-            res.json(response);
-        },
-    );
-
-    return router;
+    return Response.json(response);
 };
