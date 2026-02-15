@@ -1,10 +1,10 @@
 /**
- * Express server setup and entry point for the Cortex MCP server.
+ * Bun HTTP server setup and entry point for the Cortex MCP server.
  *
  * This module provides the main server factory function and handles
  * the complete lifecycle of the Cortex MCP server including:
  * - Configuration loading from environment variables
- * - Express app setup with JSON body parsing
+ * - Bun HTTP server setup with routes
  * - MCP protocol endpoint at POST /mcp
  * - Health check endpoint at GET /health
  * - Graceful shutdown handling
@@ -28,11 +28,9 @@
  * ```
  */
 
-import express, { type Express } from 'express';
-import type { Server } from 'node:http';
 import { loadServerConfig, type ServerConfig } from './config.ts';
 import { createMcpContext, type McpContext } from './mcp.ts';
-import { createHealthRouter } from './health.ts';
+import { createHealthResponse } from './health.ts';
 import { registerMemoryTools } from './memory/index.ts';
 import { registerStoreTools } from './store/index.ts';
 import { registerCategoryTools } from './category/index.ts';
@@ -45,11 +43,8 @@ import { err, ok, type Result } from '@yeseh/cortex-core';
  * advanced use cases like testing, monitoring, or extension.
  */
 export interface CortexServer {
-    /** Express application instance for adding middleware or routes */
-    app: Express;
-
-    /** Underlying Node.js HTTP server for low-level access */
-    httpServer: Server;
+    /** Bun HTTP server instance for low-level access */
+    server: ReturnType<typeof Bun.serve>;
 
     /** MCP context containing server and transport */
     mcpContext: McpContext;
@@ -60,8 +55,7 @@ export interface CortexServer {
     /**
      * Gracefully shuts down the server.
      *
-     * Closes the MCP server connection first, then the HTTP server.
-     * Waits for all connections to close before resolving.
+     * Closes the MCP server connection first, then stops the HTTP server.
      */
     close: () => Promise<void>;
 }
@@ -96,7 +90,7 @@ export interface ServerStartError {
  * This is the main entry point for starting the server programmatically.
  * It performs the following steps:
  * 1. Loads configuration from environment variables
- * 2. Creates Express app with JSON body parsing (1MB limit)
+ * 2. Creates Bun HTTP server with routes
  * 3. Sets up MCP server and connects transport
  * 4. Mounts MCP endpoint at POST /mcp
  * 5. Mounts health endpoint at GET /health
@@ -137,10 +131,10 @@ export interface ServerStartError {
  * // For testing - access internal components
  * const result = await createServer();
  * if (result.ok()) {
- *   const { app, mcpContext } = result.value;
+ *   const { server, mcpContext } = result.value;
  *
- *   // Add test middleware
- *   app.use('/test', testRouter);
+ *   // Access server port
+ *   console.log(`Running on port ${server.port}`);
  *
  *   // Access MCP server for tool inspection
  *   const tools = mcpContext.server.listTools();
@@ -159,54 +153,63 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
     }
     const config = configResult.value;
 
-    // Create Express app
-    const app = express();
-    app.use(express.json({ limit: '1mb' }));
-
     // Create MCP context
     const mcpContext = createMcpContext();
-    const { server, transport } = mcpContext;
+    const { server: mcpServer, transport } = mcpContext;
 
     // Register MCP tools
-    registerMemoryTools(server, config);
-    registerStoreTools(server, config);
-    registerCategoryTools(server, config);
+    registerMemoryTools(mcpServer, config);
+    registerStoreTools(mcpServer, config);
+    registerCategoryTools(mcpServer, config);
 
     // Connect MCP server to transport
-    await server.connect(transport);
+    await mcpServer.connect(transport);
 
-    // Mount MCP endpoint
-    app.post('/mcp', async (req, res) => {
-        try {
-            await transport.handleRequest(req, res, req.body);
-        }
-        catch (error) {
-            if (!res.headersSent) {
-                res.status(500).json({ error: 'Internal server error' });
-            }
-            console.error('MCP request handling error:', error);
-        }
+    // Create Bun HTTP server with routes
+    const server = Bun.serve({
+        port: config.port,
+        hostname: config.host,
+        routes: {
+            '/mcp': {
+                POST: async (req) => {
+                    try {
+                        // Enforce 1MB body size limit (matching previous Express config)
+                        const contentLength = parseInt(req.headers.get('content-length') ?? '0', 10);
+                        if (contentLength > 1024 * 1024) {
+                            return Response.json(
+                                { error: 'Request body too large. Maximum size is 1MB.' },
+                                { status: 413 },
+                            );
+                        }
+
+                        return await transport.handleRequest(req);
+                    }
+                    catch (error) {
+                        console.error('MCP request handling error:', error);
+                        return Response.json({ error: 'Internal server error' }, { status: 500 });
+                    }
+                },
+            },
+            '/health': {
+                GET: async () => createHealthResponse(config),
+            },
+        },
+        fetch: () => new Response('Not Found', { status: 404 }),
     });
 
-    // Mount health endpoint
-    app.use('/health', createHealthRouter(config));
-
-    // Start HTTP server
-    const httpServer = app.listen(config.port, config.host, () => {
-        console.warn(`Cortex MCP server listening on http://${config.host}:${config.port}`);
-        console.warn(`  Data path: ${config.dataPath}`);
-        console.warn(`  Default store: ${config.defaultStore}`);
-        console.warn('  MCP endpoint: POST /mcp');
-        console.warn('  Health check: GET /health');
-    });
+    console.warn(`Cortex MCP server listening on http://${config.host}:${config.port}`);
+    console.warn(`  Data path: ${config.dataPath}`);
+    console.warn(`  Default store: ${config.defaultStore}`);
+    console.warn('  MCP endpoint: POST /mcp');
+    console.warn('  Health check: GET /health');
 
     // Graceful shutdown handler
     const close = async (): Promise<void> => {
-        await server.close();
-        await new Promise<void>((resolve) => httpServer.close(() => resolve()));
+        await mcpServer.close();
+        server.stop();
     };
 
-    return ok({ app, httpServer, mcpContext, config, close });
+    return ok({ server, mcpContext, config, close });
 };
 
 // Start server if this is the main module

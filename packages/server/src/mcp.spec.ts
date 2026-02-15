@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 
 import { createMcpContext, createMcpServer, createMcpTransport } from './mcp.ts';
 
@@ -43,10 +43,10 @@ describe(
         describe(
             'createMcpTransport', () => {
                 it(
-                    'should return a StreamableHTTPServerTransport instance', () => {
+                    'should return a WebStandardStreamableHTTPServerTransport instance', () => {
                         const transport = createMcpTransport();
 
-                        expect(transport).toBeInstanceOf(StreamableHTTPServerTransport);
+                        expect(transport).toBeInstanceOf(WebStandardStreamableHTTPServerTransport);
                     },
                 );
 
@@ -81,10 +81,10 @@ describe(
                 );
 
                 it(
-                    'should return a StreamableHTTPServerTransport instance as transport', () => {
+                    'should return a WebStandardStreamableHTTPServerTransport instance as transport', () => {
                         const context = createMcpContext();
 
-                        expect(context.transport).toBeInstanceOf(StreamableHTTPServerTransport);
+                        expect(context.transport).toBeInstanceOf(WebStandardStreamableHTTPServerTransport);
                     },
                 );
             },
