@@ -1,29 +1,11 @@
 memories:
   - path: todo/add-concurrent-write-protection
-    token_estimate: 564
+    token_estimate: 583
     updated_at: 2026-02-14T21:33:43.075Z
-  - path: todo/add-path-normalization-double-slashes
-    token_estimate: 322
-    updated_at: 2026-02-14T21:33:30.965Z
   - path: todo/decrease-mcp-fs-coupling
-    token_estimate: 304
+    token_estimate: 310
     updated_at: 2026-02-14T21:36:39.163Z
-  - path: todo/fix-index-update-error-messages
-    token_estimate: 443
-    updated_at: 2026-02-14T21:33:24.975Z
-  - path: todo/fix-mcp-create-store-registration
-    token_estimate: 326
-    updated_at: 2026-02-15T11:11:54.272Z
-  - path: todo/fix-store-init-index-creation
-    token_estimate: 273
-    updated_at: 2026-02-14T21:58:09.448Z
   - path: todo/merge-categories-indexes
-    token_estimate: 314
+    token_estimate: 320
     updated_at: 2026-02-14T21:36:40.287Z
-  - path: todo/refactor-index-storage-structured
-    token_estimate: 309
-    updated_at: 2026-02-15T10:54:27.134Z
-  - path: todo/review-registry-implementation
-    token_estimate: 457
-    updated_at: 2026-02-14T21:36:42.387Z
 subcategories: []

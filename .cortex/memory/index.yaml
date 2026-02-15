@@ -1,7 +1,7 @@
 memories: []
 subcategories:
   - path: decisions
-    memory_count: 1
+    memory_count: 4
   - path: features
     memory_count: 4
   - path: history
@@ -13,8 +13,10 @@ subcategories:
   - path: runbooks
     memory_count: 5
   - path: standards
-    memory_count: 8
+    memory_count: 9
   - path: standup
     memory_count: 2
+  - path: test
+    memory_count: 1
   - path: todo
-    memory_count: 9
+    memory_count: 3

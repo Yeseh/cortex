@@ -1,6 +1,6 @@
 memories:
   - path: decisions/category/categorypath-error-coupling
-    token_estimate: 467
+    token_estimate: 480
     updated_at: 2026-02-14T21:36:08.951Z
   - path: decisions/category/root-category-descriptions
     token_estimate: 350

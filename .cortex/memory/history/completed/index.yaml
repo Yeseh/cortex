@@ -1,4 +1,10 @@
 memories:
+  - path: history/completed/fix-cli-normalized-path-output
+    token_estimate: 427
+    updated_at: 2026-02-15T12:46:28.783Z
+  - path: history/completed/fix-index-update-error-messages
+    token_estimate: 339
+    updated_at: 2026-02-15T11:31:03.734Z
   - path: history/completed/fix-prune-reindex-consistency
     token_estimate: 144
     updated_at: 2026-02-13T18:54:56.150Z
