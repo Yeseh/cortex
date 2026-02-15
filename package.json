@@ -42,7 +42,7 @@
         "lint": "bunx eslint packages/*/src/**/*.ts --fix",
         "format": "prettier --write \"packages/*/src/**/*.{ts,json,md}\"",
         "format:check": "prettier --check \"packages/*/src/**/*.{ts,json,md}\"",
-        "typecheck": "bunx tsc --build",
+        "typecheck": "bun tsc --build",
         "clean": "rm -rf packages/*/dist",
         "compile:mcp": "bun build --compile --minify --sourcemap --bytecode ./packages/server/src/index.ts --outfile ./bin/cortex-mcp",
         "compile:cli": "bun build --compile --minify --sourcemap --bytecode ./packages/cli/src/run.ts --outfile ./bin/cortex",

@@ -15,7 +15,7 @@
 
 import { parseArgs } from 'node:util';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 import { $ } from 'bun';
 import { FilesystemStorageAdapter } from '../packages/storage-fs/src/index.ts';
@@ -507,8 +507,8 @@ async function runMigration(options: CLIOptions): Promise<void> {
         console.log('\nStep 3: Rebuilding indexes...');
         try {
             const adapter = new FilesystemStorageAdapter({ rootDirectory: options.target });
-            const reindexResult = await adapter.reindexCategoryIndexes();
-            if (reindexResult.ok) {
+            const reindexResult = await adapter.indexes.reindex();
+            if (reindexResult.ok()) {
                 console.log('  Indexes rebuilt successfully.');
             } else {
                 console.error('  Failed to rebuild indexes:', reindexResult.error.message);

@@ -6,36 +6,26 @@
 import { describe, it, expect } from 'bun:test';
 import type { StorageAdapterError } from '@/storage/adapter.ts';
 import { updateMemory } from './update.ts';
-import {
-    ok,
-    err,
-    createMockStorage,
-    sampleMemory,
-    expiredMemory,
-} from './test-helpers.spec.ts';
+import { ok, err, createMockStorage, sampleMemory, expiredMemory } from './test-helpers.spec.ts';
 
 describe('updateMemory', () => {
     it('should update content only', async () => {
-        let _writtenContent: string | undefined;
         const storage = createMockStorage({
             memories: {
                 read: async () => ok(sampleMemory),
-                write: async (memory) => {
-                    _writtenContent = memory.content;
+                write: async (_memory) => {
                     return ok(undefined);
                 },
             },
         });
-        const result = await updateMemory(storage,  'project/test/memory', {
+        const result = await updateMemory(storage, 'project/test/memory', {
             content: 'Updated content',
         });
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             expect(result.value.content).toBe('Updated content');
             // Original tags preserved
-            expect(result.value.metadata.tags).toEqual([
-                'test', 'sample',
-            ]);
+            expect(result.value.metadata.tags).toEqual(['test', 'sample']);
         }
     });
 
@@ -46,15 +36,11 @@ describe('updateMemory', () => {
             },
         });
         const result = await updateMemory(storage, 'project/test/memory', {
-            tags: [
-                'new', 'tags',
-            ],
+            tags: ['new', 'tags'],
         });
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            expect(result.value.metadata.tags).toEqual([
-                'new', 'tags',
-            ]);
+            expect(result.value.metadata.tags).toEqual(['new', 'tags']);
             // Original content preserved
             expect(result.value.content).toContain('Sample memory content');
         }
@@ -67,7 +53,7 @@ describe('updateMemory', () => {
             },
         });
         const newExpiry = new Date('2030-12-31T00:00:00Z');
-        const result = await updateMemory(storage,  'project/test/memory', {
+        const result = await updateMemory(storage, 'project/test/memory', {
             expiresAt: newExpiry,
         });
         expect(result.ok()).toBe(true);
@@ -134,7 +120,7 @@ describe('updateMemory', () => {
             storage,
             'project/test/memory',
             { content: 'Updated' },
-            updateTime,
+            updateTime
         );
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -235,4 +221,3 @@ describe('updateMemory', () => {
         }
     });
 });
-
