@@ -2,12 +2,16 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import * as fs from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
+import { PassThrough } from 'node:stream';
+import { Cortex } from '@yeseh/cortex-core';
 
 import {
+    createCortexContext,
     getDefaultGlobalStorePath,
     getDefaultRegistryPath,
     loadRegistry,
-    resolveStoreContext,
+    resolveDefaultStoreName,
+    resolveStorePathFromRegistry,
 } from './context.ts';
 
 describe('context', () => {
@@ -57,16 +61,12 @@ describe('context', () => {
         });
     });
 
-    describe('resolveStoreContext', () => {
+    describe('resolveStorePathFromRegistry', () => {
         let tempDir: string;
-        let localStoreDir: string;
-        let globalStoreDir: string;
         let registryPath: string;
 
         beforeEach(async () => {
             tempDir = await fs.mkdtemp(join(tmpdir(), 'cortex-context-'));
-            localStoreDir = join(tempDir, '.cortex', 'memory');
-            globalStoreDir = join(tempDir, 'global-store');
             registryPath = join(tempDir, 'stores.yaml');
         });
 
@@ -76,293 +76,246 @@ describe('context', () => {
             }
         });
 
-        describe('without storeName (default resolution)', () => {
-            it('should return local store context when .cortex/memory exists', async () => {
-                await fs.mkdir(localStoreDir, { recursive: true });
+        it('should resolve store path from registry', async () => {
+            const storePathInRegistry = join(tempDir, 'registered-store');
+            await fs.mkdir(storePathInRegistry, { recursive: true });
+            await fs.writeFile(
+                registryPath,
+                `stores:\n  my-store:\n    path: '${storePathInRegistry}'\n`,
+            );
 
-                const result = await resolveStoreContext(undefined, {
-                    cwd: tempDir,
-                    globalStorePath: globalStoreDir,
-                });
+            const result = await resolveStorePathFromRegistry('my-store', registryPath);
 
-                expect(result.ok()).toBe(true);
-                if (result.ok()) {
-                    expect(result.value.root).toBe(localStoreDir);
-                    expect(result.value.scope).toBe('local');
-                    expect(result.value.name).toBeUndefined();
-                }
-            });
-
-            it('should fall back to global store when local does not exist', async () => {
-                await fs.mkdir(globalStoreDir, { recursive: true });
-
-                const result = await resolveStoreContext(undefined, {
-                    cwd: tempDir,
-                    globalStorePath: globalStoreDir,
-                });
-
-                expect(result.ok()).toBe(true);
-                if (result.ok()) {
-                    expect(result.value.root).toBe(globalStoreDir);
-                    expect(result.value.scope).toBe('global');
-                    expect(result.value.name).toBeUndefined();
-                }
-            });
-
-            it('should prefer local store over global store when both exist', async () => {
-                await fs.mkdir(localStoreDir, { recursive: true });
-                await fs.mkdir(globalStoreDir, { recursive: true });
-
-                const result = await resolveStoreContext(undefined, {
-                    cwd: tempDir,
-                    globalStorePath: globalStoreDir,
-                });
-
-                expect(result.ok()).toBe(true);
-                if (result.ok()) {
-                    expect(result.value.root).toBe(localStoreDir);
-                    expect(result.value.scope).toBe('local');
-                }
-            });
-
-            it('should return error when neither local nor global store exists', async () => {
-                const result = await resolveStoreContext(undefined, {
-                    cwd: tempDir,
-                    globalStorePath: globalStoreDir,
-                });
-
-                expect(result.ok()).toBe(false);
-                if (!result.ok()) {
-                    expect(result.error.code).toBe('STORE_RESOLUTION_FAILED');
-                }
-            });
-
-            it('should use default cwd when not provided', async () => {
-                // This test verifies the function works without explicit cwd
-                // We need global store since we can't control process.cwd() local store
-                const tempGlobal = join(tempDir, 'global-for-default');
-                await fs.mkdir(tempGlobal, { recursive: true });
-
-                const result = await resolveStoreContext(undefined, {
-                    globalStorePath: tempGlobal,
-                });
-
-                // Result depends on whether process.cwd() has a local store
-                // The important thing is it doesn't throw and returns a valid Result
-                expect(result).toBeDefined();
-                expect(result.ok()).toBe(true);
-            });
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
+                expect(result.value).toBe(storePathInRegistry);
+            }
         });
 
-        describe('with storeName (registry resolution)', () => {
-            it('should resolve store from registry', async () => {
-                const storePathInRegistry = join(tempDir, 'registered-store');
-                await fs.mkdir(storePathInRegistry, { recursive: true });
-                await fs.writeFile(
-                    registryPath,
-                    `stores:\n  my-store:\n    path: "${storePathInRegistry}"\n`,
-                );
+        it('should return STORE_NOT_FOUND error when store not in registry', async () => {
+            await fs.writeFile(
+                registryPath,
+                'stores:\n  other-store:\n    path: "/some/path"\n',
+            );
 
-                const result = await resolveStoreContext('my-store', {
-                    cwd: tempDir,
-                    registryPath,
-                });
+            const result = await resolveStorePathFromRegistry('nonexistent-store', registryPath);
 
-                expect(result.ok()).toBe(true);
-                if (result.ok()) {
-                    expect(result.value.root).toBe(storePathInRegistry);
-                    expect(result.value.name).toBe('my-store');
-                    expect(result.value.scope).toBe('registry');
-                }
-            });
-
-            it('should return STORE_NOT_FOUND error when store not in registry', async () => {
-                await fs.writeFile(
-                    registryPath,
-                    'stores:\n  other-store:\n    path: "/some/path"\n',
-                );
-
-                const result = await resolveStoreContext('nonexistent-store', {
-                    cwd: tempDir,
-                    registryPath,
-                });
-
-                expect(result.ok()).toBe(false);
-                if (!result.ok()) {
-                    expect(result.error.code).toBe('STORE_NOT_FOUND');
-                    expect(result.error.message).toContain('nonexistent-store');
-                }
-            });
-
-            it('should return REGISTRY_LOAD_FAILED error when registry file missing', async () => {
-                const result = await resolveStoreContext('any-store', {
-                    cwd: tempDir,
-                    registryPath: join(tempDir, 'nonexistent-registry.yaml'),
-                });
-
-                expect(result.ok()).toBe(false);
-                if (!result.ok()) {
-                    expect(result.error.code).toBe('REGISTRY_LOAD_FAILED');
-                }
-            });
-
-            it('should return REGISTRY_LOAD_FAILED error for invalid registry format', async () => {
-                await fs.writeFile(registryPath, 'this is not valid yaml structure');
-
-                const result = await resolveStoreContext('my-store', {
-                    cwd: tempDir,
-                    registryPath,
-                });
-
-                expect(result.ok()).toBe(false);
-                if (!result.ok()) {
-                    expect(result.error.code).toBe('REGISTRY_LOAD_FAILED');
-                }
-            });
-
-            it('should handle multiple stores in registry', async () => {
-                const store1Path = join(tempDir, 'store-1');
-                const store2Path = join(tempDir, 'store-2');
-                await fs.mkdir(store1Path, { recursive: true });
-                await fs.mkdir(store2Path, { recursive: true });
-                await fs.writeFile(
-                    registryPath,
-                    `stores:\n  first-store:\n    path: "${store1Path}"\n  second-store:\n    path: "${store2Path}"\n`,
-                );
-
-                const result1 = await resolveStoreContext('first-store', {
-                    registryPath,
-                });
-                const result2 = await resolveStoreContext('second-store', {
-                    registryPath,
-                });
-
-                expect(result1.ok()).toBe(true);
-                expect(result2.ok()).toBe(true);
-                if (result1.ok() && result2.ok()) {
-                    expect(result1.value.root).toBe(store1Path);
-                    expect(result2.value.root).toBe(store2Path);
-                }
-            });
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
+                expect(result.error.code).toBe('STORE_NOT_FOUND');
+                expect(result.error.message).toContain('nonexistent-store');
+            }
         });
 
-        describe('scope values', () => {
-            it('should return scope "local" for local store', async () => {
-                await fs.mkdir(localStoreDir, { recursive: true });
+        it('should return REGISTRY_LOAD_FAILED error when registry file missing', async () => {
+            const result = await resolveStorePathFromRegistry(
+                'any-store',
+                join(tempDir, 'nonexistent-registry.yaml'),
+            );
 
-                const result = await resolveStoreContext(undefined, {
-                    cwd: tempDir,
-                    globalStorePath: globalStoreDir,
-                });
-
-                expect(result.ok()).toBe(true);
-                if (result.ok()) {
-                    expect(result.value.scope).toBe('local');
-                }
-            });
-
-            it('should return scope "global" for global store', async () => {
-                await fs.mkdir(globalStoreDir, { recursive: true });
-
-                const result = await resolveStoreContext(undefined, {
-                    cwd: tempDir,
-                    globalStorePath: globalStoreDir,
-                });
-
-                expect(result.ok()).toBe(true);
-                if (result.ok()) {
-                    expect(result.value.scope).toBe('global');
-                }
-            });
-
-            it('should return scope "registry" for registry store', async () => {
-                const registryStorePath = join(tempDir, 'registry-store');
-                await fs.mkdir(registryStorePath, { recursive: true });
-                await fs.writeFile(
-                    registryPath,
-                    `stores:\n  reg-store:\n    path: "${registryStorePath}"\n`,
-                );
-
-                const result = await resolveStoreContext('reg-store', {
-                    registryPath,
-                });
-
-                expect(result.ok()).toBe(true);
-                if (result.ok()) {
-                    expect(result.value.scope).toBe('registry');
-                }
-            });
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
+                expect(result.error.code).toBe('REGISTRY_LOAD_FAILED');
+            }
         });
 
-        describe('config integration', () => {
-            it('should respect strict_local config when local store missing', async () => {
-                const configDir = join(tempDir, '.cortex');
-                await fs.mkdir(configDir, { recursive: true });
-                await fs.writeFile(join(configDir, 'config.yaml'), 'strict_local: true\n');
-                await fs.mkdir(globalStoreDir, { recursive: true });
+        it('should return REGISTRY_LOAD_FAILED error for invalid registry format', async () => {
+            await fs.writeFile(registryPath, 'this is not valid yaml structure');
 
-                const result = await resolveStoreContext(undefined, {
-                    cwd: tempDir,
-                    globalStorePath: globalStoreDir,
-                });
+            const result = await resolveStorePathFromRegistry('my-store', registryPath);
 
-                expect(result.ok()).toBe(false);
-                if (!result.ok()) {
-                    expect(result.error.code).toBe('STORE_RESOLUTION_FAILED');
-                }
-            });
-
-            it('should return CONFIG_LOAD_FAILED error when config is invalid', async () => {
-                const configDir = join(tempDir, '.cortex');
-                await fs.mkdir(configDir, { recursive: true });
-                // Create an invalid YAML that will fail parsing
-                await fs.writeFile(
-                    join(configDir, 'config.yaml'),
-                    'invalid: yaml: content: here\n  bad indentation',
-                );
-
-                const result = await resolveStoreContext(undefined, {
-                    cwd: tempDir,
-                    globalStorePath: globalStoreDir,
-                });
-
-                expect(result.ok()).toBe(false);
-                if (!result.ok()) {
-                    expect(result.error.code).toBe('CONFIG_LOAD_FAILED');
-                }
-            });
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
+                expect(result.error.code).toBe('REGISTRY_LOAD_FAILED');
+            }
         });
 
-        describe('edge cases', () => {
-            it('should handle empty options object', async () => {
-                const result = await resolveStoreContext(undefined, {});
-                // Should not throw, result depends on actual system state
-                expect(result).toBeDefined();
-                expect(typeof result.ok).toBe('function');
+        it('should handle multiple stores in registry', async () => {
+            const store1Path = join(tempDir, 'store-1');
+            const store2Path = join(tempDir, 'store-2');
+            await fs.mkdir(store1Path, { recursive: true });
+            await fs.mkdir(store2Path, { recursive: true });
+            await fs.writeFile(
+                registryPath,
+                `stores:\n  first-store:\n    path: '${store1Path}'\n  second-store:\n    path: '${store2Path}'\n`,
+            );
+
+            const result1 = await resolveStorePathFromRegistry('first-store', registryPath);
+            const result2 = await resolveStorePathFromRegistry('second-store', registryPath);
+
+            expect(result1.ok()).toBe(true);
+            expect(result2.ok()).toBe(true);
+            if (result1.ok() && result2.ok()) {
+                expect(result1.value).toBe(store1Path);
+                expect(result2.value).toBe(store2Path);
+            }
+        });
+    });
+
+    describe('createCortexContext', () => {
+        let tempDir: string;
+        let configDir: string;
+        let cwdDir: string;
+
+        beforeEach(async () => {
+            tempDir = await fs.mkdtemp(join(tmpdir(), 'cortex-context-create-'));
+            configDir = join(tempDir, 'config');
+            cwdDir = join(tempDir, 'project');
+            await fs.mkdir(configDir, { recursive: true });
+            await fs.mkdir(cwdDir, { recursive: true });
+        });
+
+        afterEach(async () => {
+            if (tempDir) {
+                await fs.rm(tempDir, { recursive: true, force: true });
+            }
+        });
+
+        it('should create context from config and merge discovered local store', async () => {
+            const storePath = join(tempDir, 'alpha-store');
+            await fs.mkdir(storePath, { recursive: true });
+
+            const localStorePath = join(cwdDir, '.cortex', 'memory');
+            await fs.mkdir(localStorePath, { recursive: true });
+
+            const escapedPath = storePath.replace(/'/g, "''");
+            await fs.writeFile(
+                join(configDir, 'config.yaml'),
+                `settings:\n  output_format: json\nstores:\n  alpha:\n    path: '${escapedPath}'\n`,
+            );
+
+            const stdout = new PassThrough();
+            const stdin = new PassThrough();
+            const now = new Date('2024-01-01T00:00:00.000Z');
+
+            const result = await createCortexContext({
+                configDir,
+                cwd: cwdDir,
+                stdout,
+                stdin,
+                now,
             });
 
-            it('should handle undefined options', async () => {
-                const result = await resolveStoreContext(undefined);
-                // Should not throw, result depends on actual system state
-                expect(result).toBeDefined();
-                expect(typeof result.ok).toBe('function');
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
+                expect(result.value.cortex.registry.alpha?.path).toBe(storePath);
+                expect(result.value.cortex.registry.local?.path).toBe(localStorePath);
+                expect(result.value.cortex.settings.outputFormat).toBe('json');
+                expect(result.value.stdout).toBe(stdout);
+                expect(result.value.stdin).toBe(stdin);
+                expect(result.value.now).toBe(now);
+            }
+        });
+
+        it('should create context with discovered stores when config is missing', async () => {
+            const localStorePath = join(cwdDir, '.cortex', 'memory');
+            await fs.mkdir(localStorePath, { recursive: true });
+
+            const result = await createCortexContext({
+                configDir,
+                cwd: cwdDir,
             });
 
-            it('should handle storeName with empty string as undefined', async () => {
-                await fs.mkdir(localStoreDir, { recursive: true });
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
+                expect(result.value.cortex.registry.local?.path).toBe(localStorePath);
+            }
+        });
 
-                // Empty string storeName should behave like undefined
-                const result = await resolveStoreContext('', {
-                    cwd: tempDir,
-                    globalStorePath: globalStoreDir,
+        it('should discover default store under provided configDir', async () => {
+            const localStorePath = join(cwdDir, '.cortex', 'memory');
+            const configGlobalStorePath = join(configDir, 'memory');
+            await fs.mkdir(localStorePath, { recursive: true });
+            await fs.mkdir(configGlobalStorePath, { recursive: true });
+
+            const result = await createCortexContext({
+                configDir,
+                cwd: cwdDir,
+            });
+
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
+                expect(result.value.cortex.registry.local?.path).toBe(localStorePath);
+                expect(result.value.cortex.registry.default?.path).toBe(configGlobalStorePath);
+            }
+        });
+
+        it('should discover default store under home config when configDir is omitted', async () => {
+            const originalHome = process.env.HOME;
+            const originalUserProfile = process.env.USERPROFILE;
+            const tempHome = join(tempDir, 'home');
+            await fs.mkdir(tempHome, { recursive: true });
+            process.env.HOME = tempHome;
+            process.env.USERPROFILE = tempHome;
+
+            try {
+                const localStorePath = join(cwdDir, '.cortex', 'memory');
+                await fs.mkdir(localStorePath, { recursive: true });
+
+                const defaultStorePath = getDefaultGlobalStorePath();
+                await fs.mkdir(defaultStorePath, { recursive: true });
+
+                const result = await createCortexContext({
+                    cwd: cwdDir,
                 });
 
-                // Empty string is falsy, so should fall through to default resolution
                 expect(result.ok()).toBe(true);
                 if (result.ok()) {
-                    expect(result.value.scope).toBe('local');
+                    expect(result.value.cortex.registry.local?.path).toBe(localStorePath);
+                    expect(result.value.cortex.registry.default?.path).toBe(defaultStorePath);
                 }
+            } finally {
+                if (originalHome === undefined) {
+                    delete process.env.HOME;
+                } else {
+                    process.env.HOME = originalHome;
+                }
+                if (originalUserProfile === undefined) {
+                    delete process.env.USERPROFILE;
+                } else {
+                    process.env.USERPROFILE = originalUserProfile;
+                }
+            }
+        });
+    });
+
+    describe('resolveDefaultStoreName', () => {
+        it('should return explicit store name when provided', () => {
+            const cortex = Cortex.init({
+                rootDirectory: '/tmp',
+                registry: {
+                    local: { path: '/tmp/local' },
+                    default: { path: '/tmp/default' },
+                },
             });
+
+            const result = resolveDefaultStoreName('custom', cortex);
+            expect(result).toBe('custom');
+        });
+
+        it('should prefer local store when present', () => {
+            const cortex = Cortex.init({
+                rootDirectory: '/tmp',
+                registry: {
+                    local: { path: '/tmp/local' },
+                    default: { path: '/tmp/default' },
+                },
+            });
+
+            const result = resolveDefaultStoreName(undefined, cortex);
+            expect(result).toBe('local');
+        });
+
+        it('should fall back to default when local store missing', () => {
+            const cortex = Cortex.init({
+                rootDirectory: '/tmp',
+                registry: {
+                    default: { path: '/tmp/default' },
+                },
+            });
+
+            const result = resolveDefaultStoreName(undefined, cortex);
+            expect(result).toBe('default');
         });
     });
 

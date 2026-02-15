@@ -23,13 +23,13 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
-import { resolveStoreAdapter } from '../../context.ts';
+import { resolveDefaultStoreName } from '../../context.ts';
 
-import { createMemory, type ScopedStorageAdapter, type CortexContext } from '@yeseh/cortex-core';
+import { createMemory, type CortexContext } from '@yeseh/cortex-core';
 import { resolveMemoryContentInput } from '../../input.ts';
 
 /** Options parsed by Commander for the add command */
-export interface AddCommandOptions {
+export interface AddCommandOptions extends Record<string, unknown> {
     content?: string;
     file?: string;
     tags?: string[];
@@ -37,64 +37,14 @@ export interface AddCommandOptions {
     citation?: string[];
 }
 
-/** Dependencies injected into the handler for testability */
-export interface AddHandlerDeps {
-    stdin?: NodeJS.ReadableStream;
-    stdout?: NodeJS.WritableStream;
-    now?: Date;
-    /** Pre-resolved adapter for testing */
-    adapter?: ScopedStorageAdapter;
-    /** CortexContext for store resolution (preferred over direct adapter injection) */
-    ctx?: CortexContext;
-}
-
-const resolveAdapter = async (
-    storeName: string | undefined,
-    deps: AddHandlerDeps,
-): Promise<ScopedStorageAdapter> => {
-    // Use pre-resolved adapter if provided (for testing)
-    if (deps.adapter) {
-        return deps.adapter;
-    }
-
-    // Use CortexContext if provided (preferred path)
-    if (deps.ctx && storeName) {
-        const result = deps.ctx.cortex.getStore(storeName);
-        if (!result.ok()) {
-            throwCoreError(result.error);
-        }
-        return result.value;
-    }
-
-    // Fall back to existing resolution (for backward compatibility)
-    const adapterResult = await resolveStoreAdapter(storeName);
-    if (!adapterResult.ok()) {
-        throwCoreError(
-            adapterResult.error ?? {
-                code: 'STORE_RESOLUTION_FAILED',
-                message: 'Failed to resolve store adapter.',
-            },
-        );
-    }
-
-    if (!adapterResult.value) {
-        throwCoreError({
-            code: 'STORE_RESOLUTION_FAILED',
-            message: 'Failed to resolve store adapter.',
-        });
-    }
-
-    return adapterResult.value.adapter;
-};
-
 const resolveContent = async (
     options: AddCommandOptions,
-    deps: AddHandlerDeps,
+    stdin: NodeJS.ReadableStream,
 ): Promise<{ content: string; source: string }> => {
     const contentResult = await resolveMemoryContentInput({
         content: options.content,
         filePath: options.file,
-        stdin: deps.stdin ?? process.stdin,
+        stdin,
         requireStdinFlag: false,
         requireContent: true,
     });
@@ -144,25 +94,49 @@ const parseExpiresAt = (raw?: string): Date | undefined => {
 
 /**
  * Handler for the memory add command.
- * Exported for direct testing without Commander parsing.
  *
- * @param path - Memory path (e.g., "project/tech-stack")
- * @param options - Command options from Commander
- * @param storeName - Optional store name from parent command
- * @param deps - Injectable dependencies for testing
+ * Resolves the target store via {@link CortexContext} and writes a new memory
+ * using the core {@link createMemory} operation. Exported for direct testing
+ * without Commander parsing.
+ *
+ * Edge cases:
+ * - Throws when no content is provided via flags or stdin.
+ * - Throws when expiration or store name is invalid.
+ *
+ * @module cli/commands/memory/add
+ * @param ctx - CortexContext with cortex client, stdout, stdin, and now.
+ * @param path - Memory path (e.g., "project/tech-stack").
+ * @param options - Command options from Commander.
+ * @param storeName - Optional store name from parent command.
+ * @returns Promise that resolves when the memory is created and output is written.
+ *
+ * @example
+ * ```ts
+ * const ctxResult = await createCortexContext();
+ * if (ctxResult.ok()) {
+ *   await handleAdd(ctxResult.value, 'project/tech-stack', { content: 'Notes' }, undefined);
+ * }
+ * ```
  */
 export async function handleAdd(
+    ctx: CortexContext,
     path: string,
     options: AddCommandOptions,
     storeName: string | undefined,
-    deps: AddHandlerDeps = {},
 ): Promise<void> {
-    const adapter = await resolveAdapter(storeName, deps);
-    const contentInput = await resolveContent(options, deps);
+    // Get adapter from context
+    const resolvedStoreName = resolveDefaultStoreName(storeName, ctx.cortex);
+    const adapterResult = ctx.cortex.getStore(resolvedStoreName);
+    if (!adapterResult.ok()) {
+        throwCoreError(adapterResult.error);
+    }
+    const adapter = adapterResult.value;
+
+    const contentInput = await resolveContent(options, ctx.stdin);
     const tags = parseTags(options.tags);
     const expiresAt = parseExpiresAt(options.expiresAt);
     const citations = options.citation ?? [];
-    const now = deps.now ?? new Date();
+    const now = ctx.now;
 
     const createResult = await createMemory(
         adapter,
@@ -182,12 +156,11 @@ export async function handleAdd(
     }
 
     const memory = createResult.value;
-    const out = deps.stdout ?? process.stdout;
-    out.write(`Added memory ${memory.path.toString()} (${contentInput.source}).\n`);
+    ctx.stdout.write(`Added memory ${memory.path.toString()} (${contentInput.source}).\n`);
 }
 
 /**
- * The `memory add` subcommand.
+ * Builds the `memory add` subcommand.
  *
  * Creates a new memory at the specified path. Content can be provided via:
  * - `--content` flag for inline text
@@ -195,16 +168,29 @@ export async function handleAdd(
  * - stdin when piped
  *
  * The `--store` option is inherited from the parent `memory` command.
+ *
+ * @param ctx - CortexContext that supplies the Cortex client and I/O streams.
+ * @returns A configured Commander subcommand for `memory add`.
+ *
+ * @example
+ * ```ts
+ * const ctxResult = await createCortexContext();
+ * if (ctxResult.ok()) {
+ *   program.addCommand(createAddCommand(ctxResult.value));
+ * }
+ * ```
  */
-export const addCommand = new Command('add')
-    .description('Create a new memory')
-    .argument('<path>', 'Memory path (e.g., project/tech-stack)')
-    .option('-c, --content <text>', 'Memory content as inline text')
-    .option('-f, --file <filepath>', 'Read content from a file')
-    .option('-t, --tags <value...>', 'Tags (can be repeated or comma-separated)')
-    .option('-e, --expires-at <date>', 'Expiration date (ISO 8601)')
-    .option('--citation <value...>', 'Citation references (file paths or URLs)')
-    .action(async (path, options, command) => {
-        const parentOpts = command.parent?.opts() as { store?: string } | undefined;
-        await handleAdd(path, options, parentOpts?.store);
-    });
+export const createAddCommand = (ctx: CortexContext) => {
+    return new Command('add')
+        .description('Create a new memory')
+        .argument('<path>', 'Memory path (e.g., project/tech-stack)')
+        .option('-c, --content <text>', 'Memory content as inline text')
+        .option('-f, --file <filepath>', 'Read content from a file')
+        .option('-t, --tags <value...>', 'Tags (can be repeated or comma-separated)')
+        .option('-e, --expires-at <date>', 'Expiration date (ISO 8601)')
+        .option('--citation <value...>', 'Citation references (file paths or URLs)')
+        .action(async (path, options, command) => {
+            const parentOpts = command.parent?.opts() as { store?: string } | undefined;
+            await handleAdd(ctx, path, options, parentOpts?.store);
+        });
+};

@@ -18,6 +18,7 @@ import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
 import { loadRegistry } from '../../context.ts';
 import { serializeOutput, type OutputStoreRegistry, type OutputFormat } from '../../output.ts';
+import { type CortexContext } from '@yeseh/cortex-core';
 
 /**
  * Options for the list command.
@@ -28,15 +29,6 @@ export interface ListCommandOptions {
 }
 
 /**
- * Dependencies for the list command handler.
- * Allows injection for testing.
- */
-export interface ListHandlerDeps {
-    /** Output stream for writing results (defaults to process.stdout) */
-    stdout?: NodeJS.WritableStream;
-}
-
-/**
  * Handles the list command execution.
  *
  * This function:
@@ -44,13 +36,13 @@ export interface ListHandlerDeps {
  * 2. Formats the stores as a sorted list
  * 3. Serializes and outputs the result
  *
+ * @param ctx - CortexContext with Cortex client and output stream
  * @param options - Command options (format)
- * @param deps - Optional dependencies for testing
  * @throws {CommanderError} When the registry cannot be loaded or serialization fails
  */
 export async function handleList(
+    ctx: CortexContext,
     options: ListCommandOptions,
-    deps: ListHandlerDeps = {},
 ): Promise<void> {
     // 1. Load the registry
     const registryResult = await loadRegistry();
@@ -74,15 +66,17 @@ export async function handleList(
         throwCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
     }
 
-    const out = deps.stdout ?? process.stdout;
-    out.write(serialized.value + '\n');
+    ctx.stdout.write(serialized.value + '\n');
 }
 
 /**
- * The `list` subcommand for displaying all registered stores.
+ * Builds the `list` subcommand for displaying all registered stores.
  *
  * Reads the store registry and displays all stores sorted alphabetically
  * by name in the specified format.
+ *
+ * @param ctx - CortexContext providing the Cortex client and output stream.
+ * @returns A configured Commander subcommand for `store list`.
  *
  * @example
  * ```bash
@@ -90,9 +84,11 @@ export async function handleList(
  * cortex store list --format json
  * ```
  */
-export const listCommand = new Command('list')
-    .description('List all registered stores')
-    .option('-o, --format <format>', 'Output format (yaml, json, toon)', 'yaml')
-    .action(async (options) => {
-        await handleList(options);
-    });
+export const createListCommand = (ctx: CortexContext) => {
+    return new Command('list')
+        .description('List all registered stores')
+        .option('-o, --format <format>', 'Output format (yaml, json, toon)', 'yaml')
+        .action(async (options) => {
+            await handleList(ctx, options);
+        });
+};

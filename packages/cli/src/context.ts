@@ -1,111 +1,90 @@
 /**
  * Store resolution utilities for CLI commands.
  *
- * This module provides functions to resolve the store context (root directory)
- * based on command-line options, current working directory, and the global
- * store registry.
+ * This module provides functions to resolve registry paths and build
+ * a shared CortexContext for CLI handlers.
  */
 
+import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import {
-    loadConfig,
     Cortex,
     type CortexContext,
-    type CortexConfig,
     type CortexError,
-    type ConfigLoadError,
     type Result,
     err,
     ok,
 } from '@yeseh/cortex-core';
 import {
-    resolveStore,
     resolveStorePath,
-    type StoreResolutionError,
     type StoreRegistry,
     type StoreResolveError,
 } from '@yeseh/cortex-core/store';
 import {
     FilesystemRegistry,
-    FilesystemStorageAdapter,
     createFilesystemAdapterFactory,
 } from '@yeseh/cortex-storage-fs';
-import type { RegistryError, ScopedStorageAdapter, StoreNotFoundError } from '@yeseh/cortex-core/storage';
-
-/**
- * Result of resolving a store with its adapter.
- */
-export interface ResolvedStore {
-    /** The resolved store context with path information */
-    context: StoreContext;
-    /** Scoped storage adapter for store operations */
-    adapter: ScopedStorageAdapter;
-}
+import type { RegistryError, StoreNotFoundError } from '@yeseh/cortex-core/storage';
 
 /**
  * Resolved store context containing the root path and optional store name.
  */
-export interface StoreContext {
-    /** The resolved filesystem path to the store root */
-    root: string;
-    /** The store name if resolved from registry, undefined for local/default stores */
-    name?: string;
-    /** The scope of the resolved store */
-    scope: 'local' | 'global' | 'registry';
-}
-
-/**
- * Options for resolving store context.
- */
-export interface StoreContextOptions {
-    /** Current working directory (defaults to process.cwd()) */
-    cwd?: string;
-    /** Path to the global store (defaults to ~/.config/cortex/memory) */
-    globalStorePath?: string;
-    /** Path to the store registry (defaults to ~/.config/cortex/stores.yaml) */
-    registryPath?: string;
-}
-
 export type StoreContextErrorCode =
-    | 'CONFIG_LOAD_FAILED'
-    | 'STORE_RESOLUTION_FAILED'
     | 'REGISTRY_LOAD_FAILED'
-    | 'STORE_NOT_FOUND';
+    | 'STORE_NOT_FOUND'
+    | CortexError['code'];
 
 export interface StoreContextError {
     code: StoreContextErrorCode;
     message: string;
-    cause?: ConfigLoadError 
-        | StoreResolutionError 
-        | RegistryError 
-        | StoreResolveError 
-        | StoreNotFoundError
-        | CortexError;
+    cause?: RegistryError | StoreResolveError | StoreNotFoundError | CortexError;
 }
 /**
  * Default path to the global store.
+ *
+ * @module cli/context
+ * @param configDir - Optional config directory override.
+ * @returns Absolute path to `~/.config/cortex/memory` or the provided configDir.
+ *
+ * @example
+ * ```ts
+ * const path = getDefaultGlobalStorePath();
+ * // => /home/user/.config/cortex/memory
+ *
+ * const custom = getDefaultGlobalStorePath('/custom/config');
+ * // => /custom/config/memory
+ * ```
  */
-export const getDefaultGlobalStorePath = (): string =>
-    resolve(homedir(), '.config', 'cortex', 'memory');
+export const getDefaultGlobalStorePath = (configDir?: string): string =>
+    resolve(configDir ?? resolve(homedir(), '.config', 'cortex'), 'memory');
 
 /**
  * Default path to the store registry.
+ *
+ * @module cli/context
+ * @returns Absolute path to `~/.config/cortex/stores.yaml`.
+ *
+ * @example
+ * ```ts
+ * const path = getDefaultRegistryPath();
+ * // => /home/user/.config/cortex/stores.yaml
+ * ```
  */
 export const getDefaultRegistryPath = (): string =>
     resolve(homedir(), '.config', 'cortex', 'stores.yaml');
 
 /**
- * Resolves store context from the registry using a named store.
+ * Resolves a store path from the registry using a store name.
  *
  * @param storeName - The name of the store to look up
  * @param registryPath - Path to the store registry file
- * @returns Result with store context or error
+ * @returns Result with resolved store path or error
  */
-const resolveFromRegistry = async (
+export const resolveStorePathFromRegistry = async (
     storeName: string,
     registryPath: string,
-): Promise<Result<StoreContext, StoreContextError>> => {
+): Promise<Result<string, StoreContextError>> => {
     const registry = new FilesystemRegistry(registryPath);
     const registryResult = await registry.load();
     if (!registryResult.ok()) {
@@ -125,108 +104,27 @@ const resolveFromRegistry = async (
         });
     }
 
-    return ok({
-        root: pathResult.value,
-        name: storeName,
-        scope: 'registry',
-    });
-};
-
-/**
- * Resolves store context using the default resolution strategy.
- *
- * This follows the resolution order:
- * 1. Local store (.cortex/memory in cwd)
- * 2. Global store (~/.config/cortex/memory)
- *
- * @param cwd - Current working directory
- * @param globalStorePath - Path to the global store
- * @param config - Loaded configuration
- * @returns Result with store context or error
- */
-const resolveDefault = async (
-    cwd: string,
-    globalStorePath: string,
-    config: CortexConfig,
-): Promise<Result<StoreContext, StoreContextError>> => {
-    const storeResult = await resolveStore({
-        cwd,
-        globalStorePath,
-        config,
-    });
-
-    if (!storeResult.ok()) {
-        return err({
-            code: 'STORE_RESOLUTION_FAILED',
-            message: storeResult.error.message,
-            cause: storeResult.error,
-        });
-    }
-
-    return ok({
-        root: storeResult.value.root,
-        scope: storeResult.value.scope,
-    });
-};
-
-/**
- * Resolves the store context based on the provided options.
- *
- * Resolution strategy:
- * - If `storeName` is provided, looks up the store in the registry
- * - Otherwise, uses the default resolution (local store, then global store)
- *
- * @param storeName - Optional store name to look up in the registry
- * @param options - Resolution options (cwd, globalStorePath, registryPath)
- * @returns Result with the resolved store context or an error
- *
- * @example
- * ```ts
- * // Resolve default store
- * const result = await resolveStoreContext(undefined);
- * if (result.ok()) {
- *   console.log(result.value.root); // '/path/to/.cortex/memory'
- * }
- *
- * // Resolve named store from registry
- * const result = await resolveStoreContext('work');
- * if (result.ok()) {
- *   console.log(result.value.root); // '/path/to/work/store'
- *   console.log(result.value.name); // 'work'
- * }
- * ```
- */
-export const resolveStoreContext = async (
-    storeName: string | undefined,
-    options: StoreContextOptions = {},
-): Promise<Result<StoreContext, StoreContextError>> => {
-    const cwd = options.cwd ?? process.cwd();
-    const globalStorePath = options.globalStorePath ?? getDefaultGlobalStorePath();
-    const registryPath = options.registryPath ?? getDefaultRegistryPath();
-
-    // If a store name is provided, resolve from registry
-    if (storeName) {
-        return resolveFromRegistry(storeName, registryPath);
-    }
-
-    // Otherwise, load config and use default resolution
-    const configResult = await loadConfig({ cwd });
-    if (!configResult.ok()) {
-        return err({
-            code: 'CONFIG_LOAD_FAILED',
-            message: `Failed to load config: ${configResult.error.message}`,
-            cause: configResult.error,
-        });
-    }
-
-    return resolveDefault(cwd, globalStorePath, configResult.value);
+    return ok(pathResult.value);
 };
 
 /**
  * Loads the store registry from the default or specified path.
  *
- * @param registryPath - Optional path to the registry file
- * @returns Result with the loaded registry or error
+ * Edge cases:
+ * - Returns an empty registry when the registry file is missing.
+ * - Returns `REGISTRY_LOAD_FAILED` for parse or I/O failures.
+ *
+ * @module cli/context
+ * @param registryPath - Optional path to the registry file.
+ * @returns Result with the loaded registry or error.
+ *
+ * @example
+ * ```ts
+ * const registry = await loadRegistry();
+ * if (registry.ok()) {
+ *   console.log(Object.keys(registry.value));
+ * }
+ * ```
  */
 export const loadRegistry = async (
     registryPath?: string,
@@ -251,81 +149,20 @@ export const loadRegistry = async (
 };
 
 /**
- * Resolves store context and returns a scoped storage adapter.
- *
- * Uses the Registry pattern to get a storage adapter scoped to the resolved store.
- * For named stores, uses registry.getStore(). For local/global stores, creates
- * adapter directly.
- *
- * @param storeName - Optional store name to look up in the registry
- * @param options - Resolution options
- * @returns Result with resolved store and adapter, or error
+ * Options for creating a CortexContext.
  */
-export const resolveStoreAdapter = async (
-    storeName: string | undefined,
-    options: StoreContextOptions = {},
-): Promise<Result<ResolvedStore, StoreContextError>> => {
-    const registryPath = options.registryPath ?? getDefaultRegistryPath();
-
-    // If a store name is provided, use registry.getStore() for the adapter
-    if (storeName) {
-        const registry = new FilesystemRegistry(registryPath);
-        const registryResult = await registry.load();
-        if (!registryResult.ok()) {
-            return err({
-                code: 'REGISTRY_LOAD_FAILED',
-                message: `Failed to load store registry: ${registryResult.error.message}`,
-                cause: registryResult.error,
-            });
-        }
-
-        const adapterResult = registry.getStore(storeName);
-        if (!adapterResult.ok()) {
-            return err({
-                code: 'STORE_NOT_FOUND',
-                message: `Store '${storeName}' not found in registry`,
-                cause: adapterResult.error,
-            });
-        }
-
-        const pathResult = resolveStorePath(registryResult.value, storeName);
-        if (!pathResult.ok()) {
-            return err({
-                code: 'STORE_NOT_FOUND',
-                message: pathResult.error.message,
-                cause: pathResult.error,
-            });
-        }
-
-        return ok({
-            context: {
-                root: pathResult.value,
-                name: storeName,
-                scope: 'registry',
-            },
-            adapter: adapterResult.value,
-        });
-    }
-
-    // Otherwise, resolve default context and create adapter directly
-    const contextResult = await resolveStoreContext(undefined, options);
-    if (!contextResult.ok()) {
-        return contextResult;
-    }
-
-    const fsAdapter = new FilesystemStorageAdapter({
-        rootDirectory: contextResult.value.root,
-    });
-
-    return ok({
-        context: contextResult.value,
-        adapter: {
-            memories: fsAdapter.memories,
-            indexes: fsAdapter.indexes,
-            categories: fsAdapter.categories,
-        },
-    });
-};
+export interface CreateCortexContextOptions {
+    /** Config directory path (defaults to ~/.config/cortex) */
+    configDir?: string;
+    /** Current working directory for local store discovery */
+    cwd?: string;
+    /** Output stream for writing results */
+    stdout?: NodeJS.WritableStream;
+    /** Input stream for reading content */
+    stdin?: NodeJS.ReadableStream;
+    /** Current time for expiration checks and timestamps */
+    now?: Date;
+}
 
 /**
  * Creates a CortexContext for CLI usage.
@@ -334,8 +171,17 @@ export const resolveStoreAdapter = async (
  * and provides a context for command handlers. The context wraps a Cortex
  * instance that can resolve stores by name.
  *
- * @param configDir - Optional config directory (defaults to ~/.config/cortex)
- * @returns Result with CortexContext or error
+ * Auto-discovers stores if config is missing:
+ * - `.cortex/memory` in cwd → registered as `'local'`
+ * - `~/.config/cortex/memory` → registered as `'default'`
+ *
+ * Edge cases:
+ * - If config loading fails for any reason other than missing config, returns the error.
+ * - If no stores are discovered, the registry is empty and store lookups fail.
+ *
+ * @module cli/context
+ * @param options - Context creation options.
+ * @returns Result with CortexContext or error.
  *
  * @example
  * ```typescript
@@ -348,33 +194,130 @@ export const resolveStoreAdapter = async (
  *     }
  * }
  *
- * // Create context with custom config directory
- * const result = await createCortexContext('/custom/config/path');
+ * // Create context with custom config directory and I/O streams
+ * const custom = await createCortexContext({
+ *     configDir: '/custom/config/path',
+ *     cwd: '/path/to/project',
+ *     stdout: process.stdout,
+ *     stdin: process.stdin,
+ *     now: new Date(),
+ * });
  * ```
  */
 export const createCortexContext = async (
-    configDir?: string,
+    options: CreateCortexContextOptions = {},
 ): Promise<Result<CortexContext, StoreContextError>> => {
-    const dir = configDir ?? resolve(homedir(), '.config', 'cortex');
+    const dir = options.configDir ?? resolve(homedir(), '.config', 'cortex');
+    const cwd = options.cwd ?? process.cwd();
 
     const cortexResult = await Cortex.fromConfig(dir, createFilesystemAdapterFactory());
-    if (!cortexResult.ok()) {
-        // Handle case where config doesn't exist yet - create minimal Cortex
-        if (cortexResult.error.code === 'CONFIG_NOT_FOUND') {
-            const cortex = Cortex.init({
-                rootDirectory: dir,
-                registry: {},
+
+    // Build registry with discovered stores
+    const discoveredRegistry: Record<string, { path: string }> = {};
+
+    // Check for local store in cwd
+    const localStorePath = join(cwd, '.cortex', 'memory');
+    if (existsSync(localStorePath)) {
+        discoveredRegistry['local'] = { path: localStorePath };
+    }
+
+    // Check for global default store
+    const globalStorePath = getDefaultGlobalStorePath(dir);
+    if (existsSync(globalStorePath)) {
+        discoveredRegistry['default'] = { path: globalStorePath };
+    }
+
+    // If config loaded successfully, check if we need to merge discovered stores
+    if (cortexResult.ok()) {
+        // Check if any discovered stores are missing from config
+        const missingStores = Object.keys(discoveredRegistry).filter(
+            name => !cortexResult.value.registry[name],
+        );
+
+        if (missingStores.length > 0) {
+            // Recreate Cortex with merged registry (discovered stores + config stores)
+            const mergedRegistry = { ...discoveredRegistry, ...cortexResult.value.registry };
+            const recreatedCortex = Cortex.init({
+                rootDirectory: cortexResult.value.rootDirectory,
+                settings: cortexResult.value.settings,
+                registry: mergedRegistry,
                 adapterFactory: createFilesystemAdapterFactory(),
             });
-            return ok({ cortex });
+
+            return ok({
+                cortex: recreatedCortex,
+                stdout: options.stdout ?? process.stdout,
+                stdin: options.stdin ?? process.stdin,
+                now: options.now ?? new Date(),
+            });
         }
 
+        // Config is complete, use as-is
+        return ok({
+            cortex: cortexResult.value,
+            stdout: options.stdout ?? process.stdout,
+            stdin: options.stdin ?? process.stdin,
+            now: options.now ?? new Date(),
+        });
+    }
+
+    // If config load failed for a reason other than missing config, return error
+    if (cortexResult.error.code !== 'CONFIG_NOT_FOUND') {
         return err({
-            code: 'CONFIG_LOAD_FAILED',
+            code: cortexResult.error.code,
             message: cortexResult.error.message,
             cause: cortexResult.error,
         });
     }
 
-    return ok({ cortex: cortexResult.value });
+    // Config not found, create Cortex with discovered stores only
+    const cortex = Cortex.init({
+        rootDirectory: dir,
+        registry: discoveredRegistry,
+        adapterFactory: createFilesystemAdapterFactory(),
+    });
+
+    return ok({
+        cortex,
+        stdout: options.stdout ?? process.stdout,
+        stdin: options.stdin ?? process.stdin,
+        now: options.now ?? new Date(),
+    });
+};
+
+/**
+ * Resolves the store name to use for operations.
+ *
+ * Resolution order:
+ * 1. Explicit store name (from --store flag)
+ * 2. 'local' if registered in the Cortex registry
+ * 3. 'default' as fallback
+ *
+ * Edge cases:
+ * - Returns `'default'` even when the registry is empty; callers should
+ *   handle store lookup failures from {@link Cortex.getStore}.
+ *
+ * @module cli/context
+ * @param storeName - Explicit store name from command option, or undefined.
+ * @param cortex - Cortex instance to check registry.
+ * @returns Resolved store name.
+ *
+ * @example
+ * ```typescript
+ * const storeName = resolveDefaultStoreName(options.store, ctx.cortex);
+ * const adapterResult = ctx.cortex.getStore(storeName);
+ * ```
+ */
+export const resolveDefaultStoreName = (
+    storeName: string | undefined,
+    cortex: Cortex,
+): string => {
+    if (storeName) {
+        return storeName;
+    }
+    // Prefer 'local' if it exists in the registry
+    if ('local' in cortex.registry) {
+        return 'local';
+    }
+    return 'default';
 };

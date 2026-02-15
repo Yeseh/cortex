@@ -16,67 +16,36 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
-import { resolveStoreAdapter } from '../../context.ts';
-import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
+import { resolveDefaultStoreName } from '../../context.ts';
 import { type CortexContext } from '@yeseh/cortex-core';
-
-/**
- * Dependencies for the reindex command handler.
- * Allows injection for testing.
- */
-export interface ReindexHandlerDeps {
-    /** Output stream for writing results (defaults to process.stdout) */
-    stdout?: NodeJS.WritableStream;
-    /** Pre-resolved adapter for testing */
-    adapter?: ScopedStorageAdapter;
-    /** CortexContext for store resolution (preferred) */
-    ctx?: CortexContext;
-}
 
 /**
  * Handles the reindex command execution.
  *
  * This function:
- * 1. Resolves the store context (from --store option or default resolution)
- * 2. Creates a filesystem adapter for the store
- * 3. Rebuilds the category indexes
- * 4. Outputs the result
+ * 1. Resolves the store adapter from CortexContext
+ * 2. Rebuilds the category indexes
+ * 3. Outputs the result
  *
- * @param storeName - Optional store name from parent --store option
- * @param deps - Optional dependencies for testing
- * @throws {CommanderError} When store resolution or reindexing fails
+ * @param ctx - CortexContext providing store resolution and I/O streams.
+ * @param storeName - Optional store name from parent --store option;
+ *   when `undefined`, uses the default store resolution.
+ * @returns Promise that resolves after output is written.
+ * @throws {CommanderError} When store resolution or reindexing fails.
  */
 export async function handleReindex(
+    ctx: CortexContext,
     storeName: string | undefined,
-    deps: ReindexHandlerDeps = {},
 ): Promise<void> {
-    // 1. Resolve store adapter
-    let adapter: ScopedStorageAdapter;
-    let storeRoot: string;
+    // 1. Resolve store adapter from context
+    const resolvedStoreName = resolveDefaultStoreName(storeName, ctx.cortex);
+    const adapterResult = ctx.cortex.getStore(resolvedStoreName);
+    if (!adapterResult.ok()) {
+        throwCoreError(adapterResult.error);
+    }
+    const adapter = adapterResult.value;
 
-    // Use pre-resolved adapter if provided (testing)
-    if (deps.adapter) {
-        adapter = deps.adapter;
-        storeRoot = storeName ?? 'test-store';
-    }
-    // Use CortexContext if provided with store name
-    else if (deps.ctx && storeName) {
-        const result = deps.ctx.cortex.getStore(storeName);
-        if (!result.ok()) {
-            throwCoreError(result.error);
-        }
-        adapter = result.value;
-        storeRoot = storeName;
-    }
-    // Fall back to legacy resolveStoreAdapter
-    else {
-        const storeResult = await resolveStoreAdapter(storeName);
-        if (!storeResult.ok()) {
-            throwCoreError(storeResult.error);
-        }
-        adapter = storeResult.value.adapter;
-        storeRoot = storeResult.value.context.root;
-    }
+    const out = ctx.stdout;
 
     // 2. Reindex
     const reindexResult = await adapter.indexes.reindex();
@@ -85,15 +54,17 @@ export async function handleReindex(
     }
 
     // 3. Output result
-    const out = deps.stdout ?? process.stdout;
-    out.write(`Reindexed category indexes for ${storeRoot}.\n`);
+    out.write(`Reindexed category indexes for ${resolvedStoreName}.\n`);
 }
 
 /**
- * The `reindex` subcommand for rebuilding category indexes.
+ * Builds the `reindex` subcommand for rebuilding category indexes.
  *
  * Rebuilds the category indexes for a store, which can help repair corrupted
  * indexes or synchronize them after manual file changes.
+ *
+ * @param ctx - CortexContext providing the Cortex client and output stream.
+ * @returns A configured Commander subcommand for `store reindex`.
  *
  * @example
  * ```bash
@@ -101,9 +72,11 @@ export async function handleReindex(
  * cortex store --store work reindex
  * ```
  */
-export const reindexCommand = new Command('reindex')
-    .description('Rebuild category indexes for the store')
-    .action(async (_options, command) => {
-        const parentOpts = command.parent?.opts() as { store?: string } | undefined;
-        await handleReindex(parentOpts?.store);
-    });
+export const createReindexCommand = (ctx: CortexContext) => {
+    return new Command('reindex')
+        .description('Rebuild category indexes for the store')
+        .action(async (_options, command) => {
+            const parentOpts = command.parent?.opts() as { store?: string } | undefined;
+            await handleReindex(ctx, parentOpts?.store);
+        });
+};

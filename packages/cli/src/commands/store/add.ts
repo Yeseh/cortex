@@ -25,6 +25,7 @@ import { isValidStoreName } from '@yeseh/cortex-core/store';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { serializeOutput, type OutputStore, type OutputFormat } from '../../output.ts';
 import { resolveUserPath } from '../../paths.ts';
+import { type CortexContext } from '@yeseh/cortex-core';
 
 /**
  * Options for the add command.
@@ -32,17 +33,6 @@ import { resolveUserPath } from '../../paths.ts';
 export interface AddCommandOptions {
     /** Output format (yaml, json, toon) */
     format?: string;
-}
-
-/**
- * Dependencies for the add command handler.
- * Allows injection for testing.
- */
-export interface AddHandlerDeps {
-    /** Output stream for writing results (defaults to process.stdout) */
-    stdout?: NodeJS.WritableStream;
-    /** Current working directory (defaults to process.cwd()) */
-    cwd?: string;
 }
 
 /**
@@ -109,21 +99,22 @@ function writeOutput(
  * 5. Adds the store to the registry and saves
  * 6. Outputs the result
  *
- * @param name - The store name to register
- * @param storePath - The filesystem path to the store
- * @param options - Command options (format)
- * @param deps - Optional dependencies for testing
+ * @param ctx - CortexContext with output stream.
+ * @param name - The store name to register.
+ * @param storePath - The filesystem path to the store.
+ * @param options - Command options (format).
+ * @returns Promise that resolves after output is written.
  * @throws {InvalidArgumentError} When the store name or path is invalid
  * @throws {CommanderError} When the store already exists or registry operations fail
  */
 export async function handleAdd(
+    ctx: CortexContext,
     name: string,
     storePath: string,
     options: AddCommandOptions = {},
-    deps: AddHandlerDeps = {},
 ): Promise<void> {
-    const cwd = deps.cwd ?? process.cwd();
     const registryPath = getDefaultRegistryPath();
+    const cwd = process.cwd();
 
     // 1. Validate inputs
     const trimmedName = validateStoreName(name);
@@ -159,15 +150,18 @@ export async function handleAdd(
     // 5. Output result
     const output: OutputStore = { name: trimmedName, path: resolvedPath };
     const format: OutputFormat = (options.format as OutputFormat) ?? 'yaml';
-    writeOutput(output, format, deps.stdout ?? process.stdout);
+    writeOutput(output, format, ctx.stdout);
 }
 
 /**
- * The `add` subcommand for registering a new store.
+ * Builds the `add` subcommand for registering a new store.
  *
  * Registers a store with the given name and filesystem path. The path is
  * resolved relative to the current working directory, with support for
  * tilde expansion.
+ *
+ * @param ctx - CortexContext providing the Cortex client and output stream.
+ * @returns A configured Commander subcommand for `store add`.
  *
  * @example
  * ```bash
@@ -175,11 +169,13 @@ export async function handleAdd(
  * cortex store add project ./cortex --format json
  * ```
  */
-export const addCommand = new Command('add')
-    .description('Register a new store')
-    .argument('<name>', 'Store name (lowercase slug)')
-    .argument('<path>', 'Filesystem path to the store')
-    .option('-o, --format <format>', 'Output format (yaml, json, toon)', 'yaml')
-    .action(async (name, path, options) => {
-        await handleAdd(name, path, options);
-    });
+export const createAddCommand = (ctx: CortexContext) => {
+    return new Command('add')
+        .description('Register a new store')
+        .argument('<name>', 'Store name (lowercase slug)')
+        .argument('<path>', 'Filesystem path to the store')
+        .option('-o, --format <format>', 'Output format (yaml, json, toon)', 'yaml')
+        .action(async (name, path, options) => {
+            await handleAdd(ctx, name, path, options);
+        });
+};

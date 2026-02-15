@@ -300,8 +300,12 @@ export class Cortex {
 /**
  * Shared context object passed to CLI and MCP handlers.
  *
- * Provides access to the Cortex root client and allows for future
- * extensions like logging, user context, or request tracing.
+ * Provides access to the Cortex root client and I/O streams for
+ * consistent handling across all command handlers. The CLI uses
+ * {@link createCortexContext} to create this object, while the MCP
+ * server wires it at startup.
+ *
+ * @module core/cortex
  *
  * @example
  * ```typescript
@@ -321,4 +325,10 @@ export class Cortex {
 export interface CortexContext {
     /** Root Cortex client instance */
     cortex: Cortex;
+    /** Output stream for writing results */
+    stdout: NodeJS.WritableStream;
+    /** Input stream for reading content */
+    stdin: NodeJS.ReadableStream;
+    /** Current time for expiration checks and timestamps */
+    now: Date;
 }
