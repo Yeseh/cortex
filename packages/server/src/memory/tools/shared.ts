@@ -9,7 +9,7 @@ import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { join } from 'node:path';
 import type { Result } from '@yeseh/cortex-core';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
-import { err, ok, type MemoryError } from '@yeseh/cortex-core';
+import { err, ok, type MemoryError, type Cortex } from '@yeseh/cortex-core';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import type { ServerConfig } from '../../config.ts';
 
@@ -32,8 +32,11 @@ export const tagsSchema = z.array(z.string()).optional();
 // Shared types
 // ---------------------------------------------------------------------------
 
+/** Context passed to MCP tool handlers */
 export interface ToolContext {
     config: ServerConfig;
+    /** Optional Cortex instance for store resolution (preferred when available) */
+    cortex?: Cortex;
 }
 
 /** Standard MCP tool response with text content */
@@ -48,16 +51,27 @@ export interface McpToolResponse {
 
 /**
  * Resolves a storage adapter for the given store.
+ * Uses Cortex if available, falls back to FilesystemRegistry.
  *
- * @param config - Server configuration containing data path
+ * @param ctx - Tool context containing config and optional Cortex instance
  * @param storeName - Name of the store to resolve
  * @returns A Result containing either the adapter or an MCP error
  */
 export const resolveStoreAdapter = async (
-    config: ServerConfig,
+    ctx: ToolContext,
     storeName: string,
 ): Promise<Result<ScopedStorageAdapter, McpError>> => {
-    const registryPath = join(config.dataPath, 'stores.yaml');
+    // Use Cortex if available (preferred path)
+    if (ctx.cortex) {
+        const result = ctx.cortex.getStore(storeName);
+        if (!result.ok()) {
+            return err(new McpError(ErrorCode.InvalidParams, result.error.message));
+        }
+        return ok(result.value);
+    }
+
+    // Fall back to FilesystemRegistry (backward compatibility)
+    const registryPath = join(ctx.config.dataPath, 'stores.yaml');
     const registry = new FilesystemRegistry(registryPath);
     const registryResult = await registry.load();
 

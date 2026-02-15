@@ -34,7 +34,7 @@ export const removeMemoryHandler = async (
     ctx: ToolContext,
     input: RemoveMemoryInput,
 ): Promise<McpToolResponse> => {
-    const adapterResult = await resolveStoreAdapter(ctx.config, input.store);
+    const adapterResult = await resolveStoreAdapter(ctx, input.store);
     if (!adapterResult.ok()) {
         throw adapterResult.error;
     }

@@ -16,9 +16,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import { join } from 'node:path';
-import { err, ok, type Result } from '@yeseh/cortex-core';
-import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
+import type { Cortex } from '@yeseh/cortex-core';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 import type { CategoryStorage } from '@yeseh/cortex-core/category';
 import {
@@ -29,6 +27,12 @@ import {
 } from '@yeseh/cortex-core/category';
 import type { ServerConfig } from '../config.ts';
 import { storeNameSchema } from '../store/tools.ts';
+import {
+    resolveStoreAdapter,
+    parseInput,
+    type ToolContext,
+    type McpToolResponse,
+} from '../memory/tools/shared.ts';
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -123,61 +127,6 @@ export interface DeleteCategoryInput {
     path: string;
 }
 
-/** Tool execution context containing server configuration */
-interface ToolContext {
-    /** Server configuration with default store and memory path */
-    config: ServerConfig;
-}
-
-/** Standard MCP tool response with JSON text content */
-interface McpToolResponse {
-    [key: string]: unknown;
-    /** Response content array with JSON-encoded result */
-    content: { type: 'text'; text: string }[];
-}
-
-/**
- * Resolves the store adapter from the registry.
- *
- * Loads the registry, resolves the store, and returns a scoped storage adapter.
- * For operations that require auto-creation (like createCategory), the adapter
- * is returned even if the store directory doesn't exist yet.
- *
- * @param config - Server configuration
- * @param storeName - Required store name
- * @returns Result with the ScopedStorageAdapter or MCP error
- */
-const resolveStoreAdapter = async (
-    config: ServerConfig,
-    storeName: string,
-): Promise<Result<ScopedStorageAdapter, McpError>> => {
-    const registryPath = join(config.dataPath, 'stores.yaml');
-    const registry = new FilesystemRegistry(registryPath);
-    const registryResult = await registry.load();
-
-    if (!registryResult.ok()) {
-        // Map REGISTRY_MISSING to appropriate error
-        if (registryResult.error.code === 'REGISTRY_MISSING') {
-            return err(
-                new McpError(ErrorCode.InternalError, `Store registry not found at ${registryPath}`),
-            );
-        }
-        return err(
-            new McpError(
-                ErrorCode.InternalError,
-                `Failed to load store registry: ${registryResult.error.message}`,
-            ),
-        );
-    }
-
-    const storeResult = registry.getStore(storeName);
-    if (!storeResult.ok()) {
-        return err(new McpError(ErrorCode.InvalidParams, storeResult.error.message));
-    }
-
-    return ok(storeResult.value);
-};
-
 /**
  * Creates a CategoryStorage adapter from a ScopedStorageAdapter.
  *
@@ -189,25 +138,6 @@ const resolveStoreAdapter = async (
  */
 const createCategoryStoragePort = (adapter: ScopedStorageAdapter): CategoryStorage => {
     return adapter.categories;
-};
-
-/**
- * Parses and validates input against a Zod schema.
- *
- * @param schema - Zod schema to validate against
- * @param input - Raw input from MCP tool call
- * @returns Validated and typed input
- * @throws McpError with InvalidParams code if validation fails
- */
-const parseInput = <T>(schema: z.ZodSchema<T>, input: unknown): T => {
-    const result = schema.safeParse(input);
-    if (!result.success) {
-        const message = result.error.issues
-            .map((i) => `${i.path.join('.')}: ${i.message}`)
-            .join('; ');
-        throw new McpError(ErrorCode.InvalidParams, message);
-    }
-    return result.data;
 };
 
 // ---------------------------------------------------------------------------
@@ -239,7 +169,7 @@ export const createCategoryHandler = async (
     ctx: ToolContext,
     input: CreateCategoryInput,
 ): Promise<McpToolResponse> => {
-    const adapterResult = await resolveStoreAdapter(ctx.config, input.store);
+    const adapterResult = await resolveStoreAdapter(ctx, input.store);
     if (!adapterResult.ok()) {
         throw adapterResult.error;
     }
@@ -299,7 +229,7 @@ export const setCategoryDescriptionHandler = async (
     ctx: ToolContext,
     input: SetCategoryDescriptionInput,
 ): Promise<McpToolResponse> => {
-    const adapterResult = await resolveStoreAdapter(ctx.config, input.store);
+    const adapterResult = await resolveStoreAdapter(ctx, input.store);
     if (!adapterResult.ok()) {
         throw adapterResult.error;
     }
@@ -362,7 +292,7 @@ export const deleteCategoryHandler = async (
     ctx: ToolContext,
     input: DeleteCategoryInput,
 ): Promise<McpToolResponse> => {
-    const adapterResult = await resolveStoreAdapter(ctx.config, input.store);
+    const adapterResult = await resolveStoreAdapter(ctx, input.store);
     if (!adapterResult.ok()) {
         throw adapterResult.error;
     }
@@ -408,6 +338,7 @@ export const deleteCategoryHandler = async (
  *
  * @param server - MCP server instance to register tools with
  * @param config - Server configuration with store defaults
+ * @param cortex - Optional Cortex instance for store resolution (preferred when available)
  *
  * @example
  * ```typescript
@@ -418,8 +349,12 @@ export const deleteCategoryHandler = async (
  * registerCategoryTools(server, config);
  * ```
  */
-export const registerCategoryTools = (server: McpServer, config: ServerConfig): void => {
-    const ctx: ToolContext = { config };
+export const registerCategoryTools = (
+    server: McpServer,
+    config: ServerConfig,
+    cortex?: Cortex,
+): void => {
+    const ctx: ToolContext = { config, cortex };
 
     server.tool(
         'cortex_create_category',
