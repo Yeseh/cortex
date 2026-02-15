@@ -7,7 +7,6 @@
  * @module storage-fs/index-serialization
  */
 
-import YAML from 'yaml';
 import { z } from 'zod';
 import { CategoryPath, err, MemoryPath, ok, type Result } from '@yeseh/cortex-core';
 import type { CategoryIndex } from '@yeseh/cortex-core/index';
@@ -59,7 +58,7 @@ const CategoryIndexSchema = z.object({
 export const parseIndex = (raw: string): Result<CategoryIndex, IndexSerializationError> => {
     let parsedYaml: unknown;
     try {
-        parsedYaml = YAML.parse(raw) as unknown;
+        parsedYaml = Bun.YAML.parse(raw) as unknown;
     }
     catch (cause) {
         return err({
@@ -119,7 +118,7 @@ export const serializeIndex = (index: CategoryIndex): Result<string, IndexSerial
     };
 
     try {
-        return ok(YAML.stringify(yamlData));
+        return ok(Bun.YAML.stringify(yamlData));
     }
     catch (cause) {
         return err({

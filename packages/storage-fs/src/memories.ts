@@ -21,7 +21,6 @@ import type {
 } from '@yeseh/cortex-core/memory';
 import { dateSchema, nonEmptyStringSchema, tagsSchema, ok, err } from '@yeseh/cortex-core';
 import z from 'zod';
-import * as yaml from 'yaml';
 import type { FilesystemContext, StringOrNullResult } from './types.ts';
 import { isNotFoundError, resolveStoragePath } from './utils.ts';
 
@@ -142,6 +141,9 @@ const mapZodErrorCode = (field: string | undefined, fieldExists: boolean): Memor
 /**
  * Parses YAML frontmatter lines into MemoryMetadata.
  *
+ * Note: Uses Bun.YAML which follows YAML 1.2 spec behavior for duplicate keys
+ * (last value wins). Duplicate key detection is not supported.
+ *
  * @param frontmatterLines - Array of lines from the frontmatter section
  * @returns Result containing MemoryMetadata or MemoryError
  */
@@ -150,29 +152,8 @@ const parseMetadata = (frontmatterLines: string[]): ParseMetadataResult => {
 
     let data: unknown;
     try {
-        const doc = yaml.parseDocument(frontmatterText, { uniqueKeys: true });
-
-        const hasDuplicateKeyIssue = [
-            ...doc.errors, ...doc.warnings,
-        ].some((issue) =>
-            /duplicate key/i.test(issue.message),
-        );
-
-        if (hasDuplicateKeyIssue) {
-            return err({
-                code: 'INVALID_FRONTMATTER',
-                message: 'Duplicate frontmatter key.',
-            });
-        }
-
-        if (doc.errors.length > 0) {
-            return err({
-                code: 'INVALID_FRONTMATTER',
-                message: 'Invalid YAML frontmatter.',
-            });
-        }
-
-        data = doc.toJS();
+        // Bun.YAML follows YAML 1.2 spec: duplicate keys use last value
+        data = Bun.YAML.parse(frontmatterText);
     }
     catch {
         return err({
@@ -299,7 +280,7 @@ export const serializeMemory = (memory: MemoryFile): SerializeMemoryResult => {
             : {}),
     };
 
-    const frontmatterBody = yaml.stringify(frontmatterData).trimEnd();
+    const frontmatterBody = Bun.YAML.stringify(frontmatterData).trimEnd();
     const frontmatter = `---\n${frontmatterBody}\n---`;
     const content = memory.content ?? '';
     const separator = content.length > 0 && !content.startsWith('\n') ? '\n' : '';

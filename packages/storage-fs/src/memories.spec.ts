@@ -189,7 +189,7 @@ describe('memory file parsing', () => {
         }
     });
 
-    it('should reject duplicate frontmatter keys', () => {
+    it('should use last value when duplicate frontmatter keys exist', () => {
         const raw = [
             '---',
             'created_at: 2024-01-01T00:00:00.000Z',
@@ -198,14 +198,14 @@ describe('memory file parsing', () => {
             'source: user',
             'source: duplicate',
             '---',
-            'Duplicate keys.',
+            'Duplicate keys use last value.',
         ].join('\n');
 
         const result = parseMemory(raw);
 
-        expect(result.ok()).toBe(false);
-        if (!result.ok()) {
-            expect(result.error.code).toBe('INVALID_FRONTMATTER');
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
+            expect(result.value.metadata.source).toBe('duplicate');
         }
     });
 
