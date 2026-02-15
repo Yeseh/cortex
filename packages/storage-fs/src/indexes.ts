@@ -11,7 +11,7 @@ import { dirname, extname, relative, resolve } from 'node:path';
 import { CategoryPath, type Result } from '@yeseh/cortex-core';
 import { type Memory, MemoryPath } from '@yeseh/cortex-core/memory';
 import type { ReindexResult, StorageAdapterError } from '@yeseh/cortex-core/storage';
-import type { CategoryIndex, IndexMemoryEntry } from '@yeseh/cortex-core/index';
+import type { Category, CategoryMemoryEntry } from '@yeseh/cortex-core/category';
 import { defaultTokenizer, err, ok } from '@yeseh/cortex-core';
 import type { DirEntriesResult, FilesystemContext, StringOrNullResult } from './types.ts';
 import { isNotFoundError, resolveStoragePath, toSlugPathFromRelative } from './utils.ts';
@@ -22,7 +22,7 @@ import { parseIndex, serializeIndex } from './index-serialization.ts';
  * Internal state for building indexes during reindex.
  */
 interface IndexBuildState {
-    indexes: Map<string, CategoryIndex>;
+    indexes: Map<string, Category>;
     parentSubcategories: Map<string, Set<string>>;
     warnings: string[];
 }
@@ -140,13 +140,13 @@ export const writeIndexFile = async (
  * @param ctx - Filesystem context with configuration
  * @param name - Index name (category path, or empty string for root)
  * @param options - Options for handling missing indexes
- * @returns Parsed CategoryIndex or error
+ * @returns Parsed Category or error
  */
 export const readCategoryIndex = async (
     ctx: FilesystemContext,
     name: CategoryPath,
     options: { createWhenMissing?: boolean } = {},
-): Promise<Result<CategoryIndex, StorageAdapterError>> => {
+): Promise<Result<Category, StorageAdapterError>> => {
     const contents = await readIndexFile(ctx, name);
     if (!contents.ok()) {
         return contents;
@@ -178,13 +178,13 @@ export const readCategoryIndex = async (
  *
  * @param ctx - Filesystem context with configuration
  * @param name - Index name (category path, or empty string for root)
- * @param index - The CategoryIndex to write
+ * @param index - The Category to write
  * @returns Success or error
  */
 export const writeCategoryIndex = async (
     ctx: FilesystemContext,
     name: CategoryPath,
-    index: CategoryIndex,
+    index: Category,
 ): Promise<Result<void, StorageAdapterError>> => {
     const serialized = serializeIndex(index);
     if (!serialized.ok()) {
@@ -207,7 +207,7 @@ export const writeCategoryIndex = async (
 export const upsertMemoryEntry = async (
     ctx: FilesystemContext,
     indexName: CategoryPath,
-    entry: IndexMemoryEntry,
+    entry: CategoryMemoryEntry,
     options: { createWhenMissing?: boolean } = {},
 ): Promise<Result<void, StorageAdapterError>> => {
     const indexResult = await readCategoryIndex(ctx, indexName, options);
@@ -221,7 +221,7 @@ export const upsertMemoryEntry = async (
     );
     memories.push(entry);
     memories.sort((a, b) => a.path.toString().localeCompare(b.path.toString()));
-    const nextIndex: CategoryIndex = {
+    const nextIndex: Category = {
         memories,
         subcategories: indexResult.value.subcategories,
     };
@@ -258,7 +258,7 @@ export const upsertSubcategoryEntry = async (
         ...(existing?.description ? { description: existing.description } : {}),
     });
     subcategories.sort((a, b) => a.path.toString().localeCompare(b.path.toString()));
-    const nextIndex: CategoryIndex = {
+    const nextIndex: Category = {
         memories: current.value.memories,
         subcategories,
     };
@@ -449,7 +449,7 @@ const collectMemoryFiles = async (
  * Adds an index entry to the in-memory index map.
  */
 const addIndexEntry = (
-    indexes: Map<string, CategoryIndex>,
+    indexes: Map<string, Category>,
     memoryPath: MemoryPath,
     tokenEstimate: number,
     updatedAt?: Date,
@@ -505,7 +505,7 @@ const recordParentSubcategory = (
  * Applies parent subcategory relationships to indexes.
  */
 const applyParentSubcategories = (
-    indexes: Map<string, CategoryIndex>,
+    indexes: Map<string, Category>,
     parentSubcategories: Map<string, Set<string>>,
 ): void => {
     for (const [
@@ -515,7 +515,7 @@ const applyParentSubcategories = (
             memories: [],
             subcategories: [],
         };
-        const subcategoryEntries: CategoryIndex['subcategories'] = [];
+        const subcategoryEntries: Category['subcategories'] = [];
         for (const subcategoryPath of subcategories.values()) {
             const memoryCount = indexes.get(subcategoryPath)?.memories.length ?? 0;
             const categoryPathObj = CategoryPath.fromString(subcategoryPath).unwrap();
@@ -610,7 +610,7 @@ const buildIndexState = async (
     ctx: FilesystemContext,
     filePaths: string[],
 ): Promise<IndexBuildResult> => {
-    const indexes = new Map<string, CategoryIndex>();
+    const indexes = new Map<string, Category>();
     const parentSubcategories = new Map<string, Set<string>>();
     const usedPaths = new Set<string>();
     const warnings: string[] = [];
@@ -669,7 +669,7 @@ const buildIndexState = async (
 const rebuildIndexFiles = async (
     ctx: FilesystemContext,
     targetRoot: string,
-    indexes: Map<string, CategoryIndex>,
+    indexes: Map<string, Category>,
 ): Promise<Result<void, StorageAdapterError>> => {
     const sortedIndexes = Array.from(indexes.entries()).sort((a, b) => a[0].localeCompare(b[0]));
     for (const [
@@ -789,7 +789,7 @@ const collectIndexFiles = async (
  */
 const removeStaleIndexFiles = async (
     ctx: FilesystemContext,
-    indexes: Map<string, CategoryIndex>,
+    indexes: Map<string, Category>,
     existingIndexPaths: string[],
 ): Promise<Result<void, StorageAdapterError>> => {
     const newIndexPaths = new Set<string>();

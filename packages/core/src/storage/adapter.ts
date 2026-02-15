@@ -21,7 +21,7 @@
 
 import type { Memory } from '@/memory/memory';
 import type { Result } from '@/result.ts';
-import type { CategoryIndex } from '../index/types.ts';
+import type { Category } from '../category/types.ts';
 import type { CategoryStorage } from '../category/types.ts';
 import type {
     StoreRegistry,
@@ -147,7 +147,7 @@ export interface MemoryStorage {
  * // Read and update an index after memory changes
  * const indexResult = await storage.read('project/cortex');
  * if (indexResult.ok && indexResult.value) {
- *   const updatedIndex: CategoryIndex = {
+ *   const updatedIndex: Category = {
  *     ...indexResult.value,
  *     memories: [...indexResult.value.memories],
  *   };
@@ -172,7 +172,7 @@ export interface IndexStorage {
      * - Passing an empty string reads the root index.
      * - When the index file is missing, the result is `ok(null)` rather than an error.
      */
-    read(category: CategoryPath): Promise<Result<CategoryIndex | null, StorageAdapterError>>;
+    read(category: CategoryPath): Promise<Result<Category | null, StorageAdapterError>>;
 
     /**
      * Writes contents to an index file.
@@ -192,7 +192,7 @@ export interface IndexStorage {
      * - Writing to the root index uses an empty string as the path.
      * - Serialization failures (e.g., invalid paths or counts) surface as `INDEX_ERROR`.
      */
-    write(path: CategoryPath, contents: CategoryIndex
+    write(path: CategoryPath, contents: Category
     ): Promise<Result<void, StorageAdapterError>>;
 
     /**

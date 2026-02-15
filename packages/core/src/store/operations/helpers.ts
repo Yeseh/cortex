@@ -4,7 +4,7 @@
  * @module core/store/operations/helpers
  */
 
-import type { CategoryIndex } from '@/index/types.ts';
+import type { Category } from '@/category/types.ts';
 import { CategoryPath } from '@/category/category-path.ts';
 
 /**
@@ -18,7 +18,7 @@ import { CategoryPath } from '@/category/category-path.ts';
  * const index = buildEmptyIndex(['project', 'human']);
  * ```
  */
-export const buildEmptyIndex = (subcategories: string[] = []): CategoryIndex => ({
+export const buildEmptyIndex = (subcategories: string[] = []): Category => ({
     memories: [],
     subcategories: subcategories
         .map((name) => {

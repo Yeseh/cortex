@@ -8,7 +8,6 @@ export * from './result.ts';
 export * from './memory';
 export * from './category';
 export * from './store';
-export * from './index';
 export * from './storage/adapter.ts';
 
 export {

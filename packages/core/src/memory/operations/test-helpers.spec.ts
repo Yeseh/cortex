@@ -15,7 +15,7 @@ import type {
 } from '@/storage/adapter.ts';
 import { err, ok } from '@/result.ts';
 import { Memory, type MemoryMetadata } from '@/memory/memory.ts';
-import type { CategoryIndex } from '@/index/types.ts';
+import type { Category } from '@/category/types.ts';
 import type { CategoryStorage } from '@/category/types.ts';
 import type { StoreRegistry } from '@/store/registry.ts';
 import { CategoryPath } from '@/category/category-path.ts';
@@ -27,9 +27,9 @@ import { MemoryPath } from '@/memory/memory-path.ts';
 // ============================================================================
 
 export const buildIndex = (
-    memories: CategoryIndex['memories'],
-    subcategories: CategoryIndex['subcategories'],
-): CategoryIndex => ({
+    memories: Category['memories'],
+    subcategories: Category['subcategories'],
+): Category => ({
     memories,
     subcategories,
 });

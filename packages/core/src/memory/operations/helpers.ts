@@ -11,7 +11,7 @@
 
 import type { Result } from '@/result.ts';
 import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
-import type { CategoryIndex } from '@/index/types.ts';
+import type { Category } from '@/category/types.ts';
 import { memoryError, type MemoryError, type MemoryResult } from '@/memory/result.ts';
 import { ok } from '@/result.ts';
 import type { ListedMemory, ListedSubcategory } from './list.ts';
@@ -35,7 +35,7 @@ import { CategoryPath } from '@/category/category-path.ts';
 export const readCategoryIndex = async (
     storage: ScopedStorageAdapter,
     categoryPath: CategoryPath,
-): Promise<Result<CategoryIndex | null, MemoryError>> => {
+): Promise<Result<Category | null, MemoryError>> => {
     const result = await storage.indexes.read(categoryPath);
     if (!result.ok()) {
         return memoryError('STORAGE_ERROR', `Failed to read index: ${categoryPath}`, {
