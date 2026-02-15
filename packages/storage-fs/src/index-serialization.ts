@@ -1,7 +1,7 @@
 /**
  * Internal serialization helpers for category indexes.
  *
- * Converts between YAML (snake_case) and CategoryIndex (camelCase).
+ * Converts between YAML (snake_case) and Category (camelCase).
  * This module is intentionally not exported from the package entrypoint.
  *
  * @module storage-fs/index-serialization
@@ -9,7 +9,7 @@
 
 import { z } from 'zod';
 import { CategoryPath, err, MemoryPath, ok, type Result } from '@yeseh/cortex-core';
-import type { CategoryIndex } from '@yeseh/cortex-core/index';
+import type { Category } from '@yeseh/cortex-core/category';
 
 /**
  * Error type for index serialization/deserialization operations.
@@ -47,15 +47,15 @@ const IndexSubcategoryEntrySchema = z.object({
  * Zod schema for category index (snake_case YAML format).
  * @internal
  */
-const CategoryIndexSchema = z.object({
+const CategorySchema = z.object({
     memories: z.array(IndexMemoryEntrySchema),
     subcategories: z.array(IndexSubcategoryEntrySchema),
 });
 
 /**
- * Parse category index YAML to CategoryIndex with validation.
+ * Parse category index YAML to Category with validation.
  */
-export const parseIndex = (raw: string): Result<CategoryIndex, IndexSerializationError> => {
+export const parseIndex = (raw: string): Result<Category, IndexSerializationError> => {
     let parsedYaml: unknown;
     try {
         parsedYaml = Bun.YAML.parse(raw) as unknown;
@@ -68,7 +68,7 @@ export const parseIndex = (raw: string): Result<CategoryIndex, IndexSerializatio
         });
     }
 
-    const parsed = CategoryIndexSchema.safeParse(parsedYaml);
+    const parsed = CategorySchema.safeParse(parsedYaml);
     if (!parsed.success) {
         return err({
             code: 'VALIDATION_FAILED',
@@ -100,9 +100,9 @@ export const parseIndex = (raw: string): Result<CategoryIndex, IndexSerializatio
 };
 
 /**
- * Serialize CategoryIndex to YAML string.
+ * Serialize Category to YAML string.
  */
-export const serializeIndex = (index: CategoryIndex): Result<string, IndexSerializationError> => {
+export const serializeIndex = (index: Category): Result<string, IndexSerializationError> => {
     const yamlData = {
         memories: index.memories.map((memory) => ({
             path: memory.path.toString(),

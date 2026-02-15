@@ -28,10 +28,6 @@
       "import": "./src/store/index.ts",
       "types": "./src/store/index.ts"
     },
-    "./index": {
-      "import": "./src/index/index.ts",
-      "types": "./src/index/index.ts"
-    },
     "./storage": {
       "import": "./src/storage/adapter.ts",
       "types": "./src/storage/adapter.ts"

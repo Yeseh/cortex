@@ -25,7 +25,9 @@ describe('updateMemory', () => {
         if (result.ok()) {
             expect(result.value.content).toBe('Updated content');
             // Original tags preserved
-            expect(result.value.metadata.tags).toEqual(['test', 'sample']);
+            expect(result.value.metadata.tags).toEqual([
+                'test', 'sample',
+            ]);
         }
     });
 
@@ -36,11 +38,15 @@ describe('updateMemory', () => {
             },
         });
         const result = await updateMemory(storage, 'project/test/memory', {
-            tags: ['new', 'tags'],
+            tags: [
+                'new', 'tags',
+            ],
         });
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            expect(result.value.metadata.tags).toEqual(['new', 'tags']);
+            expect(result.value.metadata.tags).toEqual([
+                'new', 'tags',
+            ]);
             // Original content preserved
             expect(result.value.content).toContain('Sample memory content');
         }
@@ -120,7 +126,7 @@ describe('updateMemory', () => {
             storage,
             'project/test/memory',
             { content: 'Updated' },
-            updateTime
+            updateTime,
         );
         expect(result.ok()).toBe(true);
         if (result.ok()) {

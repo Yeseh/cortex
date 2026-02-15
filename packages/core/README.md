@@ -13,9 +13,8 @@ bun add @yeseh/cortex-core
 This package is the foundation of Cortex, containing:
 
 - **Memory types and operations** - Create, validate, and manipulate memories
-- **Category management** - Hierarchical organization of memories
+- **Category management** - Hierarchical organization with index metadata
 - **Store abstractions** - Registry and resolution for multi-store setups
-- **Index types** - Category indexes with memory metadata and summaries
 - **Tokenization** - Token estimation for LLM context management
 - **Serialization** - YAML/TOON serialization utilities
 
@@ -41,9 +40,11 @@ import {
   updateMemory 
 } from '@yeseh/cortex-core/memory';
 
-// Category domain
+// Category domain (includes index types)
 import { 
   type Category,
+  type CategoryMemoryEntry,
+  type SubcategoryEntry,
   type CategoryStorage,
   createCategory,
   setDescription 
@@ -56,11 +57,9 @@ import {
   resolveStore
 } from '@yeseh/cortex-core/store';
 
-// Index domain
-import { 
-  type CategoryIndex,
-  type IndexMemoryEntry 
-} from '@yeseh/cortex-core/index';
+// Category domain also includes index types
+// (Category is the combined view of memories and subcategories)
+// See the category import above for Category, CategoryMemoryEntry, etc.
 
 // Storage port interfaces
 import { 

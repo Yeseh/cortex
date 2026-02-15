@@ -10,6 +10,7 @@
 
 import type { Result } from '../result.ts';
 import type { CategoryPath } from './category-path.ts';
+import type { MemoryPath } from '@/memory/memory-path.ts';
 
 /**
  * Error codes for category operations.
@@ -234,3 +235,157 @@ export const ROOT_CATEGORIES = [
 
 /** Type for root category names */
 export type RootCategory = (typeof ROOT_CATEGORIES)[number];
+
+/**
+ * Entry for a memory within a category.
+ *
+ * Each memory file in a category is tracked with its path and
+ * estimated token count. The token estimate helps AI agents
+ * decide which memories to load based on context window limits.
+ *
+ * @example
+ * ```typescript
+ * const entry: CategoryMemoryEntry = {
+ *   path: MemoryPath.fromString('project/cortex/tech-stack').unwrap(),
+ *   tokenEstimate: 150,
+ *   summary: 'TypeScript project using Bun runtime'
+ * };
+ * ```
+ *
+ * @edgeCases
+ * - `updatedAt` may be undefined when the memory frontmatter is missing or invalid.
+ */
+export interface CategoryMemoryEntry {
+    /** Full path to the memory (e.g., "project/cortex/conventions") */
+    path: MemoryPath;
+    /** Estimated token count for the memory content */
+    tokenEstimate: number;
+    /** Optional brief summary of memory contents (for listing displays) */
+    summary?: string;
+    /** Optional last updated timestamp for sorting by recency */
+    updatedAt?: Date;
+}
+
+/**
+ * Entry for a subcategory within a category.
+ *
+ * Subcategories are nested category directories. Each entry tracks
+ * the total memory count for efficient hierarchy browsing without
+ * recursively scanning the filesystem.
+ *
+ * @example
+ * ```typescript
+ * const entry: SubcategoryEntry = {
+ *   path: CategoryPath.fromString('project/cortex').unwrap(),
+ *   memoryCount: 5,
+ *   description: 'Cortex memory system project knowledge'
+ * };
+ * ```
+ *
+ * @edgeCases
+ * - `memoryCount` reflects direct memories in the subcategory, not recursive totals.
+ */
+export interface SubcategoryEntry {
+    /** Full path to the subcategory (e.g., "project/cortex") */
+    path: CategoryPath;
+    /** Total number of memories in this subcategory */
+    memoryCount: number;
+    /** Optional description (max 500 chars) for the subcategory */
+    description?: string;
+}
+
+/**
+ * Complete structure for a category's contents.
+ *
+ * Each category directory contains an `index.yaml` file with this
+ * structure, listing all direct memories and subcategories. Storage
+ * adapters handle YAML serialization using snake_case fields such as
+ * `token_estimate`, `memory_count`, and optional `updated_at`.
+ * The index is maintained automatically when memories are written or
+ * deleted, and can be rebuilt via the `reindex` command.
+ *
+ * @example
+ * ```typescript
+ * const category: Category = {
+ *   memories: [
+ *     { path: memPath('project/tech-stack'), tokenEstimate: 150 },
+ *     { path: memPath('project/conventions'), tokenEstimate: 200 }
+ *   ],
+ *   subcategories: [
+ *     { path: catPath('project/cortex'), memoryCount: 5 }
+ *   ]
+ * };
+ * ```
+ *
+ * @edgeCases
+ * - Empty categories are represented with `{ memories: [], subcategories: [] }`.
+ */
+export interface Category {
+    /** List of memory entries in this category */
+    memories: CategoryMemoryEntry[];
+    /** List of subcategory entries in this category */
+    subcategories: SubcategoryEntry[];
+}
+
+/**
+ * Error codes for index parsing failures.
+ *
+ * These codes enable programmatic error handling:
+ * - `INVALID_FORMAT` - The index file structure is malformed (not valid YAML-like format)
+ * - `INVALID_SECTION` - Entry appears outside a valid section (memories/subcategories)
+ * - `INVALID_ENTRY` - Entry has invalid structure or unexpected fields
+ * - `MISSING_FIELD` - Required field (path, token_estimate, memory_count) is missing
+ * - `INVALID_NUMBER` - Numeric field (token_estimate, memory_count) has invalid value
+ */
+export type IndexParseErrorCode =
+    | 'INVALID_FORMAT'
+    | 'INVALID_SECTION'
+    | 'INVALID_ENTRY'
+    | 'MISSING_FIELD'
+    | 'INVALID_NUMBER';
+
+/**
+ * Error details for index parsing failures.
+ *
+ * Provides structured error information including the error code,
+ * human-readable message, and optional context about the failing
+ * line or field.
+ */
+export interface IndexParseError {
+    /** Machine-readable error code for programmatic handling */
+    code: IndexParseErrorCode;
+    /** Human-readable error message */
+    message: string;
+    /** Line number where the error occurred (1-based) */
+    line?: number;
+    /** Field name that caused the error (when applicable) */
+    field?: string;
+    /** Underlying error that caused this failure (for debugging) */
+    cause?: unknown;
+}
+
+/**
+ * Error codes for index serialization failures.
+ *
+ * These codes enable programmatic error handling:
+ * - `INVALID_ENTRY` - Entry has missing or empty required fields (path)
+ * - `INVALID_NUMBER` - Numeric field is not a valid finite non-negative number
+ */
+export type IndexSerializeErrorCode = 'INVALID_ENTRY' | 'INVALID_NUMBER';
+
+/**
+ * Error details for index serialization failures.
+ *
+ * Provides structured error information for failures during
+ * index-to-string conversion.
+ */
+export interface IndexSerializeError {
+    /** Machine-readable error code for programmatic handling */
+    code: IndexSerializeErrorCode;
+    /** Human-readable error message */
+    message: string;
+    /** Field name that caused the error (when applicable) */
+    field?: string;
+    /** Underlying error that caused this failure (for debugging) */
+    cause?: unknown;
+}
