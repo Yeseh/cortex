@@ -152,8 +152,10 @@ const parseMetadata = (frontmatterLines: string[]): ParseMetadataResult => {
     try {
         const doc = yaml.parseDocument(frontmatterText, { uniqueKeys: true });
 
-        const hasDuplicateKeyIssue = [...doc.errors, ...doc.warnings].some((issue) =>
-            /duplicate key/i.test(issue.message)
+        const hasDuplicateKeyIssue = [
+            ...doc.errors, ...doc.warnings,
+        ].some((issue) =>
+            /duplicate key/i.test(issue.message),
         );
 
         if (hasDuplicateKeyIssue) {
@@ -171,7 +173,8 @@ const parseMetadata = (frontmatterLines: string[]): ParseMetadataResult => {
         }
 
         data = doc.toJS();
-    } catch {
+    }
+    catch {
         return err({
             code: 'INVALID_FRONTMATTER',
             message: 'Invalid YAML frontmatter.',
@@ -216,7 +219,7 @@ const parseMetadata = (frontmatterLines: string[]): ParseMetadataResult => {
 export const resolveMemoryPath = (
     ctx: FilesystemContext,
     slugPath: MemoryPath,
-    errorCode: StorageAdapterError['code']
+    errorCode: StorageAdapterError['code'],
 ): Result<string, StorageAdapterError> => {
     return resolveStoragePath(ctx.storeRoot, `${slugPath}${ctx.memoryExtension}`, errorCode);
 };
@@ -314,7 +317,7 @@ export const serializeMemory = (memory: MemoryFile): SerializeMemoryResult => {
  */
 export const readMemory = async (
     ctx: FilesystemContext,
-    slugPath: MemoryPath
+    slugPath: MemoryPath,
 ): Promise<StringOrNullResult> => {
     const filePathResult = resolveMemoryPath(ctx, slugPath, 'IO_READ_ERROR');
     if (!filePathResult.ok()) {
@@ -324,7 +327,8 @@ export const readMemory = async (
     try {
         const contents = await readFile(filePath, 'utf8');
         return ok(contents);
-    } catch (error) {
+    }
+    catch (error) {
         if (isNotFoundError(error)) {
             return ok(null);
         }
@@ -350,7 +354,7 @@ export const readMemory = async (
 export const writeMemory = async (
     ctx: FilesystemContext,
     slugPath: MemoryPath,
-    memory: string
+    memory: string,
 ): Promise<Result<void, StorageAdapterError>> => {
     const filePathResult = resolveMemoryPath(ctx, slugPath, 'IO_WRITE_ERROR');
     if (!filePathResult.ok()) {
@@ -362,7 +366,8 @@ export const writeMemory = async (
     try {
         await mkdir(dirname(filePath), { recursive: true });
         await writeFile(filePath, memory, 'utf8');
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'IO_WRITE_ERROR',
             message: `Failed to write memory file at ${filePath}.`,
@@ -383,7 +388,7 @@ export const writeMemory = async (
  */
 export const removeMemory = async (
     ctx: FilesystemContext,
-    slugPath: MemoryPath
+    slugPath: MemoryPath,
 ): Promise<Result<void, StorageAdapterError>> => {
     const filePathResult = resolveMemoryPath(ctx, slugPath, 'IO_WRITE_ERROR');
     if (!filePathResult.ok()) {
@@ -393,7 +398,8 @@ export const removeMemory = async (
     try {
         await rm(filePath);
         return ok(undefined);
-    } catch (error) {
+    }
+    catch (error) {
         if (isNotFoundError(error)) {
             return ok(undefined);
         }
@@ -419,7 +425,7 @@ export const removeMemory = async (
 export const moveMemory = async (
     ctx: FilesystemContext,
     sourceSlugPath: MemoryPath,
-    destinationSlugPath: MemoryPath
+    destinationSlugPath: MemoryPath,
 ): Promise<Result<void, StorageAdapterError>> => {
     const sourcePathResult = resolveMemoryPath(ctx, sourceSlugPath, 'IO_WRITE_ERROR');
     if (!sourcePathResult.ok()) {
@@ -434,7 +440,8 @@ export const moveMemory = async (
     const destinationDirectory = dirname(destinationPathResult.value);
     try {
         await access(destinationDirectory);
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'IO_WRITE_ERROR',
             message: `Destination category does not exist for ${destinationSlugPath}.`,
@@ -446,7 +453,8 @@ export const moveMemory = async (
     try {
         await rename(sourcePathResult.value, destinationPathResult.value);
         return ok(undefined);
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'IO_WRITE_ERROR',
             message: `Failed to move memory from ${sourceSlugPath} to ${destinationSlugPath}.`,

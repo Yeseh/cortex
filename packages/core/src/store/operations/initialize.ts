@@ -59,14 +59,14 @@ export const initializeStore = async (
     registry: Registry,
     name: string,
     path: string,
-    options: InitStoreOptions = {}
+    options: InitStoreOptions = {},
 ): Promise<StoreResult<void, InitStoreError>> => {
     // 1. Validate store name
     if (!isValidStoreName(name)) {
         return storeError(
             'INVALID_STORE_NAME',
             `Store name '${name}' is invalid. Must be a lowercase slug (letters, numbers, hyphens).`,
-            { store: name }
+            { store: name },
         );
     }
 
@@ -80,7 +80,7 @@ export const initializeStore = async (
         return storeError(
             'REGISTRY_UPDATE_FAILED',
             `Failed to load registry: ${loadResult.error?.message ?? 'Unknown error'}`,
-            { store: name, cause: loadResult.error }
+            { store: name, cause: loadResult.error },
         );
     }
 
@@ -93,7 +93,8 @@ export const initializeStore = async (
     // 3. Create store directory
     try {
         await mkdir(path, { recursive: true });
-    } catch (error) {
+    }
+    catch (error) {
         return storeError('STORE_CREATE_FAILED', `Failed to create store directory at ${path}`, {
             store: name,
             path,
@@ -115,7 +116,7 @@ export const initializeStore = async (
         return storeError(
             'REGISTRY_UPDATE_FAILED',
             `Failed to save registry: ${saveResult.error?.message ?? 'Unknown error'}`,
-            { store: name, cause: saveResult.error }
+            { store: name, cause: saveResult.error },
         );
     }
 
@@ -155,7 +156,7 @@ export const initializeStore = async (
                         store: name,
                         path: categoryPath,
                         cause: catPathResult.error,
-                    }
+                    },
                 );
             }
             const writeResult = await adapter.indexes.write(catPathResult.value, categoryIndex);
@@ -167,10 +168,11 @@ export const initializeStore = async (
                         store: name,
                         path: categoryPath,
                         cause: writeResult.error,
-                    }
+                    },
                 );
             }
-        } catch (error) {
+        }
+        catch (error) {
             return storeError('STORE_INDEX_FAILED', `Failed to create category '${category}'`, {
                 store: name,
                 path: categoryPath,

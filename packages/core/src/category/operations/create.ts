@@ -40,7 +40,7 @@ import type { CategoryStorage, CategoryError, CreateCategoryResult } from '../ty
  */
 export const createCategory = async (
     storage: CategoryStorage,
-    path: string
+    path: string,
 ): Promise<Result<CreateCategoryResult, CategoryError>> => {
     // Validate path
     const pathResult = CategoryPath.fromString(path);

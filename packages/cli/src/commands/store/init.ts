@@ -58,7 +58,7 @@ export interface InitHandlerDeps {
  */
 const runGitCommand = (
     args: string[],
-    cwd: string
+    cwd: string,
 ): Promise<{ ok: true; value: string } | { ok: false }> => {
     return new Promise((resolvePromise) => {
         const proc = spawn('git', args, { cwd });
@@ -70,7 +70,8 @@ const runGitCommand = (
         proc.on('close', (code: number | null) => {
             if (code === 0) {
                 resolvePromise({ ok: true, value: stdout.trim() });
-            } else {
+            }
+            else {
                 resolvePromise({ ok: false });
             }
         });
@@ -90,7 +91,9 @@ const runGitCommand = (
  * @returns The repository directory name, or `null` if not in a git repository
  */
 const detectGitRepoName = async (cwd: string): Promise<string | null> => {
-    const result = await runGitCommand(['rev-parse', '--show-toplevel'], cwd);
+    const result = await runGitCommand([
+        'rev-parse', '--show-toplevel',
+    ], cwd);
     if (!result.ok) {
         return null;
     }
@@ -166,7 +169,7 @@ async function resolveStoreName(cwd: string, explicitName?: string): Promise<str
 function writeOutput(
     output: OutputStoreInit,
     format: OutputFormat,
-    stdout: NodeJS.WritableStream
+    stdout: NodeJS.WritableStream,
 ): void {
     const serialized = serializeOutput({ kind: 'store-init', value: output }, format);
     if (!serialized.ok()) {
@@ -193,7 +196,7 @@ function writeOutput(
 export async function handleInit(
     targetPath: string | undefined,
     options: InitCommandOptions = {},
-    deps: InitHandlerDeps = {}
+    deps: InitHandlerDeps = {},
 ): Promise<void> {
     const cwd = deps.cwd ?? process.cwd();
     const registryPath = getDefaultRegistryPath();
@@ -213,8 +216,8 @@ export async function handleInit(
             result.error.code === 'STORE_ALREADY_EXISTS'
                 ? 'STORE_ALREADY_EXISTS'
                 : result.error.code === 'INVALID_STORE_NAME'
-                  ? 'INVALID_STORE_NAME'
-                  : 'STORE_INIT_FAILED';
+                    ? 'INVALID_STORE_NAME'
+                    : 'STORE_INIT_FAILED';
         throwCoreError({ code: errorCode, message: result.error.message });
     }
 
