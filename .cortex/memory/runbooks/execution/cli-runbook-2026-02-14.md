@@ -1,12 +1,13 @@
 ---
 created_at: 2026-02-14T21:32:55.979Z
-updated_at: 2026-02-14T21:32:55.979Z
+updated_at: 2026-02-15T11:48:51.490Z
 tags:
   - runbook
   - cli
   - testing
   - qa
   - execution-report
+  - updated
 source: mcp
 citations:
   - runbooks/user-test-cli
@@ -18,12 +19,12 @@ citations:
 - **Tester**: OpenCode Agent
 - **Version**: 0.1.0
 - **Platform**: Windows 11, Bun 1.3.6
-- **Test Suite Status**: 180/180 unit tests passing ✅
+- **Test Suite Status**: 724/724 unit tests passing ✅ (as of 2026-02-15)
 
 ## Results Overview
 - **Total Tests**: 40 test cases
-- **Passed**: 35
-- **Partial Pass/Issues**: 5
+- **Passed**: 38
+- **Partial Pass/Issues**: 2
 - **Failed**: 0
 - **Overall Assessment**: Production-ready with minor improvements recommended
 
@@ -32,29 +33,24 @@ citations:
 - Show single memory: ~170ms ✅
 - Create 100 memories: Completed successfully ✅
 
-## Issues Identified
+## Resolved Issues ✅
 
 ### Issue 1: Multiple tag flags (TC-CLI-004, TC-CLI-012)
-- **Severity**: Medium
-- **Description**: Only last `-t` tag retained instead of accumulating
-- **Expected**: `-t tag1 -t tag2 -t tag3` → `[tag1, tag2, tag3]`
-- **Actual**: `-t tag1 -t tag2 -t tag3` → `[tag3]`
-- **Impact**: Users can only add one tag at a time via CLI
-- **Priority**: High
+- **Status**: ✅ VERIFIED FALSE POSITIVE
+- **Description**: Tested and confirmed working correctly
+- **Resolution**: No fix needed - original report was incorrect
 
 ### Issue 2: Store init failure (TC-CLI-020)
-- **Severity**: Medium
-- **Description**: `store init` fails to create index.yaml file
-- **Error**: "Failed to write root index"
-- **Workaround**: Manual creation or use `store add`
-- **Impact**: Store initialization requires manual intervention
-- **Priority**: High
+- **Status**: ✅ FIXED in commit 0622059
+- **Root Cause**: `adapter.indexes.write()` was called with empty string `''` instead of `CategoryPath.root()`
+- **Resolution**: Changed to use proper CategoryPath objects in store initialization
 
 ### Issue 3: Index update error messages (TC-CLI-026)
-- **Severity**: Low
-- **Description**: Operations succeed but show "Failed to update indexes" error
-- **Impact**: Confusing error messages despite successful operations
-- **Priority**: Medium
+- **Status**: ✅ FIXED in PR #27
+- **Description**: Now includes memory path, underlying error reason, and remediation suggestion
+- **Example after fix**: "Memory written but index update failed for 'project/test': Index error. Run 'cortex store reindex' to rebuild indexes."
+
+## Remaining Known Issues
 
 ### Issue 4: Double slash paths (TC-CLI-032)
 - **Severity**: Low
@@ -74,6 +70,7 @@ citations:
 - Version and help commands
 - Memory operations (CRUD)
 - Store management (list, add, remove, prune, reindex)
+- Store initialization (fixed)
 - Output formats (YAML, JSON, TOON)
 - Error handling
 - Cross-platform path handling

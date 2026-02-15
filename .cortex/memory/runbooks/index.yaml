@@ -3,13 +3,13 @@ memories:
     token_estimate: 306
     updated_at: 2026-02-05T20:31:13.818Z
   - path: runbooks/debugging-content-loss
-    token_estimate: 692
+    token_estimate: 714
     updated_at: 2026-02-14T21:20:48.746Z
   - path: runbooks/user-test-cli
-    token_estimate: 4286
+    token_estimate: 4439
     updated_at: 2026-02-14T21:07:10.951Z
   - path: runbooks/user-test-mcp-server
-    token_estimate: 2758
+    token_estimate: 2875
     updated_at: 2026-02-14T21:16:27.765Z
   - path: runbooks/verify-memory-tools
     token_estimate: 122
