@@ -219,9 +219,10 @@ export async function handleUpdate(
         throwCoreError(updateResult.error);
     }
 
-    // 2. Output success message
+    // 2. Output success message with normalized path
+    const memory = updateResult.value;
     const stdout = deps.stdout ?? process.stdout;
-    stdout.write(`Updated memory at ${path}.\n`);
+    stdout.write(`Updated memory at ${memory.path.toString()}.\n`);
 }
 
 /**

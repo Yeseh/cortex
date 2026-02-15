@@ -168,8 +168,9 @@ export async function handleAdd(
         throwCoreError(createResult.error);
     }
 
+    const memory = createResult.value;
     const out = deps.stdout ?? process.stdout;
-    out.write(`Added memory ${path} (${contentInput.source}).\n`);
+    out.write(`Added memory ${memory.path.toString()} (${contentInput.source}).\n`);
 }
 
 /**
