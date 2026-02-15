@@ -112,13 +112,52 @@ export type { FilesystemStorageAdapterOptions, FilesystemContext } from './types
 export { parseMemory, serializeMemory } from './memories.ts';
 
 /**
+ * Creates an adapter factory for filesystem-based storage.
+ *
+ * This factory function creates {@link ScopedStorageAdapter} instances
+ * for a given store path. It is used with {@link Cortex.fromConfig} or
+ * {@link Cortex.init} to enable store resolution.
+ *
+ * @returns A factory function that creates scoped storage adapters
+ *
+ * @example
+ * ```typescript
+ * import { Cortex } from '@yeseh/cortex-core';
+ * import { createFilesystemAdapterFactory } from '@yeseh/cortex-storage-fs';
+ *
+ * // Use with Cortex.fromConfig
+ * const result = await Cortex.fromConfig(
+ *     '~/.config/cortex',
+ *     createFilesystemAdapterFactory()
+ * );
+ *
+ * // Use with Cortex.init for testing
+ * const cortex = Cortex.init({
+ *     rootDirectory: '/tmp/test',
+ *     registry: { test: { path: '/tmp/store' } },
+ *     adapterFactory: createFilesystemAdapterFactory(),
+ * });
+ * ```
+ */
+export const createFilesystemAdapterFactory = (): ((storePath: string) => ScopedStorageAdapter) => {
+    return (storePath: string): ScopedStorageAdapter => {
+        const adapter = new FilesystemStorageAdapter({ rootDirectory: storePath });
+        return {
+            memories: adapter.memories,
+            indexes: adapter.indexes,
+            categories: adapter.categories,
+        };
+    };
+};
+
+/**
  * Focused storage implementations following the Interface Segregation Principle.
  *
  * These classes provide single-responsibility storage interfaces:
  * - {@link FilesystemMemoryStorage} - Memory file I/O operations
  * - {@link FilesystemIndexStorage} - Index file I/O and reindexing
  * - {@link FilesystemCategoryStorage} - Category directory management
- * - {@link FilesystemRegistry} - Store registry management (implements Registry interface)
+ * - {@link FilesystemRegistry} - Store registry management (implements RegistryService interface)
  *
  * New code should prefer these focused interfaces over the legacy
  * {@link FilesystemStorageAdapter} methods for better testability

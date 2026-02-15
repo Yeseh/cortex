@@ -24,10 +24,12 @@ import type { Result } from '@/result.ts';
 import type { Category } from '../category/types.ts';
 import type { CategoryStorage } from '../category/types.ts';
 import type {
+    Registry as RegistryData,
     StoreRegistry,
     StoreRegistryLoadError,
     StoreRegistrySaveError,
 } from '../store/registry.ts';
+import type { CortexSettings } from '../config.ts';
 import type { MemoryPath } from '@/memory/memory-path.ts';
 import type { CategoryPath } from '@/category/category-path.ts';
 
@@ -457,7 +459,32 @@ export interface ScopedStorageAdapter {
 }
 
 /**
- * Registry interface for managing store configurations.
+ * Factory function for creating scoped storage adapters.
+ *
+ * Used for dependency injection - production code uses the default
+ * FilesystemStorageAdapter, tests can inject mock adapters.
+ *
+ * @param storePath - Absolute path to the store root directory
+ * @returns A scoped storage adapter for the store
+ */
+export type AdapterFactory = (storePath: string) => ScopedStorageAdapter;
+
+/**
+ * Options for programmatic Cortex creation via Cortex.init().
+ */
+export interface CortexOptions {
+    /** Path to the config directory (e.g., ~/.config/cortex) */
+    rootDirectory: string;
+    /** Settings override (merged with defaults) */
+    settings?: Partial<CortexSettings>;
+    /** Store definitions (default: empty) */
+    registry?: RegistryData;
+    /** Custom adapter factory for testing (default: filesystem) */
+    adapterFactory?: AdapterFactory;
+}
+
+/**
+ * Registry service interface for managing store configurations.
  *
  * The registry is a central configuration file that maps store names to their
  * filesystem paths. Implementations cache loaded data internally, enabling
@@ -496,7 +523,7 @@ export interface ScopedStorageAdapter {
  * }
  * ```
  */
-export interface Registry {
+export interface RegistryService {
     /**
      * First-time registry setup.
      *

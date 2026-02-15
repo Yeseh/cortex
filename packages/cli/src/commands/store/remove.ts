@@ -17,6 +17,7 @@ import { getDefaultRegistryPath } from '../../context.ts';
 import { isValidStoreName } from '@yeseh/cortex-core/store';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { serializeOutput, type OutputStore, type OutputFormat } from '../../output.ts';
+import { type CortexContext } from '@yeseh/cortex-core';
 
 /**
  * Options for the remove command.
@@ -24,15 +25,6 @@ import { serializeOutput, type OutputStore, type OutputFormat } from '../../outp
 export interface RemoveCommandOptions {
     /** Output format (yaml, json, toon) */
     format?: string;
-}
-
-/**
- * Dependencies for the remove command handler.
- * Allows injection for testing.
- */
-export interface RemoveHandlerDeps {
-    /** Output stream for writing results (defaults to process.stdout) */
-    stdout?: NodeJS.WritableStream;
 }
 
 /**
@@ -82,16 +74,16 @@ function writeOutput(
  * 4. Removes the store from the registry and saves
  * 5. Outputs the result
  *
+ * @param ctx - CortexContext with output stream
  * @param name - The store name to unregister
  * @param options - Command options (format)
- * @param deps - Optional dependencies for testing
  * @throws {InvalidArgumentError} When the store name is invalid
  * @throws {CommanderError} When the store doesn't exist or registry operations fail
  */
 export async function handleRemove(
+    ctx: CortexContext,
     name: string,
     options: RemoveCommandOptions = {},
-    deps: RemoveHandlerDeps = {},
 ): Promise<void> {
     const registryPath = getDefaultRegistryPath();
 
@@ -125,14 +117,17 @@ export async function handleRemove(
     // 5. Output result
     const output: OutputStore = { name: trimmedName, path: existingStore.path };
     const format: OutputFormat = (options.format as OutputFormat) ?? 'yaml';
-    writeOutput(output, format, deps.stdout ?? process.stdout);
+    writeOutput(output, format, ctx.stdout);
 }
 
 /**
- * The `remove` subcommand for unregistering a store.
+ * Builds the `remove` subcommand for unregistering a store.
  *
  * Removes a store from the registry. This only unregisters the store
  * from the global registry - it does not delete the actual data.
+ *
+ * @param ctx - CortexContext providing the Cortex client and output stream.
+ * @returns A configured Commander subcommand for `store remove`.
  *
  * @example
  * ```bash
@@ -140,10 +135,12 @@ export async function handleRemove(
  * cortex store remove project --format json
  * ```
  */
-export const removeCommand = new Command('remove')
-    .description('Unregister a store from the registry')
-    .argument('<name>', 'Store name to remove')
-    .option('-o, --format <format>', 'Output format (yaml, json, toon)', 'yaml')
-    .action(async (name, options) => {
-        await handleRemove(name, options);
-    });
+export const createRemoveCommand = (ctx: CortexContext) => {
+    return new Command('remove')
+        .description('Unregister a store from the registry')
+        .argument('<name>', 'Store name to remove')
+        .option('-o, --format <format>', 'Output format (yaml, json, toon)', 'yaml')
+        .action(async (name, options) => {
+            await handleRemove(ctx, name, options);
+        });
+};

@@ -18,12 +18,13 @@
 
 import { Command } from '@commander-js/extra-typings';
 
-import { addCommand } from './add.ts';
-import { showCommand } from './show.ts';
-import { updateCommand } from './update.ts';
-import { removeCommand } from './remove.ts';
-import { moveCommand } from './move.ts';
-import { listCommand } from './list.ts';
+import { type CortexContext } from '@yeseh/cortex-core';
+import { createAddCommand } from './add.ts';
+import { createShowCommand } from './show.ts';
+import { createUpdateCommand } from './update.ts';
+import { createRemoveCommand } from './remove.ts';
+import { createMoveCommand } from './move.ts';
+import { createListCommand } from './list.ts';
 
 /**
  * The `memory` command group.
@@ -31,14 +32,31 @@ import { listCommand } from './list.ts';
  * Provides memory management operations. The `--store` option allows
  * targeting a specific named store instead of the default store.
  * This option is inherited by all subcommands.
+ *
+ * Edge case: This function only wires subcommands; errors surface when
+ * individual command handlers execute.
+ *
+ * @module commands/memory
+ * @param ctx - Shared CLI context used to resolve adapters and I/O streams.
+ * @returns The configured Commander command for the `memory` group.
+ *
+ * @example
+ * ```ts
+ * const memoryCommand = createMemoryCommand(ctx);
+ * program.addCommand(memoryCommand);
+ * ```
  */
-export const memoryCommand = new Command('memory')
-    .description('Memory operations')
-    .option('-s, --store <name>', 'Use a specific named store');
+export const createMemoryCommand = (ctx: CortexContext) => {
+    const memoryCommand = new Command('memory')
+        .description('Memory operations')
+        .option('-s, --store <name>', 'Use a specific named store');
 
-memoryCommand.addCommand(addCommand);
-memoryCommand.addCommand(showCommand);
-memoryCommand.addCommand(updateCommand);
-memoryCommand.addCommand(removeCommand);
-memoryCommand.addCommand(moveCommand);
-memoryCommand.addCommand(listCommand);
+    memoryCommand.addCommand(createAddCommand(ctx));
+    memoryCommand.addCommand(createShowCommand(ctx));
+    memoryCommand.addCommand(createUpdateCommand(ctx));
+    memoryCommand.addCommand(createRemoveCommand(ctx));
+    memoryCommand.addCommand(createMoveCommand(ctx));
+    memoryCommand.addCommand(createListCommand(ctx));
+
+    return memoryCommand;
+};

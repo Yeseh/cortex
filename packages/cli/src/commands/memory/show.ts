@@ -23,11 +23,10 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
-import { resolveStoreAdapter } from '../../context.ts';
+import { resolveDefaultStoreName } from '../../context.ts';
 
 import { getMemory } from '@yeseh/cortex-core/memory';
-import { defaultTokenizer } from '@yeseh/cortex-core';
-import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
+import { defaultTokenizer, type CortexContext } from '@yeseh/cortex-core';
 import { serializeOutput, type OutputMemory, type OutputFormat } from '../../output.ts';
 
 /**
@@ -41,51 +40,48 @@ export interface ShowCommandOptions {
 }
 
 /**
- * Dependencies for the show command handler.
- * Allows injection for testing.
- */
-export interface ShowHandlerDeps {
-    /** Output stream for writing results (defaults to process.stdout) */
-    stdout?: NodeJS.WritableStream;
-    /** Pre-resolved adapter for testing */
-    adapter?: ScopedStorageAdapter;
-}
-
-/**
  * Handles the show command execution.
  *
  * This function:
- * 1. Resolves the store context
- * 2. Validates the memory path
- * 3. Reads the memory file from storage
- * 4. Parses the memory content and frontmatter
- * 5. Checks expiration status (unless --include-expired)
- * 6. Serializes and outputs the result
+ * 1. Resolves the store context from {@link CortexContext}
+ * 2. Reads the memory file from storage
+ * 3. Checks expiration status (unless --include-expired)
+ * 4. Serializes and outputs the result
  *
- * @param path - The memory path to show (e.g., "project/notes")
- * @param options - Command options (includeExpired, format)
- * @param storeName - Optional store name from parent command
- * @param deps - Optional dependencies for testing
- * @throws {InvalidArgumentError} When the path is invalid
- * @throws {CommanderError} When the memory is not found or read fails
+ * @param ctx - CortexContext with cortex client, stdout, stdin, and now.
+ * @param path - The memory path to show (e.g., "project/notes").
+ * @param options - Command options (includeExpired, format).
+ * @param storeName - Optional store name from parent command.
+ * @returns Promise that resolves after output is written.
+ * @throws {InvalidArgumentError} When the path is invalid.
+ * @throws {CommanderError} When the memory is not found or read fails.
+ *
+ * @example
+ * ```ts
+ * const ctxResult = await createCortexContext();
+ * if (ctxResult.ok()) {
+ *   await handleShow(ctxResult.value, 'project/notes', { format: 'json' }, undefined);
+ * }
+ * ```
  */
 export async function handleShow(
+    ctx: CortexContext,
     path: string,
     options: ShowCommandOptions,
     storeName: string | undefined,
-    deps: ShowHandlerDeps = {},
 ): Promise<void> {
     // 1. Resolve store context
-    const storeResult = await resolveStoreAdapter(storeName);
-    if (!storeResult.ok()) {
-        throwCoreError(storeResult.error);
+    const resolvedStoreName = resolveDefaultStoreName(storeName, ctx.cortex);
+    const adapterResult = ctx.cortex.getStore(resolvedStoreName);
+    if (!adapterResult.ok()) {
+        throwCoreError(adapterResult.error);
     }
+    const adapter = adapterResult.value;
 
     // 2. Read the memory
-    const adapter = deps.adapter ?? storeResult.value.adapter;
     const readResult = await getMemory(adapter, path, {
         includeExpired: options.includeExpired ?? false,
-        now: new Date(),
+        now: ctx.now,
     });
     if (!readResult.ok()) {
         throwCoreError(readResult.error);
@@ -122,15 +118,17 @@ export async function handleShow(
         throwCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
     }
 
-    const out = deps.stdout ?? process.stdout;
-    out.write(serialized.value + '\n');
+    ctx.stdout.write(serialized.value + '\n');
 }
 
 /**
- * The `show` subcommand for displaying a memory.
+ * Builds the `show` subcommand for displaying a memory.
  *
  * Reads a memory from the store and displays its content and metadata
  * in the specified format. By default, expired memories are excluded.
+ *
+ * @param ctx - CortexContext providing the Cortex client and I/O streams.
+ * @returns A configured Commander subcommand for `memory show`.
  *
  * @example
  * ```bash
@@ -139,12 +137,14 @@ export async function handleShow(
  * cortex memory show project/notes --include-expired
  * ```
  */
-export const showCommand = new Command('show')
-    .description('Display a memory')
-    .argument('<path>', 'Memory path to show')
-    .option('-x, --include-expired', 'Include expired memories')
-    .option('-o, --format <format>', 'Output format (yaml, json, toon)', 'yaml')
-    .action(async (path, options, command) => {
-        const parentOpts = command.parent?.opts() as { store?: string } | undefined;
-        await handleShow(path, options, parentOpts?.store);
-    });
+export const createShowCommand = (ctx: CortexContext) => {
+    return new Command('show')
+        .description('Display a memory')
+        .argument('<path>', 'Memory path to show')
+        .option('-x, --include-expired', 'Include expired memories')
+        .option('-o, --format <format>', 'Output format (yaml, json, toon)', 'yaml')
+        .action(async (path, options, command) => {
+            const parentOpts = command.parent?.opts() as { store?: string } | undefined;
+            await handleShow(ctx, path, options, parentOpts?.store);
+        });
+};

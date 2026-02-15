@@ -9,9 +9,11 @@
 
 import { Command } from '@commander-js/extra-typings';
 
-import { memoryCommand } from './commands/memory/index.ts';
-import { storeCommand } from './commands/store/index.ts';
-import { initCommand } from './commands/init/command.ts';
+import { createMemoryCommand } from './commands/memory/index.ts';
+import { createStoreCommand } from './commands/store/index.ts';
+import { createInitCommand } from './commands/init/command.ts';
+import { createCortexContext } from './context.ts';
+import { throwCoreError } from './errors.ts';
 
 /**
  * The main Commander program instance for Cortex CLI.
@@ -27,16 +29,24 @@ import { initCommand } from './commands/init/command.ts';
  * await program.parseAsync(process.argv);
  * ```
  */
-const program = new Command()
-    .name('cortex')
-    .description('Memory system for AI agents')
-    .version('0.1.0');
+export const createProgram = async (): Promise<Command> => {
+    const program = new Command()
+        .name('cortex')
+        .description('Memory system for AI agents')
+        .version('0.1.0');
 
-program.addCommand(memoryCommand);
-program.addCommand(storeCommand);
-program.addCommand(initCommand);
+    const ctxResult = await createCortexContext();
+    if (!ctxResult.ok()) {
+        throwCoreError(ctxResult.error);
+    }
+    const ctx = ctxResult.value;
 
-export { program };
+    program.addCommand(createMemoryCommand(ctx));
+    program.addCommand(createStoreCommand(ctx));
+    program.addCommand(createInitCommand(ctx));
+
+    return program;
+};
 
 /**
  * Runs the CLI program by parsing command-line arguments.
@@ -54,6 +64,7 @@ export { program };
  */
 export const runProgram = async (): Promise<void> => {
     try {
+        const program = await createProgram();
         await program.parseAsync(process.argv);
     }
     catch (error) {

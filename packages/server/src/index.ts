@@ -34,7 +34,8 @@ import { createHealthResponse } from './health.ts';
 import { registerMemoryTools } from './memory/index.ts';
 import { registerStoreTools } from './store/index.ts';
 import { registerCategoryTools } from './category/index.ts';
-import { err, ok, type Result } from '@yeseh/cortex-core';
+import { Cortex, err, ok, type Result } from '@yeseh/cortex-core';
+import { createFilesystemAdapterFactory } from '@yeseh/cortex-storage-fs';
 
 /**
  * Complete Cortex server instance with all components.
@@ -153,14 +154,25 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
     }
     const config = configResult.value;
 
+    // Try to load Cortex from config directory
+    // If this fails, tools will fall back to FilesystemRegistry for backward compatibility
+    const cortexResult = await Cortex.fromConfig(
+        config.dataPath,
+        createFilesystemAdapterFactory(),
+    );
+    const cortex = cortexResult.ok() ? cortexResult.value : undefined;
+    if (!cortexResult.ok()) {
+        console.warn(`Cortex config not loaded from ${config.dataPath}: ${cortexResult.error.message}. Using FilesystemRegistry fallback.`);
+    }
+
     // Create MCP context
     const mcpContext = createMcpContext();
     const { server: mcpServer, transport } = mcpContext;
 
-    // Register MCP tools
-    registerMemoryTools(mcpServer, config);
-    registerStoreTools(mcpServer, config);
-    registerCategoryTools(mcpServer, config);
+    // Register MCP tools with optional Cortex instance
+    registerMemoryTools(mcpServer, config, cortex);
+    registerStoreTools(mcpServer, config, cortex);
+    registerCategoryTools(mcpServer, config, cortex);
 
     // Connect MCP server to transport
     await mcpServer.connect(transport);

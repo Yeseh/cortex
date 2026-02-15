@@ -5,6 +5,7 @@
  */
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { Cortex } from '@yeseh/cortex-core';
 import type { ServerConfig } from '../../config.ts';
 import { parseInput, type ToolContext } from './shared.ts';
 import {
@@ -85,9 +86,17 @@ export {
 
 /**
  * Registers all memory tools with the MCP server.
+ *
+ * @param server - MCP server instance
+ * @param config - Server configuration
+ * @param cortex - Optional Cortex instance for store resolution (preferred when available)
  */
-export const registerMemoryTools = (server: McpServer, config: ServerConfig): void => {
-    const ctx: ToolContext = { config };
+export const registerMemoryTools = (
+    server: McpServer,
+    config: ServerConfig,
+    cortex?: Cortex,
+): void => {
+    const ctx: ToolContext = { config, cortex };
 
     server.registerTool(
         'cortex_add_memory',

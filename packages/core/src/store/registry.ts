@@ -14,7 +14,10 @@ export interface StoreDefinition {
     description?: string;
 }
 
-export type StoreRegistry = Record<string, StoreDefinition>;
+export type Registry = Record<string, StoreDefinition>;
+
+/** @deprecated Use Registry instead */
+export type StoreRegistry = Registry;
 
 export type { StoreRegistryParseErrorCode, StoreRegistryParseError } from './result.ts';
 

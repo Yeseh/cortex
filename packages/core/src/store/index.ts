@@ -11,6 +11,7 @@ export {
     isValidStoreName,
     resolveStorePath,
     type StoreDefinition,
+    type Registry,
     type StoreRegistry,
     type StoreRegistryLoadError,
     type StoreRegistryLoadErrorCode,

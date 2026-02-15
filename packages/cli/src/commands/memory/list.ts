@@ -30,9 +30,9 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
-import { resolveStoreAdapter } from '../../context.ts';
+import { resolveDefaultStoreName } from '../../context.ts';
 
-import { CategoryPath, listMemories, type ScopedStorageAdapter } from '@yeseh/cortex-core';
+import { CategoryPath, listMemories, type CortexContext } from '@yeseh/cortex-core';
 import type { OutputFormat } from '../../output.ts';
 import { toonOptions } from '../../output.ts';
 import { encode as toonEncode } from '@toon-format/toon';
@@ -47,19 +47,6 @@ export interface ListCommandOptions {
     format?: string;
     /** Store name (can be specified on subcommand or parent) */
     store?: string;
-}
-
-/**
- * Dependencies for the list command handler.
- * Allows injection for testing.
- */
-export interface ListHandlerDeps {
-    /** Output stream for writing results (defaults to process.stdout) */
-    stdout?: NodeJS.WritableStream;
-    /** Current time for expiration checks */
-    now?: Date;
-    /** Pre-resolved adapter for testing */
-    adapter?: ScopedStorageAdapter;
 }
 
 /**
@@ -90,10 +77,6 @@ export interface ListResult {
     subcategories: ListSubcategoryEntry[];
 }
 
-
-/**
- * Formats the output based on the specified format.
- */
 const formatOutput = (result: ListResult, format: OutputFormat): string => {
     const outputMemories = result.memories.map((memory) => ({
         path: memory.path,
@@ -170,32 +153,42 @@ const formatOutput = (result: ListResult, format: OutputFormat): string => {
  * Handles the list command execution.
  *
  * This function:
- * 1. Resolves the store context
+ * 1. Resolves the store context from {@link CortexContext}
  * 2. Loads category index (or all categories if none specified)
  * 3. Collects memories and subcategories, filtering expired if needed
  * 4. Formats and outputs the result
  *
- * @param category - Optional category path to list (lists all if omitted)
- * @param options - Command options (includeExpired, format)
- * @param storeName - Optional store name from parent command
- * @param deps - Optional dependencies for testing
- * @throws {InvalidArgumentError} When arguments are invalid
- * @throws {CommanderError} When read or parse fails
+ * @param ctx - CortexContext with cortex client, stdout, stdin, and now.
+ * @param category - Optional category path to list (lists all if omitted).
+ * @param options - Command options (includeExpired, format).
+ * @param storeName - Optional store name from parent command.
+ * @returns Promise that resolves after output is written.
+ * @throws {InvalidArgumentError} When arguments are invalid.
+ * @throws {CommanderError} When read or parse fails.
+ *
+ * @example
+ * ```ts
+ * const ctxResult = await createCortexContext();
+ * if (ctxResult.ok()) {
+ *   await handleList(ctxResult.value, 'project', { includeExpired: false }, undefined);
+ * }
+ * ```
  */
 export async function handleList(
+    ctx: CortexContext,
     category: string | undefined,
     options: ListCommandOptions,
     storeName: string | undefined,
-    deps: ListHandlerDeps = {},
 ): Promise<void> {
     // 1. Resolve store context
-    const storeResult = await resolveStoreAdapter(storeName);
-    if (!storeResult.ok()) {
-        throwCoreError(storeResult.error);
+    const resolvedStoreName = resolveDefaultStoreName(storeName, ctx.cortex);
+    const adapterResult = ctx.cortex.getStore(resolvedStoreName);
+    if (!adapterResult.ok()) {
+        throwCoreError(adapterResult.error);
     }
+    const adapter = adapterResult.value;
 
-    const now = deps.now ?? new Date();
-    const adapter = deps.adapter ?? storeResult.value.adapter;
+    const now = ctx.now;
 
     const categoryResult = CategoryPath.fromString(category ?? '');
     if (!categoryResult.ok()) {
@@ -237,18 +230,20 @@ export async function handleList(
     const format: OutputFormat = VALID_FORMATS.includes(requestedFormat) ? requestedFormat : 'yaml';
     const output = formatOutput(result, format);
 
-    const out = deps.stdout ?? process.stdout;
-    out.write(output + '\n');
+    ctx.stdout.write(output + '\n');
 }
 
 /**
- * The `list` subcommand for browsing memories.
+ * Builds the `list` subcommand for browsing memories.
  *
  * Lists memories in a category, or all memories across all root categories
  * if no category is specified. By default, expired memories are excluded.
  *
  * The `--store` option can be specified either on this command or on the
  * parent `memory` command for flexibility.
+ *
+ * @param ctx - CortexContext providing the Cortex client and I/O streams.
+ * @returns A configured Commander subcommand for `memory list`.
  *
  * @example
  * ```bash
@@ -260,15 +255,17 @@ export async function handleList(
  * cortex memory -s my-store list
  * ```
  */
-export const listCommand = new Command('list')
-    .description('List memories in a category')
-    .argument('[category]', 'Category path to list (lists all if omitted)')
-    .option('-s, --store <name>', 'Use a specific named store')
-    .option('-x, --include-expired', 'Include expired memories')
-    .option('-o, --format <format>', 'Output format (yaml, json, toon)', 'yaml')
-    .action(async (category, options, command) => {
-        const parentOpts = command.parent?.opts() as { store?: string } | undefined;
-        // Allow store to be specified on either the subcommand or parent command
-        const storeName = options.store ?? parentOpts?.store;
-        await handleList(category, options, storeName);
-    });
+export const createListCommand = (ctx: CortexContext) => {
+    return new Command('list')
+        .description('List memories in a category')
+        .argument('[category]', 'Category path to list (lists all if omitted)')
+        .option('-s, --store <name>', 'Use a specific named store')
+        .option('-x, --include-expired', 'Include expired memories')
+        .option('-o, --format <format>', 'Output format (yaml, json, toon)', 'yaml')
+        .action(async (category, options, command) => {
+            const parentOpts = command.parent?.opts() as { store?: string } | undefined;
+            // Allow store to be specified on either the subcommand or parent command
+            const storeName = options.store ?? parentOpts?.store;
+            await handleList(ctx, category, options, storeName);
+        });
+};

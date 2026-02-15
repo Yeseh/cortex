@@ -16,60 +16,55 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
-import { resolveStoreAdapter } from '../../context.ts';
-import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
-
-/**
- * Dependencies for the reindex command handler.
- * Allows injection for testing.
- */
-export interface ReindexHandlerDeps {
-    /** Output stream for writing results (defaults to process.stdout) */
-    stdout?: NodeJS.WritableStream;
-    /** Pre-resolved adapter for testing */
-    adapter?: ScopedStorageAdapter;
-}
+import { resolveDefaultStoreName } from '../../context.ts';
+import { type CortexContext } from '@yeseh/cortex-core';
 
 /**
  * Handles the reindex command execution.
  *
  * This function:
- * 1. Resolves the store context (from --store option or default resolution)
- * 2. Creates a filesystem adapter for the store
- * 3. Rebuilds the category indexes
- * 4. Outputs the result
+ * 1. Resolves the store adapter from CortexContext
+ * 2. Rebuilds the category indexes
+ * 3. Outputs the result
  *
- * @param storeName - Optional store name from parent --store option
- * @param deps - Optional dependencies for testing
- * @throws {CommanderError} When store resolution or reindexing fails
+ * @param ctx - CortexContext providing store resolution and I/O streams.
+ * @param storeName - Optional store name from parent --store option;
+ *   when `undefined`, uses the default store resolution.
+ * @returns Promise that resolves after output is written.
+ * @throws {CommanderError} When store resolution or reindexing fails.
  */
 export async function handleReindex(
+    ctx: CortexContext,
     storeName: string | undefined,
-    deps: ReindexHandlerDeps = {},
 ): Promise<void> {
-    // 1. Resolve store context
-    const storeResult = await resolveStoreAdapter(storeName);
-    if (!storeResult.ok()) {
-        throwCoreError(storeResult.error);
+    // 1. Resolve store adapter from context
+    const resolvedStoreName = resolveDefaultStoreName(storeName, ctx.cortex);
+    const adapterResult = ctx.cortex.getStore(resolvedStoreName);
+    if (!adapterResult.ok()) {
+        throwCoreError(adapterResult.error);
     }
+    const adapter = adapterResult.value;
 
-    // 2. Create adapter and reindex
-    const adapter = deps.adapter ?? storeResult.value.adapter;
+    const out = ctx.stdout;
+
+    // 2. Reindex
     const reindexResult = await adapter.indexes.reindex();
     if (!reindexResult.ok()) {
         throwCoreError({ code: 'REINDEX_FAILED', message: reindexResult.error.message });
     }
 
     // 3. Output result
-    const out = deps.stdout ?? process.stdout;
-    out.write(`Reindexed category indexes for ${storeResult.value.context.root}.\n`);
+    out.write(`Reindexed category indexes for ${resolvedStoreName}.\n`);
 }
 
 /**
- * The `reindex` subcommand for rebuilding category indexes.
+ * Builds the `reindex` subcommand for rebuilding category indexes.
  *
  * Rebuilds the category indexes for a store, which can help repair corrupted
  * indexes or synchronize them after manual file changes.
+ *
+ * @param ctx - CortexContext providing the Cortex client and output stream.
+ * @returns A configured Commander subcommand for `store reindex`.
  *
  * @example
  * ```bash
@@ -77,9 +72,11 @@ export async function handleReindex(
  * cortex store --store work reindex
  * ```
  */
-export const reindexCommand = new Command('reindex')
-    .description('Rebuild category indexes for the store')
-    .action(async (_options, command) => {
-        const parentOpts = command.parent?.opts() as { store?: string } | undefined;
-        await handleReindex(parentOpts?.store);
-    });
+export const createReindexCommand = (ctx: CortexContext) => {
+    return new Command('reindex')
+        .description('Rebuild category indexes for the store')
+        .action(async (_options, command) => {
+            const parentOpts = command.parent?.opts() as { store?: string } | undefined;
+            await handleReindex(ctx, parentOpts?.store);
+        });
+};

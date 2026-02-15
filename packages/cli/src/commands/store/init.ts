@@ -31,6 +31,7 @@ import { isValidStoreName, initializeStore } from '@yeseh/cortex-core/store';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { serializeOutput, type OutputStoreInit, type OutputFormat } from '../../output.ts';
 import { resolveUserPath } from '../../paths.ts';
+import { type CortexContext } from '@yeseh/cortex-core';
 
 /**
  * Options for the init command.
@@ -40,17 +41,6 @@ export interface InitCommandOptions {
     name?: string;
     /** Output format (yaml, json, toon) */
     format?: string;
-}
-
-/**
- * Dependencies for the init command handler.
- * Allows injection for testing.
- */
-export interface InitHandlerDeps {
-    /** Output stream for writing results (defaults to process.stdout) */
-    stdout?: NodeJS.WritableStream;
-    /** Current working directory (defaults to process.cwd()) */
-    cwd?: string;
 }
 
 /**
@@ -187,18 +177,18 @@ function writeOutput(
  * 3. Uses initializeStore to create directory, index, and register
  * 4. Outputs the result
  *
+ * @param ctx - CortexContext with output stream
  * @param targetPath - Optional path for the store (defaults to .cortex in cwd)
  * @param options - Command options (name, format)
- * @param deps - Optional dependencies for testing
  * @throws {InvalidArgumentError} When the store name is invalid
  * @throws {CommanderError} When the store already exists or init fails
  */
 export async function handleInit(
+    ctx: CortexContext,
     targetPath: string | undefined,
     options: InitCommandOptions = {},
-    deps: InitHandlerDeps = {},
 ): Promise<void> {
-    const cwd = deps.cwd ?? process.cwd();
+    const cwd = process.cwd();
     const registryPath = getDefaultRegistryPath();
 
     // 1. Resolve store name (explicit or git detection)
@@ -224,15 +214,18 @@ export async function handleInit(
     // 4. Output result
     const output: OutputStoreInit = { path: rootPath, name: storeName };
     const format: OutputFormat = (options.format as OutputFormat) ?? 'yaml';
-    writeOutput(output, format, deps.stdout ?? process.stdout);
+    writeOutput(output, format, ctx.stdout);
 }
 
 /**
- * The `init` subcommand for initializing a new memory store.
+ * Builds the `init` subcommand for initializing a new memory store.
  *
  * Creates a new store at the specified path (or .cortex in current directory)
  * and registers it in the global registry. The store name is auto-detected
  * from the git repository name or can be explicitly provided.
+ *
+ * @param ctx - CortexContext providing the Cortex client and output stream.
+ * @returns A configured Commander subcommand for `store init`.
  *
  * @example
  * ```bash
@@ -241,11 +234,13 @@ export async function handleInit(
  * cortex store init ./store --name custom  # Custom path and name
  * ```
  */
-export const initCommand = new Command('init')
-    .description('Initialize a new memory store')
-    .argument('[path]', 'Path for the store (defaults to .cortex in current directory)')
-    .option('-n, --name <name>', 'Explicit store name (otherwise auto-detected from git)')
-    .option('-o, --format <format>', 'Output format (yaml, json, toon)', 'yaml')
-    .action(async (path, options) => {
-        await handleInit(path, options);
-    });
+export const createInitCommand = (ctx: CortexContext) => {
+    return new Command('init')
+        .description('Initialize a new memory store')
+        .argument('[path]', 'Path for the store (defaults to .cortex in current directory)')
+        .option('-n, --name <name>', 'Explicit store name (otherwise auto-detected from git)')
+        .option('-o, --format <format>', 'Output format (yaml, json, toon)', 'yaml')
+        .action(async (path, options) => {
+            await handleInit(ctx, path, options);
+        });
+};

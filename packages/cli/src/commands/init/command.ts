@@ -24,6 +24,7 @@ import { throwCoreError } from '../../errors.ts';
 import { serializeOutput, type OutputFormat, type OutputInit, type OutputPayload } from '../../output.ts';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { initializeStore } from '@yeseh/cortex-core/store';
+import { type CortexContext } from '@yeseh/cortex-core';
 
 /**
  * Options for the init command.
@@ -39,10 +40,6 @@ export interface InitCommandOptions {
  * Dependencies for the init command handler.
  * Allows injection for testing.
  */
-export interface InitHandlerDeps {
-    /** Output stream for writing results (defaults to process.stdout) */
-    stdout?: NodeJS.WritableStream;
-}
 
 /**
  * Default category directories created in the global store.
@@ -94,8 +91,8 @@ const pathExists = async (path: string): Promise<boolean> => {
  * @throws {CommanderError} When initialization fails
  */
 export async function handleInit(
+    ctx: CortexContext,
     options: InitCommandOptions = {},
-    deps: InitHandlerDeps = {},
 ): Promise<void> {
     const cortexConfigDir = resolve(homedir(), '.config', 'cortex');
     const globalStorePath = resolve(cortexConfigDir, 'memory');
@@ -168,8 +165,7 @@ export async function handleInit(
         return;
     }
 
-    const out = deps.stdout ?? process.stdout;
-    out.write(outputSerialized.value + '\n');
+    ctx.stdout.write(outputSerialized.value + '\n');
 }
 
 /**
@@ -178,16 +174,25 @@ export async function handleInit(
  * Creates the global config store at ~/.config/cortex/ with default settings
  * and store registry.
  *
+ * Edge case: If a global store already exists, this command fails unless
+ * `--force` is provided.
+ *
+ * @module commands/init
+ * @param ctx - Shared CLI context used to write output for the command.
+ * @returns The configured Commander command for `init`.
+ *
  * @example
- * ```bash
- * cortex init              # Initialize global config
- * cortex init --force      # Reinitialize even if exists
+ * ```ts
+ * const initCommand = createInitCommand(ctx);
+ * program.addCommand(initCommand);
  * ```
  */
-export const initCommand = new Command('init')
-    .description('Initialize global cortex configuration')
-    .option('-F, --force', 'Reinitialize even if already initialized')
-    .option('-o, --format <format>', 'Output format (yaml, json, toon)', 'yaml')
-    .action(async (options) => {
-        await handleInit(options);
-    });
+export const createInitCommand = (ctx: CortexContext) => {
+    return new Command('init')
+        .description('Initialize global cortex configuration')
+        .option('-F, --force', 'Reinitialize even if already initialized')
+        .option('-o, --format <format>', 'Output format (yaml, json, toon)', 'yaml')
+        .action(async (options) => {
+            await handleInit(ctx, options);
+        });
+};

@@ -15,61 +15,71 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
-import { resolveStoreAdapter } from '../../context.ts';
+import { resolveDefaultStoreName } from '../../context.ts';
 import { removeMemory, MemoryPath } from '@yeseh/cortex-core/memory';
-import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
-
-/** Dependencies injected into the handler for testability */
-export interface RemoveHandlerDeps {
-    stdout?: NodeJS.WritableStream;
-    /** Pre-resolved adapter for testing */
-    adapter?: ScopedStorageAdapter;
-}
+import { type CortexContext } from '@yeseh/cortex-core';
 
 /**
  * Handler for the memory remove command.
- * Exported for direct testing without Commander parsing.
  *
- * @param path - Memory path to remove (e.g., "project/tech-stack")
- * @param storeName - Optional store name from parent command
- * @param deps - Injectable dependencies for testing
+ * Resolves the target store from {@link CortexContext} and removes the memory
+ * via the core {@link removeMemory} operation. Exported for direct testing
+ * without Commander parsing.
+ *
+ * @param ctx - CortexContext with cortex client, stdout, stdin, and now.
+ * @param path - Memory path to remove (e.g., "project/tech-stack").
+ * @param storeName - Optional store name from parent command.
+ * @returns Promise that resolves after the removal output is written.
+ *
+ * @example
+ * ```ts
+ * const ctxResult = await createCortexContext();
+ * if (ctxResult.ok()) {
+ *   await handleRemove(ctxResult.value, 'project/tech-stack', undefined);
+ * }
+ * ```
  */
 export async function handleRemove(
+    ctx: CortexContext,
     path: string,
     storeName: string | undefined,
-    deps: RemoveHandlerDeps = {},
 ): Promise<void> {
     // 1. Resolve store context
-    const storeResult = await resolveStoreAdapter(storeName);
-    if (!storeResult.ok()) {
-        throwCoreError(storeResult.error);
+    const resolvedStoreName = resolveDefaultStoreName(storeName, ctx.cortex);
+    const adapterResult = ctx.cortex.getStore(resolvedStoreName);
+    if (!adapterResult.ok()) {
+        throwCoreError(adapterResult.error);
     }
+    const adapter = adapterResult.value;
 
     // 2. Remove the memory file
-    const adapter = deps.adapter ?? storeResult.value.adapter;
     const removeResult = await removeMemory(adapter, path);
     if (!removeResult.ok()) {
         throwCoreError(removeResult.error);
     }
 
     // 3. Output success message with normalized path
-    const out = deps.stdout ?? process.stdout;
     const normalizedPath = MemoryPath.fromString(path);
     const pathDisplay = normalizedPath.ok() ? normalizedPath.value.toString() : path;
-    out.write(`Removed memory at ${pathDisplay}.\n`);
+    ctx.stdout.write(`Removed memory at ${pathDisplay}.\n`);
 }
 
 /**
- * The `memory remove` subcommand.
+ * Builds the `memory remove` subcommand.
  *
  * Deletes an existing memory at the specified path.
  *
  * The `--store` option is inherited from the parent `memory` command.
+ *
+ * @param ctx - CortexContext providing the Cortex client and I/O streams.
+ * @returns A configured Commander subcommand for `memory remove`.
  */
-export const removeCommand = new Command('remove')
-    .description('Delete a memory')
-    .argument('<path>', 'Memory path to remove')
-    .action(async (path, _options, command) => {
-        const parentOpts = command.parent?.opts() as { store?: string } | undefined;
-        await handleRemove(path, parentOpts?.store);
-    });
+export const createRemoveCommand = (ctx: CortexContext) => {
+    return new Command('remove')
+        .description('Delete a memory')
+        .argument('<path>', 'Memory path to remove')
+        .action(async (path, _options, command) => {
+            const parentOpts = command.parent?.opts() as { store?: string } | undefined;
+            await handleRemove(ctx, path, parentOpts?.store);
+        });
+};

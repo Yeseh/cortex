@@ -21,11 +21,11 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
-import { resolveStoreAdapter } from '../../context.ts';
+import { resolveDefaultStoreName } from '../../context.ts';
 import {
     pruneExpiredMemories,
 } from '@yeseh/cortex-core/memory';
-import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
+import { type CortexContext } from '@yeseh/cortex-core';
 
 /**
  * Options for the prune command.
@@ -36,25 +36,12 @@ export interface PruneCommandOptions {
 }
 
 /**
- * Dependencies for the prune command handler.
- * Allows injection for testing.
- */
-export interface PruneHandlerDeps {
-    /** Output stream for writing results (defaults to process.stdout) */
-    stdout?: NodeJS.WritableStream;
-    /** Current time for expiry checks (defaults to new Date()) */
-    now?: Date;
-    /** Pre-resolved adapter for testing */
-    adapter?: ScopedStorageAdapter;
-}
-
-/**
  * Handles the prune command execution.
  *
  * Thin CLI handler that delegates all business logic to the core
  * {@link pruneExpiredMemories} operation. This handler is responsible
  * only for:
- * 1. Resolving the store adapter (from `storeName` or the default store)
+ * 1. Resolving the store adapter from CortexContext
  * 2. Calling the core prune operation with the appropriate serializer
  * 3. Formatting output for the CLI (dry-run preview vs. deletion summary)
  *
@@ -63,11 +50,12 @@ export interface PruneHandlerDeps {
  *
  * @module cli/commands/store/prune
  *
- * @param options - Command options controlling pruning behavior
- * @param options.dryRun - When `true`, lists expired memories without deleting
+ * @param ctx - CortexContext providing store resolution and I/O streams.
+ * @param options - Command options controlling pruning behavior.
+ * @param options.dryRun - When `true`, lists expired memories without deleting.
  * @param storeName - Optional store name from the parent `--store` flag;
- *   when `undefined`, resolves the default store
- * @param deps - Optional injected dependencies for testing
+ *   when `undefined`, uses the default store resolution.
+ * @returns Promise that resolves after output is written.
  * @throws {InvalidArgumentError} When the store cannot be resolved
  *   (e.g., store name does not exist)
  * @throws {CommanderError} When the core prune operation fails
@@ -77,32 +65,24 @@ export interface PruneHandlerDeps {
  * ```typescript
  * // Direct invocation in tests
  * const out = new PassThrough();
- * await handlePrune({ dryRun: true }, 'my-store', {
- *   stdout: out,
- *   now: new Date('2025-01-01'),
- *   adapter: mockAdapter,
- * });
+ * await handlePrune(ctx, { dryRun: true }, 'my-store');
  * ```
  */
 export async function handlePrune(
+    ctx: CortexContext,
     options: PruneCommandOptions,
     storeName: string | undefined,
-    deps: PruneHandlerDeps = {},
 ): Promise<void> {
-    // 1. Resolve store adapter
-    const now = deps.now ?? new Date();
-    let adapter: ScopedStorageAdapter;
+    // 1. Resolve store adapter from context
+    const resolvedStoreName = resolveDefaultStoreName(storeName, ctx.cortex);
+    const adapterResult = ctx.cortex.getStore(resolvedStoreName);
+    if (!adapterResult.ok()) {
+        throwCoreError(adapterResult.error);
+    }
+    const adapter = adapterResult.value;
 
-    if (deps.adapter) {
-        adapter = deps.adapter;
-    }
-    else {
-        const storeResult = await resolveStoreAdapter(storeName);
-        if (!storeResult.ok()) {
-            throwCoreError(storeResult.error);
-        }
-        adapter = storeResult.value.adapter;
-    }
+    const now = ctx.now;
+    const out = ctx.stdout;
 
     // 2. Delegate to core operation
     const result = await pruneExpiredMemories(adapter, {
@@ -115,7 +95,6 @@ export async function handlePrune(
     }
 
     const pruned = result.value.pruned;
-    const out = deps.stdout ?? process.stdout;
 
     // 3. Format output
     if (pruned.length === 0) {
@@ -133,10 +112,13 @@ export async function handlePrune(
 }
 
 /**
- * The `prune` subcommand for removing expired memories.
+ * Builds the `prune` subcommand for removing expired memories.
  *
  * Removes all expired memories from the store. Use --dry-run to preview
  * what would be deleted without actually removing anything.
+ *
+ * @param ctx - CortexContext providing the Cortex client and output stream.
+ * @returns A configured Commander subcommand for `store prune`.
  *
  * @example
  * ```bash
@@ -144,10 +126,12 @@ export async function handlePrune(
  * cortex store prune --dry-run
  * ```
  */
-export const pruneCommand = new Command('prune')
-    .description('Remove expired memories from the store')
-    .option('--dry-run', 'Show what would be pruned without deleting')
-    .action(async (options, command) => {
-        const parentOpts = command.parent?.opts() as { store?: string } | undefined;
-        await handlePrune(options, parentOpts?.store);
-    });
+export const createPruneCommand = (ctx: CortexContext) => {
+    return new Command('prune')
+        .description('Remove expired memories from the store')
+        .option('--dry-run', 'Show what would be pruned without deleting')
+        .action(async (options, command) => {
+            const parentOpts = command.parent?.opts() as { store?: string } | undefined;
+            await handlePrune(ctx, options, parentOpts?.store);
+        });
+};

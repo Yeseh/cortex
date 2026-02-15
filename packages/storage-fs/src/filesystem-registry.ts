@@ -20,7 +20,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { err, ok, type Result } from '@yeseh/cortex-core';
-import type { Registry, RegistryError, ScopedStorageAdapter, StoreNotFoundError } from '@yeseh/cortex-core/storage';
+import type { RegistryService, RegistryError, ScopedStorageAdapter, StoreNotFoundError } from '@yeseh/cortex-core/storage';
 import type { StoreRegistry } from '@yeseh/cortex-core/store';
 import { parseStoreRegistry, serializeStoreRegistry } from '@yeseh/cortex-core/store';
 import { FilesystemStorageAdapter } from './index.ts';
@@ -79,7 +79,7 @@ const isNotFoundError = (error: unknown): boolean => {
  * }
  * ```
  */
-export class FilesystemRegistry implements Registry {
+export class FilesystemRegistry implements RegistryService {
     /** Cached registry data, populated by load() */
     private cache: StoreRegistry | null = null;
 

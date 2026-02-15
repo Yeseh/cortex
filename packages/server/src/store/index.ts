@@ -24,6 +24,7 @@
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import * as path from 'node:path';
+import type { Cortex } from '@yeseh/cortex-core';
 import { initializeStore } from '@yeseh/cortex-core/store';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import type { ServerConfig } from '../config.ts';
@@ -43,6 +44,7 @@ import { registerStoreResources } from './resources.ts';
  *
  * @param server - MCP server instance for tool registration
  * @param config - Server configuration containing data path
+ * @param _cortex - Optional Cortex instance (reserved for future use)
  *
  * @example
  * ```ts
@@ -51,7 +53,11 @@ import { registerStoreResources } from './resources.ts';
  * registerStoreTools(server, config);
  * ```
  */
-export const registerStoreTools = (server: McpServer, config: ServerConfig): void => {
+export const registerStoreTools = (
+    server: McpServer,
+    config: ServerConfig,
+    _cortex?: Cortex,
+): void => {
     // Register cortex_list_stores tool
     server.registerTool(
         'cortex_list_stores',
