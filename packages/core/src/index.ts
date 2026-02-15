@@ -10,6 +10,7 @@ export * from './category';
 export * from './store';
 export * from './index';
 export * from './storage/adapter.ts';
+export { Cortex, type CortexError, type CortexErrorCode } from './cortex/index.ts';
 
 export {
     serialize,

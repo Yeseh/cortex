@@ -118,7 +118,7 @@ export { parseMemory, serializeMemory } from './memories.ts';
  * - {@link FilesystemMemoryStorage} - Memory file I/O operations
  * - {@link FilesystemIndexStorage} - Index file I/O and reindexing
  * - {@link FilesystemCategoryStorage} - Category directory management
- * - {@link FilesystemRegistry} - Store registry management (implements Registry interface)
+ * - {@link FilesystemRegistry} - Store registry management (implements RegistryService interface)
  *
  * New code should prefer these focused interfaces over the legacy
  * {@link FilesystemStorageAdapter} methods for better testability

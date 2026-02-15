@@ -7,7 +7,7 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { CategoryPath } from '@/category/category-path.ts';
-import type { Registry } from '@/storage/adapter.ts';
+import type { RegistryService } from '@/storage/adapter.ts';
 import { ok } from '@/result.ts';
 import { isValidStoreName } from '@/store/registry.ts';
 import { storeError, type InitStoreError, type StoreResult } from '@/store/result.ts';
@@ -56,7 +56,7 @@ export interface InitStoreOptions {
  * ```
  */
 export const initializeStore = async (
-    registry: Registry,
+    registry: RegistryService,
     name: string,
     path: string,
     options: InitStoreOptions = {},
