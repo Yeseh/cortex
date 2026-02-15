@@ -7,7 +7,8 @@
   </p>
 </div>
 
-# About 
+# About
+
 > ⚠️ **Heads up:** this project is experimental and under active development. No guarantees it will work as expected.
 
 A hierarchical memory system for AI coding agents. Cortex provides persistent, structured storage that agents can use to maintain context across sessions.
@@ -16,12 +17,12 @@ A hierarchical memory system for AI coding agents. Cortex provides persistent, s
 
 This is a monorepo containing the following packages:
 
-| Package | Description |
-|---------|-------------|
-| [`@yeseh/cortex-core`](./packages/core) | Core domain logic, types, and validation |
-| [`@yeseh/cortex-storage-fs`](./packages/storage-fs) | Filesystem storage adapter |
-| [`@yeseh/cortex-cli`](./packages/cli) | Command-line interface |
-| [`@yeseh/cortex-server`](./packages/server) | MCP server for AI agent integration |
+| Package                                             | Description                              |
+| --------------------------------------------------- | ---------------------------------------- |
+| [`@yeseh/cortex-core`](./packages/core)             | Core domain logic, types, and validation |
+| [`@yeseh/cortex-storage-fs`](./packages/storage-fs) | Filesystem storage adapter               |
+| [`@yeseh/cortex-cli`](./packages/cli)               | Command-line interface                   |
+| [`@yeseh/cortex-server`](./packages/server)         | MCP server for AI agent integration      |
 
 ## Quick Start
 
@@ -57,11 +58,11 @@ Add to your Claude Desktop config:
 
 ```json
 {
-  "mcpServers": {
-    "cortex": {
-      "command": "cortex-mcp"
+    "mcpServers": {
+        "cortex": {
+            "command": "cortex-mcp"
+        }
     }
-  }
 }
 ```
 
@@ -145,10 +146,10 @@ cortex/
 │   ├── core/           # @yeseh/cortex-core
 │   │   └── src/
 │   │       ├── memory/     # Memory types and operations
-│   │       ├── category/   # Category management
+│   │       ├── category/   # Category and index management
 │   │       ├── store/      # Store registry
-│   │       ├── index/      # Index types
-│   │       └── storage/    # Storage port interfaces
+│   │       ├── storage/    # Storage port interfaces
+│   │       └── validation/ # Input validation utilities
 │   ├── storage-fs/     # @yeseh/cortex-storage-fs
 │   │   └── src/
 │   │       ├── index.ts    # FilesystemStorageAdapter
