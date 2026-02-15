@@ -117,7 +117,6 @@ export const createServerConfigSchema = () =>
 
 /**
  * Server configuration schema with environment variable defaults.
- * @deprecated Use createServerConfigSchema() for runtime defaults
  */
 export const serverConfigSchema = createServerConfigSchema();
 
