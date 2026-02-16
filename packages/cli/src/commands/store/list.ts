@@ -31,7 +31,7 @@ export interface ListCommandOptions {
  * Handles the list command execution.
  *
  * This function:
- * 1. Formats the stores as a sorted list from ctx.cortex.registry
+ * 1. Formats the stores as a sorted list from cortex.getStoreDefinitions()
  * 2. Serializes and outputs the result
  *
  * @param ctx - CortexContext with Cortex client and output stream
@@ -40,7 +40,8 @@ export interface ListCommandOptions {
  */
 export async function handleList(ctx: CortexContext, options: ListCommandOptions): Promise<void> {
     // 1. Format the output as a sorted list of stores (registry already loaded in ctx)
-    const stores = Object.entries(ctx.cortex.registry)
+    const storeDefinitions = ctx.cortex.getStoreDefinitions();
+    const stores = Object.entries(storeDefinitions)
         .map(([name, def]) => ({ name, path: def.path }))
         .sort((a, b) => a.name.localeCompare(b.name));
 

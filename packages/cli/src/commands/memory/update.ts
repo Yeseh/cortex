@@ -28,7 +28,6 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
-import { resolveDefaultStoreName } from '../../context.ts';
 import { updateMemory, type UpdateMemoryInput } from '@yeseh/cortex-core/memory';
 import { type CortexContext } from '@yeseh/cortex-core';
 import { resolveMemoryContentInput } from '../../input.ts';
@@ -182,7 +181,7 @@ export async function handleUpdate(
     storeName: string | undefined
 ): Promise<void> {
     // Get adapter from context
-    const resolvedStoreName = resolveDefaultStoreName(storeName, ctx.cortex);
+    const resolvedStoreName = storeName ?? 'default';
     const adapterResult = ctx.cortex.getStore(resolvedStoreName);
     if (!adapterResult.ok()) {
         throwCoreError(adapterResult.error);

@@ -23,7 +23,6 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
-import { resolveDefaultStoreName } from '../../context.ts';
 
 import { getMemory } from '@yeseh/cortex-core/memory';
 import { defaultTokenizer, type CortexContext } from '@yeseh/cortex-core';
@@ -71,7 +70,7 @@ export async function handleShow(
     storeName: string | undefined
 ): Promise<void> {
     // 1. Resolve store context
-    const resolvedStoreName = resolveDefaultStoreName(storeName, ctx.cortex);
+    const resolvedStoreName = storeName ?? 'default';
     const adapterResult = ctx.cortex.getStore(resolvedStoreName);
     if (!adapterResult.ok()) {
         throwCoreError(adapterResult.error);

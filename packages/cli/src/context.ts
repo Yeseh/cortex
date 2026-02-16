@@ -135,12 +135,12 @@ export const createCortexContext = async (
     if (cortexResult.ok()) {
         // Check if any discovered stores are missing from config
         const missingStores = Object.keys(discoveredRegistry).filter(
-            (name) => !cortexResult.value.registry[name]
+            (name) => !cortexResult.value.hasStore(name)
         );
 
         if (missingStores.length > 0) {
             // Recreate Cortex with merged registry (discovered stores + config stores)
-            const mergedRegistry = { ...discoveredRegistry, ...cortexResult.value.registry };
+            const mergedRegistry = { ...discoveredRegistry, ...cortexResult.value.getStoreDefinitions() };
             const recreatedCortex = Cortex.init({
                 rootDirectory: cortexResult.value.rootDirectory,
                 settings: cortexResult.value.settings,
@@ -187,38 +187,4 @@ export const createCortexContext = async (
         stdin: options.stdin ?? process.stdin,
         now: options.now ?? new Date(),
     });
-};
-
-/**
- * Resolves the store name to use for operations.
- *
- * Resolution order:
- * 1. Explicit store name (from --store flag)
- * 2. 'local' if registered in the Cortex registry
- * 3. 'default' as fallback
- *
- * Edge cases:
- * - Returns `'default'` even when the registry is empty; callers should
- *   handle store lookup failures from {@link Cortex.getStore}.
- *
- * @module cli/context
- * @param storeName - Explicit store name from command option, or undefined.
- * @param cortex - Cortex instance to check registry.
- * @returns Resolved store name.
- *
- * @example
- * ```typescript
- * const storeName = resolveDefaultStoreName(options.store, ctx.cortex);
- * const adapterResult = ctx.cortex.getStore(storeName);
- * ```
- */
-export const resolveDefaultStoreName = (storeName: string | undefined, cortex: Cortex): string => {
-    if (storeName) {
-        return storeName;
-    }
-    // Prefer 'local' if it exists in the registry
-    if ('local' in cortex.registry) {
-        return 'local';
-    }
-    return 'default';
 };

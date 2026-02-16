@@ -129,7 +129,7 @@ export async function handleAdd(
     const resolvedPath = validateAndResolvePath(storePath, cwd);
 
     // 2. Check for existing store
-    if (ctx.cortex.registry[trimmedName]) {
+    if (ctx.cortex.hasStore(trimmedName)) {
         throwCoreError({
             code: 'STORE_ALREADY_EXISTS',
             message: `Store '${trimmedName}' is already registered.`,

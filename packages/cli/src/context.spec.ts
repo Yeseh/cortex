@@ -3,13 +3,8 @@ import * as fs from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
 import { PassThrough } from 'node:stream';
-import { Cortex } from '@yeseh/cortex-core';
 
-import {
-    createCortexContext,
-    getDefaultGlobalStorePath,
-    resolveDefaultStoreName,
-} from './context.ts';
+import { createCortexContext, getDefaultGlobalStorePath } from './context.ts';
 
 describe('context', () => {
     describe('getDefaultGlobalStorePath', () => {
@@ -81,8 +76,8 @@ describe('context', () => {
 
             expect(result.ok()).toBe(true);
             if (result.ok()) {
-                expect(result.value.cortex.registry.alpha?.path).toBe(storePath);
-                expect(result.value.cortex.registry.local?.path).toBe(localStorePath);
+                expect(result.value.cortex.getStoreDefinitions().alpha?.path).toBe(storePath);
+                expect(result.value.cortex.getStoreDefinitions().local?.path).toBe(localStorePath);
                 expect(result.value.cortex.settings.outputFormat).toBe('json');
                 expect(result.value.stdout).toBe(stdout);
                 expect(result.value.stdin).toBe(stdin);
@@ -101,7 +96,7 @@ describe('context', () => {
 
             expect(result.ok()).toBe(true);
             if (result.ok()) {
-                expect(result.value.cortex.registry.local?.path).toBe(localStorePath);
+                expect(result.value.cortex.getStoreDefinitions().local?.path).toBe(localStorePath);
             }
         });
 
@@ -118,8 +113,8 @@ describe('context', () => {
 
             expect(result.ok()).toBe(true);
             if (result.ok()) {
-                expect(result.value.cortex.registry.local?.path).toBe(localStorePath);
-                expect(result.value.cortex.registry.default?.path).toBe(configGlobalStorePath);
+                expect(result.value.cortex.getStoreDefinitions().local?.path).toBe(localStorePath);
+                expect(result.value.cortex.getStoreDefinitions().default?.path).toBe(configGlobalStorePath);
             }
         });
 
@@ -144,8 +139,8 @@ describe('context', () => {
 
                 expect(result.ok()).toBe(true);
                 if (result.ok()) {
-                    expect(result.value.cortex.registry.local?.path).toBe(localStorePath);
-                    expect(result.value.cortex.registry.default?.path).toBe(defaultStorePath);
+                    expect(result.value.cortex.getStoreDefinitions().local?.path).toBe(localStorePath);
+                    expect(result.value.cortex.getStoreDefinitions().default?.path).toBe(defaultStorePath);
                 }
             } finally {
                 if (originalHome === undefined) {
@@ -159,46 +154,6 @@ describe('context', () => {
                     process.env.USERPROFILE = originalUserProfile;
                 }
             }
-        });
-    });
-
-    describe('resolveDefaultStoreName', () => {
-        it('should return explicit store name when provided', () => {
-            const cortex = Cortex.init({
-                rootDirectory: '/tmp',
-                registry: {
-                    local: { path: '/tmp/local' },
-                    default: { path: '/tmp/default' },
-                },
-            });
-
-            const result = resolveDefaultStoreName('custom', cortex);
-            expect(result).toBe('custom');
-        });
-
-        it('should prefer local store when present', () => {
-            const cortex = Cortex.init({
-                rootDirectory: '/tmp',
-                registry: {
-                    local: { path: '/tmp/local' },
-                    default: { path: '/tmp/default' },
-                },
-            });
-
-            const result = resolveDefaultStoreName(undefined, cortex);
-            expect(result).toBe('local');
-        });
-
-        it('should fall back to default when local store missing', () => {
-            const cortex = Cortex.init({
-                rootDirectory: '/tmp',
-                registry: {
-                    default: { path: '/tmp/default' },
-                },
-            });
-
-            const result = resolveDefaultStoreName(undefined, cortex);
-            expect(result).toBe('default');
         });
     });
 });

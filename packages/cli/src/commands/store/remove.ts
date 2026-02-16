@@ -89,14 +89,14 @@ export async function handleRemove(
     const trimmedName = validateStoreName(name);
 
     // 2. Get store path before removal (for output)
-    const existingStore = ctx.cortex.registry[trimmedName];
-    if (!existingStore) {
+    if (!ctx.cortex.hasStore(trimmedName)) {
         throwCoreError({
             code: 'STORE_NOT_FOUND',
             message: `Store '${trimmedName}' is not registered.`,
         });
     }
-    const storePath = existingStore.path;
+    const storeDefinitions = ctx.cortex.getStoreDefinitions();
+    const storePath = storeDefinitions[trimmedName]!.path;
 
     // 3. Remove from registry via Cortex
     const removeResult = await ctx.cortex.removeStore(trimmedName);
