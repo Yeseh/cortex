@@ -52,7 +52,7 @@ import {
 
 // Store domain
 import { 
-  type StoreRegistry,
+  type Registry,
   initializeStore,
   resolveStore
 } from '@yeseh/cortex-core/store';

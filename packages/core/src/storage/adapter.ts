@@ -24,8 +24,7 @@ import type { Result } from '@/result.ts';
 import type { Category } from '../category/types.ts';
 import type { CategoryStorage } from '../category/types.ts';
 import type {
-    Registry as RegistryData,
-    StoreRegistry,
+    Registry,
     StoreRegistryLoadError,
     StoreRegistrySaveError,
 } from '../store/registry.ts';
@@ -268,7 +267,7 @@ export interface IndexStorage {
  * ```typescript
  * const cortex = await Cortex.fromConfig('~/.config/cortex');
  * if (cortex.ok) {
- *   const defaultStore = cortex.value.registry['default'];
+ *   const defaultStore = cortex.value.getStoreDefinitions()['default'];
  *   console.log('Default store path:', defaultStore?.path);
  * }
  * ```
@@ -285,7 +284,7 @@ export interface StoreStorage {
     load(
         path: string,
         options?: { allowMissing?: boolean }
-    ): Promise<Result<StoreRegistry, StoreRegistryLoadError>>;
+    ): Promise<Result<Registry, StoreRegistryLoadError>>;
 
     /**
      * Saves the store registry to a file.
@@ -296,7 +295,7 @@ export interface StoreStorage {
      * @param registry - The registry data to persist
      * @returns Result indicating success or failure
      */
-    save(path: string, registry: StoreRegistry): Promise<Result<void, StoreRegistrySaveError>>;
+    save(path: string, registry: Registry): Promise<Result<void, StoreRegistrySaveError>>;
 
     /**
      * Removes a store registry file.
@@ -477,7 +476,7 @@ export interface CortexOptions {
     /** Settings override (merged with defaults) */
     settings?: Partial<CortexSettings>;
     /** Store definitions (default: empty) */
-    registry?: RegistryData;
+    registry?: Registry;
     /** Custom adapter factory for testing (default: filesystem) */
     adapterFactory?: AdapterFactory;
 }
@@ -519,7 +518,7 @@ export interface CortexOptions {
  *   registry: {}
  * });
  * if (cortex.ok) {
- *   console.log('Registered stores:', Object.keys(cortex.value.registry));
+ *   console.log('Registered stores:', cortex.value.listStores());
  * }
  * ```
  */
@@ -549,7 +548,7 @@ export interface RegistryService {
      * refresh the internal cache, which is useful when the registry file
      * may have been modified externally.
      *
-     * @returns Result with the parsed {@link StoreRegistry}, or {@link RegistryError} on failure
+     * @returns Result with the parsed {@link Registry}, or {@link RegistryError} on failure
      *
      * @example
      * ```typescript
@@ -561,7 +560,7 @@ export interface RegistryService {
      * }
      * ```
      */
-    load(): Promise<Result<StoreRegistry, RegistryError>>;
+    load(): Promise<Result<Registry, RegistryError>>;
 
     /**
      * Persist registry data to storage.
@@ -585,7 +584,7 @@ export interface RegistryService {
      * }
      * ```
      */
-    save(registry: StoreRegistry): Promise<Result<void, RegistryError>>;
+    save(registry: Registry): Promise<Result<void, RegistryError>>;
 
     /**
      * Synchronous factory returning a storage adapter scoped to a specific store.

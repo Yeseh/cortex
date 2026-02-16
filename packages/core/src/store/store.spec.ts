@@ -89,7 +89,7 @@ describe('store resolution', () => {
         if (!result.ok()) {
             expect(result.error.code).toBe('LOCAL_STORE_MISSING');
             expect(normalizePath(result.error.path!)).toBe(
-                normalizePath(join(cwd, '.cortex', 'memory'))
+                normalizePath(join(cwd, '.cortex', 'memory')),
             );
         }
     });

@@ -70,7 +70,7 @@ export const initializeStore = async (
     }
 
     // 2. Check for collision in registry
-    if (cortex.registry[name]) {
+    if (cortex.hasStore(name)) {
         return storeError('STORE_ALREADY_EXISTS', `Store '${name}' is already registered.`, {
             store: name,
         });

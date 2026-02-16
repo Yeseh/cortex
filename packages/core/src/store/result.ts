@@ -69,7 +69,7 @@ export type StoreResult<T, E extends StoreError = StoreError> = Result<T, E>;
 export const storeError = <Code extends StoreErrorCode>(
     code: Code,
     message: string,
-    extras?: Partial<StoreError>
+    extras?: Partial<StoreError>,
 ): StoreResult<never, StoreErrorForCode<Code>> =>
     err({
         code,

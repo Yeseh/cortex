@@ -18,7 +18,7 @@ export class MemoryPath {
         if (segments.length < 2) {
             return memoryError(
                 'INVALID_PATH',
-                'Memory slug path must include at least two segments.'
+                'Memory slug path must include at least two segments.',
             );
         }
 
@@ -29,7 +29,7 @@ export class MemoryPath {
         if (segments.length < 2) {
             return memoryError(
                 'INVALID_PATH',
-                'Memory slug path must include at least two segments.'
+                'Memory slug path must include at least two segments.',
             );
         }
 

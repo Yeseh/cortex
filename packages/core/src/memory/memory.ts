@@ -82,7 +82,7 @@ export class Memory {
     static init(
         path: string | MemoryPath,
         metadata: MemoryMetadata,
-        content: string
+        content: string,
     ): MemoryResult<Memory> {
         if (typeof path === 'string') {
             const pathResult = MemoryPath.fromString(path);

@@ -33,7 +33,7 @@ export class CategoryPath {
         if (slugSegments.length === 0) {
             return memoryError(
                 'INVALID_PATH',
-                'Memory slug path must include at least one segment with valid slugs'
+                'Memory slug path must include at least one segment with valid slugs',
             );
         }
 
