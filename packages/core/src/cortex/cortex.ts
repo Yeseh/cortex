@@ -67,7 +67,7 @@ const createDefaultAdapterFactory = (): AdapterFactory => {
         // This will be replaced by the actual factory from storage-fs
         // when used in CLI/Server entry points
         throw new Error(
-            `No adapter factory provided. Pass adapterFactory to Cortex.fromConfig() or Cortex.init(). Store path: ${storePath}`
+            `No adapter factory provided. Pass adapterFactory to Cortex.fromConfig() or Cortex.init(). Store path: ${storePath}`,
         );
     };
 };
@@ -104,7 +104,7 @@ export class Cortex {
     /** Current settings */
     readonly settings: CortexSettings;
     /** Store definitions */
-    readonly registry: Registry;
+    private readonly registry: Registry;
     /** Factory for creating adapters */
     private readonly adapterFactory: AdapterFactory;
 
@@ -135,14 +135,14 @@ export class Cortex {
      */
     static async fromConfig(
         configDir: string,
-        defaultAdapterFactory?: AdapterFactory
+        defaultAdapterFactory?: AdapterFactory,
     ): Promise<Result<Cortex, CortexError>> {
         // Expand ~ to home directory
         const resolvedDir = configDir.startsWith('~')
             ? join(
-                  homedir(),
-                  configDir.slice(configDir[1] === '/' || configDir[1] === '\\' ? 2 : 1)
-              )
+                homedir(),
+                configDir.slice(configDir[1] === '/' || configDir[1] === '\\' ? 2 : 1),
+            )
             : resolve(configDir);
 
         const configPath = join(resolvedDir, 'config.yaml');
@@ -150,7 +150,8 @@ export class Cortex {
         let contents: string;
         try {
             contents = await readFile(configPath, 'utf8');
-        } catch (error) {
+        }
+        catch (error) {
             if (isNotFoundError(error)) {
                 return err({
                     code: 'CONFIG_NOT_FOUND',
@@ -182,7 +183,7 @@ export class Cortex {
                 settings: parsed.value.settings,
                 registry: parsed.value.stores,
                 adapterFactory,
-            })
+            }),
         );
     }
 
@@ -242,7 +243,8 @@ export class Cortex {
                 await readFile(configPath, 'utf8');
                 // Already exists, nothing to do
                 return ok(undefined);
-            } catch (error) {
+            }
+            catch (error) {
                 if (!isNotFoundError(error)) {
                     return err({
                         code: 'INITIALIZE_FAILED',
@@ -260,7 +262,8 @@ export class Cortex {
 
             await writeFile(configPath, configYaml, 'utf8');
             return ok(undefined);
-        } catch (error) {
+        }
+        catch (error) {
             return err({
                 code: 'INITIALIZE_FAILED',
                 message: `Failed to initialize config directory at ${this.rootDirectory}. Check write permissions and available disk space.`,
@@ -355,6 +358,34 @@ export class Cortex {
     }
 
     /**
+     * Check if a store is registered.
+     *
+     * @param name - Store name to check
+     * @returns true if the store exists
+     */
+    hasStore(name: string): boolean {
+        return name in this.registry;
+    }
+
+    /**
+     * Get all registered store names.
+     *
+     * @returns Array of store names
+     */
+    listStores(): string[] {
+        return Object.keys(this.registry);
+    }
+
+    /**
+     * Get all store definitions.
+     *
+     * @returns Record of store names to their definitions
+     */
+    getStoreDefinitions(): Readonly<Record<string, StoreDefinition>> {
+        return this.registry;
+    }
+
+    /**
      * Persist the current config to disk.
      *
      * @internal
@@ -368,7 +399,8 @@ export class Cortex {
             });
             await writeFile(configPath, configYaml, 'utf8');
             return ok(undefined);
-        } catch (error) {
+        }
+        catch (error) {
             return err({
                 code: 'CONFIG_WRITE_FAILED',
                 message: `Failed to save config at ${this.rootDirectory}. Check write permissions.`,

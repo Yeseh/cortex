@@ -38,7 +38,7 @@ describe('Cortex.init', () => {
 
         expect(cortex.rootDirectory).toBe('/tmp/test');
         expect(cortex.settings).toEqual(DEFAULT_CORTEX_SETTINGS);
-        expect(cortex.registry).toEqual({});
+        expect(cortex.getStoreDefinitions()).toEqual({});
     });
 
     it('should create Cortex with custom settings', () => {
@@ -90,7 +90,7 @@ stores:
         if (result.ok()) {
             expect(result.value.settings.outputFormat).toBe('json');
             expect(result.value.settings.autoSummary).toBe(true);
-            expect(result.value.registry.default?.path).toBe('/tmp/default');
+            expect(result.value.getStoreDefinitions().default?.path).toBe('/tmp/default');
         }
     });
 
