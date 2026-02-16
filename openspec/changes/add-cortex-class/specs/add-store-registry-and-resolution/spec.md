@@ -1,9 +1,4 @@
-## RENAMED Requirements
-
-- FROM: `### Requirement: Registry Interface`
-- TO: `### Requirement: Cortex Class`
-
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Cortex Class
 
@@ -97,19 +92,6 @@ The system SHALL provide a `CortexOptions` interface for programmatic Cortex cre
 - **WHEN** `CortexOptions` includes only `rootDirectory`
 - **THEN** default settings, empty registry, and filesystem adapter factory are used
 
-### Requirement: CortexContext for handlers
-
-The system SHALL provide a `CortexContext` interface for dependency injection into handlers:
-
-- `cortex: Cortex` - The root client instance
-
-#### Scenario: Handler receives context
-
-- **GIVEN** a CLI or MCP handler function
-- **WHEN** the handler is invoked
-- **THEN** it receives `CortexContext` as its first parameter
-- **AND** can access `ctx.cortex.getStore(name)`
-
 ### Requirement: Registry type (renamed from StoreRegistry)
 
 The `StoreRegistry` type SHALL be renamed to `Registry` to represent the collection of store definitions.
@@ -119,11 +101,3 @@ The `StoreRegistry` type SHALL be renamed to `Registry` to represent the collect
 - **WHEN** the `Registry` type is used
 - **THEN** it is `Record<string, StoreDefinition>`
 - **AND** `StoreDefinition` has `path: string` and optional `description?: string`
-
-## REMOVED Requirements
-
-### Requirement: Initialize Store Domain Operation
-
-**Reason**: Store initialization logic moves into `Cortex.initialize()` and dedicated store operations.
-
-**Migration**: Use `Cortex.init()` followed by `cortex.initialize()` for first-time setup.
