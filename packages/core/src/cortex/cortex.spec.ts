@@ -5,9 +5,48 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { mkdtemp, mkdir, rm, writeFile, readFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join } from 'path';
+
+// =============================================================================
+// Bun-native helper functions for test file operations
+// =============================================================================
+
+/** Creates a temporary directory with given prefix (Bun-native replacement for mkdtemp) */
+const createTempDir = async (prefix: string): Promise<string> => {
+    const tempBase = Bun.env.TMPDIR ?? '/tmp';
+    const uniqueDir = join(
+        tempBase,
+        `${prefix}${Date.now()}-${Math.random().toString(36).slice(2)}`
+    );
+    await Bun.write(join(uniqueDir, '.keep'), ''); // Creates dir by writing a file
+    return uniqueDir;
+};
+
+/** Writes content to a file using Bun.write() */
+const writeFile = async (filePath: string, content: string): Promise<void> => {
+    await Bun.write(filePath, content);
+};
+
+/** Reads content from a file using Bun.file() */
+const readFile = async (filePath: string, _encoding?: string): Promise<string> => {
+    return await Bun.file(filePath).text();
+};
+
+/** Creates a directory recursively using Bun */
+const mkdir = async (dirPath: string, _options?: { recursive?: boolean }): Promise<void> => {
+    // Create directory by writing a placeholder file (Bun creates parent dirs)
+    const keepFile = join(dirPath, '.keep');
+    await Bun.write(keepFile, '');
+};
+
+/** Removes a directory recursively (fallback to shell for reliability) */
+const rm = async (
+    dirPath: string,
+    _options?: { recursive?: boolean; force?: boolean }
+): Promise<void> => {
+    const proc = Bun.spawn(['rm', '-rf', dirPath], { stdout: 'ignore', stderr: 'ignore' });
+    await proc.exited;
+};
 
 import { Cortex } from './cortex.ts';
 import type { AdapterFactory } from './types.ts';
@@ -51,7 +90,7 @@ describe('Cortex.init()', () => {
     let tempDir: string;
 
     beforeEach(async () => {
-        tempDir = await mkdtemp(join(tmpdir(), 'cortex-init-tests-'));
+        tempDir = await createTempDir('cortex-init-tests-');
     });
 
     afterEach(async () => {
@@ -99,9 +138,7 @@ describe('Cortex.init()', () => {
             },
         });
 
-        expect(Object.keys(cortex.registry)).toEqual([
-            'my-store', 'another-store',
-        ]);
+        expect(Object.keys(cortex.registry)).toEqual(['my-store', 'another-store']);
         expect(cortex.registry['my-store']!.path).toBe('/path/to/store');
         expect(cortex.registry['another-store']!.description).toBe('Test store');
     });
@@ -154,7 +191,7 @@ describe('Cortex.fromConfig()', () => {
     let tempDir: string;
 
     beforeEach(async () => {
-        tempDir = await mkdtemp(join(tmpdir(), 'cortex-fromconfig-tests-'));
+        tempDir = await createTempDir('cortex-fromconfig-tests-');
     });
 
     afterEach(async () => {
@@ -187,9 +224,7 @@ describe('Cortex.fromConfig()', () => {
             expect(result.value.settings.outputFormat).toBe('json');
             expect(result.value.settings.autoSummaryThreshold).toBe(15);
             expect(result.value.settings.strictLocal).toBe(true);
-            expect(Object.keys(result.value.registry)).toEqual([
-                'my-store', 'another-store',
-            ]);
+            expect(Object.keys(result.value.registry)).toEqual(['my-store', 'another-store']);
             expect(result.value.registry['another-store']!.description).toBe('Another store');
         }
     });
@@ -266,7 +301,7 @@ describe('Cortex.initialize()', () => {
     let tempDir: string;
 
     beforeEach(async () => {
-        tempDir = await mkdtemp(join(tmpdir(), 'cortex-initialize-tests-'));
+        tempDir = await createTempDir('cortex-initialize-tests-');
     });
 
     afterEach(async () => {
@@ -342,7 +377,7 @@ describe('Cortex.getStore()', () => {
     let tempDir: string;
 
     beforeEach(async () => {
-        tempDir = await mkdtemp(join(tmpdir(), 'cortex-getstore-tests-'));
+        tempDir = await createTempDir('cortex-getstore-tests-');
     });
 
     afterEach(async () => {

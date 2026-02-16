@@ -33,9 +33,20 @@
  * ```
  */
 
-import { readFile, mkdir, writeFile, access } from 'node:fs/promises';
-import { resolve, isAbsolute } from 'node:path';
-import { homedir } from 'node:os';
+import { mkdir } from 'node:fs/promises';
+import { resolve, isAbsolute } from 'path';
+
+/**
+ * Gets the user's home directory using Bun-native API.
+ * Falls back to process.env.HOME for compatibility.
+ */
+const getHomeDir = (): string => {
+    const home = Bun.env.HOME ?? process.env.HOME;
+    if (!home) {
+        throw new Error('Unable to determine home directory: HOME environment variable not set');
+    }
+    return home;
+};
 import z from 'zod';
 import { type Result, ok, err } from '@/result.ts';
 import type { ScopedStorageAdapter, StoreNotFoundError } from '@/storage/adapter.ts';
@@ -58,9 +69,7 @@ import {
  */
 const settingsSchema = z
     .object({
-        output_format: z.enum([
-            'yaml', 'json',
-        ]).optional(),
+        output_format: z.enum(['yaml', 'json']).optional(),
         auto_summary_threshold: z.number().int().nonnegative().optional(),
         strict_local: z.boolean().optional(),
     })
@@ -81,7 +90,7 @@ const storeDefinitionSchema = z.object({
 const storesSchema = z
     .record(
         z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Store name must be a lowercase slug'),
-        storeDefinitionSchema,
+        storeDefinitionSchema
     )
     .optional();
 
@@ -164,11 +173,6 @@ export class Cortex {
      *     },
      * });
      *
-     * // With mock adapter factory for testing
-     * const cortex = Cortex.init({
-     *     rootDirectory: '/tmp/test',
-     *     adapterFactory: (path) => createMockAdapter(path),
-     * });
      * ```
      */
     static init(options: CortexOptions): Cortex {
@@ -201,19 +205,19 @@ export class Cortex {
         const resolvedDir = resolvePath(configDir);
         const configPath = resolve(resolvedDir, 'config.yaml');
 
-        // Read config file
+        // Read config file using Bun.file()
+        const configFile = Bun.file(configPath);
         let contents: string;
         try {
-            contents = await readFile(configPath, 'utf8');
-        }
-        catch (error) {
-            if (isNotFoundError(error)) {
+            if (!(await configFile.exists())) {
                 return err({
                     code: 'CONFIG_NOT_FOUND',
                     message: `Config file not found at ${configPath}. Run 'cortex init' to create one.`,
                     path: configPath,
                 });
             }
+            contents = await configFile.text();
+        } catch (error) {
             return err({
                 code: 'CONFIG_READ_FAILED',
                 message: `Failed to read config file at ${configPath}.`,
@@ -235,7 +239,7 @@ export class Cortex {
                 rootDirectory: resolvedDir,
                 settings,
                 registry,
-            }),
+            })
         );
     }
 
@@ -262,22 +266,18 @@ export class Cortex {
      */
     async initialize(): Promise<Result<void, InitializeError>> {
         const configPath = resolve(this.rootDirectory, 'config.yaml');
+        const configFile = Bun.file(configPath);
 
-        // Check if config already exists
-        try {
-            await access(configPath);
+        // Check if config already exists using Bun.file()
+        if (await configFile.exists()) {
             // Config exists, preserve it (idempotent)
             return ok(undefined);
-        }
-        catch {
-            // Config doesn't exist, continue to create
         }
 
         // Create directory structure
         try {
             await mkdir(this.rootDirectory, { recursive: true });
-        }
-        catch (error) {
+        } catch (error) {
             return err({
                 code: 'DIRECTORY_CREATE_FAILED',
                 message: `Failed to create directory at ${this.rootDirectory}. Check that the parent directory exists and you have write permissions.`,
@@ -286,12 +286,11 @@ export class Cortex {
             });
         }
 
-        // Write config file
+        // Write config file using Bun.write()
         try {
             const configContent = serializeConfig(this.settings, this.registry);
-            await writeFile(configPath, configContent, 'utf8');
-        }
-        catch (error) {
+            await Bun.write(configPath, configContent);
+        } catch (error) {
             return err({
                 code: 'CONFIG_WRITE_FAILED',
                 message: `Failed to write config file at ${configPath}. Check that you have write permissions to the directory.`,
@@ -357,23 +356,13 @@ export class Cortex {
 // =============================================================================
 
 /**
- * Resolves a path, expanding ~ to home directory.
+ * Resolves a path, expanding ~ to home directory using Bun-native API.
  */
-const resolvePath = (path: string): string => {
-    if (path.startsWith('~')) {
-        return resolve(homedir(), path.slice(1).replace(/^[/\\]/, ''));
+const resolvePath = (pathStr: string): string => {
+    if (pathStr.startsWith('~')) {
+        return resolve(getHomeDir(), pathStr.slice(1).replace(/^[/\\]/, ''));
     }
-    return isAbsolute(path) ? path : resolve(path);
-};
-
-/**
- * Checks if an error is a "file not found" error.
- */
-const isNotFoundError = (error: unknown): boolean => {
-    if (!error || typeof error !== 'object') {
-        return false;
-    }
-    return 'code' in error && (error as { code?: string }).code === 'ENOENT';
+    return isAbsolute(pathStr) ? pathStr : resolve(pathStr);
 };
 
 /**
@@ -389,7 +378,7 @@ const createDefaultAdapterFactory = (): AdapterFactory => {
     return (_storePath: string): ScopedStorageAdapter => {
         throw new Error(
             'No adapter factory provided. Either provide an adapterFactory in CortexOptions, ' +
-                'or use createFilesystemCortex() from @yeseh/cortex-storage-fs.',
+                'or use createFilesystemCortex() from @yeseh/cortex-storage-fs.'
         );
     };
 };
@@ -418,9 +407,7 @@ const transformSettings = (rawSettings: ParsedConfigFile['settings']): Partial<C
 const transformStores = (rawStores: ParsedConfigFile['stores']): StoreRegistry => {
     if (!rawStores) return {};
     const registry: StoreRegistry = {};
-    for (const [
-        name, def,
-    ] of Object.entries(rawStores)) {
+    for (const [name, def] of Object.entries(rawStores)) {
         const storeDefinition: StoreDefinition = { path: def.path };
         if (def.description !== undefined) {
             storeDefinition.description = def.description;
@@ -435,14 +422,13 @@ const transformStores = (rawStores: ParsedConfigFile['stores']): StoreRegistry =
  */
 const parseConfigFile = (
     contents: string,
-    configPath: string,
+    configPath: string
 ): Result<{ settings: Partial<CortexSettings>; registry: StoreRegistry }, ConfigError> => {
     // Parse YAML
     let parsed: unknown;
     try {
         parsed = Bun.YAML.parse(contents);
-    }
-    catch (error) {
+    } catch (error) {
         const yamlError = error as { message?: string };
         return err({
             code: 'CONFIG_PARSE_FAILED',
@@ -492,9 +478,7 @@ const serializeConfig = (settings: CortexSettings, registry: StoreRegistry): str
     };
 
     // Add stores
-    for (const [
-        name, def,
-    ] of Object.entries(registry)) {
+    for (const [name, def] of Object.entries(registry)) {
         config.stores![name] = {
             path: def.path,
             ...(def.description !== undefined && { description: def.description }),
