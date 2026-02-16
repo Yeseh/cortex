@@ -91,7 +91,7 @@ export { toonOptions } from '@yeseh/cortex-core';
  */
 export const serializeOutput = (
     payload: OutputPayload,
-    format: OutputFormat,
+    format: OutputFormat
 ): Result<string, OutputSerializeError> => {
     const result = serialize(payload.value, format);
 

@@ -64,7 +64,7 @@ export const createMemory = async (
     storage: ScopedStorageAdapter,
     path: string,
     input: CreateMemoryInput,
-    now?: Date,
+    now?: Date
 ): Promise<MemoryResult<Memory>> => {
     const timestamp = now ?? new Date();
     const memoryResult = Memory.init(
@@ -77,7 +77,7 @@ export const createMemory = async (
             expiresAt: input.expiresAt,
             citations: input.citations ?? [],
         },
-        input.content,
+        input.content
     );
 
     if (!memoryResult.ok()) {
@@ -97,13 +97,15 @@ export const createMemory = async (
     const indexResult = await storage.indexes.updateAfterMemoryWrite(memory);
     if (!indexResult.ok()) {
         const reason = indexResult.error.message ?? 'Unknown error';
-        return memoryError('STORAGE_ERROR',
+        return memoryError(
+            'STORAGE_ERROR',
             `Memory written but index update failed for "${path}": ${reason}. ` +
-            'Run "cortex store reindex" to rebuild indexes.',
+                'Run "cortex store reindex" to rebuild indexes.',
             {
                 path,
                 cause: indexResult.error,
-            });
+            }
+        );
     }
 
     return ok(memory);

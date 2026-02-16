@@ -21,7 +21,7 @@ const toCategoryError = (
     code: CategoryError['code'],
     message: string,
     path: string,
-    cause?: unknown,
+    cause?: unknown
 ): CategoryError => ({ code, message, path, cause });
 
 /**
@@ -33,14 +33,13 @@ const toCategoryError = (
  */
 export const exists = async (
     ctx: FilesystemContext,
-    path: string,
+    path: string
 ): Promise<Result<boolean, CategoryError>> => {
     const dirPath = resolve(ctx.storeRoot, path);
     try {
         await access(dirPath);
         return ok(true);
-    }
-    catch {
+    } catch {
         return ok(false);
     }
 };
@@ -56,21 +55,20 @@ export const exists = async (
  */
 export const ensure = async (
     ctx: FilesystemContext,
-    path: string,
+    path: string
 ): Promise<Result<void, CategoryError>> => {
     const dirPath = resolve(ctx.storeRoot, path);
     try {
         await mkdir(dirPath, { recursive: true });
         return ok(undefined);
-    }
-    catch (error) {
+    } catch (error) {
         return err(
             toCategoryError(
                 'STORAGE_ERROR',
                 `Failed to create category directory: ${path}`,
                 path,
-                error,
-            ),
+                error
+            )
         );
     }
 };
@@ -86,14 +84,13 @@ export const ensure = async (
  */
 export const deleteCategoryDirectory = async (
     ctx: FilesystemContext,
-    path: CategoryPath,
+    path: CategoryPath
 ): Promise<Result<void, CategoryError>> => {
     const dirPath = resolve(ctx.storeRoot, path.toString());
     try {
         await rm(dirPath, { recursive: true });
         return ok(undefined);
-    }
-    catch (error) {
+    } catch (error) {
         if (isNotFoundError(error)) {
             return ok(undefined);
         }
@@ -102,8 +99,8 @@ export const deleteCategoryDirectory = async (
                 'STORAGE_ERROR',
                 `Failed to delete category directory: ${path.toString()}`,
                 path.toString(),
-                error,
-            ),
+                error
+            )
         );
     }
 };
@@ -136,7 +133,7 @@ export { deleteCategoryDirectory as delete };
 export const updateSubcategoryDescription = async (
     ctx: FilesystemContext,
     categoryPath: CategoryPath,
-    description: string | null,
+    description: string | null
 ): Promise<Result<void, CategoryError>> => {
     const parent = categoryPath.parent;
     const indexName = !parent || parent.isRoot ? CategoryPath.root() : parent;
@@ -149,8 +146,8 @@ export const updateSubcategoryDescription = async (
                 'STORAGE_ERROR',
                 `Failed to read parent index: ${indexName.toString()}`,
                 indexName.toString(),
-                currentResult.error,
-            ),
+                currentResult.error
+            )
         );
     }
 
@@ -159,7 +156,7 @@ export const updateSubcategoryDescription = async (
 
     // Find existing entry or create new one
     let entryIndex = subcategories.findIndex(
-        (subcategory) => subcategory.path.toString() === subcategoryPath,
+        (subcategory) => subcategory.path.toString() === subcategoryPath
     );
     if (entryIndex === -1) {
         subcategories.push({ path: categoryPath, memoryCount: 0 });
@@ -171,8 +168,7 @@ export const updateSubcategoryDescription = async (
     if (entry) {
         if (description === null) {
             delete entry.description;
-        }
-        else {
+        } else {
             entry.description = description;
         }
     }
@@ -190,8 +186,8 @@ export const updateSubcategoryDescription = async (
                 'STORAGE_ERROR',
                 `Failed to write parent index: ${indexName.toString()}`,
                 indexName.toString(),
-                writeResult.error,
-            ),
+                writeResult.error
+            )
         );
     }
 
@@ -209,7 +205,7 @@ export const updateSubcategoryDescription = async (
  */
 export const removeSubcategoryEntry = async (
     ctx: FilesystemContext,
-    categoryPath: CategoryPath,
+    categoryPath: CategoryPath
 ): Promise<Result<void, CategoryError>> => {
     const parent = categoryPath.parent;
     const indexName = !parent || parent.isRoot ? CategoryPath.root() : parent;
@@ -223,7 +219,7 @@ export const removeSubcategoryEntry = async (
 
     const currentIndex = currentResult.value;
     const subcategories = currentIndex.subcategories.filter(
-        (subcategory) => subcategory.path.toString() !== subcategoryPath,
+        (subcategory) => subcategory.path.toString() !== subcategoryPath
     );
 
     const writeResult = await writeCategoryIndex(ctx, indexName, {
@@ -237,8 +233,8 @@ export const removeSubcategoryEntry = async (
                 'STORAGE_ERROR',
                 `Failed to update parent index: ${indexName.toString()}`,
                 indexName.toString(),
-                writeResult.error,
-            ),
+                writeResult.error
+            )
         );
     }
 

@@ -21,14 +21,13 @@ import type { StoreRegistry } from '@/store/registry.ts';
 import { CategoryPath } from '@/category/category-path.ts';
 import { MemoryPath } from '@/memory/memory-path.ts';
 
-
 // ============================================================================
 // Index Builder
 // ============================================================================
 
 export const buildIndex = (
     memories: Category['memories'],
-    subcategories: Category['subcategories'],
+    subcategories: Category['subcategories']
 ): Category => ({
     memories,
     subcategories,
@@ -44,7 +43,7 @@ export const createMockStorage = (
         indexes: Partial<IndexStorage>;
         categories: Partial<CategoryStorage>;
         stores: Partial<StoreStorage>;
-    }> = {},
+    }> = {}
 ): ComposedStorageAdapter => ({
     memories: {
         read: async () => ok(null),
@@ -80,13 +79,10 @@ export const createMockStorage = (
 // Path Helpers
 // ============================================================================
 
-export const categoryPath = (path: string): CategoryPath => (
-    path === '' ? CategoryPath.root() : CategoryPath.fromString(path).unwrap()
-);
+export const categoryPath = (path: string): CategoryPath =>
+    path === '' ? CategoryPath.root() : CategoryPath.fromString(path).unwrap();
 
-export const memoryPath = (path: string): MemoryPath => (
-    MemoryPath.fromString(path).unwrap()
-);
+export const memoryPath = (path: string): MemoryPath => MemoryPath.fromString(path).unwrap();
 
 // Re-export for convenience in tests
 export { ok, err };
@@ -98,15 +94,13 @@ export { ok, err };
 export const buildMemoryFixture = (
     path: string,
     overrides: Partial<MemoryMetadata> = {},
-    content = 'Sample memory content',
+    content = 'Sample memory content'
 ): Memory => {
     const timestamp = new Date('2025-01-15T12:00:00.000Z');
     const metadata: MemoryMetadata = {
         createdAt: timestamp,
         updatedAt: timestamp,
-        tags: [
-            'test', 'sample',
-        ],
+        tags: ['test', 'sample'],
         source: 'test',
         expiresAt: undefined,
         citations: [],
@@ -131,7 +125,7 @@ export const expiredMemory = buildMemoryFixture(
         createdAt: new Date('2025-01-01T12:00:00.000Z'),
         updatedAt: new Date('2025-01-01T12:00:00.000Z'),
     },
-    'Expired content',
+    'Expired content'
 );
 
 export const memoryWithExpiry = buildMemoryFixture(
@@ -140,5 +134,5 @@ export const memoryWithExpiry = buildMemoryFixture(
         tags: ['active'],
         expiresAt: new Date('2030-01-01T12:00:00.000Z'),
     },
-    'Memory with future expiry',
+    'Memory with future expiry'
 );

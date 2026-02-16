@@ -35,7 +35,7 @@ import { type CortexContext } from '@yeseh/cortex-core';
  */
 export async function handleReindex(
     ctx: CortexContext,
-    storeName: string | undefined,
+    storeName: string | undefined
 ): Promise<void> {
     // 1. Resolve store adapter from context
     const resolvedStoreName = resolveDefaultStoreName(storeName, ctx.cortex);

@@ -13,9 +13,7 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
-import { getDefaultRegistryPath } from '../../context.ts';
 import { isValidStoreName } from '@yeseh/cortex-core/store';
-import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { serializeOutput, type OutputStore, type OutputFormat } from '../../output.ts';
 import { type CortexContext } from '@yeseh/cortex-core';
 
@@ -40,7 +38,10 @@ function validateStoreName(name: string): string {
         throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name is required.' });
     }
     if (!isValidStoreName(trimmed)) {
-        throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug.' });
+        throwCoreError({
+            code: 'INVALID_STORE_NAME',
+            message: 'Store name must be a lowercase slug.',
+        });
     }
     return trimmed;
 }
@@ -55,7 +56,7 @@ function validateStoreName(name: string): string {
 function writeOutput(
     output: OutputStore,
     format: OutputFormat,
-    stdout: NodeJS.WritableStream,
+    stdout: NodeJS.WritableStream
 ): void {
     const serialized = serializeOutput({ kind: 'store', value: output }, format);
     if (!serialized.ok()) {
@@ -69,10 +70,9 @@ function writeOutput(
  *
  * This function:
  * 1. Validates the store name format
- * 2. Loads the existing registry
- * 3. Checks that the store exists
- * 4. Removes the store from the registry and saves
- * 5. Outputs the result
+ * 2. Gets the store path before removal (for output)
+ * 3. Removes the store from the registry via Cortex
+ * 4. Outputs the result
  *
  * @param ctx - CortexContext with output stream
  * @param name - The store name to unregister
@@ -83,39 +83,29 @@ function writeOutput(
 export async function handleRemove(
     ctx: CortexContext,
     name: string,
-    options: RemoveCommandOptions = {},
+    options: RemoveCommandOptions = {}
 ): Promise<void> {
-    const registryPath = getDefaultRegistryPath();
-
     // 1. Validate store name
     const trimmedName = validateStoreName(name);
 
-    // 2. Load existing registry
-    const registry = new FilesystemRegistry(registryPath);
-    const loadResult = await registry.load();
-    // Handle REGISTRY_MISSING - if registry doesn't exist, nothing to remove
-    if (!loadResult.ok()) {
-        if (loadResult.error.code === 'REGISTRY_MISSING') {
-            throwCoreError({ code: 'STORE_NOT_FOUND', message: `Store '${trimmedName}' is not registered.` });
-        }
-        throwCoreError({ code: 'STORE_REGISTRY_FAILED', message: loadResult.error.message });
-    }
-
-    // 3. Check store exists
-    const existingStore = loadResult.value[trimmedName];
+    // 2. Get store path before removal (for output)
+    const existingStore = ctx.cortex.registry[trimmedName];
     if (!existingStore) {
-        throwCoreError({ code: 'STORE_NOT_FOUND', message: `Store '${trimmedName}' is not registered.` });
+        throwCoreError({
+            code: 'STORE_NOT_FOUND',
+            message: `Store '${trimmedName}' is not registered.`,
+        });
+    }
+    const storePath = existingStore.path;
+
+    // 3. Remove from registry via Cortex
+    const removeResult = await ctx.cortex.removeStore(trimmedName);
+    if (!removeResult.ok()) {
+        throwCoreError({ code: removeResult.error.code, message: removeResult.error.message });
     }
 
-    // 4. Remove from registry and save (even if registry would be empty, just save empty registry)
-    const { [trimmedName]: _removed, ...rest } = loadResult.value;
-    const saveResult = await registry.save(rest);
-    if (!saveResult.ok()) {
-        throwCoreError({ code: 'STORE_REGISTRY_FAILED', message: saveResult.error.message });
-    }
-
-    // 5. Output result
-    const output: OutputStore = { name: trimmedName, path: existingStore.path };
+    // 4. Output result
+    const output: OutputStore = { name: trimmedName, path: storePath };
     const format: OutputFormat = (options.format as OutputFormat) ?? 'yaml';
     writeOutput(output, format, ctx.stdout);
 }

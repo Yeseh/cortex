@@ -34,7 +34,7 @@ import { getCategoryFromSlugPath } from './helpers.ts';
 export const moveMemory = async (
     storage: ScopedStorageAdapter,
     fromPath: string,
-    toPath: string,
+    toPath: string
 ): Promise<Result<void, MemoryError>> => {
     // 1. Validate both paths
     const fromResult = MemoryPath.fromString(fromPath);
@@ -59,7 +59,7 @@ export const moveMemory = async (
     // 2. Check source exists
     const sourceCheck = await storage.memories.read(fromResult.value);
     if (!sourceCheck.ok()) {
-        return  memoryError('STORAGE_ERROR', `Failed to read source memory: ${fromPath}`, {
+        return memoryError('STORAGE_ERROR', `Failed to read source memory: ${fromPath}`, {
             path: fromPath,
             cause: sourceCheck.error,
         });
@@ -90,9 +90,13 @@ export const moveMemory = async (
     const destCategory = getCategoryFromSlugPath(toPath);
     const ensureResult = await storage.categories.ensure(toResult.value.category);
     if (!ensureResult.ok()) {
-        return memoryError('STORAGE_ERROR', `Failed to create destination category: ${destCategory}`, {
-            cause: ensureResult.error,
-        });
+        return memoryError(
+            'STORAGE_ERROR',
+            `Failed to create destination category: ${destCategory}`,
+            {
+                cause: ensureResult.error,
+            }
+        );
     }
 
     // 5. Move using storage.memories.move()
@@ -114,7 +118,7 @@ export const moveMemory = async (
             {
                 path: toPath,
                 cause: reindexResult.error,
-            },
+            }
         );
     }
 

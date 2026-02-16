@@ -14,7 +14,7 @@ import {
     parseMergedConfig,
     serializeMergedConfig,
 } from '../config.ts';
-import type { Registry } from '../store/registry.ts';
+import type { Registry, StoreDefinition } from '../store/registry.ts';
 import type {
     ScopedStorageAdapter,
     StoreNotFoundError,
@@ -22,15 +22,17 @@ import type {
     CortexOptions,
 } from '../storage/adapter.ts';
 
-export type { Registry };
+export type { Registry, StoreDefinition };
 
 export type CortexErrorCode =
     | 'CONFIG_NOT_FOUND'
     | 'CONFIG_READ_FAILED'
     | 'CONFIG_PARSE_FAILED'
+    | 'CONFIG_WRITE_FAILED'
     | 'INVALID_STORE_PATH'
     | 'INITIALIZE_FAILED'
-    | 'STORE_NOT_FOUND';
+    | 'STORE_NOT_FOUND'
+    | 'STORE_ALREADY_EXISTS';
 
 export interface CortexError {
     code: CortexErrorCode;
@@ -65,7 +67,7 @@ const createDefaultAdapterFactory = (): AdapterFactory => {
         // This will be replaced by the actual factory from storage-fs
         // when used in CLI/Server entry points
         throw new Error(
-            `No adapter factory provided. Pass adapterFactory to Cortex.fromConfig() or Cortex.init(). Store path: ${storePath}`,
+            `No adapter factory provided. Pass adapterFactory to Cortex.fromConfig() or Cortex.init(). Store path: ${storePath}`
         );
     };
 };
@@ -133,11 +135,14 @@ export class Cortex {
      */
     static async fromConfig(
         configDir: string,
-        defaultAdapterFactory?: AdapterFactory,
+        defaultAdapterFactory?: AdapterFactory
     ): Promise<Result<Cortex, CortexError>> {
         // Expand ~ to home directory
         const resolvedDir = configDir.startsWith('~')
-            ? join(homedir(), configDir.slice(configDir[1] === '/' || configDir[1] === '\\' ? 2 : 1))
+            ? join(
+                  homedir(),
+                  configDir.slice(configDir[1] === '/' || configDir[1] === '\\' ? 2 : 1)
+              )
             : resolve(configDir);
 
         const configPath = join(resolvedDir, 'config.yaml');
@@ -145,8 +150,7 @@ export class Cortex {
         let contents: string;
         try {
             contents = await readFile(configPath, 'utf8');
-        }
-        catch (error) {
+        } catch (error) {
             if (isNotFoundError(error)) {
                 return err({
                     code: 'CONFIG_NOT_FOUND',
@@ -178,7 +182,7 @@ export class Cortex {
                 settings: parsed.value.settings,
                 registry: parsed.value.stores,
                 adapterFactory,
-            }),
+            })
         );
     }
 
@@ -238,8 +242,7 @@ export class Cortex {
                 await readFile(configPath, 'utf8');
                 // Already exists, nothing to do
                 return ok(undefined);
-            }
-            catch (error) {
+            } catch (error) {
                 if (!isNotFoundError(error)) {
                     return err({
                         code: 'INITIALIZE_FAILED',
@@ -257,8 +260,7 @@ export class Cortex {
 
             await writeFile(configPath, configYaml, 'utf8');
             return ok(undefined);
-        }
-        catch (error) {
+        } catch (error) {
             return err({
                 code: 'INITIALIZE_FAILED',
                 message: `Failed to initialize config directory at ${this.rootDirectory}. Check write permissions and available disk space.`,
@@ -294,6 +296,85 @@ export class Cortex {
         }
 
         return ok(this.adapterFactory(definition.path));
+    }
+
+    /**
+     * Add a store to the registry and persist the change.
+     *
+     * Updates the in-memory registry and writes the updated config to disk.
+     * Returns an error if the store already exists.
+     *
+     * @param name - Store name (must be unique)
+     * @param definition - Store definition with path and optional description
+     * @returns Result indicating success or failure
+     *
+     * @example
+     * ```typescript
+     * const result = await cortex.addStore('my-project', {
+     *     path: '/path/to/store',
+     *     description: 'Project memories'
+     * });
+     * if (result.ok()) {
+     *     console.log('Store added');
+     * }
+     * ```
+     */
+    async addStore(name: string, definition: StoreDefinition): Promise<Result<void, CortexError>> {
+        // Check for existing store
+        if (this.registry[name]) {
+            return err({
+                code: 'STORE_ALREADY_EXISTS',
+                message: `Store '${name}' already exists`,
+            });
+        }
+
+        // Add to registry (mutate in place - readonly is for external consumers)
+        (this.registry as Record<string, StoreDefinition>)[name] = definition;
+
+        // Persist to disk
+        return this.saveConfig();
+    }
+
+    /**
+     * Remove a store from the registry.
+     *
+     * @param name - Store name to remove
+     * @returns Result indicating success or failure
+     */
+    async removeStore(name: string): Promise<Result<void, CortexError>> {
+        if (!this.registry[name]) {
+            return err({
+                code: 'STORE_NOT_FOUND',
+                message: `Store '${name}' is not registered.`,
+            });
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+        delete (this.registry as Record<string, StoreDefinition>)[name];
+        return this.saveConfig();
+    }
+
+    /**
+     * Persist the current config to disk.
+     *
+     * @internal
+     */
+    private async saveConfig(): Promise<Result<void, CortexError>> {
+        try {
+            const configPath = join(this.rootDirectory, 'config.yaml');
+            const configYaml = serializeMergedConfig({
+                settings: this.settings,
+                stores: this.registry,
+            });
+            await writeFile(configPath, configYaml, 'utf8');
+            return ok(undefined);
+        } catch (error) {
+            return err({
+                code: 'CONFIG_WRITE_FAILED',
+                message: `Failed to save config at ${this.rootDirectory}. Check write permissions.`,
+                cause: error,
+            });
+        }
     }
 }
 

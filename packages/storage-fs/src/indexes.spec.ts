@@ -227,9 +227,7 @@ describe('reindexCategoryIndexes', () => {
         ].join('\n');
         await fs.writeFile(join(tempDir, 'index.yaml'), rootIndex);
 
-        const oldCatIndex = [
-            'memories: []', 'subcategories: []',
-        ].join('\n');
+        const oldCatIndex = ['memories: []', 'subcategories: []'].join('\n');
         await fs.writeFile(join(tempDir, 'old-cat', 'index.yaml'), oldCatIndex);
 
         // Reindex
@@ -371,7 +369,7 @@ describe('updateCategoryIndexes', () => {
             ctx,
             memoryPath('project/cortex/test-memory'),
             memoryContent,
-            { createWhenMissing: true },
+            { createWhenMissing: true }
         );
 
         expect(result.ok()).toBe(true);
@@ -424,7 +422,7 @@ describe('updateCategoryIndexes', () => {
             ctx,
             memoryPath('project/test-memory'),
             updatedContent,
-            { createWhenMissing: true },
+            { createWhenMissing: true }
         );
 
         expect(updateResult.ok()).toBe(true);
@@ -461,7 +459,7 @@ describe('updateCategoryIndexes', () => {
             memoryContent,
             {
                 createWhenMissing: true,
-            },
+            }
         );
 
         expect(result.ok()).toBe(false);

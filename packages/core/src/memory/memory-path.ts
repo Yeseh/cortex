@@ -16,23 +16,29 @@ export class MemoryPath {
     static fromString(path: string): MemoryResult<MemoryPath> {
         const segments = path.split('/').filter((s) => s.length > 0);
         if (segments.length < 2) {
-            return memoryError('INVALID_PATH', 'Memory slug path must include at least two segments.');
+            return memoryError(
+                'INVALID_PATH',
+                'Memory slug path must include at least two segments.'
+            );
         }
-        
-        return MemoryPath.fromSegments(...segments); 
+
+        return MemoryPath.fromSegments(...segments);
     }
 
     static fromSegments(...segments: string[]): MemoryResult<MemoryPath> {
         if (segments.length < 2) {
-            return memoryError('INVALID_PATH', 'Memory slug path must include at least two segments.');
+            return memoryError(
+                'INVALID_PATH',
+                'Memory slug path must include at least two segments.'
+            );
         }
 
         const categorySegments = segments.slice(0, -1);
         const categoryResult = CategoryPath.fromSegments(categorySegments);
         if (!categoryResult.ok()) {
-            return memoryError('INVALID_PATH', 'Invalid category path.', { 
+            return memoryError('INVALID_PATH', 'Invalid category path.', {
                 cause: categoryResult.error,
-                path: segments.join('/'), 
+                path: segments.join('/'),
             });
         }
 
@@ -40,7 +46,7 @@ export class MemoryPath {
         const slugResult = Slug.from(rawSlug);
         if (!slugResult.ok()) {
             return memoryError('INVALID_SLUG', 'Invalid slug.', {
-                path: rawSlug, 
+                path: rawSlug,
                 cause: slugResult.error,
             });
         }
@@ -59,7 +65,7 @@ export class MemoryPath {
         return this.toString();
     }
 
-    equals(other: MemoryPath): boolean {   
+    equals(other: MemoryPath): boolean {
         return this.category.equals(other.category) && this.slug.equals(other.slug);
     }
-};
+}

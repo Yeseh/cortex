@@ -39,7 +39,7 @@ export interface AddCommandOptions extends Record<string, unknown> {
 
 const resolveContent = async (
     options: AddCommandOptions,
-    stdin: NodeJS.ReadableStream,
+    stdin: NodeJS.ReadableStream
 ): Promise<{ content: string; source: string }> => {
     const contentResult = await resolveMemoryContentInput({
         content: options.content,
@@ -54,7 +54,7 @@ const resolveContent = async (
             contentResult.error ?? {
                 code: 'CONTENT_INPUT_FAILED',
                 message: 'Failed to resolve memory content input.',
-            },
+            }
         );
     }
 
@@ -74,9 +74,9 @@ const resolveContent = async (
 const parseTags = (raw?: string[]): string[] =>
     raw
         ? raw
-            .flatMap((tag) => tag.split(','))
-            .map((tag) => tag.trim())
-            .filter(Boolean)
+              .flatMap((tag) => tag.split(','))
+              .map((tag) => tag.trim())
+              .filter(Boolean)
         : [];
 
 const parseExpiresAt = (raw?: string): Date | undefined => {
@@ -122,7 +122,7 @@ export async function handleAdd(
     ctx: CortexContext,
     path: string,
     options: AddCommandOptions,
-    storeName: string | undefined,
+    storeName: string | undefined
 ): Promise<void> {
     // Get adapter from context
     const resolvedStoreName = resolveDefaultStoreName(storeName, ctx.cortex);
@@ -148,7 +148,7 @@ export async function handleAdd(
             expiresAt,
             citations,
         },
-        now,
+        now
     );
 
     if (!createResult.ok()) {

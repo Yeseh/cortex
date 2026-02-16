@@ -66,14 +66,12 @@ export const runProgram = async (): Promise<void> => {
     try {
         const program = await createProgram();
         await program.parseAsync(process.argv);
-    }
-    catch (error) {
+    } catch (error) {
         // Commander.js handles most errors by writing to stderr and exiting.
         // This catch handles any unexpected errors that slip through.
         if (error instanceof Error) {
             console.error(`Error: ${error.message}`);
-        }
-        else {
+        } else {
             console.error('An unexpected error occurred');
         }
         process.exitCode = 1;

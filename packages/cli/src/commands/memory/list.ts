@@ -96,14 +96,14 @@ const formatOutput = (result: ListResult, format: OutputFormat): string => {
         return JSON.stringify(
             { memories: outputMemories, subcategories: outputSubcategories },
             null,
-            2,
+            2
         );
     }
 
     if (format === 'toon') {
         return toonEncode(
             { memories: outputMemories, subcategories: outputSubcategories },
-            toonOptions,
+            toonOptions
         );
     }
 
@@ -113,8 +113,7 @@ const formatOutput = (result: ListResult, format: OutputFormat): string => {
     // Memories section
     if (result.memories.length === 0) {
         lines.push('memories: []');
-    }
-    else {
+    } else {
         lines.push('memories:');
         for (const memory of result.memories) {
             lines.push(`  - path: ${memory.path}`);
@@ -134,8 +133,7 @@ const formatOutput = (result: ListResult, format: OutputFormat): string => {
     // Subcategories section
     if (result.subcategories.length === 0) {
         lines.push('subcategories: []');
-    }
-    else {
+    } else {
         lines.push('subcategories:');
         for (const subcategory of result.subcategories) {
             lines.push(`  - path: ${subcategory.path}`);
@@ -178,7 +176,7 @@ export async function handleList(
     ctx: CortexContext,
     category: string | undefined,
     options: ListCommandOptions,
-    storeName: string | undefined,
+    storeName: string | undefined
 ): Promise<void> {
     // 1. Resolve store context
     const resolvedStoreName = resolveDefaultStoreName(storeName, ctx.cortex);
@@ -221,11 +219,7 @@ export async function handleList(
     };
 
     // 3. Format and output
-    const VALID_FORMATS: OutputFormat[] = [
-        'yaml',
-        'json',
-        'toon',
-    ];
+    const VALID_FORMATS: OutputFormat[] = ['yaml', 'json', 'toon'];
     const requestedFormat = options.format as OutputFormat;
     const format: OutputFormat = VALID_FORMATS.includes(requestedFormat) ? requestedFormat : 'yaml';
     const output = formatOutput(result, format);

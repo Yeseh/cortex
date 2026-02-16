@@ -26,9 +26,8 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import * as path from 'node:path';
 import type { Cortex } from '@yeseh/cortex-core';
 import { initializeStore } from '@yeseh/cortex-core/store';
-import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import type { ServerConfig } from '../config.ts';
-import { listStoresFromRegistry, storeNameSchema } from './tools.ts';
+import { listStoresFromCortex, storeNameSchema } from './tools.ts';
 import { registerStoreResources } from './resources.ts';
 
 /**
@@ -44,19 +43,19 @@ import { registerStoreResources } from './resources.ts';
  *
  * @param server - MCP server instance for tool registration
  * @param config - Server configuration containing data path
- * @param _cortex - Optional Cortex instance (reserved for future use)
+ * @param cortex - Cortex client instance for store access
  *
  * @example
  * ```ts
  * const server = createMcpServer();
  * const config = { dataPath: './.cortex-data', ... };
- * registerStoreTools(server, config);
+ * registerStoreTools(server, config, cortex);
  * ```
  */
 export const registerStoreTools = (
     server: McpServer,
     config: ServerConfig,
-    _cortex?: Cortex,
+    cortex: Cortex
 ): void => {
     // Register cortex_list_stores tool
     server.registerTool(
@@ -65,8 +64,7 @@ export const registerStoreTools = (
             description: 'List all available memory stores',
         },
         async () => {
-            const registryPath = path.join(config.dataPath, 'stores.yaml');
-            const result = await listStoresFromRegistry(registryPath);
+            const result = listStoresFromCortex(cortex);
             if (!result.ok()) {
                 return {
                     content: [{ type: 'text', text: `Error: ${result.error.message}` }],
@@ -76,7 +74,7 @@ export const registerStoreTools = (
             return {
                 content: [{ type: 'text', text: JSON.stringify(result.value, null, 2) }],
             };
-        },
+        }
     );
 
     // Register cortex_create_store tool with input schema
@@ -86,20 +84,18 @@ export const registerStoreTools = (
             description: 'Create a new memory store',
             inputSchema: {
                 name: storeNameSchema.describe(
-                    'Name of the store to create (alphanumeric, hyphens, underscores only)',
+                    'Name of the store to create (alphanumeric, hyphens, underscores only)'
                 ),
             },
         },
         async ({ name }) => {
-            const registryPath = path.join(config.dataPath, 'stores.yaml');
-            const registry = new FilesystemRegistry(registryPath);
             const storePath = path.join(config.dataPath, name);
 
             // Delegate to core's initializeStore which handles:
             // 1. Creating the store directory
-            // 2. Registering the store in stores.yaml
+            // 2. Registering the store in config.yaml
             // 3. Creating the root category index
-            const result = await initializeStore(registry, name, storePath);
+            const result = await initializeStore(cortex, name, storePath);
             if (!result.ok()) {
                 return {
                     content: [{ type: 'text', text: `Error: ${result.error.message}` }],
@@ -109,16 +105,22 @@ export const registerStoreTools = (
             return {
                 content: [{ type: 'text', text: JSON.stringify({ created: name }, null, 2) }],
             };
-        },
+        }
     );
 
     // Register store resources
-    registerStoreResources(server, config);
+    registerStoreResources(server, config, cortex);
 };
 
 // Re-export tools for direct usage
-export { listStores, listStoresFromRegistry, storeNameSchema, createStoreInputSchema } from './tools.ts';
-export type { StoreToolError, StoreToolErrorCode, CreateStoreInput, StoreInfo, ListStoresResult } from './tools.ts';
+export { listStoresFromCortex, storeNameSchema, createStoreInputSchema } from './tools.ts';
+export type {
+    StoreToolError,
+    StoreToolErrorCode,
+    CreateStoreInput,
+    StoreInfo,
+    ListStoresResult,
+} from './tools.ts';
 
 // Re-export resources
 export { registerStoreResources } from './resources.ts';

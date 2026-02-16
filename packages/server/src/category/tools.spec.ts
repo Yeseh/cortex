@@ -9,7 +9,9 @@ import { tmpdir } from 'node:os';
 
 import type { ServerConfig } from '../config.ts';
 import { MEMORY_SUBDIR } from '../config.ts';
-import { serializeStoreRegistry } from '@yeseh/cortex-core/store';
+import { Cortex, serializeStoreRegistry } from '@yeseh/cortex-core';
+import { createFilesystemAdapterFactory } from '@yeseh/cortex-storage-fs';
+import type { ToolContext } from '../memory/tools/shared.ts';
 import {
     createCategoryHandler,
     setCategoryDescriptionHandler,
@@ -29,7 +31,7 @@ const createTestConfig = (dataPath: string): ServerConfig => ({
     autoSummaryThreshold: 500,
 });
 
-const createTestDir = async (): Promise<string> => {
+const createTestContext = async (): Promise<{ testDir: string; ctx: ToolContext }> => {
     const testDir = await mkdtemp(join(tmpdir(), 'cortex-cat-tools-'));
 
     // Create stores.yaml registry pointing default store to memory subdirectory
@@ -42,16 +44,24 @@ const createTestDir = async (): Promise<string> => {
     }
     await writeFile(join(testDir, 'stores.yaml'), serialized.value);
 
-    return testDir;
+    const config = createTestConfig(testDir);
+    const cortex = Cortex.init({
+        rootDirectory: testDir,
+        registry,
+        adapterFactory: createFilesystemAdapterFactory(),
+    });
+
+    return { testDir, ctx: { config, cortex } };
 };
 
 describe('cortex_create_category tool', () => {
     let testDir: string;
-    let config: ServerConfig;
+    let ctx: ToolContext;
 
     beforeEach(async () => {
-        testDir = await createTestDir();
-        config = createTestConfig(testDir);
+        const result = await createTestContext();
+        testDir = result.testDir;
+        ctx = result.ctx;
     });
 
     afterEach(async () => {
@@ -64,7 +74,7 @@ describe('cortex_create_category tool', () => {
             path: 'project/cortex',
         };
 
-        const result = await createCategoryHandler({ config }, input);
+        const result = await createCategoryHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.path).toBe('project/cortex');
@@ -75,10 +85,10 @@ describe('cortex_create_category tool', () => {
         const input: CreateCategoryInput = { store: 'default', path: 'project/cortex' };
 
         // Create first time
-        await createCategoryHandler({ config }, input);
+        await createCategoryHandler(ctx, input);
 
         // Create again
-        const result = await createCategoryHandler({ config }, input);
+        const result = await createCategoryHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.created).toBe(false);
@@ -87,19 +97,18 @@ describe('cortex_create_category tool', () => {
     it('should reject empty path', async () => {
         const input = { store: 'default', path: '' };
 
-        await expect(
-            createCategoryHandler({ config }, input as CreateCategoryInput),
-        ).rejects.toThrow();
+        await expect(createCategoryHandler(ctx, input as CreateCategoryInput)).rejects.toThrow();
     });
 });
 
 describe('cortex_set_category_description tool', () => {
     let testDir: string;
-    let config: ServerConfig;
+    let ctx: ToolContext;
 
     beforeEach(async () => {
-        testDir = await createTestDir();
-        config = createTestConfig(testDir);
+        const result = await createTestContext();
+        testDir = result.testDir;
+        ctx = result.ctx;
     });
 
     afterEach(async () => {
@@ -113,7 +122,7 @@ describe('cortex_set_category_description tool', () => {
             description: 'Cortex memory system',
         };
 
-        const result = await setCategoryDescriptionHandler({ config }, input);
+        const result = await setCategoryDescriptionHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.description).toBe('Cortex memory system');
@@ -126,7 +135,7 @@ describe('cortex_set_category_description tool', () => {
             description: 'Root category description',
         };
 
-        const result = await setCategoryDescriptionHandler({ config }, input);
+        const result = await setCategoryDescriptionHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.description).toBe('Root category description');
@@ -134,24 +143,18 @@ describe('cortex_set_category_description tool', () => {
 
     it('should clear description with empty string', async () => {
         // First set a description
-        await setCategoryDescriptionHandler(
-            { config },
-            {
-                store: 'default',
-                path: 'project/cortex',
-                description: 'Initial',
-            },
-        );
+        await setCategoryDescriptionHandler(ctx, {
+            store: 'default',
+            path: 'project/cortex',
+            description: 'Initial',
+        });
 
         // Then clear it
-        const result = await setCategoryDescriptionHandler(
-            { config },
-            {
-                store: 'default',
-                path: 'project/cortex',
-                description: '',
-            },
-        );
+        const result = await setCategoryDescriptionHandler(ctx, {
+            store: 'default',
+            path: 'project/cortex',
+            description: '',
+        });
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.description).toBeNull();
@@ -164,7 +167,7 @@ describe('cortex_set_category_description tool', () => {
             description: 'Test category for runbook validation',
         };
 
-        const result = await setCategoryDescriptionHandler({ config }, input);
+        const result = await setCategoryDescriptionHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.description).toBe('Test category for runbook validation');
@@ -184,14 +187,15 @@ describe('cortex_set_category_description tool', () => {
 
 describe('cortex_delete_category tool', () => {
     let testDir: string;
-    let config: ServerConfig;
+    let ctx: ToolContext;
 
     beforeEach(async () => {
-        testDir = await createTestDir();
-        config = createTestConfig(testDir);
+        const result = await createTestContext();
+        testDir = result.testDir;
+        ctx = result.ctx;
 
         // Create a category to delete
-        await createCategoryHandler({ config }, { store: 'default', path: 'project/deleteme' });
+        await createCategoryHandler(ctx, { store: 'default', path: 'project/deleteme' });
     });
 
     afterEach(async () => {
@@ -204,7 +208,7 @@ describe('cortex_delete_category tool', () => {
             path: 'project/deleteme',
         };
 
-        const result = await deleteCategoryHandler({ config }, input);
+        const result = await deleteCategoryHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.deleted).toBe(true);
@@ -216,7 +220,7 @@ describe('cortex_delete_category tool', () => {
             path: 'project',
         };
 
-        await expect(deleteCategoryHandler({ config }, input)).rejects.toThrow(/root category/i);
+        await expect(deleteCategoryHandler(ctx, input)).rejects.toThrow(/root category/i);
     });
 
     it('should reject non-existent category', async () => {
@@ -225,6 +229,6 @@ describe('cortex_delete_category tool', () => {
             path: 'project/nonexistent',
         };
 
-        await expect(deleteCategoryHandler({ config }, input)).rejects.toThrow(/not found/i);
+        await expect(deleteCategoryHandler(ctx, input)).rejects.toThrow(/not found/i);
     });
 });

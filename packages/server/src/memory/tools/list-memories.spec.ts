@@ -5,10 +5,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ServerConfig } from '../../config.ts';
 import { MEMORY_SUBDIR } from '../../config.ts';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
-import { createMemoryFile, createTestConfig, createTestDir } from './test-utils.ts';
+import { createMemoryFile, createTestContext } from './test-utils.ts';
+import type { ToolContext } from './shared.ts';
 import { listMemoriesHandler, type ListMemoriesInput } from './list-memories.ts';
 import { CategoryPath } from '@yeseh/cortex-core';
 
@@ -16,11 +16,12 @@ const categoryPath = (path: string): CategoryPath => CategoryPath.fromString(pat
 
 describe('cortex_list_memories tool', () => {
     let testDir: string;
-    let config: ServerConfig;
+    let ctx: ToolContext;
 
     beforeEach(async () => {
-        testDir = await createTestDir();
-        config = createTestConfig(testDir);
+        const result = await createTestContext();
+        testDir = result.testDir;
+        ctx = result.ctx;
 
         const storeRoot = join(testDir, MEMORY_SUBDIR);
 
@@ -68,7 +69,7 @@ describe('cortex_list_memories tool', () => {
             category: 'project',
         };
 
-        const result = await listMemoriesHandler({ config }, input);
+        const result = await listMemoriesHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.category).toBe('project');
@@ -81,7 +82,7 @@ describe('cortex_list_memories tool', () => {
             store: 'default',
         };
 
-        const result = await listMemoriesHandler({ config }, input);
+        const result = await listMemoriesHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.category).toBe('all');
@@ -107,7 +108,7 @@ describe('cortex_list_memories tool', () => {
             category: 'project',
         };
 
-        const result = await listMemoriesHandler({ config }, input);
+        const result = await listMemoriesHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.count).toBe(2);
@@ -133,7 +134,7 @@ describe('cortex_list_memories tool', () => {
             include_expired: true,
         };
 
-        const result = await listMemoriesHandler({ config }, input);
+        const result = await listMemoriesHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.count).toBe(3);
@@ -146,7 +147,11 @@ describe('cortex_list_memories tool', () => {
         await adapter.indexes.write(categoryPath('project'), {
             memories: [],
             subcategories: [
-                { path: categoryPath('project/cortex'), memoryCount: 0, description: 'Cortex memory system' },
+                {
+                    path: categoryPath('project/cortex'),
+                    memoryCount: 0,
+                    description: 'Cortex memory system',
+                },
                 { path: categoryPath('project/other'), memoryCount: 0 },
             ],
         });
@@ -156,20 +161,20 @@ describe('cortex_list_memories tool', () => {
             category: 'project',
         };
 
-        const result = await listMemoriesHandler({ config }, input);
+        const result = await listMemoriesHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.subcategories).toBeDefined();
         expect(output.subcategories).toHaveLength(2);
 
         const cortexSubcat = output.subcategories.find(
-            (s: { path: string }) => s.path === 'project/cortex',
+            (s: { path: string }) => s.path === 'project/cortex'
         );
         expect(cortexSubcat).toBeDefined();
         expect(cortexSubcat.description).toBe('Cortex memory system');
 
         const otherSubcat = output.subcategories.find(
-            (s: { path: string }) => s.path === 'project/other',
+            (s: { path: string }) => s.path === 'project/other'
         );
         expect(otherSubcat).toBeDefined();
         expect(otherSubcat.description).toBeUndefined();
@@ -181,7 +186,7 @@ describe('cortex_list_memories tool', () => {
             category: 'project',
         };
 
-        const result = await listMemoriesHandler({ config }, input);
+        const result = await listMemoriesHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.memories).toBeDefined();

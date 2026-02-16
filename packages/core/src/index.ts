@@ -9,7 +9,13 @@ export * from './memory';
 export * from './category';
 export * from './store';
 export * from './storage/adapter.ts';
-export { Cortex, type CortexContext, type Registry, type CortexError, type CortexErrorCode } from './cortex/index.ts';
+export {
+    Cortex,
+    type CortexContext,
+    type Registry,
+    type CortexError,
+    type CortexErrorCode,
+} from './cortex/index.ts';
 
 export {
     serialize,

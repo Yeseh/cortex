@@ -32,7 +32,7 @@ export interface RemoveMemoryInput {
  */
 export const removeMemoryHandler = async (
     ctx: ToolContext,
-    input: RemoveMemoryInput,
+    input: RemoveMemoryInput
 ): Promise<McpToolResponse> => {
     const adapterResult = await resolveStoreAdapter(ctx, input.store);
     if (!adapterResult.ok()) {

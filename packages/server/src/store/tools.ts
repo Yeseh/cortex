@@ -2,7 +2,7 @@
  * Store listing utilities and validation schemas for MCP tools.
  *
  * This module provides:
- * - Functions for listing stores from filesystem or registry
+ * - Functions for listing stores from Cortex registry
  * - Validation schemas for store names and tool inputs
  * - Types for store information and listing results
  *
@@ -12,10 +12,9 @@
  * @module server/store/tools
  */
 
-import * as fs from 'node:fs/promises';
 import { z } from 'zod';
-import { err, ok, type Result } from '@yeseh/cortex-core';
-import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
+import type { Cortex, StoreDefinition } from '@yeseh/cortex-core';
+import { ok, type Result } from '@yeseh/cortex-core';
 
 /**
  * Error codes for store tool operations.
@@ -46,12 +45,10 @@ export interface StoreToolError {
  */
 export const storeNameSchema = z
     .string()
-    .min(
-        1, 'Store name must not be empty',
-    )
+    .min(1, 'Store name must not be empty')
     .regex(
         /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/,
-        'Store name must start with alphanumeric and contain only alphanumeric, hyphens, or underscores',
+        'Store name must start with alphanumeric and contain only alphanumeric, hyphens, or underscores'
     );
 
 /**
@@ -85,88 +82,26 @@ export interface ListStoresResult {
 }
 
 /**
- * Lists all available memory stores in the data directory.
+ * Lists all available memory stores from the Cortex registry.
  *
- * Reads the data path directory and returns all subdirectory names
- * as store names. If the data path doesn't exist yet, returns an
- * empty array (stores will be created on first use).
+ * Returns all registered stores with their names, paths, and optional
+ * descriptions from the Cortex instance.
  *
- * @param dataPath - Directory where stores are persisted
- * @returns Result with list of store names or error
- *
- * @example
- * ```ts
- * const result = await listStores('./.cortex-data');
- * if (result.ok()) {
- *   console.log('Stores:', result.value); // ['default', 'project-a']
- * }
- * ```
- */
-export const listStores = async (dataPath: string)
-: Promise<Result<string[], StoreToolError>> => {
-    try {
-        const entries = await fs.readdir(
-            dataPath, { withFileTypes: true },
-        );
-        const stores = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
-        return ok(stores);
-    }
-    catch (error) {
-    // Handle ENOENT (data path doesn't exist yet) by returning empty array
-        if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-            return ok([]); 
-        }
-        return err({
-            code: 'STORE_LIST_FAILED',
-            message: `Failed to list stores: ${error instanceof Error ? error.message : String(error)}`,
-            cause: error,
-        });
-    }
-};
-
-/**
- * Lists all stores from the registry with their metadata.
- *
- * Reads the store registry file and returns all registered stores
- * with their names, paths, and optional descriptions. If the registry
- * doesn't exist yet, returns an empty list.
- *
- * @param registryPath - Path to the stores.yaml registry file
- * @returns Result with list of stores or error
+ * @param cortex - Cortex client instance containing the registry
+ * @returns Result with list of stores
  *
  * @example
  * ```ts
- * const result = await listStoresFromRegistry('/path/to/stores.yaml');
+ * const result = listStoresFromCortex(cortex);
  * if (result.ok()) {
  *   console.log('Stores:', result.value.stores);
  *   // [{ name: 'default', path: '/path/to/default', description: 'Default store' }]
  * }
  * ```
  */
-export const listStoresFromRegistry = async (
-    registryPath: string,
-): Promise<Result<ListStoresResult, StoreToolError>> => {
-    const registry = new FilesystemRegistry(registryPath);
-    const loadResult = await registry.load();
-
-    if (!loadResult.ok()) {
-        // Handle REGISTRY_MISSING as empty list (like allowMissing: true did)
-        if (loadResult.error.code === 'REGISTRY_MISSING') {
-            return ok({ stores: [] });
-        }
-        return err({
-            code: 'STORE_LIST_FAILED',
-            message: `Failed to load store registry: ${loadResult.error.message}`,
-            cause: loadResult.error,
-        });
-    }
-
-    const stores: StoreInfo[] = Object.entries(loadResult.value)
-        .map((
-            [
-                name, definition,
-            ],
-        ) => ({
+export const listStoresFromCortex = (cortex: Cortex): Result<ListStoresResult, StoreToolError> => {
+    const stores: StoreInfo[] = Object.entries(cortex.registry)
+        .map(([name, definition]: [string, StoreDefinition]) => ({
             name,
             path: definition.path,
             ...(definition.description !== undefined && { description: definition.description }),

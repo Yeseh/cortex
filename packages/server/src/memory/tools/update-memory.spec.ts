@@ -5,19 +5,20 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ServerConfig } from '../../config.ts';
 import { MEMORY_SUBDIR } from '../../config.ts';
-import { createMemoryFile, createTestConfig, createTestDir } from './test-utils.ts';
+import { createMemoryFile, createTestContext } from './test-utils.ts';
 import { getMemoryHandler } from './get-memory.ts';
 import { updateMemoryHandler, type UpdateMemoryInput } from './update-memory.ts';
+import type { ToolContext } from './shared.ts';
 
 describe('cortex_update_memory tool', () => {
     let testDir: string;
-    let config: ServerConfig;
+    let ctx: ToolContext;
 
     beforeEach(async () => {
-        testDir = await createTestDir();
-        config = createTestConfig(testDir);
+        const result = await createTestContext();
+        testDir = result.testDir;
+        ctx = result.ctx;
 
         const storeRoot = join(testDir, MEMORY_SUBDIR);
 
@@ -44,13 +45,13 @@ describe('cortex_update_memory tool', () => {
             content: 'Updated content',
         };
 
-        const result = await updateMemoryHandler({ config }, input);
+        const result = await updateMemoryHandler(ctx, input);
         expect(result.content[0]!.text).toContain('Memory updated');
 
-        const getResult = await getMemoryHandler(
-            { config },
-            { store: 'default', path: 'project/update-target' },
-        );
+        const getResult = await getMemoryHandler(ctx, {
+            store: 'default',
+            path: 'project/update-target',
+        });
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.content).toBe('Updated content');
     });
@@ -62,12 +63,12 @@ describe('cortex_update_memory tool', () => {
             tags: ['new-tag'],
         };
 
-        await updateMemoryHandler({ config }, input);
+        await updateMemoryHandler(ctx, input);
 
-        const getResult = await getMemoryHandler(
-            { config },
-            { store: 'default', path: 'project/update-target' },
-        );
+        const getResult = await getMemoryHandler(ctx, {
+            store: 'default',
+            path: 'project/update-target',
+        });
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.tags).toEqual(['new-tag']);
     });
@@ -80,12 +81,12 @@ describe('cortex_update_memory tool', () => {
             expires_at: futureDate,
         };
 
-        await updateMemoryHandler({ config }, input);
+        await updateMemoryHandler(ctx, input);
 
-        const getResult = await getMemoryHandler(
-            { config },
-            { store: 'default', path: 'project/update-target' },
-        );
+        const getResult = await getMemoryHandler(ctx, {
+            store: 'default',
+            path: 'project/update-target',
+        });
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.expires_at).toBeDefined();
     });
@@ -110,12 +111,12 @@ describe('cortex_update_memory tool', () => {
             expires_at: null,
         };
 
-        await updateMemoryHandler({ config }, input);
+        await updateMemoryHandler(ctx, input);
 
-        const getResult = await getMemoryHandler(
-            { config },
-            { store: 'default', path: 'project/with-expiry' },
-        );
+        const getResult = await getMemoryHandler(ctx, {
+            store: 'default',
+            path: 'project/with-expiry',
+        });
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.expires_at).toBeUndefined();
     });
@@ -140,12 +141,12 @@ describe('cortex_update_memory tool', () => {
             path: 'project/preserve-expiry',
             content: 'Updated content',
         };
-        await updateMemoryHandler({ config }, updateInput);
+        await updateMemoryHandler(ctx, updateInput);
 
-        const getResult = await getMemoryHandler(
-            { config },
-            { store: 'default', path: 'project/preserve-expiry' },
-        );
+        const getResult = await getMemoryHandler(ctx, {
+            store: 'default',
+            path: 'project/preserve-expiry',
+        });
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.expires_at).toBe(expiryDate.toISOString());
     });
@@ -156,7 +157,7 @@ describe('cortex_update_memory tool', () => {
             path: 'project/update-target',
         };
 
-        await expect(updateMemoryHandler({ config }, input)).rejects.toThrow('No updates');
+        await expect(updateMemoryHandler(ctx, input)).rejects.toThrow('No updates');
     });
 
     it('should return error for non-existent memory', async () => {
@@ -166,6 +167,6 @@ describe('cortex_update_memory tool', () => {
             content: 'New content',
         };
 
-        await expect(updateMemoryHandler({ config }, input)).rejects.toThrow('not found');
+        await expect(updateMemoryHandler(ctx, input)).rejects.toThrow('not found');
     });
 });

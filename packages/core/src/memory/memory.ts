@@ -59,8 +59,6 @@ export type MemoryMetadata = {
     citations: string[];
 };
 
-
-
 /**
  * A memory entry combining metadata and content.
  *
@@ -82,9 +80,10 @@ export class Memory {
     }
 
     static init(
-        path: string | MemoryPath, 
-        metadata: MemoryMetadata, 
-        content: string): MemoryResult<Memory> {
+        path: string | MemoryPath,
+        metadata: MemoryMetadata,
+        content: string
+    ): MemoryResult<Memory> {
         if (typeof path === 'string') {
             const pathResult = MemoryPath.fromString(path);
             if (!pathResult.ok()) {
@@ -95,7 +94,7 @@ export class Memory {
             path = pathResult.value;
         }
 
-        return ok(new Memory(path, metadata, content)); 
+        return ok(new Memory(path, metadata, content));
     }
 
     /**
@@ -109,5 +108,5 @@ export class Memory {
             return false;
         }
         return this.metadata.expiresAt.getTime() <= now.getTime();
-    };
-};
+    }
+}

@@ -92,7 +92,7 @@ export interface ListMemoriesResult {
  */
 export const listMemories = async (
     storage: ScopedStorageAdapter,
-    options?: ListMemoriesOptions,
+    options?: ListMemoriesOptions
 ): Promise<Result<ListMemoriesResult, MemoryError>> => {
     const includeExpired = options?.includeExpired ?? false;
     const now = options?.now ?? new Date();
@@ -116,7 +116,7 @@ export const listMemories = async (
                 rootCat,
                 includeExpired,
                 now,
-                visited,
+                visited
             );
             if (collectResult.ok()) {
                 memories.push(...collectResult.value);
@@ -132,15 +132,14 @@ export const listMemories = async (
                 });
             }
         }
-    }
-    else {
+    } else {
         // Specific category requested
         const collectResult = await collectMemoriesFromCategory(
             storage,
             category,
             includeExpired,
             now,
-            visited,
+            visited
         );
         if (!collectResult.ok()) {
             return collectResult;

@@ -16,26 +16,26 @@ import {
     memoryPath,
 } from './test-helpers.spec.ts';
 
-const pathToString = (memoryPath: MemoryPath): string => (
-    `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`
-);
+const pathToString = (memoryPath: MemoryPath): string =>
+    `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`;
 
 const buildRecentMemory = (
     path: string,
     updatedAt: Date,
     tags: string[],
     content: string,
-    expiresAt?: Date,
-): Memory => buildMemoryFixture(
-    path,
-    {
-        createdAt: new Date('2025-01-01T10:00:00.000Z'),
-        updatedAt,
-        tags,
-        expiresAt,
-    },
-    content,
-);
+    expiresAt?: Date
+): Memory =>
+    buildMemoryFixture(
+        path,
+        {
+            createdAt: new Date('2025-01-01T10:00:00.000Z'),
+            updatedAt,
+            tags,
+            expiresAt,
+        },
+        content
+    );
 
 describe('getRecentMemories', () => {
     it('should retrieve recent memories store-wide sorted by updatedAt', async () => {
@@ -44,19 +44,19 @@ describe('getRecentMemories', () => {
                 'project/memory1',
                 new Date('2025-01-03T10:00:00.000Z'),
                 ['project'],
-                'Memory 1 content',
+                'Memory 1 content'
             ),
             'project/memory2': buildRecentMemory(
                 'project/memory2',
                 new Date('2025-01-05T10:00:00.000Z'),
                 ['project'],
-                'Memory 2 content',
+                'Memory 2 content'
             ),
             'notes/note1': buildRecentMemory(
                 'notes/note1',
                 new Date('2025-01-04T10:00:00.000Z'),
                 ['notes'],
-                'Note 1 content',
+                'Note 1 content'
             ),
         };
 
@@ -74,8 +74,8 @@ describe('getRecentMemories', () => {
                                 [
                                     { path: categoryPath('project'), memoryCount: 2 },
                                     { path: categoryPath('notes'), memoryCount: 1 },
-                                ],
-                            ),
+                                ]
+                            )
                         );
                     }
                     if (key === 'project') {
@@ -93,20 +93,22 @@ describe('getRecentMemories', () => {
                                         updatedAt: new Date('2025-01-05T10:00:00.000Z'),
                                     },
                                 ],
-                                [],
-                            ),
+                                []
+                            )
                         );
                     }
                     if (key === 'notes') {
                         return ok(
                             buildIndex(
-                                [{
-                                    path: memoryPath('notes/note1'),
-                                    tokenEstimate: 40,
-                                    updatedAt: new Date('2025-01-04T10:00:00.000Z'),
-                                }],
-                                [],
-                            ),
+                                [
+                                    {
+                                        path: memoryPath('notes/note1'),
+                                        tokenEstimate: 40,
+                                        updatedAt: new Date('2025-01-04T10:00:00.000Z'),
+                                    },
+                                ],
+                                []
+                            )
                         );
                     }
                     return ok(null);
@@ -136,13 +138,13 @@ describe('getRecentMemories', () => {
                 'project/cortex/memory1',
                 new Date('2025-01-03T10:00:00.000Z'),
                 ['cortex'],
-                'Cortex memory 1',
+                'Cortex memory 1'
             ),
             'project/cortex/memory2': buildRecentMemory(
                 'project/cortex/memory2',
                 new Date('2025-01-05T10:00:00.000Z'),
                 ['cortex'],
-                'Cortex memory 2',
+                'Cortex memory 2'
             ),
         };
 
@@ -167,8 +169,8 @@ describe('getRecentMemories', () => {
                                         updatedAt: new Date('2025-01-05T10:00:00.000Z'),
                                     },
                                 ],
-                                [],
-                            ),
+                                []
+                            )
                         );
                     }
                     return ok(null);
@@ -195,19 +197,19 @@ describe('getRecentMemories', () => {
                 'notes/note1',
                 new Date('2025-01-01T10:00:00.000Z'),
                 [],
-                'Note 1',
+                'Note 1'
             ),
             'notes/note2': buildRecentMemory(
                 'notes/note2',
                 new Date('2025-01-02T10:00:00.000Z'),
                 [],
-                'Note 2',
+                'Note 2'
             ),
             'notes/note3': buildRecentMemory(
                 'notes/note3',
                 new Date('2025-01-03T10:00:00.000Z'),
                 [],
-                'Note 3',
+                'Note 3'
             ),
         };
 
@@ -219,7 +221,9 @@ describe('getRecentMemories', () => {
                 read: async (path) => {
                     const key = path.toString();
                     if (key === '') {
-                        return ok(buildIndex([], [{ path: categoryPath('notes'), memoryCount: 3 }]));
+                        return ok(
+                            buildIndex([], [{ path: categoryPath('notes'), memoryCount: 3 }])
+                        );
                     }
                     if (key === 'notes') {
                         return ok(
@@ -241,8 +245,8 @@ describe('getRecentMemories', () => {
                                         updatedAt: new Date('2025-01-03T10:00:00.000Z'),
                                     },
                                 ],
-                                [],
-                            ),
+                                []
+                            )
                         );
                     }
                     return ok(null);
@@ -267,7 +271,7 @@ describe('getRecentMemories', () => {
                 'notes/note1',
                 new Date('2025-01-01T10:00:00.000Z'),
                 [],
-                'Note 1',
+                'Note 1'
             ),
         };
 
@@ -279,18 +283,22 @@ describe('getRecentMemories', () => {
                 read: async (path) => {
                     const key = path.toString();
                     if (key === '') {
-                        return ok(buildIndex([], [{ path: categoryPath('notes'), memoryCount: 1 }]));
+                        return ok(
+                            buildIndex([], [{ path: categoryPath('notes'), memoryCount: 1 }])
+                        );
                     }
                     if (key === 'notes') {
                         return ok(
                             buildIndex(
-                                [{
-                                    path: memoryPath('notes/note1'),
-                                    tokenEstimate: 10,
-                                    updatedAt: new Date('2025-01-01T10:00:00.000Z'),
-                                }],
-                                [],
-                            ),
+                                [
+                                    {
+                                        path: memoryPath('notes/note1'),
+                                        tokenEstimate: 10,
+                                        updatedAt: new Date('2025-01-01T10:00:00.000Z'),
+                                    },
+                                ],
+                                []
+                            )
                         );
                     }
                     return ok(null);
@@ -330,14 +338,14 @@ describe('getRecentMemories', () => {
                 'notes/active',
                 new Date('2025-01-05T10:00:00.000Z'),
                 [],
-                'Active note',
+                'Active note'
             ),
             'notes/expired': buildRecentMemory(
                 'notes/expired',
                 new Date('2025-01-03T10:00:00.000Z'),
                 [],
                 'Expired note',
-                new Date('2025-01-02T10:00:00.000Z'),
+                new Date('2025-01-02T10:00:00.000Z')
             ),
         };
 
@@ -349,7 +357,9 @@ describe('getRecentMemories', () => {
                 read: async (path) => {
                     const key = path.toString();
                     if (key === '') {
-                        return ok(buildIndex([], [{ path: categoryPath('notes'), memoryCount: 2 }]));
+                        return ok(
+                            buildIndex([], [{ path: categoryPath('notes'), memoryCount: 2 }])
+                        );
                     }
                     if (key === 'notes') {
                         return ok(
@@ -366,8 +376,8 @@ describe('getRecentMemories', () => {
                                         updatedAt: new Date('2025-01-03T10:00:00.000Z'),
                                     },
                                 ],
-                                [],
-                            ),
+                                []
+                            )
                         );
                     }
                     return ok(null);
@@ -391,14 +401,14 @@ describe('getRecentMemories', () => {
                 'notes/active',
                 new Date('2025-01-05T10:00:00.000Z'),
                 [],
-                'Active note',
+                'Active note'
             ),
             'notes/expired': buildRecentMemory(
                 'notes/expired',
                 new Date('2025-01-03T10:00:00.000Z'),
                 [],
                 'Expired note',
-                new Date('2025-01-02T10:00:00.000Z'),
+                new Date('2025-01-02T10:00:00.000Z')
             ),
         };
 
@@ -410,7 +420,9 @@ describe('getRecentMemories', () => {
                 read: async (path) => {
                     const key = path.toString();
                     if (key === '') {
-                        return ok(buildIndex([], [{ path: categoryPath('notes'), memoryCount: 2 }]));
+                        return ok(
+                            buildIndex([], [{ path: categoryPath('notes'), memoryCount: 2 }])
+                        );
                     }
                     if (key === 'notes') {
                         return ok(
@@ -427,8 +439,8 @@ describe('getRecentMemories', () => {
                                         updatedAt: new Date('2025-01-03T10:00:00.000Z'),
                                     },
                                 ],
-                                [],
-                            ),
+                                []
+                            )
                         );
                     }
                     return ok(null);
@@ -456,19 +468,19 @@ describe('getRecentMemories', () => {
                 'notes/recent',
                 new Date('2025-01-05T10:00:00.000Z'),
                 [],
-                'Recent note',
+                'Recent note'
             ),
             'notes/stale': buildRecentMemory(
                 'notes/stale',
                 new Date('2025-01-03T10:00:00.000Z'),
                 [],
-                'Stale note',
+                'Stale note'
             ),
             'notes/middle': buildRecentMemory(
                 'notes/middle',
                 new Date('2025-01-04T10:00:00.000Z'),
                 [],
-                'Middle note',
+                'Middle note'
             ),
         };
 
@@ -480,7 +492,9 @@ describe('getRecentMemories', () => {
                 read: async (path) => {
                     const key = path.toString();
                     if (key === '') {
-                        return ok(buildIndex([], [{ path: categoryPath('notes'), memoryCount: 3 }]));
+                        return ok(
+                            buildIndex([], [{ path: categoryPath('notes'), memoryCount: 3 }])
+                        );
                     }
                     if (key === 'notes') {
                         // Note: 'stale' entry is missing updated_at
@@ -502,8 +516,8 @@ describe('getRecentMemories', () => {
                                         updatedAt: new Date('2025-01-04T10:00:00.000Z'),
                                     },
                                 ],
-                                [],
-                            ),
+                                []
+                            )
                         );
                     }
                     return ok(null);
@@ -531,13 +545,13 @@ describe('getRecentMemories', () => {
                 'project/cortex/deep/memory1',
                 new Date('2025-01-05T10:00:00.000Z'),
                 [],
-                'Deep memory',
+                'Deep memory'
             ),
             'project/cortex/memory2': buildRecentMemory(
                 'project/cortex/memory2',
                 new Date('2025-01-04T10:00:00.000Z'),
                 [],
-                'Shallow memory',
+                'Shallow memory'
             ),
         };
 
@@ -551,25 +565,29 @@ describe('getRecentMemories', () => {
                     if (key === 'project/cortex') {
                         return ok(
                             buildIndex(
-                                [{
-                                    path: memoryPath('project/cortex/memory2'),
-                                    tokenEstimate: 20,
-                                    updatedAt: new Date('2025-01-04T10:00:00.000Z'),
-                                }],
-                                [{ path: categoryPath('project/cortex/deep'), memoryCount: 1 }],
-                            ),
+                                [
+                                    {
+                                        path: memoryPath('project/cortex/memory2'),
+                                        tokenEstimate: 20,
+                                        updatedAt: new Date('2025-01-04T10:00:00.000Z'),
+                                    },
+                                ],
+                                [{ path: categoryPath('project/cortex/deep'), memoryCount: 1 }]
+                            )
                         );
                     }
                     if (key === 'project/cortex/deep') {
                         return ok(
                             buildIndex(
-                                [{
-                                    path: memoryPath('project/cortex/deep/memory1'),
-                                    tokenEstimate: 20,
-                                    updatedAt: new Date('2025-01-05T10:00:00.000Z'),
-                                }],
-                                [],
-                            ),
+                                [
+                                    {
+                                        path: memoryPath('project/cortex/deep/memory1'),
+                                        tokenEstimate: 20,
+                                        updatedAt: new Date('2025-01-05T10:00:00.000Z'),
+                                    },
+                                ],
+                                []
+                            )
                         );
                     }
                     return ok(null);
@@ -590,4 +608,3 @@ describe('getRecentMemories', () => {
         }
     });
 });
-

@@ -52,4 +52,3 @@ export type FileWithMetadata<TMeta> = {
     metadata: TMeta;
     content: string;
 };
-

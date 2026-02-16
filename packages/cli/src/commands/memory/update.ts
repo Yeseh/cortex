@@ -50,7 +50,7 @@ export interface UpdateCommandOptions {
 
 const resolveContent = async (
     options: UpdateCommandOptions,
-    stdin: NodeJS.ReadableStream,
+    stdin: NodeJS.ReadableStream
 ): Promise<{ content: string | null }> => {
     // Don't read from stdin for update command - only use explicit --content or --file flags
     // If neither is provided, return null to preserve existing content
@@ -71,7 +71,7 @@ const resolveContent = async (
             contentResult.error ?? {
                 code: 'CONTENT_INPUT_FAILED',
                 message: 'Failed to resolve memory content input.',
-            },
+            }
         );
     }
 
@@ -127,7 +127,7 @@ const buildUpdates = (
     content: string | null,
     tags: string[] | undefined,
     expiresAt: Date | null | undefined,
-    citations: string[] | undefined,
+    citations: string[] | undefined
 ): UpdateMemoryInput => {
     const updates: UpdateMemoryInput = {};
     if (content !== null) {
@@ -179,7 +179,7 @@ export async function handleUpdate(
     ctx: CortexContext,
     path: string,
     options: UpdateCommandOptions,
-    storeName: string | undefined,
+    storeName: string | undefined
 ): Promise<void> {
     // Get adapter from context
     const resolvedStoreName = resolveDefaultStoreName(storeName, ctx.cortex);
@@ -225,7 +225,10 @@ export const createUpdateCommand = (ctx: CortexContext) => {
         .argument('<path>', 'Memory path to update')
         .option('-c, --content <text>', 'New memory content as inline text')
         .option('-f, --file <filepath>', 'Read new content from a file')
-        .option('-t, --tags <value...>', 'Tags (can be repeated or comma-separated, replaces existing)')
+        .option(
+            '-t, --tags <value...>',
+            'Tags (can be repeated or comma-separated, replaces existing)'
+        )
         .option('-e, --expires-at <date>', 'New expiration date (ISO 8601)')
         .option('--no-expires-at', 'Remove expiration date')
         .option('--citation <value...>', 'Citation references (replaces existing)')

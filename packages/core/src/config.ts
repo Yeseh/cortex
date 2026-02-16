@@ -84,11 +84,7 @@ export interface ConfigLoadOptions {
     localConfigPath?: string;
 }
 
-const configKeys = new Set([
-    'output_format',
-    'auto_summary_threshold',
-    'strict_local',
-]);
+const configKeys = new Set(['output_format', 'auto_summary_threshold', 'strict_local']);
 const keyFormat = /^[a-z0-9_]+$/;
 
 const isNotFoundError = (error: unknown): boolean =>
@@ -161,7 +157,7 @@ const parseNumber = (value: string, line: number): Result<number, ConfigLoadErro
 
 const parseConfigLine = (
     rawLine: string,
-    lineNumber: number,
+    lineNumber: number
 ): Result<{ key: string; value: string }, ConfigLoadError> => {
     const match = /^\s*([^:]+)\s*:\s*(.*)$/.exec(rawLine);
     if (!match) {
@@ -186,7 +182,7 @@ const applyConfigValue = (
     config: CortexConfig,
     key: string,
     rawValue: string,
-    lineNumber: number,
+    lineNumber: number
 ): Result<void, ConfigLoadError> => {
     switch (key) {
         case 'output_format': {
@@ -222,7 +218,7 @@ const applyConfigValue = (
 const validateConfigKey = (
     key: string,
     lineNumber: number,
-    seenKeys: Set<string>,
+    seenKeys: Set<string>
 ): Result<void, ConfigLoadError> => {
     if (!keyFormat.test(key)) {
         return err({
@@ -254,7 +250,7 @@ const validateConfigKey = (
 const parseConfigValue = (
     rawValue: string,
     key: string,
-    lineNumber: number,
+    lineNumber: number
 ): Result<string, ConfigLoadError> => {
     const parsed = parseScalarValue(rawValue);
     if (parsed) {
@@ -331,8 +327,7 @@ const readConfigFile = async (path: string): Promise<Result<string | null, Confi
     try {
         const contents = await readFile(path, 'utf8');
         return ok(contents);
-    }
-    catch (error) {
+    } catch (error) {
         if (isNotFoundError(error)) {
             return ok(null);
         }
@@ -346,16 +341,16 @@ const readConfigFile = async (path: string): Promise<Result<string | null, Confi
 };
 
 export const loadConfig = async (
-    options: ConfigLoadOptions = {},
+    options: ConfigLoadOptions = {}
 ): Promise<Result<CortexConfig, ConfigLoadError>> => {
     const cwd = options.cwd ?? process.cwd();
     const globalPath = resolveConfigPath(
         cwd,
-        options.globalConfigPath ?? resolve(homedir(), '.config', 'cortex', 'config.yaml'),
+        options.globalConfigPath ?? resolve(homedir(), '.config', 'cortex', 'config.yaml')
     );
     const localPath = resolveConfigPath(
         cwd,
-        options.localConfigPath ?? resolve(cwd, '.cortex', 'config.yaml'),
+        options.localConfigPath ?? resolve(cwd, '.cortex', 'config.yaml')
     );
 
     const globalConfig = await readAndParseConfig(globalPath);
@@ -381,9 +376,7 @@ export const loadConfig = async (
 /**
  * Parses settings section from config object.
  */
-const parseSettingsSection = (
-    settings: unknown,
-): Result<CortexSettings, MergedConfigLoadError> => {
+const parseSettingsSection = (settings: unknown): Result<CortexSettings, MergedConfigLoadError> => {
     if (settings === undefined || settings === null) {
         return ok({ ...DEFAULT_CORTEX_SETTINGS });
     }
@@ -400,7 +393,11 @@ const parseSettingsSection = (
     const result: CortexSettings = { ...DEFAULT_CORTEX_SETTINGS };
 
     if (s.output_format !== undefined) {
-        if (s.output_format !== 'yaml' && s.output_format !== 'json' && s.output_format !== 'toon') {
+        if (
+            s.output_format !== 'yaml' &&
+            s.output_format !== 'json' &&
+            s.output_format !== 'toon'
+        ) {
             return err({
                 code: 'CONFIG_PARSE_FAILED',
                 message: 'output_format must be yaml, json, or toon',
@@ -439,7 +436,7 @@ const parseSettingsSection = (
  * Parses stores section from config object.
  */
 const parseStoresSection = (
-    stores: unknown,
+    stores: unknown
 ): Result<Record<string, StoreDefinition>, MergedConfigLoadError> => {
     if (stores === undefined || stores === null) {
         return ok({});
@@ -456,9 +453,7 @@ const parseStoresSection = (
     const registry: Record<string, StoreDefinition> = {};
     const entries = Object.entries(stores as Record<string, unknown>);
 
-    for (const [
-        name, value,
-    ] of entries) {
+    for (const [name, value] of entries) {
         if (typeof value !== 'object' || value === null) {
             return err({
                 code: 'CONFIG_PARSE_FAILED',
@@ -527,14 +522,11 @@ const parseStoresSection = (
  * }
  * ```
  */
-export const parseMergedConfig = (
-    raw: string,
-): Result<MergedConfig, MergedConfigLoadError> => {
+export const parseMergedConfig = (raw: string): Result<MergedConfig, MergedConfigLoadError> => {
     let parsed: unknown;
     try {
         parsed = Bun.YAML.parse(raw);
-    }
-    catch (error) {
+    } catch (error) {
         return err({
             code: 'CONFIG_PARSE_FAILED',
             message: 'Failed to parse config YAML',
@@ -613,15 +605,13 @@ export const serializeMergedConfig = (config: MergedConfig): string => {
         obj.stores = Object.fromEntries(
             Object.entries(config.stores)
                 .sort(([a], [b]) => a.localeCompare(b))
-                .map(([
-                    name, def,
-                ]) => [
+                .map(([name, def]) => [
                     name,
                     {
                         path: def.path,
                         ...(def.description && { description: def.description }),
                     },
-                ]),
+                ])
         );
     }
 

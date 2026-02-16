@@ -29,11 +29,7 @@ export const getRecentMemoriesInputSchema = z.object({
         .optional()
         .default(5)
         .describe('Maximum number of memories to return (default: 5, max: 100)'),
-    include_expired: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe('Include expired memories'),
+    include_expired: z.boolean().optional().default(false).describe('Include expired memories'),
 });
 
 /** Input type for get_recent_memories tool */
@@ -58,7 +54,7 @@ export interface GetRecentMemoriesInput {
  */
 export const getRecentMemoriesHandler = async (
     ctx: ToolContext,
-    input: GetRecentMemoriesInput,
+    input: GetRecentMemoriesInput
 ): Promise<McpToolResponse> => {
     const adapterResult = await resolveStoreAdapter(ctx, input.store);
     if (!adapterResult.ok()) {

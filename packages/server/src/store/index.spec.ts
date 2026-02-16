@@ -3,6 +3,8 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { Cortex } from '@yeseh/cortex-core';
+import { createFilesystemAdapterFactory } from '@yeseh/cortex-storage-fs';
 import { registerStoreTools } from './index.ts';
 import type { ServerConfig } from '../config.ts';
 
@@ -10,7 +12,7 @@ import type { ServerConfig } from '../config.ts';
 interface RegisteredToolHandler {
     handler: (
         args: Record<string, unknown>,
-        extra: unknown,
+        extra: unknown
     ) => Promise<{ content: { type: string; text: string }[]; isError?: boolean }>;
 }
 
@@ -24,6 +26,7 @@ describe('store tool registration', () => {
     let server: McpServer;
     let testDir: string;
     let config: ServerConfig;
+    let cortex: Cortex;
 
     beforeEach(async () => {
         server = new McpServer({ name: 'test-server', version: '1.0.0' });
@@ -37,6 +40,11 @@ describe('store tool registration', () => {
             outputFormat: 'yaml',
             autoSummaryThreshold: 500,
         };
+        cortex = Cortex.init({
+            rootDirectory: testDir,
+            registry: {},
+            adapterFactory: createFilesystemAdapterFactory(),
+        });
     });
 
     afterEach(async () => {
@@ -45,7 +53,7 @@ describe('store tool registration', () => {
 
     describe('registerStoreTools function', () => {
         it('should register both tools without throwing', () => {
-            expect(() => registerStoreTools(server, config)).not.toThrow();
+            expect(() => registerStoreTools(server, config, cortex)).not.toThrow();
         });
 
         it('should call registerTool with cortex_list_stores', () => {
@@ -58,12 +66,12 @@ describe('store tool registration', () => {
                     return originalRegisterTool(
                         name,
                         configArg as Parameters<typeof originalRegisterTool>[1],
-                        cb as Parameters<typeof originalRegisterTool>[2],
+                        cb as Parameters<typeof originalRegisterTool>[2]
                     );
-                },
+                }
             );
 
-            registerStoreTools(server, config);
+            registerStoreTools(server, config, cortex);
 
             expect(registerToolCalls).toContain('cortex_list_stores');
         });
@@ -78,12 +86,12 @@ describe('store tool registration', () => {
                     return originalRegisterTool(
                         name,
                         configArg as Parameters<typeof originalRegisterTool>[1],
-                        cb as Parameters<typeof originalRegisterTool>[2],
+                        cb as Parameters<typeof originalRegisterTool>[2]
                     );
-                },
+                }
             );
 
-            registerStoreTools(server, config);
+            registerStoreTools(server, config, cortex);
 
             expect(registerToolCalls).toContain('cortex_create_store');
         });
@@ -98,12 +106,12 @@ describe('store tool registration', () => {
                     return originalRegisterTool(
                         name,
                         configArg as Parameters<typeof originalRegisterTool>[1],
-                        cb as Parameters<typeof originalRegisterTool>[2],
+                        cb as Parameters<typeof originalRegisterTool>[2]
                     );
-                },
+                }
             );
 
-            registerStoreTools(server, config);
+            registerStoreTools(server, config, cortex);
 
             expect(registerToolCalls).toHaveLength(2);
         });
@@ -121,18 +129,18 @@ describe('store tool registration', () => {
                     return originalRegisterTool(
                         name,
                         configArg as Parameters<typeof originalRegisterTool>[1],
-                        cb as Parameters<typeof originalRegisterTool>[2],
+                        cb as Parameters<typeof originalRegisterTool>[2]
                     );
-                },
+                }
             );
 
-            registerStoreTools(server, config);
+            registerStoreTools(server, config, cortex);
 
             const listStoresTool = registeredDescriptions.find(
-                (t) => t.name === 'cortex_list_stores',
+                (t) => t.name === 'cortex_list_stores'
             );
             const createStoreTool = registeredDescriptions.find(
-                (t) => t.name === 'cortex_create_store',
+                (t) => t.name === 'cortex_create_store'
             );
 
             expect(listStoresTool?.description).toBe('List all available memory stores');
@@ -151,12 +159,12 @@ describe('store tool registration', () => {
                     return originalRegisterTool(
                         name,
                         configArg as Parameters<typeof originalRegisterTool>[1],
-                        cb as Parameters<typeof originalRegisterTool>[2],
+                        cb as Parameters<typeof originalRegisterTool>[2]
                     );
-                },
+                }
             );
 
-            registerStoreTools(server, config);
+            registerStoreTools(server, config, cortex);
 
             expect(createStoreConfig?.inputSchema).toBeDefined();
             expect(createStoreConfig?.inputSchema?.name).toBeDefined();
@@ -165,7 +173,7 @@ describe('store tool registration', () => {
 
     describe('integration with MCP server', () => {
         it('should execute list_stores tool and return valid response when no stores exist', async () => {
-            registerStoreTools(server, config);
+            registerStoreTools(server, config, cortex);
 
             const registeredTools = getRegisteredTools(server);
             const listStoresTool = registeredTools['cortex_list_stores'];
@@ -184,17 +192,17 @@ describe('store tool registration', () => {
         });
 
         it('should execute list_stores tool and return stores when stores exist', async () => {
-            // Create a stores.yaml registry with store entries
-            const registryContent = [
-                'stores:',
-                '  store-a:',
-                '    path: "/data/store-a"',
-                '  store-b:',
-                '    path: "/data/store-b"',
-            ].join('\n');
-            await fs.writeFile(path.join(testDir, 'stores.yaml'), registryContent);
+            // Create a Cortex instance with stores in registry
+            const cortexWithStores = Cortex.init({
+                rootDirectory: testDir,
+                registry: {
+                    'store-a': { path: '/data/store-a' },
+                    'store-b': { path: '/data/store-b' },
+                },
+                adapterFactory: createFilesystemAdapterFactory(),
+            });
 
-            registerStoreTools(server, config);
+            registerStoreTools(server, config, cortexWithStores);
 
             const registeredTools = getRegisteredTools(server);
             const listStoresTool = registeredTools['cortex_list_stores'];
@@ -208,7 +216,7 @@ describe('store tool registration', () => {
         });
 
         it('should execute create_store tool with valid name and create store', async () => {
-            registerStoreTools(server, config);
+            registerStoreTools(server, config, cortex);
 
             const registeredTools = getRegisteredTools(server);
             const createStoreTool = registeredTools['cortex_create_store'];
@@ -229,7 +237,7 @@ describe('store tool registration', () => {
         });
 
         it('should execute create_store tool with invalid name and return error', async () => {
-            registerStoreTools(server, config);
+            registerStoreTools(server, config, cortex);
 
             const registeredTools = getRegisteredTools(server);
             const createStoreTool = registeredTools['cortex_create_store'];
@@ -243,7 +251,7 @@ describe('store tool registration', () => {
         });
 
         it('should execute create_store tool with empty name and return error', async () => {
-            registerStoreTools(server, config);
+            registerStoreTools(server, config, cortex);
 
             const registeredTools = getRegisteredTools(server);
             const createStoreTool = registeredTools['cortex_create_store'];
@@ -257,15 +265,16 @@ describe('store tool registration', () => {
         });
 
         it('should execute create_store tool with existing store name and return error', async () => {
-            // Create a registry with an existing store entry
-            const registryContent = [
-                'stores:',
-                '  existing-store:',
-                `    path: "${path.join(testDir, 'existing-store').replace(/\\/g, '/')}"`,
-            ].join('\n');
-            await fs.writeFile(path.join(testDir, 'stores.yaml'), registryContent);
+            // Create a Cortex instance with an existing store
+            const cortexWithStore = Cortex.init({
+                rootDirectory: testDir,
+                registry: {
+                    'existing-store': { path: path.join(testDir, 'existing-store') },
+                },
+                adapterFactory: createFilesystemAdapterFactory(),
+            });
 
-            registerStoreTools(server, config);
+            registerStoreTools(server, config, cortexWithStore);
 
             const registeredTools = getRegisteredTools(server);
             const createStoreTool = registeredTools['cortex_create_store'];
@@ -277,26 +286,11 @@ describe('store tool registration', () => {
             expect(result.content[0]?.text).toContain('Error:');
             expect(result.content[0]?.text).toContain('already');
         });
-
-        it('should return error from list_stores when registry is malformed', async () => {
-            // Create a malformed stores.yaml
-            await fs.writeFile(path.join(testDir, 'stores.yaml'), 'not valid yaml: [');
-
-            registerStoreTools(server, config);
-
-            const registeredTools = getRegisteredTools(server);
-            const listStoresTool = registeredTools['cortex_list_stores'];
-
-            const result = await listStoresTool!.handler({}, {});
-
-            expect(result.isError).toBe(true);
-            expect(result.content[0]?.text).toContain('Error:');
-        });
     });
 
     describe('tool handler behavior', () => {
         it('should return JSON formatted response from list_stores', async () => {
-            registerStoreTools(server, config);
+            registerStoreTools(server, config, cortex);
 
             const registeredTools = getRegisteredTools(server);
             const listStoresTool = registeredTools['cortex_list_stores'];
@@ -308,7 +302,7 @@ describe('store tool registration', () => {
         });
 
         it('should return JSON formatted response from create_store', async () => {
-            registerStoreTools(server, config);
+            registerStoreTools(server, config, cortex);
 
             const registeredTools = getRegisteredTools(server);
             const createStoreTool = registeredTools['cortex_create_store'];
@@ -320,7 +314,7 @@ describe('store tool registration', () => {
         });
 
         it('should create store with kebab-case name', async () => {
-            registerStoreTools(server, config);
+            registerStoreTools(server, config, cortex);
 
             const registeredTools = getRegisteredTools(server);
             const createStoreTool = registeredTools['cortex_create_store'];
@@ -338,7 +332,7 @@ describe('store tool registration', () => {
         });
 
         it('should handle name with special invalid characters', async () => {
-            registerStoreTools(server, config);
+            registerStoreTools(server, config, cortex);
 
             const registeredTools = getRegisteredTools(server);
             const createStoreTool = registeredTools['cortex_create_store'];

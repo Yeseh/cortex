@@ -183,7 +183,7 @@ export class FilesystemCategoryStorage implements CategoryStorage {
      */
     async updateSubcategoryDescription(
         categoryPath: CategoryPath,
-        description: string | null,
+        description: string | null
     ): Promise<Result<void, CategoryError>> {
         return updateSubcategoryDescriptionOp(this.ctx, categoryPath, description);
     }
@@ -211,9 +211,7 @@ export class FilesystemCategoryStorage implements CategoryStorage {
      * - If the parent index is missing, this is treated as a no-op success.
      * - Only the index entry is removed; the directory remains.
      */
-    async removeSubcategoryEntry(path: CategoryPath,
-    ): Promise<Result<void, CategoryError>> {
+    async removeSubcategoryEntry(path: CategoryPath): Promise<Result<void, CategoryError>> {
         return removeSubcategoryEntryOp(this.ctx, path);
     }
 }
-

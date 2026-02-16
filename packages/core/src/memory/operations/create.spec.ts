@@ -7,7 +7,7 @@ import { describe, it, expect } from 'bun:test';
 import type { StorageAdapterError } from '@/storage/adapter.ts';
 import type { Memory } from '@/memory';
 import { createMemory } from './create.ts';
-import {  createMockStorage } from './test-helpers.spec.ts';
+import { createMockStorage } from './test-helpers.spec.ts';
 import { err, ok } from '@/result.ts';
 
 describe('createMemory', () => {
@@ -32,15 +32,18 @@ describe('createMemory', () => {
 
         const now = new Date('2024-06-15T10:30:00.000Z');
         const expiresAt = new Date('2030-06-01T00:00:00Z');
-        const result = await createMemory(storage, 'project/test/memory', {
-            content: 'Test content',
-            tags: [
-                'tag1', 'tag2',
-            ],
-            source: 'test',
-            expiresAt,
-            citations: ['docs/spec.md'],
-        }, now);
+        const result = await createMemory(
+            storage,
+            'project/test/memory',
+            {
+                content: 'Test content',
+                tags: ['tag1', 'tag2'],
+                source: 'test',
+                expiresAt,
+                citations: ['docs/spec.md'],
+            },
+            now
+        );
 
         expect(result.ok()).toBe(true);
         expect(writtenMemory).toBeDefined();
@@ -50,9 +53,7 @@ describe('createMemory', () => {
             expect(writtenMemory.path.category.toString()).toBe('project/test');
             expect(writtenMemory.path.slug.toString()).toBe('memory');
             expect(writtenMemory.content).toBe('Test content');
-            expect(writtenMemory.metadata.tags).toEqual([
-                'tag1', 'tag2',
-            ]);
+            expect(writtenMemory.metadata.tags).toEqual(['tag1', 'tag2']);
             expect(writtenMemory.metadata.source).toBe('test');
             expect(writtenMemory.metadata.expiresAt).toEqual(expiresAt);
             expect(writtenMemory.metadata.citations).toEqual(['docs/spec.md']);
@@ -186,7 +187,7 @@ describe('createMemory', () => {
             storage,
             'project/test/memory',
             { content: 'Test', source: 'test' },
-            customTime,
+            customTime
         );
 
         expect(result.ok()).toBe(true);

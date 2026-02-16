@@ -96,11 +96,7 @@ describe('config loading', () => {
 
         await writeFile(
             globalPath,
-            [
-                'output_format: yaml',
-                'auto_summary_threshold: 7',
-                'strict_local: false',
-            ].join('\n'),
+            ['output_format: yaml', 'auto_summary_threshold: 7', 'strict_local: false'].join('\n')
         );
         await writeFile(localPath, 'output_format: json');
 

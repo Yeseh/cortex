@@ -147,13 +147,9 @@ const errorCodeMapping: Record<DomainErrorCode, ErrorCode> = {
  * // Returns: McpError with code InvalidParams
  * ```
  */
-export const domainErrorToMcpError = (
-    code: DomainErrorCode, message: string,
-): McpError => {
+export const domainErrorToMcpError = (code: DomainErrorCode, message: string): McpError => {
     const mcpCode = errorCodeMapping[code] ?? ErrorCode.InternalError;
-    return new McpError(
-        mcpCode, message,
-    );
+    return new McpError(mcpCode, message);
 };
 
 /**
@@ -177,9 +173,7 @@ export const domainErrorToMcpError = (
  */
 export const zodErrorToMcpError = (error: z.ZodError): McpError => {
     const message = error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
-    return new McpError(
-        ErrorCode.InvalidParams, message,
-    );
+    return new McpError(ErrorCode.InvalidParams, message);
 };
 
 /**
@@ -194,22 +188,17 @@ export const zodErrorToMcpError = (error: z.ZodError): McpError => {
  *
  * @example
  * ```ts
- * const registry = new FilesystemRegistry(path);
- * const result = await registry.load();
- * if (!result.ok()) {
- *   throw handleDomainError(result.error);
+ * const cortex = await Cortex.fromConfig(configPath);
+ * if (!cortex.ok()) {
+ *   throw handleDomainError(cortex.error);
  * }
  * ```
  */
 export const handleDomainError = <E extends { code: string; message: string }>(
-    error: E,
+    error: E
 ): McpError => {
     if (error.code in errorCodeMapping) {
-        return domainErrorToMcpError(
-            error.code as DomainErrorCode, error.message,
-        ); 
+        return domainErrorToMcpError(error.code as DomainErrorCode, error.message);
     }
-    return new McpError(
-        ErrorCode.InternalError, error.message,
-    );
+    return new McpError(ErrorCode.InternalError, error.message);
 };

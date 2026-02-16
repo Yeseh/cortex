@@ -7,7 +7,7 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { CategoryPath } from '@/category/category-path.ts';
-import type { RegistryService } from '@/storage/adapter.ts';
+import type { Cortex } from '@/cortex/cortex.ts';
 import { ok } from '@/result.ts';
 import { isValidStoreName } from '@/store/registry.ts';
 import { storeError, type InitStoreError, type StoreResult } from '@/store/result.ts';
@@ -26,13 +26,13 @@ export interface InitStoreOptions {
  *
  * This domain operation:
  * 1. Validates the store name
- * 2. Loads the registry and checks for name collision
+ * 2. Checks for name collision in the registry
  * 3. Creates the store directory
- * 4. Registers the store in the registry
+ * 4. Registers the store in Cortex (persists to config.yaml)
  * 5. Creates a root index entry via IndexStorage
  * 6. Optionally creates category subdirectories with indexes
  *
- * @param registry - The registry to use for store registration
+ * @param cortex - The Cortex client for store registration
  * @param name - The store name (must be a valid lowercase slug)
  * @param path - The filesystem path for the store
  * @param options - Optional settings for categories and description
@@ -40,11 +40,10 @@ export interface InitStoreOptions {
  *
  * @example
  * ```typescript
- * const registry = new FilesystemRegistry('/config/stores.yaml');
- * await registry.load();
+ * const cortex = await Cortex.fromConfig('~/.config/cortex');
  *
  * const result = await initializeStore(
- *   registry,
+ *   cortex.value,
  *   'my-project',
  *   '/path/to/store',
  *   { categories: ['global', 'projects'] }
@@ -56,35 +55,22 @@ export interface InitStoreOptions {
  * ```
  */
 export const initializeStore = async (
-    registry: RegistryService,
+    cortex: Cortex,
     name: string,
     path: string,
-    options: InitStoreOptions = {},
+    options: InitStoreOptions = {}
 ): Promise<StoreResult<void, InitStoreError>> => {
     // 1. Validate store name
     if (!isValidStoreName(name)) {
         return storeError(
             'INVALID_STORE_NAME',
             `Store name '${name}' is invalid. Must be a lowercase slug (letters, numbers, hyphens).`,
-            { store: name },
+            { store: name }
         );
     }
 
-    // 2. Load registry and check for collision
-    const loadResult = await registry.load();
-    // If registry is missing, that's okay - we'll create entries from scratch
-    const currentRegistry = loadResult.ok() ? loadResult.value : {};
-
-    // But if load failed for another reason, propagate the error
-    if (!loadResult.ok() && loadResult.error?.code !== 'REGISTRY_MISSING') {
-        return storeError(
-            'REGISTRY_UPDATE_FAILED',
-            `Failed to load registry: ${loadResult.error?.message ?? 'Unknown error'}`,
-            { store: name, cause: loadResult.error },
-        );
-    }
-
-    if (currentRegistry[name]) {
+    // 2. Check for collision in registry
+    if (cortex.registry[name]) {
         return storeError('STORE_ALREADY_EXISTS', `Store '${name}' is already registered.`, {
             store: name,
         });
@@ -93,8 +79,7 @@ export const initializeStore = async (
     // 3. Create store directory
     try {
         await mkdir(path, { recursive: true });
-    }
-    catch (error) {
+    } catch (error) {
         return storeError('STORE_CREATE_FAILED', `Failed to create store directory at ${path}`, {
             store: name,
             path,
@@ -102,28 +87,24 @@ export const initializeStore = async (
         });
     }
 
-    // 4. Register in registry
-    const updatedRegistry = {
-        ...currentRegistry,
-        [name]: {
-            path,
-            ...(options.description !== undefined && { description: options.description }),
-        },
+    // 4. Register in Cortex (persists to config.yaml)
+    const storeDefinition = {
+        path,
+        ...(options.description !== undefined && { description: options.description }),
     };
-
-    const saveResult = await registry.save(updatedRegistry);
-    if (!saveResult.ok()) {
+    const addResult = await cortex.addStore(name, storeDefinition);
+    if (!addResult.ok()) {
         return storeError(
             'REGISTRY_UPDATE_FAILED',
-            `Failed to save registry: ${saveResult.error?.message ?? 'Unknown error'}`,
-            { store: name, cause: saveResult.error },
+            `Failed to register store: ${addResult.error.message}`,
+            { store: name, cause: addResult.error }
         );
     }
 
     // 5. Create root index via IndexStorage
     const categories = options.categories ?? [];
     const rootIndex = buildEmptyIndex(categories);
-    const adapterResult = registry.getStore(name);
+    const adapterResult = cortex.getStore(name);
     if (!adapterResult.ok()) {
         return storeError('STORE_INDEX_FAILED', `Failed to resolve store adapter for '${name}'.`, {
             store: name,
@@ -156,7 +137,7 @@ export const initializeStore = async (
                         store: name,
                         path: categoryPath,
                         cause: catPathResult.error,
-                    },
+                    }
                 );
             }
             const writeResult = await adapter.indexes.write(catPathResult.value, categoryIndex);
@@ -168,11 +149,10 @@ export const initializeStore = async (
                         store: name,
                         path: categoryPath,
                         cause: writeResult.error,
-                    },
+                    }
                 );
             }
-        }
-        catch (error) {
+        } catch (error) {
             return storeError('STORE_INDEX_FAILED', `Failed to create category '${category}'`, {
                 store: name,
                 path: categoryPath,

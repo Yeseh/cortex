@@ -86,9 +86,10 @@ export type MemoryErrorCode =
 export const memoryError = (
     code: MemoryErrorCode,
     message: string,
-    extras?: Partial<MemoryError>,
-): Result<never, MemoryError> => err({
-    code,
-    message,
-    ...extras,
-});
+    extras?: Partial<MemoryError>
+): Result<never, MemoryError> =>
+    err({
+        code,
+        message,
+        ...extras,
+    });

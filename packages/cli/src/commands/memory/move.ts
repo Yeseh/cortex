@@ -44,7 +44,7 @@ export async function handleMove(
     ctx: CortexContext,
     from: string,
     to: string,
-    storeName: string | undefined,
+    storeName: string | undefined
 ): Promise<void> {
     // 1. Resolve store context
     const resolvedStoreName = resolveDefaultStoreName(storeName, ctx.cortex);
@@ -64,7 +64,7 @@ export async function handleMove(
     // The paths were already validated by moveMemory, so these will succeed
     const normalizedFrom = MemoryPath.fromString(from);
     const normalizedTo = MemoryPath.fromString(to);
-    
+
     // Use normalized paths if parsing succeeded, fall back to original
     const fromDisplay = normalizedFrom.ok() ? normalizedFrom.value.toString() : from;
     const toDisplay = normalizedTo.ok() ? normalizedTo.value.toString() : to;

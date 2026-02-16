@@ -24,12 +24,16 @@ export const updateMemoryInputSchema = z.object({
     path: memoryPathSchema.describe('Memory path in category/slug format'),
     content: z.string().optional().describe('New memory content'),
     tags: tagsSchema.describe('New tags (replaces existing)'),
-    expires_at: isoDateSchema.optional().nullable().describe(
-        'New expiration date (ISO 8601). Pass null to clear the expiration. Omit to keep existing value.',
-    ),
-    citations: z.array(z.string().min(1)).optional().describe(
-        'New citations (replaces existing). Omit to keep existing citations.',
-    ),
+    expires_at: isoDateSchema
+        .optional()
+        .nullable()
+        .describe(
+            'New expiration date (ISO 8601). Pass null to clear the expiration. Omit to keep existing value.'
+        ),
+    citations: z
+        .array(z.string().min(1))
+        .optional()
+        .describe('New citations (replaces existing). Omit to keep existing citations.'),
 });
 
 /**
@@ -87,14 +91,18 @@ export interface UpdateMemoryInput {
  */
 export const updateMemoryHandler = async (
     ctx: ToolContext,
-    input: UpdateMemoryInput,
+    input: UpdateMemoryInput
 ): Promise<McpToolResponse> => {
     // Validate that at least one update field is provided
-    if (input.content === undefined && input.tags === undefined &&
-        input.expires_at === undefined && input.citations === undefined) {
+    if (
+        input.content === undefined &&
+        input.tags === undefined &&
+        input.expires_at === undefined &&
+        input.citations === undefined
+    ) {
         throw new McpError(
             ErrorCode.InvalidParams,
-            'No updates provided. Specify content, tags, expires_at, or citations.',
+            'No updates provided. Specify content, tags, expires_at, or citations.'
         );
     }
 
@@ -106,11 +114,12 @@ export const updateMemoryHandler = async (
     const result = await updateMemory(adapterResult.value, input.path, {
         content: input.content,
         tags: input.tags,
-        expiresAt: input.expires_at === null
-            ? null
-            : input.expires_at
-                ? new Date(input.expires_at)
-                : undefined,
+        expiresAt:
+            input.expires_at === null
+                ? null
+                : input.expires_at
+                  ? new Date(input.expires_at)
+                  : undefined,
         citations: input.citations,
     });
 

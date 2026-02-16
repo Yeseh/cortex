@@ -183,7 +183,9 @@ export interface CategoryStorage {
      * - Passing `''` as `parentPath` updates the root index.
      * - Passing `null` clears the description field for the subcategory.
      */
-    updateSubcategoryDescription(categoryPath: CategoryPath, description: string | null
+    updateSubcategoryDescription(
+        categoryPath: CategoryPath,
+        description: string | null
     ): Promise<Result<void, CategoryError>>;
 
     /**
@@ -229,9 +231,7 @@ export const MAX_DESCRIPTION_LENGTH = 500;
  * Those operations discover root categories dynamically by reading the
  * store's root index, allowing stores to have any root-level categories.
  */
-export const ROOT_CATEGORIES = [
-    'human', 'persona',
-] as const;
+export const ROOT_CATEGORIES = ['human', 'persona'] as const;
 
 /** Type for root category names */
 export type RootCategory = (typeof ROOT_CATEGORIES)[number];

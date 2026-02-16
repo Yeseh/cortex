@@ -28,9 +28,7 @@ const IndexMemoryEntrySchema = z.object({
     path: z.string().min(1),
     token_estimate: z.number().int().nonnegative(),
     summary: z.string().optional(),
-    updated_at: z.union([
-        z.string().datetime(), z.date(),
-    ]).optional(),
+    updated_at: z.union([z.string().datetime(), z.date()]).optional(),
 });
 
 /**
@@ -59,8 +57,7 @@ export const parseIndex = (raw: string): Result<Category, IndexSerializationErro
     let parsedYaml: unknown;
     try {
         parsedYaml = Bun.YAML.parse(raw) as unknown;
-    }
-    catch (cause) {
+    } catch (cause) {
         return err({
             code: 'PARSE_FAILED',
             message: 'Failed to parse YAML for category index.',
@@ -84,11 +81,11 @@ export const parseIndex = (raw: string): Result<Category, IndexSerializationErro
             ...(memory.summary ? { summary: memory.summary } : {}),
             ...(memory.updated_at
                 ? {
-                    updatedAt:
+                      updatedAt:
                           memory.updated_at instanceof Date
                               ? memory.updated_at
                               : new Date(memory.updated_at),
-                }
+                  }
                 : {}),
         })),
         subcategories: parsed.data.subcategories.map((subcategory) => ({
@@ -119,8 +116,7 @@ export const serializeIndex = (index: Category): Result<string, IndexSerializati
 
     try {
         return ok(Bun.YAML.stringify(yamlData));
-    }
-    catch (cause) {
+    } catch (cause) {
         return err({
             code: 'SERIALIZE_FAILED',
             message: 'Failed to serialize category index to YAML.',

@@ -5,18 +5,19 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ServerConfig } from '../../config.ts';
 import { MEMORY_SUBDIR } from '../../config.ts';
-import { createMemoryFile, createTestConfig, createTestDir } from './test-utils.ts';
+import { createMemoryFile, createTestContext } from './test-utils.ts';
+import type { ToolContext } from './shared.ts';
 import { reindexStoreHandler, type ReindexStoreInput } from './reindex-store.ts';
 
 describe('cortex_reindex_store tool', () => {
     let testDir: string;
-    let config: ServerConfig;
+    let ctx: ToolContext;
 
     beforeEach(async () => {
-        testDir = await createTestDir();
-        config = createTestConfig(testDir);
+        const result = await createTestContext();
+        testDir = result.testDir;
+        ctx = result.ctx;
     });
 
     afterEach(async () => {
@@ -40,7 +41,7 @@ describe('cortex_reindex_store tool', () => {
             store: 'default',
         };
 
-        const result = await reindexStoreHandler({ config }, input);
+        const result = await reindexStoreHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.store).toBe('default');
@@ -53,7 +54,7 @@ describe('cortex_reindex_store tool', () => {
             store: 'non-existent-store',
         };
 
-        await expect(reindexStoreHandler({ config }, input)).rejects.toThrow('not registered');
+        await expect(reindexStoreHandler(ctx, input)).rejects.toThrow('not registered');
     });
 
     it('should work with empty store', async () => {
@@ -61,7 +62,7 @@ describe('cortex_reindex_store tool', () => {
             store: 'default',
         };
 
-        const result = await reindexStoreHandler({ config }, input);
+        const result = await reindexStoreHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.store).toBe('default');

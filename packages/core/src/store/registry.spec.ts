@@ -43,11 +43,7 @@ describe('store registry parsing', () => {
     });
 
     it('should reject stores section not at top level', () => {
-        const raw = [
-            '  stores:',
-            '    local:',
-            '      path: ./data',
-        ].join('\n');
+        const raw = ['  stores:', '    local:', '      path: ./data'].join('\n');
 
         const result = parseStoreRegistry(raw);
 
@@ -59,11 +55,7 @@ describe('store registry parsing', () => {
     });
 
     it('should reject store names with invalid characters', () => {
-        const raw = [
-            'stores:',
-            '  bad_name:',
-            '    path: /var/lib/cortex',
-        ].join('\n');
+        const raw = ['stores:', '  bad_name:', '    path: /var/lib/cortex'].join('\n');
 
         const result = parseStoreRegistry(raw);
 
@@ -92,11 +84,7 @@ describe('store registry parsing', () => {
     });
 
     it('should reject missing store paths', () => {
-        const raw = [
-            'primary:',
-            'secondary:',
-            '  path: /var/lib/cortex',
-        ].join('\n');
+        const raw = ['primary:', 'secondary:', '  path: /var/lib/cortex'].join('\n');
 
         const result = parseStoreRegistry(raw);
 
@@ -108,9 +96,7 @@ describe('store registry parsing', () => {
     });
 
     it('should reject empty or comment-only path values', () => {
-        const raw = [
-            'primary:', '  path: # empty',
-        ].join('\n');
+        const raw = ['primary:', '  path: # empty'].join('\n');
 
         const result = parseStoreRegistry(raw);
 
@@ -122,12 +108,7 @@ describe('store registry parsing', () => {
     });
 
     it('should reject unexpected entries', () => {
-        const raw = [
-            'stores:',
-            '  primary:',
-            '    path: /var/lib',
-            '  extra: true',
-        ].join('\n');
+        const raw = ['stores:', '  primary:', '    path: /var/lib', '  extra: true'].join('\n');
 
         const result = parseStoreRegistry(raw);
 
@@ -139,9 +120,7 @@ describe('store registry parsing', () => {
     });
 
     it('should reject paths that are not indented under the store', () => {
-        const raw = [
-            'primary:', 'path: /var/lib',
-        ].join('\n');
+        const raw = ['primary:', 'path: /var/lib'].join('\n');
 
         const result = parseStoreRegistry(raw);
 
@@ -188,11 +167,7 @@ describe('description field parsing', () => {
     });
 
     it('should parse registry without description (backward compatibility)', () => {
-        const raw = [
-            'stores:',
-            '  default:',
-            '    path: "/data/default"',
-        ].join('\n');
+        const raw = ['stores:', '  default:', '    path: "/data/default"'].join('\n');
 
         const result = parseStoreRegistry(raw);
 

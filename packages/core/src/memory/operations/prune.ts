@@ -14,7 +14,7 @@ import { type MemoryPath } from '@/memory/memory-path.ts';
 /** Options for pruning expired memories */
 export interface PruneOptions {
     /** If true, return what would be pruned without deleting */
-    dryRun?: boolean
+    dryRun?: boolean;
     /** Current time for expiration check */
     now?: Date;
 }
@@ -56,7 +56,7 @@ export interface PruneResult {
  */
 export const pruneExpiredMemories = async (
     storage: ScopedStorageAdapter,
-    options?: PruneOptions,
+    options?: PruneOptions
 ): Promise<Result<PruneResult, MemoryError>> => {
     const dryRun = options?.dryRun ?? false;
     const now = options?.now ?? new Date();
@@ -78,7 +78,7 @@ export const pruneExpiredMemories = async (
             rootCat,
             true, // Include expired
             now,
-            visited,
+            visited
         );
         if (collectResult.ok()) {
             for (const memory of collectResult.value) {

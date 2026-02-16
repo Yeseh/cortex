@@ -34,7 +34,7 @@ export interface MoveMemoryInput {
  */
 export const moveMemoryHandler = async (
     ctx: ToolContext,
-    input: MoveMemoryInput,
+    input: MoveMemoryInput
 ): Promise<McpToolResponse> => {
     const adapterResult = await resolveStoreAdapter(ctx, input.store);
     if (!adapterResult.ok()) {
@@ -48,9 +48,11 @@ export const moveMemoryHandler = async (
     }
 
     return {
-        content: [{
-            type: 'text',
-            text: `Memory moved from ${input.from_path} to ${input.to_path}`,
-        }],
+        content: [
+            {
+                type: 'text',
+                text: `Memory moved from ${input.from_path} to ${input.to_path}`,
+            },
+        ],
     };
 };

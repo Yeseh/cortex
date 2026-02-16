@@ -16,7 +16,6 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
-import { loadRegistry } from '../../context.ts';
 import { serializeOutput, type OutputStoreRegistry, type OutputFormat } from '../../output.ts';
 import { type CortexContext } from '@yeseh/cortex-core';
 
@@ -32,34 +31,22 @@ export interface ListCommandOptions {
  * Handles the list command execution.
  *
  * This function:
- * 1. Loads the store registry
- * 2. Formats the stores as a sorted list
- * 3. Serializes and outputs the result
+ * 1. Formats the stores as a sorted list from ctx.cortex.registry
+ * 2. Serializes and outputs the result
  *
  * @param ctx - CortexContext with Cortex client and output stream
  * @param options - Command options (format)
- * @throws {CommanderError} When the registry cannot be loaded or serialization fails
+ * @throws {CommanderError} When serialization fails
  */
-export async function handleList(
-    ctx: CortexContext,
-    options: ListCommandOptions,
-): Promise<void> {
-    // 1. Load the registry
-    const registryResult = await loadRegistry();
-    if (!registryResult.ok()) {
-        throwCoreError(registryResult.error);
-    }
-
-    // 2. Format the output as a sorted list of stores
-    const stores = Object.entries(registryResult.value)
-        .map(([
-            name, def,
-        ]) => ({ name, path: def.path }))
+export async function handleList(ctx: CortexContext, options: ListCommandOptions): Promise<void> {
+    // 1. Format the output as a sorted list of stores (registry already loaded in ctx)
+    const stores = Object.entries(ctx.cortex.registry)
+        .map(([name, def]) => ({ name, path: def.path }))
         .sort((a, b) => a.name.localeCompare(b.name));
 
     const output: OutputStoreRegistry = { stores };
 
-    // 3. Serialize and output
+    // 2. Serialize and output
     const format: OutputFormat = (options.format as OutputFormat) ?? 'yaml';
     const serialized = serializeOutput({ kind: 'store-registry', value: output }, format);
     if (!serialized.ok()) {

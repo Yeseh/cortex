@@ -16,15 +16,8 @@ import {
     err,
     ok,
 } from '@yeseh/cortex-core';
-import {
-    resolveStorePath,
-    type StoreRegistry,
-    type StoreResolveError,
-} from '@yeseh/cortex-core/store';
-import {
-    FilesystemRegistry,
-    createFilesystemAdapterFactory,
-} from '@yeseh/cortex-storage-fs';
+import { type StoreResolveError } from '@yeseh/cortex-core/store';
+import { createFilesystemAdapterFactory } from '@yeseh/cortex-storage-fs';
 import type { RegistryError, StoreNotFoundError } from '@yeseh/cortex-core/storage';
 
 /**
@@ -58,95 +51,6 @@ export interface StoreContextError {
  */
 export const getDefaultGlobalStorePath = (configDir?: string): string =>
     resolve(configDir ?? resolve(homedir(), '.config', 'cortex'), 'memory');
-
-/**
- * Default path to the store registry.
- *
- * @module cli/context
- * @returns Absolute path to `~/.config/cortex/stores.yaml`.
- *
- * @example
- * ```ts
- * const path = getDefaultRegistryPath();
- * // => /home/user/.config/cortex/stores.yaml
- * ```
- */
-export const getDefaultRegistryPath = (): string =>
-    resolve(homedir(), '.config', 'cortex', 'stores.yaml');
-
-/**
- * Resolves a store path from the registry using a store name.
- *
- * @param storeName - The name of the store to look up
- * @param registryPath - Path to the store registry file
- * @returns Result with resolved store path or error
- */
-export const resolveStorePathFromRegistry = async (
-    storeName: string,
-    registryPath: string,
-): Promise<Result<string, StoreContextError>> => {
-    const registry = new FilesystemRegistry(registryPath);
-    const registryResult = await registry.load();
-    if (!registryResult.ok()) {
-        return err({
-            code: 'REGISTRY_LOAD_FAILED',
-            message: `Failed to load store registry: ${registryResult.error.message}`,
-            cause: registryResult.error,
-        });
-    }
-
-    const pathResult = resolveStorePath(registryResult.value, storeName);
-    if (!pathResult.ok()) {
-        return err({
-            code: 'STORE_NOT_FOUND',
-            message: pathResult.error.message,
-            cause: pathResult.error,
-        });
-    }
-
-    return ok(pathResult.value);
-};
-
-/**
- * Loads the store registry from the default or specified path.
- *
- * Edge cases:
- * - Returns an empty registry when the registry file is missing.
- * - Returns `REGISTRY_LOAD_FAILED` for parse or I/O failures.
- *
- * @module cli/context
- * @param registryPath - Optional path to the registry file.
- * @returns Result with the loaded registry or error.
- *
- * @example
- * ```ts
- * const registry = await loadRegistry();
- * if (registry.ok()) {
- *   console.log(Object.keys(registry.value));
- * }
- * ```
- */
-export const loadRegistry = async (
-    registryPath?: string,
-): Promise<Result<StoreRegistry, StoreContextError>> => {
-    const path = registryPath ?? getDefaultRegistryPath();
-    const registry = new FilesystemRegistry(path);
-    const result = await registry.load();
-
-    if (!result.ok()) {
-        // For allowMissing: true behavior, return empty registry if missing
-        if (result.error.code === 'REGISTRY_MISSING') {
-            return ok({});
-        }
-        return err({
-            code: 'REGISTRY_LOAD_FAILED',
-            message: `Failed to load store registry: ${result.error.message}`,
-            cause: result.error,
-        });
-    }
-
-    return ok(result.value);
-};
 
 /**
  * Options for creating a CortexContext.
@@ -205,7 +109,7 @@ export interface CreateCortexContextOptions {
  * ```
  */
 export const createCortexContext = async (
-    options: CreateCortexContextOptions = {},
+    options: CreateCortexContextOptions = {}
 ): Promise<Result<CortexContext, StoreContextError>> => {
     const dir = options.configDir ?? resolve(homedir(), '.config', 'cortex');
     const cwd = options.cwd ?? process.cwd();
@@ -231,7 +135,7 @@ export const createCortexContext = async (
     if (cortexResult.ok()) {
         // Check if any discovered stores are missing from config
         const missingStores = Object.keys(discoveredRegistry).filter(
-            name => !cortexResult.value.registry[name],
+            (name) => !cortexResult.value.registry[name]
         );
 
         if (missingStores.length > 0) {
@@ -308,10 +212,7 @@ export const createCortexContext = async (
  * const adapterResult = ctx.cortex.getStore(storeName);
  * ```
  */
-export const resolveDefaultStoreName = (
-    storeName: string | undefined,
-    cortex: Cortex,
-): string => {
+export const resolveDefaultStoreName = (storeName: string | undefined, cortex: Cortex): string => {
     if (storeName) {
         return storeName;
     }

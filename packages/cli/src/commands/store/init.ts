@@ -26,9 +26,7 @@ import { Command } from '@commander-js/extra-typings';
 import { spawn } from 'node:child_process';
 import { basename, resolve } from 'node:path';
 import { throwCoreError } from '../../errors.ts';
-import { getDefaultRegistryPath } from '../../context.ts';
 import { isValidStoreName, initializeStore } from '@yeseh/cortex-core/store';
-import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { serializeOutput, type OutputStoreInit, type OutputFormat } from '../../output.ts';
 import { resolveUserPath } from '../../paths.ts';
 import { type CortexContext } from '@yeseh/cortex-core';
@@ -48,7 +46,7 @@ export interface InitCommandOptions {
  */
 const runGitCommand = (
     args: string[],
-    cwd: string,
+    cwd: string
 ): Promise<{ ok: true; value: string } | { ok: false }> => {
     return new Promise((resolvePromise) => {
         const proc = spawn('git', args, { cwd });
@@ -60,8 +58,7 @@ const runGitCommand = (
         proc.on('close', (code: number | null) => {
             if (code === 0) {
                 resolvePromise({ ok: true, value: stdout.trim() });
-            }
-            else {
+            } else {
                 resolvePromise({ ok: false });
             }
         });
@@ -81,9 +78,7 @@ const runGitCommand = (
  * @returns The repository directory name, or `null` if not in a git repository
  */
 const detectGitRepoName = async (cwd: string): Promise<string | null> => {
-    const result = await runGitCommand([
-        'rev-parse', '--show-toplevel',
-    ], cwd);
+    const result = await runGitCommand(['rev-parse', '--show-toplevel'], cwd);
     if (!result.ok) {
         return null;
     }
@@ -159,7 +154,7 @@ async function resolveStoreName(cwd: string, explicitName?: string): Promise<str
 function writeOutput(
     output: OutputStoreInit,
     format: OutputFormat,
-    stdout: NodeJS.WritableStream,
+    stdout: NodeJS.WritableStream
 ): void {
     const serialized = serializeOutput({ kind: 'store-init', value: output }, format);
     if (!serialized.ok()) {
@@ -186,10 +181,9 @@ function writeOutput(
 export async function handleInit(
     ctx: CortexContext,
     targetPath: string | undefined,
-    options: InitCommandOptions = {},
+    options: InitCommandOptions = {}
 ): Promise<void> {
     const cwd = process.cwd();
-    const registryPath = getDefaultRegistryPath();
 
     // 1. Resolve store name (explicit or git detection)
     const storeName = await resolveStoreName(cwd, options.name);
@@ -198,16 +192,15 @@ export async function handleInit(
     const rootPath = targetPath ? resolveUserPath(targetPath.trim(), cwd) : resolve(cwd, '.cortex');
 
     // 3. Use initializeStore to handle directory creation, index, and registration
-    const registry = new FilesystemRegistry(registryPath);
-    const result = await initializeStore(registry, storeName, rootPath);
+    const result = await initializeStore(ctx.cortex, storeName, rootPath);
     if (!result.ok()) {
         // Map InitStoreError to CLI error
         const errorCode =
             result.error.code === 'STORE_ALREADY_EXISTS'
                 ? 'STORE_ALREADY_EXISTS'
                 : result.error.code === 'INVALID_STORE_NAME'
-                    ? 'INVALID_STORE_NAME'
-                    : 'STORE_INIT_FAILED';
+                  ? 'INVALID_STORE_NAME'
+                  : 'STORE_INIT_FAILED';
         throwCoreError({ code: errorCode, message: result.error.message });
     }
 

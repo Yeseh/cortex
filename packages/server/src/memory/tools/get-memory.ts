@@ -34,7 +34,7 @@ export interface GetMemoryInput {
  */
 export const getMemoryHandler = async (
     ctx: ToolContext,
-    input: GetMemoryInput,
+    input: GetMemoryInput
 ): Promise<McpToolResponse> => {
     const adapterResult = await resolveStoreAdapter(ctx, input.store);
     if (!adapterResult.ok()) {

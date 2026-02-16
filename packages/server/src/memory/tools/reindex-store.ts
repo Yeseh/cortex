@@ -7,11 +7,7 @@
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { storeNameSchema } from '../../store/tools.ts';
-import {
-    type ToolContext,
-    type McpToolResponse,
-    resolveStoreAdapter,
-} from './shared.ts';
+import { type ToolContext, type McpToolResponse, resolveStoreAdapter } from './shared.ts';
 
 /** Schema for reindex_store tool input */
 export const reindexStoreInputSchema = z.object({
@@ -43,7 +39,7 @@ export interface ReindexStoreInput {
  */
 export const reindexStoreHandler = async (
     ctx: ToolContext,
-    input: ReindexStoreInput,
+    input: ReindexStoreInput
 ): Promise<McpToolResponse> => {
     const adapterResult = await resolveStoreAdapter(ctx, input.store);
     if (!adapterResult.ok()) {

@@ -6,11 +6,9 @@
 
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import { join } from 'node:path';
 import type { Result } from '@yeseh/cortex-core';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 import { err, ok, type MemoryError, type Cortex } from '@yeseh/cortex-core';
-import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import type { ServerConfig } from '../../config.ts';
 
 // ---------------------------------------------------------------------------
@@ -35,8 +33,8 @@ export const tagsSchema = z.array(z.string()).optional();
 /** Context passed to MCP tool handlers */
 export interface ToolContext {
     config: ServerConfig;
-    /** Optional Cortex instance for store resolution (preferred when available) */
-    cortex?: Cortex;
+    /** Cortex instance for store resolution */
+    cortex: Cortex;
 }
 
 /** Standard MCP tool response with text content */
@@ -51,55 +49,20 @@ export interface McpToolResponse {
 
 /**
  * Resolves a storage adapter for the given store.
- * Uses Cortex if available, falls back to FilesystemRegistry.
  *
- * @param ctx - Tool context containing config and optional Cortex instance
+ * @param ctx - Tool context containing config and Cortex instance
  * @param storeName - Name of the store to resolve
  * @returns A Result containing either the adapter or an MCP error
  */
 export const resolveStoreAdapter = async (
     ctx: ToolContext,
-    storeName: string,
+    storeName: string
 ): Promise<Result<ScopedStorageAdapter, McpError>> => {
-    // Use Cortex if available (preferred path)
-    if (ctx.cortex) {
-        const result = ctx.cortex.getStore(storeName);
-        if (!result.ok()) {
-            return err(new McpError(ErrorCode.InvalidParams, result.error.message));
-        }
-        return ok(result.value);
+    const result = ctx.cortex.getStore(storeName);
+    if (!result.ok()) {
+        return err(new McpError(ErrorCode.InvalidParams, result.error.message));
     }
-
-    // Fall back to FilesystemRegistry (backward compatibility)
-    const registryPath = join(ctx.config.dataPath, 'stores.yaml');
-    const registry = new FilesystemRegistry(registryPath);
-    const registryResult = await registry.load();
-
-    if (!registryResult.ok()) {
-        // Map REGISTRY_MISSING to appropriate error (like allowMissing: false did)
-        if (registryResult.error.code === 'REGISTRY_MISSING') {
-            return err(
-                new McpError(
-                    ErrorCode.InternalError,
-                    `Store registry not found at ${registryPath}`,
-                ),
-            );
-        }
-        return err(
-            new McpError(
-                ErrorCode.InternalError,
-                `Failed to load store registry: ${registryResult.error.message}`,
-            ),
-        );
-    }
-
-    // Use registry.getStore() to get scoped adapter
-    const storeResult = registry.getStore(storeName);
-    if (!storeResult.ok()) {
-        return err(new McpError(ErrorCode.InvalidParams, storeResult.error.message));
-    }
-
-    return ok(storeResult.value);
+    return ok(result.value);
 };
 
 /**
@@ -115,15 +78,9 @@ export const translateMemoryError = (error: MemoryError): McpError => {
     switch (error.code) {
         // Client-correctable errors (InvalidParams)
         case 'MEMORY_NOT_FOUND':
-            return new McpError(
-                ErrorCode.InvalidParams,
-                `Memory not found: ${error.path}`,
-            );
+            return new McpError(ErrorCode.InvalidParams, `Memory not found: ${error.path}`);
         case 'MEMORY_EXPIRED':
-            return new McpError(
-                ErrorCode.InvalidParams,
-                `Memory expired: ${error.path}`,
-            );
+            return new McpError(ErrorCode.InvalidParams, `Memory expired: ${error.path}`);
         case 'INVALID_PATH':
             return new McpError(ErrorCode.InvalidParams, error.message);
         case 'INVALID_INPUT':
@@ -131,7 +88,7 @@ export const translateMemoryError = (error: MemoryError): McpError => {
         case 'DESTINATION_EXISTS':
             return new McpError(
                 ErrorCode.InvalidParams,
-                `Destination already exists: ${error.path}`,
+                `Destination already exists: ${error.path}`
             );
 
         // Parsing/validation errors (corrupted data)
@@ -142,10 +99,7 @@ export const translateMemoryError = (error: MemoryError): McpError => {
         case 'INVALID_TAGS':
         case 'INVALID_SOURCE':
         case 'INVALID_CITATIONS':
-            return new McpError(
-                ErrorCode.InternalError,
-                `Memory file corrupted: ${error.message}`,
-            );
+            return new McpError(ErrorCode.InternalError, `Memory file corrupted: ${error.message}`);
 
         // Storage/infrastructure errors
         case 'STORAGE_ERROR':

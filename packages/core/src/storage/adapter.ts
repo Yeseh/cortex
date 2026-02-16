@@ -194,8 +194,7 @@ export interface IndexStorage {
      * - Writing to the root index uses an empty string as the path.
      * - Serialization failures (e.g., invalid paths or counts) surface as `INDEX_ERROR`.
      */
-    write(path: CategoryPath, contents: Category
-    ): Promise<Result<void, StorageAdapterError>>;
+    write(path: CategoryPath, contents: Category): Promise<Result<void, StorageAdapterError>>;
 
     /**
      * Rebuilds all category indexes from the current filesystem state.
@@ -267,9 +266,9 @@ export interface IndexStorage {
  *
  * @example
  * ```typescript
- * const result = await storage.load('~/.config/cortex/stores.yml');
- * if (result.ok) {
- *   const defaultStore = result.value['default'];
+ * const cortex = await Cortex.fromConfig('~/.config/cortex');
+ * if (cortex.ok) {
+ *   const defaultStore = cortex.value.registry['default'];
  *   console.log('Default store path:', defaultStore?.path);
  * }
  * ```
@@ -502,24 +501,25 @@ export interface CortexOptions {
  * @example
  * ```typescript
  * // Setup and usage
- * const registry = new FilesystemRegistry('/path/to/stores.yaml');
- * await registry.load();
- *
- * const adapter = registry.getStore('my-project');
- * if (adapter.ok) {
- *   const content = await adapter.value.memories.read('category/memory');
- *   console.log(content.value);
+ * const cortex = await Cortex.fromConfig('~/.config/cortex');
+ * if (cortex.ok) {
+ *   const adapter = cortex.value.getStore('my-project');
+ *   if (adapter.ok) {
+ *     const content = await adapter.value.memories.read('category/memory');
+ *     console.log(content.value);
+ *   }
  * }
  * ```
  *
  * @example
  * ```typescript
  * // First-time initialization
- * const registry = new FilesystemRegistry('/path/to/stores.yaml');
- * await registry.initialize();  // Creates file if missing
- * const result = await registry.load();
- * if (result.ok) {
- *   console.log('Registered stores:', Object.keys(result.value));
+ * const cortex = await Cortex.init({
+ *   rootDirectory: '~/.config/cortex',
+ *   registry: {}
+ * });
+ * if (cortex.ok) {
+ *   console.log('Registered stores:', Object.keys(cortex.value.registry));
  * }
  * ```
  */

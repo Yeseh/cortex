@@ -60,12 +60,9 @@ const resolveFileContent = async (filePath: string | undefined): Promise<Optiona
         });
     }
     try {
-        const content = await readFile(
-            trimmed, 'utf8',
-        );
+        const content = await readFile(trimmed, 'utf8');
         return ok({ content, source: 'file' });
-    }
-    catch (error) {
+    } catch (error) {
         return err({
             code: 'FILE_READ_FAILED',
             message: `Failed to read content file: ${trimmed}.`,
@@ -76,7 +73,8 @@ const resolveFileContent = async (filePath: string | undefined): Promise<Optiona
 };
 
 const resolveStdinContent = async (
-    stdin?: NodeJS.ReadableStream) : Promise<OptionalContentResult> => {
+    stdin?: NodeJS.ReadableStream
+): Promise<OptionalContentResult> => {
     const stream = stdin ?? process.stdin;
     const isTty = 'isTTY' in stream ? Boolean(stream.isTTY) : false;
     if (isTty) {
@@ -87,18 +85,14 @@ const resolveStdinContent = async (
 };
 
 export const resolveMemoryContentInput = async (
-    options: MemoryContentInputOptions): Promise<ContentInputResult> => {
-
+    options: MemoryContentInputOptions
+): Promise<ContentInputResult> => {
     const contentProvided = options.content !== undefined;
     const fileProvided = options.filePath !== undefined;
     const stdinRequested = options.stdinRequested === true;
     const requireStdinFlag = options.requireStdinFlag === true;
 
-    const requestedSources = [
-        contentProvided,
-        fileProvided,
-        stdinRequested,
-    ].filter(Boolean);
+    const requestedSources = [contentProvided, fileProvided, stdinRequested].filter(Boolean);
     if (requestedSources.length > 1) {
         return err({
             code: 'MULTIPLE_CONTENT_SOURCES',

@@ -29,13 +29,11 @@ describe('setDescription', () => {
         let capturedDesc: string | null = null;
         const storage = createMockStorage({
             exists: mock(async () => ok(true)),
-            updateSubcategoryDescription: mock(
-                async (path: CategoryPath, desc: string | null) => {
-                    capturedPath = path.toString();
-                    capturedDesc = desc;
-                    return ok(undefined);
-                },
-            ),
+            updateSubcategoryDescription: mock(async (path: CategoryPath, desc: string | null) => {
+                capturedPath = path.toString();
+                capturedDesc = desc;
+                return ok(undefined);
+            }),
         });
         const result = await setDescription(storage, 'project', 'Root category description');
 
@@ -65,12 +63,10 @@ describe('setDescription', () => {
         let capturedDesc: string | null = null;
         const storage = createMockStorage({
             exists: mock(async () => ok(true)),
-            updateSubcategoryDescription: mock(
-                async (_path: CategoryPath, desc: string | null) => {
-                    capturedDesc = desc;
-                    return ok(undefined);
-                },
-            ),
+            updateSubcategoryDescription: mock(async (_path: CategoryPath, desc: string | null) => {
+                capturedDesc = desc;
+                return ok(undefined);
+            }),
         });
 
         await setDescription(storage, 'project/cortex', '  trimmed  ');
@@ -82,12 +78,10 @@ describe('setDescription', () => {
         let capturedDesc: string | null = 'initial';
         const storage = createMockStorage({
             exists: mock(async () => ok(true)),
-            updateSubcategoryDescription: mock(
-                async (_path: CategoryPath, desc: string | null) => {
-                    capturedDesc = desc;
-                    return ok(undefined);
-                },
-            ),
+            updateSubcategoryDescription: mock(async (_path: CategoryPath, desc: string | null) => {
+                capturedDesc = desc;
+                return ok(undefined);
+            }),
         });
 
         await setDescription(storage, 'project/cortex', '');
@@ -112,12 +106,10 @@ describe('setDescription', () => {
         let capturedDesc: string | null = 'initial';
         const storage = createMockStorage({
             exists: mock(async () => ok(true)),
-            updateSubcategoryDescription: mock(
-                async (_path: CategoryPath, desc: string | null) => {
-                    capturedDesc = desc;
-                    return ok(undefined);
-                },
-            ),
+            updateSubcategoryDescription: mock(async (_path: CategoryPath, desc: string | null) => {
+                capturedDesc = desc;
+                return ok(undefined);
+            }),
         });
 
         await setDescription(storage, 'project/cortex', '   ');
@@ -129,12 +121,10 @@ describe('setDescription', () => {
         let capturedDesc: string | null = null;
         const storage = createMockStorage({
             exists: mock(async () => ok(true)),
-            updateSubcategoryDescription: mock(
-                async (_path: CategoryPath, desc: string | null) => {
-                    capturedDesc = desc;
-                    return ok(undefined);
-                },
-            ),
+            updateSubcategoryDescription: mock(async (_path: CategoryPath, desc: string | null) => {
+                capturedDesc = desc;
+                return ok(undefined);
+            }),
         });
         const exactlyMaxDesc = 'a'.repeat(500);
 

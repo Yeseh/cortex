@@ -37,7 +37,7 @@ import type { CategoryStorage, CategoryError, DeleteCategoryResult } from '../ty
  */
 export const deleteCategory = async (
     storage: CategoryStorage,
-    path: string,
+    path: string
 ): Promise<Result<DeleteCategoryResult, CategoryError>> => {
     const pathResult = CategoryPath.fromString(path);
     if (!pathResult.ok()) {
@@ -46,7 +46,7 @@ export const deleteCategory = async (
             message: `Invalid category path: ${path}`,
             path,
         });
-    };
+    }
 
     // Reject root (top-level) categories
     if (pathResult.value.depth === 1) {

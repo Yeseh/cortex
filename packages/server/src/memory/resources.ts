@@ -11,15 +11,14 @@
  * @module server/memory/resources
  */
 
-import { join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Variables } from '@modelcontextprotocol/sdk/shared/uriTemplate.js';
 import type { ReadResourceResult, Resource } from '@modelcontextprotocol/sdk/types.js';
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
+import type { Cortex, CategoryMemoryEntry, SubcategoryEntry } from '@yeseh/cortex-core';
 import { CategoryPath, err, ok, type Result } from '@yeseh/cortex-core';
 import { getMemory } from '@yeseh/cortex-core/memory';
-import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 import type { ServerConfig } from '../config.ts';
 
@@ -34,12 +33,7 @@ import type { ServerConfig } from '../config.ts';
  * They are only used when the root index is missing or unreadable, to
  * preserve existing behavior for root listings and resource discovery.
  */
-const ROOT_CATEGORIES = [
-    'human',
-    'persona',
-    'project',
-    'domain',
-] as const;
+const ROOT_CATEGORIES = ['human', 'persona', 'project', 'domain'] as const;
 
 /**
  * URI scheme prefix for memory resources.
@@ -51,46 +45,30 @@ const MEMORY_URI_SCHEME = 'cortex://memory';
 /**
  * Resolves a scoped storage adapter for a store.
  *
- * Uses the Registry pattern to get the adapter by loading the store registry
- * and obtaining a store-specific adapter. This approach ensures all store
- * access goes through the centralized registry configuration.
+ * Uses the Cortex client to get a store-specific adapter. This ensures all store
+ * access goes through the centralized Cortex configuration.
  *
- * @param config - Server configuration containing data path and default store
+ * @param cortex - Cortex client instance
+ * @param config - Server configuration containing default store
  * @param storeName - Optional store name; uses default store if undefined
  * @returns Result containing ScopedStorageAdapter or McpError
  *
  * @example
  * ```ts
- * const result = await resolveAdapter(config, 'my-store');
+ * const result = resolveAdapter(cortex, config, 'my-store');
  * if (result.ok()) {
  *     const memory = await result.value.memories.read('project/my-memory');
  * }
  * ```
  */
-const resolveAdapter = async (
+const resolveAdapter = (
+    cortex: Cortex,
     config: ServerConfig,
-    storeName: string | undefined,
-): Promise<Result<ScopedStorageAdapter, McpError>> => {
+    storeName: string | undefined
+): Result<ScopedStorageAdapter, McpError> => {
     const store = storeName ?? config.defaultStore;
-    const registryPath = join(config.dataPath, 'stores.yaml');
-    const registry = new FilesystemRegistry(registryPath);
 
-    const loadResult = await registry.load();
-    if (!loadResult.ok()) {
-        if (loadResult.error.code === 'REGISTRY_MISSING') {
-            return err(
-                new McpError(ErrorCode.InternalError, `Store registry not found at ${registryPath}`),
-            );
-        }
-        return err(
-            new McpError(
-                ErrorCode.InternalError,
-                `Failed to load store registry: ${loadResult.error.message}`,
-            ),
-        );
-    }
-
-    const storeResult = registry.getStore(store);
+    const storeResult = cortex.getStore(store);
     if (!storeResult.ok()) {
         return err(new McpError(ErrorCode.InvalidParams, storeResult.error.message));
     }
@@ -193,7 +171,7 @@ const getVariableString = (value: string | string[] | undefined): string => {
  */
 const parseUriVariables = (
     variables: Variables,
-    config: ServerConfig,
+    config: ServerConfig
 ): Result<ParsedUriVariables, McpError> => {
     const store = getVariableString(variables.store) || config.defaultStore;
     const rawPath = getVariableString(variables['path*']);
@@ -289,7 +267,7 @@ interface CategoryListing {
 const readMemoryContent = async (
     adapter: ScopedStorageAdapter,
     store: string,
-    memoryPath: string,
+    memoryPath: string
 ): Promise<Result<ReadResourceResult, McpError>> => {
     // Read the memory
     const readResult = await getMemory(adapter, memoryPath, {
@@ -301,8 +279,8 @@ const readMemoryContent = async (
             return err(
                 new McpError(
                     ErrorCode.InvalidParams,
-                    `Invalid memory path: ${readResult.error.message}`,
-                ),
+                    `Invalid memory path: ${readResult.error.message}`
+                )
             );
         }
 
@@ -316,19 +294,21 @@ const readMemoryContent = async (
         return err(
             new McpError(
                 ErrorCode.InternalError,
-                `Failed to read memory: ${readResult.error.message}`,
-            ),
+                `Failed to read memory: ${readResult.error.message}`
+            )
         );
     }
 
     const uri = buildResourceUri(store, memoryPath, false);
 
     return ok({
-        contents: [{
-            uri,
-            mimeType: 'text/plain',
-            text: readResult.value.content,
-        }],
+        contents: [
+            {
+                uri,
+                mimeType: 'text/plain',
+                text: readResult.value.content,
+            },
+        ],
     });
 };
 
@@ -360,7 +340,7 @@ const readMemoryContent = async (
 const readCategoryListing = async (
     adapter: ScopedStorageAdapter,
     store: string,
-    categoryPath: string,
+    categoryPath: string
 ): Promise<Result<ReadResourceResult, McpError>> => {
     // Handle root listing (empty path)
     if (!categoryPath) {
@@ -373,8 +353,8 @@ const readCategoryListing = async (
         return err(
             new McpError(
                 ErrorCode.InvalidParams,
-                `Invalid category path: ${categoryPathResult.error.message}`,
-            ),
+                `Invalid category path: ${categoryPathResult.error.message}`
+            )
         );
     }
 
@@ -384,8 +364,8 @@ const readCategoryListing = async (
         return err(
             new McpError(
                 ErrorCode.InternalError,
-                `Failed to read category index: ${indexResult.error.message}`,
-            ),
+                `Failed to read category index: ${indexResult.error.message}`
+            )
         );
     }
 
@@ -395,13 +375,13 @@ const readCategoryListing = async (
 
     const listing: CategoryListing = {
         category: categoryPath,
-        memories: indexResult.value.memories.map((memory) => ({
+        memories: indexResult.value.memories.map((memory: CategoryMemoryEntry) => ({
             path: memory.path.toString(),
             uri: buildResourceUri(store, memory.path.toString(), false),
             tokenEstimate: memory.tokenEstimate,
             summary: memory.summary,
         })),
-        subcategories: indexResult.value.subcategories.map((sub) => ({
+        subcategories: indexResult.value.subcategories.map((sub: SubcategoryEntry) => ({
             path: sub.path.toString(),
             uri: buildResourceUri(store, sub.path.toString(), true),
             memoryCount: sub.memoryCount,
@@ -411,11 +391,13 @@ const readCategoryListing = async (
     const uri = buildResourceUri(store, categoryPath, true);
 
     return ok({
-        contents: [{
-            uri,
-            mimeType: 'application/json',
-            text: JSON.stringify(listing, null, 2),
-        }],
+        contents: [
+            {
+                uri,
+                mimeType: 'application/json',
+                text: JSON.stringify(listing, null, 2),
+            },
+        ],
     });
 };
 
@@ -432,7 +414,7 @@ const readCategoryListing = async (
  */
 const readRootCategoryListing = async (
     adapter: ScopedStorageAdapter,
-    store: string,
+    store: string
 ): Promise<Result<ReadResourceResult, McpError>> => {
     const subcategories: CategoryListing['subcategories'] = [];
 
@@ -445,8 +427,7 @@ const readRootCategoryListing = async (
                 memoryCount: sub.memoryCount,
             });
         }
-    }
-    else {
+    } else {
         for (const category of ROOT_CATEGORIES) {
             const categoryPathResult = CategoryPath.fromString(category);
             if (!categoryPathResult.ok()) {
@@ -475,11 +456,13 @@ const readRootCategoryListing = async (
     const uri = buildResourceUri(store, '', true);
 
     return ok({
-        contents: [{
-            uri,
-            mimeType: 'application/json',
-            text: JSON.stringify(listing, null, 2),
-        }],
+        contents: [
+            {
+                uri,
+                mimeType: 'application/json',
+                text: JSON.stringify(listing, null, 2),
+            },
+        ],
     });
 };
 
@@ -491,12 +474,13 @@ const readRootCategoryListing = async (
  * derived from the root index when available; if missing or unreadable, the
  * default category list is used as a fallback.
  *
- * @param config - Server configuration containing data path and default store
+ * @param cortex - Cortex client instance
+ * @param config - Server configuration containing default store
  * @returns Result containing array of Resource objects or McpError
  *
  * @example
  * ```ts
- * const result = await listResources(config);
+ * const result = await listResources(cortex, config);
  * if (result.ok()) {
  *   for (const resource of result.value.resources) {
  *     console.log(`${resource.name}: ${resource.uri}`);
@@ -504,12 +488,15 @@ const readRootCategoryListing = async (
  * }
  * ```
  */
-const listResources = async (config: ServerConfig): Promise<ListResourcesResult> => {
+const listResources = async (
+    cortex: Cortex,
+    config: ServerConfig
+): Promise<ListResourcesResult> => {
     const resources: Resource[] = [];
     const store = config.defaultStore;
 
     // Resolve the adapter for this store
-    const adapterResult = await resolveAdapter(config, store);
+    const adapterResult = resolveAdapter(cortex, config, store);
     if (!adapterResult.ok()) {
         return err(adapterResult.error);
     }
@@ -526,7 +513,7 @@ const listResources = async (config: ServerConfig): Promise<ListResourcesResult>
     const rootIndexResult = await adapter.indexes.read(CategoryPath.root());
     const rootCategories =
         rootIndexResult.ok() && rootIndexResult.value
-            ? rootIndexResult.value.subcategories.map((sub) => sub.path)
+            ? rootIndexResult.value.subcategories.map((sub: SubcategoryEntry) => sub.path)
             : [...ROOT_CATEGORIES];
 
     // Collect resources from all root categories
@@ -615,6 +602,7 @@ export type { CategoryListing, ParsedUriVariables };
  *
  * @param server - MCP server instance to register resources with
  * @param config - Server configuration for store paths and defaults
+ * @param cortex - Cortex client instance for store access
  *
  * @example
  * ```ts
@@ -624,7 +612,7 @@ export type { CategoryListing, ParsedUriVariables };
  * const server = new McpServer({ name: 'cortex', version: '1.0.0' });
  * const config = { dataPath: '/data', defaultStore: 'global' };
  *
- * registerMemoryResources(server, config);
+ * registerMemoryResources(server, config, cortex);
  *
  * // Clients can now access:
  * // - cortex://memory/global/          (list root categories)
@@ -632,11 +620,15 @@ export type { CategoryListing, ParsedUriVariables };
  * // - cortex://memory/global/project/my-memory (read memory content)
  * ```
  */
-export const registerMemoryResources = (server: McpServer, config: ServerConfig): void => {
+export const registerMemoryResources = (
+    server: McpServer,
+    config: ServerConfig,
+    cortex: Cortex
+): void => {
     // Create resource template for dynamic URIs
     const template = new ResourceTemplate('cortex://memory/{store}/{path*}', {
         list: async () => {
-            const result = await listResources(config);
+            const result = await listResources(cortex, config);
             // MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
             if (!result.ok()) {
                 throw result.error;
@@ -645,12 +637,12 @@ export const registerMemoryResources = (server: McpServer, config: ServerConfig)
         },
         complete: {
             store: (): string[] => {
-                // Return known store names (currently just default)
-                return [config.defaultStore];
+                // Return known store names from Cortex registry
+                return Object.keys(cortex.registry);
             },
             'path*': async (value: string): Promise<string[]> => {
                 // Autocomplete for paths within store
-                const adapterResult = await resolveAdapter(config, config.defaultStore);
+                const adapterResult = resolveAdapter(cortex, config, config.defaultStore);
                 if (!adapterResult.ok()) {
                     // Return empty completions on failure - don't throw in autocomplete
                     return [];
@@ -672,8 +664,7 @@ export const registerMemoryResources = (server: McpServer, config: ServerConfig)
                 if (categoryPath === '') {
                     const matches = ROOT_CATEGORIES.filter((cat) => cat.startsWith(prefix));
                     completions.push(...matches);
-                }
-                else {
+                } else {
                     // Read the parent category index
                     const categoryPathResult = CategoryPath.fromString(categoryPath);
                     if (!categoryPathResult.ok()) {
@@ -723,7 +714,7 @@ export const registerMemoryResources = (server: McpServer, config: ServerConfig)
             const { store, path, isCategory } = parsed.value;
 
             // Resolve adapter for the requested store
-            const adapterResult = await resolveAdapter(config, store);
+            const adapterResult = resolveAdapter(cortex, config, store);
             if (!adapterResult.ok()) {
                 throw adapterResult.error;
             }
@@ -736,8 +727,7 @@ export const registerMemoryResources = (server: McpServer, config: ServerConfig)
                     throw result.error;
                 }
                 return result.value;
-            }
-            else {
+            } else {
                 const result = await readMemoryContent(adapter, store, path);
                 // MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
                 if (!result.ok()) {
@@ -745,6 +735,6 @@ export const registerMemoryResources = (server: McpServer, config: ServerConfig)
                 }
                 return result.value;
             }
-        },
+        }
     );
 };

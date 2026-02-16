@@ -26,10 +26,10 @@ import { memoryError, type MemoryError } from '../result.ts';
  */
 export const removeMemory = async (
     storage: ScopedStorageAdapter,
-    slugPath: string,
+    slugPath: string
 ): Promise<Result<void, MemoryError>> => {
     // 1. Validate path
-    const pathResult = MemoryPath.fromString(slugPath);    
+    const pathResult = MemoryPath.fromString(slugPath);
     if (!pathResult.ok()) {
         return memoryError('INVALID_PATH', pathResult.error.message, {
             path: slugPath,
@@ -57,7 +57,7 @@ export const removeMemory = async (
     if (!removeResult.ok()) {
         return memoryError('STORAGE_ERROR', `Failed to remove memory: ${slugPath}`, {
             path: slugPath,
-            cause: removeResult.error, 
+            cause: removeResult.error,
         });
     }
 

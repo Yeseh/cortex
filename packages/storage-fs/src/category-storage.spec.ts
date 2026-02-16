@@ -132,7 +132,7 @@ describe('FilesystemCategoryStorage', () => {
 
             const result = await storage.updateSubcategoryDescription(
                 categoryPath('parent/child'),
-                'A child category',
+                'A child category'
             );
 
             expect(result.ok()).toBe(true);
@@ -148,7 +148,7 @@ describe('FilesystemCategoryStorage', () => {
 
             const result = await storage.updateSubcategoryDescription(
                 categoryPath('parent2/new-child'),
-                'New child description',
+                'New child description'
             );
 
             expect(result.ok()).toBe(true);
@@ -171,7 +171,7 @@ describe('FilesystemCategoryStorage', () => {
 
             const result = await storage.updateSubcategoryDescription(
                 categoryPath('parent3/child'),
-                null,
+                null
             );
 
             expect(result.ok()).toBe(true);
@@ -185,14 +185,14 @@ describe('FilesystemCategoryStorage', () => {
 
             const result = await storage.updateSubcategoryDescription(
                 categoryPath('no-index-parent/child'),
-                'Child category',
+                'Child category'
             );
 
             expect(result.ok()).toBe(true);
 
             const content = await fs.readFile(
                 join(tempDir, 'no-index-parent', 'index.yaml'),
-                'utf8',
+                'utf8'
             );
             expect(content).toContain('no-index-parent/child');
         });
@@ -236,7 +236,9 @@ describe('FilesystemCategoryStorage', () => {
             ].join('\n');
             await fs.writeFile(join(tempDir, 'parent5', 'index.yaml'), indexContent);
 
-            const result = await storage.removeSubcategoryEntry(categoryPath('parent5/nonexistent'));
+            const result = await storage.removeSubcategoryEntry(
+                categoryPath('parent5/nonexistent')
+            );
 
             expect(result.ok()).toBe(true);
 
@@ -246,4 +248,3 @@ describe('FilesystemCategoryStorage', () => {
         });
     });
 });
-

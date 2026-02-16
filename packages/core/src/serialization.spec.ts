@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
-import {
-    serialize,
-    deserialize,
-    type OutputFormat,
-} from './serialization.ts';
+import { serialize, deserialize, type OutputFormat } from './serialization.ts';
 
 // -----------------------------------------------------------------------------
 // serialize() tests
@@ -35,11 +31,7 @@ describe('serialize()', () => {
         });
 
         it('should serialize arrays to JSON', () => {
-            const obj = { items: [
-                1,
-                2,
-                3,
-            ] };
+            const obj = { items: [1, 2, 3] };
 
             const result = serialize(obj, 'json');
 
@@ -100,11 +92,7 @@ describe('serialize()', () => {
         });
 
         it('should serialize arrays to YAML', () => {
-            const obj = { items: [
-                'a',
-                'b',
-                'c',
-            ] };
+            const obj = { items: ['a', 'b', 'c'] };
 
             const result = serialize(obj, 'yaml');
 

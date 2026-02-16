@@ -31,8 +31,7 @@ import { err, ok, type Result } from '@yeseh/cortex-core';
  * `~/.config/cortex/`
  *
  * This aligns with the global config directory layout defined in the specs:
- * - `~/.config/cortex/config.yaml` - global configuration
- * - `~/.config/cortex/stores.yaml` - store registry
+ * - `~/.config/cortex/config.yaml` - global configuration and store registry
  * - `~/.config/cortex/memory/` - default global store root (where stores are subdirectories)
  */
 export const getDefaultDataPath = (): string => join(homedir(), '.config', 'cortex');
@@ -55,12 +54,7 @@ export const SERVER_VERSION = '1.0.0';
  * - `warn` - Warning conditions that should be reviewed
  * - `error` - Error conditions that need attention
  */
-export const logLevelSchema = z.enum([
-    'debug',
-    'info',
-    'warn',
-    'error',
-]);
+export const logLevelSchema = z.enum(['debug', 'info', 'warn', 'error']);
 
 /** Log verbosity level */
 export type LogLevel = z.infer<typeof logLevelSchema>;
@@ -71,11 +65,7 @@ export type LogLevel = z.infer<typeof logLevelSchema>;
  * - `json` - Machine-readable JSON format
  * - `toon` - Token-optimized format for LLM consumption (~40% token reduction)
  */
-export const outputFormatSchema = z.enum([
-    'yaml',
-    'json',
-    'toon',
-]);
+export const outputFormatSchema = z.enum(['yaml', 'json', 'toon']);
 
 /** Output format type */
 export type OutputFormat = z.infer<typeof outputFormatSchema>;

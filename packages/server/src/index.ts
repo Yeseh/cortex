@@ -154,22 +154,22 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
     }
     const config = configResult.value;
 
-    // Try to load Cortex from config directory
-    // If this fails, tools will fall back to FilesystemRegistry for backward compatibility
-    const cortexResult = await Cortex.fromConfig(
-        config.dataPath,
-        createFilesystemAdapterFactory(),
-    );
-    const cortex = cortexResult.ok() ? cortexResult.value : undefined;
+    // Load Cortex from config directory (required)
+    const cortexResult = await Cortex.fromConfig(config.dataPath, createFilesystemAdapterFactory());
     if (!cortexResult.ok()) {
-        console.warn(`Cortex config not loaded from ${config.dataPath}: ${cortexResult.error.message}. Using FilesystemRegistry fallback.`);
+        return err({
+            code: 'CONFIG_INVALID',
+            message: `Failed to load Cortex config: ${cortexResult.error.message}`,
+            cause: new Error(cortexResult.error.message),
+        });
     }
+    const cortex = cortexResult.value;
 
     // Create MCP context
     const mcpContext = createMcpContext();
     const { server: mcpServer, transport } = mcpContext;
 
-    // Register MCP tools with optional Cortex instance
+    // Register MCP tools with Cortex instance
     registerMemoryTools(mcpServer, config, cortex);
     registerStoreTools(mcpServer, config, cortex);
     registerCategoryTools(mcpServer, config, cortex);
@@ -186,24 +186,26 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
                 POST: async (req) => {
                     try {
                         // Enforce 1MB body size limit (matching previous Express config)
-                        const contentLength = parseInt(req.headers.get('content-length') ?? '0', 10);
+                        const contentLength = parseInt(
+                            req.headers.get('content-length') ?? '0',
+                            10
+                        );
                         if (contentLength > 1024 * 1024) {
                             return Response.json(
                                 { error: 'Request body too large. Maximum size is 1MB.' },
-                                { status: 413 },
+                                { status: 413 }
                             );
                         }
 
                         return await transport.handleRequest(req);
-                    }
-                    catch (error) {
+                    } catch (error) {
                         console.error('MCP request handling error:', error);
                         return Response.json({ error: 'Internal server error' }, { status: 500 });
                     }
                 },
             },
             '/health': {
-                GET: async () => createHealthResponse(config),
+                GET: () => createHealthResponse(config, cortex),
             },
         },
         fetch: () => new Response('Not Found', { status: 404 }),

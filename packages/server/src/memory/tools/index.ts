@@ -5,19 +5,11 @@
  */
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { Cortex } from '@yeseh/cortex-core';
+import { Cortex } from '@yeseh/cortex-core';
 import type { ServerConfig } from '../../config.ts';
 import { parseInput, type ToolContext } from './shared.ts';
-import {
-    addMemoryHandler,
-    addMemoryInputSchema,
-    type AddMemoryInput,
-} from './add-memory.ts';
-import {
-    getMemoryHandler,
-    getMemoryInputSchema,
-    type GetMemoryInput,
-} from './get-memory.ts';
+import { addMemoryHandler, addMemoryInputSchema, type AddMemoryInput } from './add-memory.ts';
+import { getMemoryHandler, getMemoryInputSchema, type GetMemoryInput } from './get-memory.ts';
 import {
     updateMemoryHandler,
     updateMemoryInputSchema,
@@ -28,11 +20,7 @@ import {
     removeMemoryInputSchema,
     type RemoveMemoryInput,
 } from './remove-memory.ts';
-import {
-    moveMemoryHandler,
-    moveMemoryInputSchema,
-    type MoveMemoryInput,
-} from './move-memory.ts';
+import { moveMemoryHandler, moveMemoryInputSchema, type MoveMemoryInput } from './move-memory.ts';
 import {
     listMemoriesHandler,
     listMemoriesInputSchema,
@@ -89,12 +77,12 @@ export {
  *
  * @param server - MCP server instance
  * @param config - Server configuration
- * @param cortex - Optional Cortex instance for store resolution (preferred when available)
+ * @param cortex - Cortex instance for store resolution
  */
 export const registerMemoryTools = (
     server: McpServer,
     config: ServerConfig,
-    cortex?: Cortex,
+    cortex: Cortex
 ): void => {
     const ctx: ToolContext = { config, cortex };
 
@@ -107,7 +95,7 @@ export const registerMemoryTools = (
         async (input) => {
             const parsed = parseInput(addMemoryInputSchema, input);
             return addMemoryHandler(ctx, parsed);
-        },
+        }
     );
 
     server.registerTool(
@@ -120,7 +108,7 @@ export const registerMemoryTools = (
         async (input) => {
             const parsed = parseInput(getMemoryInputSchema, input);
             return getMemoryHandler(ctx, parsed);
-        },
+        }
     );
 
     server.registerTool(
@@ -132,7 +120,7 @@ export const registerMemoryTools = (
         async (input) => {
             const parsed = parseInput(updateMemoryInputSchema, input);
             return updateMemoryHandler(ctx, parsed);
-        },
+        }
     );
 
     server.registerTool(
@@ -144,7 +132,7 @@ export const registerMemoryTools = (
         async (input) => {
             const parsed = parseInput(removeMemoryInputSchema, input);
             return removeMemoryHandler(ctx, parsed);
-        },
+        }
     );
 
     server.registerTool(
@@ -156,7 +144,7 @@ export const registerMemoryTools = (
         async (input) => {
             const parsed = parseInput(moveMemoryInputSchema, input);
             return moveMemoryHandler(ctx, parsed);
-        },
+        }
     );
 
     server.registerTool(
@@ -168,7 +156,7 @@ export const registerMemoryTools = (
         async (input) => {
             const parsed = parseInput(listMemoriesInputSchema, input);
             return listMemoriesHandler(ctx, parsed);
-        },
+        }
     );
 
     server.registerTool(
@@ -180,7 +168,7 @@ export const registerMemoryTools = (
         async (input) => {
             const parsed = parseInput(pruneMemoriesInputSchema, input);
             return pruneMemoriesHandler(ctx, parsed);
-        },
+        }
     );
 
     server.registerTool(
@@ -192,7 +180,7 @@ export const registerMemoryTools = (
         async (input) => {
             const parsed = parseInput(reindexStoreInputSchema, input);
             return reindexStoreHandler(ctx, parsed);
-        },
+        }
     );
 
     server.registerTool(
@@ -204,6 +192,6 @@ export const registerMemoryTools = (
         async (input) => {
             const parsed = parseInput(getRecentMemoriesInputSchema, input);
             return getRecentMemoriesHandler(ctx, parsed);
-        },
+        }
     );
 };

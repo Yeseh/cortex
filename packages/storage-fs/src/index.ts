@@ -36,22 +36,15 @@ import { resolve } from 'node:path';
 import {
     type MemoryStorage,
     type IndexStorage,
-
     type ScopedStorageAdapter,
 } from '@yeseh/cortex-core';
 import type { CategoryStorage } from '@yeseh/cortex-core/category';
-import type {
-    FilesystemStorageAdapterOptions,
-    FilesystemContext,
-} from './types.ts';
+import type { FilesystemStorageAdapterOptions, FilesystemContext } from './types.ts';
 import { normalizeExtension } from './utils.ts';
 // Import ISP-compliant storage implementations
 import { FilesystemMemoryStorage } from './memory-storage.ts';
 import { FilesystemIndexStorage } from './index-storage.ts';
 import { FilesystemCategoryStorage } from './category-storage.ts';
-
-// Export FilesystemRegistry for the new Registry pattern
-export { FilesystemRegistry } from './filesystem-registry.ts';
 
 // Import legacy operations needed for backward-compatible port methods
 
@@ -77,7 +70,7 @@ export { FilesystemRegistry } from './filesystem-registry.ts';
  * await adapter.reindexCategoryIndexes();
  * ```
  */
-export class FilesystemStorageAdapter implements ScopedStorageAdapter{
+export class FilesystemStorageAdapter implements ScopedStorageAdapter {
     private readonly ctx: FilesystemContext;
 
     // ========================================================================
@@ -157,7 +150,6 @@ export const createFilesystemAdapterFactory = (): ((storePath: string) => Scoped
  * - {@link FilesystemMemoryStorage} - Memory file I/O operations
  * - {@link FilesystemIndexStorage} - Index file I/O and reindexing
  * - {@link FilesystemCategoryStorage} - Category directory management
- * - {@link FilesystemRegistry} - Store registry management (implements RegistryService interface)
  *
  * New code should prefer these focused interfaces over the legacy
  * {@link FilesystemStorageAdapter} methods for better testability
@@ -185,4 +177,3 @@ export const createFilesystemAdapterFactory = (): ((storePath: string) => Scoped
 export { FilesystemMemoryStorage } from './memory-storage.ts';
 export { FilesystemIndexStorage } from './index-storage.ts';
 export { FilesystemCategoryStorage } from './category-storage.ts';
-

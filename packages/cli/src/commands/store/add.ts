@@ -19,13 +19,11 @@
  */
 
 import { Command } from '@commander-js/extra-typings';
-import { throwCoreError } from '../../errors.ts';
-import { getDefaultRegistryPath } from '../../context.ts';
+import type { CortexContext } from '@yeseh/cortex-core';
 import { isValidStoreName } from '@yeseh/cortex-core/store';
-import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
-import { serializeOutput, type OutputStore, type OutputFormat } from '../../output.ts';
+import { throwCoreError } from '../../errors.ts';
+import { type OutputFormat, type OutputStore, serializeOutput } from '../../output.ts';
 import { resolveUserPath } from '../../paths.ts';
-import { type CortexContext } from '@yeseh/cortex-core';
 
 /**
  * Options for the add command.
@@ -45,10 +43,16 @@ export interface AddCommandOptions {
 function validateStoreName(name: string): string {
     const trimmed = name.trim();
     if (!trimmed) {
-        throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name is required.' });
+        throwCoreError({
+            code: 'INVALID_STORE_NAME',
+            message: 'Store name is required.',
+        });
     }
     if (!isValidStoreName(trimmed)) {
-        throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug.' });
+        throwCoreError({
+            code: 'INVALID_STORE_NAME',
+            message: 'Store name must be a lowercase slug.',
+        });
     }
     return trimmed;
 }
@@ -64,7 +68,10 @@ function validateStoreName(name: string): string {
 function validateAndResolvePath(storePath: string, cwd: string): string {
     const trimmed = storePath.trim();
     if (!trimmed) {
-        throwCoreError({ code: 'INVALID_STORE_PATH', message: 'Store path is required.' });
+        throwCoreError({
+            code: 'INVALID_STORE_PATH',
+            message: 'Store path is required.',
+        });
     }
     return resolveUserPath(trimmed, cwd);
 }
@@ -79,11 +86,14 @@ function validateAndResolvePath(storePath: string, cwd: string): string {
 function writeOutput(
     output: OutputStore,
     format: OutputFormat,
-    stdout: NodeJS.WritableStream,
+    stdout: NodeJS.WritableStream
 ): void {
     const serialized = serializeOutput({ kind: 'store', value: output }, format);
     if (!serialized.ok()) {
-        throwCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
+        throwCoreError({
+            code: 'SERIALIZE_FAILED',
+            message: serialized.error.message,
+        });
     }
     stdout.write(serialized.value + '\n');
 }
@@ -94,12 +104,11 @@ function writeOutput(
  * This function:
  * 1. Validates the store name format
  * 2. Validates and resolves the store path
- * 3. Loads the existing registry
- * 4. Checks for existing store with the same name
- * 5. Adds the store to the registry and saves
- * 6. Outputs the result
+ * 3. Checks for existing store with the same name
+ * 4. Adds the store via Cortex (persists to config.yaml)
+ * 5. Outputs the result
  *
- * @param ctx - CortexContext with output stream.
+ * @param ctx - CortexContext with Cortex client and output stream.
  * @param name - The store name to register.
  * @param storePath - The filesystem path to the store.
  * @param options - Command options (format).
@@ -111,43 +120,34 @@ export async function handleAdd(
     ctx: CortexContext,
     name: string,
     storePath: string,
-    options: AddCommandOptions = {},
+    options: AddCommandOptions = {}
 ): Promise<void> {
-    const registryPath = getDefaultRegistryPath();
     const cwd = process.cwd();
 
     // 1. Validate inputs
     const trimmedName = validateStoreName(name);
     const resolvedPath = validateAndResolvePath(storePath, cwd);
 
-    // 2. Load existing registry
-    const registry = new FilesystemRegistry(registryPath);
-    const registryResult = await registry.load();
-    // Handle REGISTRY_MISSING as empty registry (like allowMissing: true did)
-    let currentRegistry: Record<string, { path: string }>;
-    if (registryResult.ok()) {
-        currentRegistry = registryResult.value;
-    }
-    else if (registryResult.error.code === 'REGISTRY_MISSING') {
-        currentRegistry = {};
-    }
-    else {
-        throwCoreError({ code: 'STORE_REGISTRY_FAILED', message: registryResult.error.message });
+    // 2. Check for existing store
+    if (ctx.cortex.registry[trimmedName]) {
+        throwCoreError({
+            code: 'STORE_ALREADY_EXISTS',
+            message: `Store '${trimmedName}' is already registered.`,
+        });
     }
 
-    // 3. Check for existing store
-    if (currentRegistry[trimmedName]) {
-        throwCoreError({ code: 'STORE_ALREADY_EXISTS', message: `Store '${trimmedName}' is already registered.` });
+    // 3. Add store using Cortex (this persists to config.yaml)
+    const addResult = await ctx.cortex.addStore(trimmedName, {
+        path: resolvedPath,
+    });
+    if (!addResult.ok()) {
+        throwCoreError({
+            code: 'STORE_REGISTRY_FAILED',
+            message: addResult.error.message,
+        });
     }
 
-    // 4. Add to registry and save
-    currentRegistry[trimmedName] = { path: resolvedPath };
-    const saved = await registry.save(currentRegistry);
-    if (!saved.ok()) {
-        throwCoreError({ code: 'STORE_REGISTRY_FAILED', message: saved.error.message });
-    }
-
-    // 5. Output result
+    // 4. Output result
     const output: OutputStore = { name: trimmedName, path: resolvedPath };
     const format: OutputFormat = (options.format as OutputFormat) ?? 'yaml';
     writeOutput(output, format, ctx.stdout);

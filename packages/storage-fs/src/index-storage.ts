@@ -120,9 +120,7 @@ export class FilesystemIndexStorage implements IndexStorage {
      *
      * @deprecated Prefer {@link read} which returns structured data.
      */
-    async readIndexFile(
-        name: CategoryPath,
-    ): Promise<Result<Category | null, StorageAdapterError>> {
+    async readIndexFile(name: CategoryPath): Promise<Result<Category | null, StorageAdapterError>> {
         return this.read(name);
     }
 
@@ -151,7 +149,7 @@ export class FilesystemIndexStorage implements IndexStorage {
      */
     async write(
         name: CategoryPath,
-        contents: Category,
+        contents: Category
     ): Promise<Result<void, StorageAdapterError>> {
         const serialized = serializeIndex(contents);
         if (!serialized.ok()) {
@@ -175,7 +173,7 @@ export class FilesystemIndexStorage implements IndexStorage {
      */
     async writeIndexFile(
         name: CategoryPath,
-        contents: Category,
+        contents: Category
     ): Promise<Result<void, StorageAdapterError>> {
         return this.write(name, contents);
     }
@@ -227,7 +225,7 @@ export class FilesystemIndexStorage implements IndexStorage {
      */
     async updateAfterMemoryWrite(
         memory: Memory,
-        options?: { createWhenMissing?: boolean },
+        options?: { createWhenMissing?: boolean }
     ): Promise<Result<void, StorageAdapterError>> {
         return updateCategoryIndexesFromMemory(this.ctx, memory, options);
     }

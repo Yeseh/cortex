@@ -68,7 +68,7 @@ export async function handleShow(
     ctx: CortexContext,
     path: string,
     options: ShowCommandOptions,
-    storeName: string | undefined,
+    storeName: string | undefined
 ): Promise<void> {
     // 1. Resolve store context
     const resolvedStoreName = resolveDefaultStoreName(storeName, ctx.cortex);
@@ -106,11 +106,7 @@ export async function handleShow(
     };
 
     // 4. Serialize and output
-    const VALID_FORMATS: OutputFormat[] = [
-        'yaml',
-        'json',
-        'toon',
-    ];
+    const VALID_FORMATS: OutputFormat[] = ['yaml', 'json', 'toon'];
     const requestedFormat = options.format as OutputFormat;
     const format: OutputFormat = VALID_FORMATS.includes(requestedFormat) ? requestedFormat : 'yaml';
     const serialized = serializeOutput({ kind: 'memory', value: outputMemory }, format);

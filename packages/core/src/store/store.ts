@@ -35,8 +35,7 @@ const canAccess = async (path: string): Promise<StoreResult<boolean, StoreResolu
     try {
         await access(path);
         return ok(true);
-    }
-    catch (error) {
+    } catch (error) {
         if (isMissingPath(error)) {
             return ok(false);
         }
@@ -48,7 +47,7 @@ const canAccess = async (path: string): Promise<StoreResult<boolean, StoreResolu
 };
 
 export const resolveStore = async (
-    options: StoreResolutionOptions,
+    options: StoreResolutionOptions
 ): Promise<ResolveStoreResult> => {
     const cwd = options.cwd ?? process.cwd();
     const localPath = resolveCortexDir(cwd);
@@ -65,7 +64,7 @@ export const resolveStore = async (
         return storeError(
             'LOCAL_STORE_MISSING',
             'Local store not found and strict_local is enabled.',
-            { path: localPath },
+            { path: localPath }
         );
     }
 
@@ -74,7 +73,7 @@ export const resolveStore = async (
 
 const resolveGlobalStore = async (
     cwd: string,
-    globalStorePath: string,
+    globalStorePath: string
 ): Promise<StoreResult<StoreResolution, StoreResolutionError>> => {
     const globalPath = isAbsolute(globalStorePath)
         ? globalStorePath

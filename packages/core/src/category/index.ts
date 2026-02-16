@@ -25,8 +25,4 @@ export type {
 
 export { MAX_DESCRIPTION_LENGTH, ROOT_CATEGORIES, type RootCategory } from './types.ts';
 
-export {
-    createCategory,
-    setDescription,
-    deleteCategory,
-} from './operations/index.ts';
+export { createCategory, setDescription, deleteCategory } from './operations/index.ts';

@@ -13,7 +13,7 @@ bun add @yeseh/cortex-storage-fs
 This package provides:
 
 - **FilesystemStorageAdapter** - Full storage adapter for memories, categories, and indexes
-- **FilesystemRegistry** - Store registry with global configuration
+- **createFilesystemAdapterFactory** - Factory function for use with `Cortex.fromConfig()`
 - **Serialization utilities** - Parse and serialize memory files with YAML frontmatter
 
 ## Usage
@@ -41,18 +41,17 @@ await adapter.memories.write('project/notes/new-note', 'Memory content here');
 await adapter.memories.remove('project/notes/old-note');
 ```
 
-### Store Registry
+### Using with Cortex
 
 ```typescript
-import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
+import { Cortex } from '@yeseh/cortex-core';
+import { createFilesystemAdapterFactory } from '@yeseh/cortex-storage-fs';
 
-const registry = new FilesystemRegistry('/path/to/stores.yaml');
-
-await registry.initialize();
-await registry.load();
-
-// Get a specific store
-const store = registry.getStore('my-project');
+const cortex = await Cortex.fromConfig('~/.config/cortex', createFilesystemAdapterFactory());
+if (cortex.ok()) {
+    const store = cortex.value.getStore('default');
+    // use store...
+}
 ```
 
 ### Memory File Parsing

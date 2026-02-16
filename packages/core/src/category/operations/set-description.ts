@@ -46,7 +46,7 @@ import { MAX_DESCRIPTION_LENGTH } from '../types.ts';
 export const setDescription = async (
     storage: CategoryStorage,
     path: string,
-    description: string,
+    description: string
 ): Promise<Result<SetDescriptionResult, CategoryError>> => {
     // Trim and validate length
     const trimmed = description.trim();
@@ -85,7 +85,7 @@ export const setDescription = async (
 
     const updateResult = await storage.updateSubcategoryDescription(
         pathResult.value,
-        finalDescription,
+        finalDescription
     );
     if (!updateResult.ok()) {
         return updateResult;

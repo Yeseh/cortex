@@ -15,9 +15,7 @@ const buildMemory = (path: string, overrides?: Partial<Memory['metadata']>): Mem
     const metadata = {
         createdAt: now,
         updatedAt: now,
-        tags: [
-            'test', 'sample',
-        ],
+        tags: ['test', 'sample'],
         source: 'test',
         expiresAt: undefined,
         citations: [],
@@ -42,9 +40,7 @@ describe('getMemory', () => {
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             expect(result.value.content).toContain('Sample memory content');
-            expect(result.value.metadata.tags).toEqual([
-                'test', 'sample',
-            ]);
+            expect(result.value.metadata.tags).toEqual(['test', 'sample']);
             expect(result.value.metadata.source).toBe('test');
         }
     });

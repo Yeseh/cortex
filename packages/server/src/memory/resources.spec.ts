@@ -19,9 +19,10 @@ import {
     MEMORY_URI_SCHEME,
     type CategoryListing,
 } from './resources.ts';
-import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
+import { FilesystemStorageAdapter, createFilesystemAdapterFactory } from '@yeseh/cortex-storage-fs';
 import type { Memory } from '@yeseh/cortex-core/memory';
 import { createMemory } from '@yeseh/cortex-core/memory';
+import { Cortex } from '@yeseh/cortex-core';
 
 // Test configuration
 const createTestConfig = (dataPath: string): ServerConfig => ({
@@ -38,7 +39,7 @@ const createTestConfig = (dataPath: string): ServerConfig => ({
 const createTestDir = async (): Promise<string> => {
     const testDir = join(
         tmpdir(),
-        `cortex-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        `cortex-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
     );
     await mkdir(testDir, { recursive: true });
     return testDir;
@@ -48,7 +49,7 @@ const createTestDir = async (): Promise<string> => {
 const createMemoryFile = async (
     storeRoot: string,
     slugPath: string,
-    contents: Partial<Memory>,
+    contents: Partial<Memory>
 ): Promise<void> => {
     // Use the proper core createMemory operation which updates indexes
     const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
@@ -68,7 +69,7 @@ const createMemoryFile = async (
 
 // Helper to safely extract text content from resource result
 const getTextContent = (
-    content: { uri: string; text?: string; blob?: string } | undefined,
+    content: { uri: string; text?: string; blob?: string } | undefined
 ): string => {
     if (!content) {
         throw new Error('Content is undefined');
@@ -84,6 +85,16 @@ const createStoreRegistry = async (dataPath: string, storeName: string): Promise
     const storeRoot = join(dataPath, storeName);
     const registryContent = `stores:\n  ${storeName}:\n    path: "${storeRoot}"\n`;
     await writeFile(join(dataPath, 'stores.yaml'), registryContent);
+};
+
+// Helper to create a Cortex instance for listResources tests
+const createTestCortex = (dataPath: string, storeName: string): Cortex => {
+    const storeRoot = join(dataPath, storeName);
+    return Cortex.init({
+        rootDirectory: dataPath,
+        registry: { [storeName]: { path: storeRoot } },
+        adapterFactory: createFilesystemAdapterFactory(),
+    });
 };
 
 // ---------------------------------------------------------------------------
@@ -164,11 +175,7 @@ describe('parseUriVariables', () => {
     });
 
     it('should handle path* as array', () => {
-        const variables = { store: 'default', 'path*': [
-            'project',
-            'subcategory',
-            'memory',
-        ] };
+        const variables = { store: 'default', 'path*': ['project', 'subcategory', 'memory'] };
         const result = parseUriVariables(variables, config);
 
         expect(result.ok()).toBe(true);
@@ -279,7 +286,7 @@ describe('readMemoryContent', () => {
         const result = await readMemoryContent(
             adapter,
             'default',
-            'project/subcategory/deep-memory',
+            'project/subcategory/deep-memory'
         );
 
         expect(result.ok()).toBe(true);
@@ -589,10 +596,12 @@ describe('readCategoryListing', () => {
 describe('listResources', () => {
     let testDir: string;
     let config: ServerConfig;
+    let cortex: Cortex;
 
     beforeEach(async () => {
         testDir = await createTestDir();
         config = createTestConfig(testDir);
+        cortex = createTestCortex(testDir, 'default');
         // Create the store registry file needed by listResources
         await createStoreRegistry(testDir, 'default');
     });
@@ -616,7 +625,7 @@ describe('listResources', () => {
             content: 'Test memory content',
         });
 
-        const result = await listResources(config);
+        const result = await listResources(cortex, config);
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -639,12 +648,12 @@ describe('listResources', () => {
             content: 'Root test',
         });
 
-        const result = await listResources(config);
+        const result = await listResources(cortex, config);
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             const rootResource = result.value.resources.find((r) =>
-                r.name.includes('Memory Store'),
+                r.name.includes('Memory Store')
             );
             expect(rootResource).toBeDefined();
             expect(rootResource!.uri).toBe('cortex://memory/default/');
@@ -667,12 +676,12 @@ describe('listResources', () => {
             content: 'Category test',
         });
 
-        const result = await listResources(config);
+        const result = await listResources(cortex, config);
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             const categoryResource = result.value.resources.find(
-                (r) => r.name === 'Category: project',
+                (r) => r.name === 'Category: project'
             );
             expect(categoryResource).toBeDefined();
             expect(categoryResource!.uri).toBe('cortex://memory/default/project/');
@@ -695,12 +704,12 @@ describe('listResources', () => {
             content: 'Memory resource test',
         });
 
-        const result = await listResources(config);
+        const result = await listResources(cortex, config);
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             const memoryResource = result.value.resources.find(
-                (r) => r.name === 'Memory: project/memory-resource',
+                (r) => r.name === 'Memory: project/memory-resource'
             );
             expect(memoryResource).toBeDefined();
             expect(memoryResource!.uri).toBe('cortex://memory/default/project/memory-resource');
@@ -723,12 +732,12 @@ describe('listResources', () => {
             content: 'Nested memory',
         });
 
-        const result = await listResources(config);
+        const result = await listResources(cortex, config);
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             const subResource = result.value.resources.find(
-                (r) => r.name === 'Category: project/sub',
+                (r) => r.name === 'Category: project/sub'
             );
             expect(subResource).toBeDefined();
             expect(subResource!.uri).toBe('cortex://memory/default/project/sub/');
@@ -739,7 +748,7 @@ describe('listResources', () => {
         const storeRoot = join(testDir, 'default');
         await mkdir(storeRoot, { recursive: true });
 
-        const result = await listResources(config);
+        const result = await listResources(cortex, config);
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -786,7 +795,7 @@ describe('listResources', () => {
             content: 'Persona memory',
         });
 
-        const result = await listResources(config);
+        const result = await listResources(cortex, config);
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -804,7 +813,7 @@ describe('listResources', () => {
         const storeRoot = join(testDir, 'default');
         await mkdir(storeRoot, { recursive: true });
 
-        const result = await listResources(config);
+        const result = await listResources(cortex, config);
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -828,12 +837,12 @@ describe('listResources', () => {
             content: 'Custom memory',
         });
 
-        const result = await listResources(config);
+        const result = await listResources(cortex, config);
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             const categoryResource = result.value.resources.find(
-                (r) => r.name === 'Category: custom',
+                (r) => r.name === 'Category: custom'
             );
             expect(categoryResource).toBeDefined();
             expect(categoryResource!.uri).toBe('cortex://memory/default/custom/');
@@ -912,12 +921,14 @@ describe('resource workflow', () => {
     let testDir: string;
     let config: ServerConfig;
     let storeRoot: string;
+    let cortex: Cortex;
 
     beforeEach(async () => {
         testDir = await createTestDir();
         config = createTestConfig(testDir);
         storeRoot = join(testDir, MEMORY_SUBDIR);
         await mkdir(storeRoot, { recursive: true });
+        cortex = createTestCortex(testDir, 'default');
         // Create the store registry file needed by listResources
         await createStoreRegistry(testDir, 'default');
     });
@@ -940,7 +951,7 @@ describe('resource workflow', () => {
         });
 
         // Step 1: List all resources
-        const listResult = await listResources(config);
+        const listResult = await listResources(cortex, config);
         expect(listResult.ok()).toBe(true);
 
         // Step 2: Browse category listing
@@ -989,7 +1000,7 @@ describe('resource workflow', () => {
         const memoryResult = await readMemoryContent(
             adapter,
             'default',
-            'project/level1/level2/deep-memory',
+            'project/level1/level2/deep-memory'
         );
         expect(memoryResult.ok()).toBe(true);
         if (memoryResult.ok()) {

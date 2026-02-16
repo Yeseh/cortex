@@ -5,18 +5,19 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ServerConfig } from '../../config.ts';
 import { MEMORY_SUBDIR } from '../../config.ts';
-import { createMemoryFile, createTestConfig, createTestDir } from './test-utils.ts';
+import { createMemoryFile, createTestContext } from './test-utils.ts';
 import { getMemoryHandler, type GetMemoryInput } from './get-memory.ts';
+import type { ToolContext } from './shared.ts';
 
 describe('cortex_get_memory tool', () => {
     let testDir: string;
-    let config: ServerConfig;
+    let ctx: ToolContext;
 
     beforeEach(async () => {
-        testDir = await createTestDir();
-        config = createTestConfig(testDir);
+        const result = await createTestContext();
+        testDir = result.testDir;
+        ctx = result.ctx;
 
         const storeRoot = join(testDir, MEMORY_SUBDIR);
 
@@ -42,7 +43,7 @@ describe('cortex_get_memory tool', () => {
             path: 'project/existing-memory',
         };
 
-        const result = await getMemoryHandler({ config }, input);
+        const result = await getMemoryHandler(ctx, input);
 
         const output = JSON.parse(result.content[0]!.text);
         expect(output.path).toBe('project/existing-memory');
@@ -57,7 +58,7 @@ describe('cortex_get_memory tool', () => {
             path: 'project/non-existent',
         };
 
-        await expect(getMemoryHandler({ config }, input)).rejects.toThrow('not found');
+        await expect(getMemoryHandler(ctx, input)).rejects.toThrow('not found');
     });
 
     it('should not return expired memory by default', async () => {
@@ -79,7 +80,7 @@ describe('cortex_get_memory tool', () => {
             path: 'project/expired-memory',
         };
 
-        await expect(getMemoryHandler({ config }, input)).rejects.toThrow('expired');
+        await expect(getMemoryHandler(ctx, input)).rejects.toThrow('expired');
     });
 
     it('should return expired memory when include_expired is true', async () => {
@@ -102,7 +103,7 @@ describe('cortex_get_memory tool', () => {
             include_expired: true,
         };
 
-        const result = await getMemoryHandler({ config }, input);
+        const result = await getMemoryHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
         expect(output.content).toBe('Expired content');
     });

@@ -39,9 +39,9 @@ export interface GetMemoryOptions {
 export const getMemory = async (
     storage: ScopedStorageAdapter,
     path: string,
-    options?: GetMemoryOptions,
+    options?: GetMemoryOptions
 ): Promise<MemoryResult<Memory>> => {
-    const pathResult = MemoryPath.fromString(path); 
+    const pathResult = MemoryPath.fromString(path);
     if (!pathResult.ok()) {
         return memoryError('INVALID_PATH', pathResult.error.message, {
             path: path,
@@ -69,7 +69,7 @@ export const getMemory = async (
     if (!includeExpired && memory.isExpired(now)) {
         return memoryError('MEMORY_EXPIRED', `Memory has expired: ${path}`, {
             path: path,
-        }); 
+        });
     }
 
     return ok(memory);

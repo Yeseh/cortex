@@ -9,9 +9,8 @@ import type { MemoryPath } from '@/memory/memory-path.ts';
 import { removeMemory } from './remove.ts';
 import { ok, err, createMockStorage, sampleMemory } from './test-helpers.spec.ts';
 
-const pathToString = (memoryPath: MemoryPath): string => (
-    `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`
-);
+const pathToString = (memoryPath: MemoryPath): string =>
+    `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`;
 
 describe('removeMemory', () => {
     it('should remove existing memory', async () => {
@@ -118,4 +117,3 @@ describe('removeMemory', () => {
         }
     });
 });
-

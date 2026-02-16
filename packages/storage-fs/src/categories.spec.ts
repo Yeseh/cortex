@@ -141,7 +141,7 @@ describe('categories module', () => {
             const result = await updateSubcategoryDescription(
                 ctx,
                 categoryPath('parent/child'),
-                'Test description',
+                'Test description'
             );
 
             expect(result.ok()).toBe(true);
@@ -165,7 +165,7 @@ describe('categories module', () => {
             const result = await updateSubcategoryDescription(
                 ctx,
                 categoryPath('parent2/child'),
-                'New description',
+                'New description'
             );
 
             expect(result.ok()).toBe(true);
@@ -189,7 +189,7 @@ describe('categories module', () => {
             const result = await updateSubcategoryDescription(
                 ctx,
                 categoryPath('parent3/child'),
-                null,
+                null
             );
 
             expect(result.ok()).toBe(true);
@@ -202,7 +202,7 @@ describe('categories module', () => {
             const result = await updateSubcategoryDescription(
                 ctx,
                 categoryPath('top-level'),
-                'Root level category',
+                'Root level category'
             );
 
             expect(result.ok()).toBe(true);
@@ -292,6 +292,4 @@ describe('categories module', () => {
             expect(content).not.toContain('root-child');
         });
     });
-
 });
-

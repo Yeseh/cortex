@@ -57,7 +57,7 @@ export const createMcpServer = (): McpServer => {
     return new McpServer({
         name: SERVER_NAME,
         version: SERVER_VERSION,
-    }); 
+    });
 };
 
 /**
@@ -81,7 +81,7 @@ export const createMcpServer = (): McpServer => {
 export const createMcpTransport = (): WebStandardStreamableHTTPServerTransport => {
     return new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: undefined, // stateless mode
-    }); 
+    });
 };
 
 /**

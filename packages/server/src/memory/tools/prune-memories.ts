@@ -8,11 +8,7 @@ import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { pruneExpiredMemories } from '@yeseh/cortex-core';
 import { storeNameSchema } from '../../store/tools.ts';
-import {
-    type ToolContext,
-    type McpToolResponse,
-    resolveStoreAdapter,
-} from './shared.ts';
+import { type ToolContext, type McpToolResponse, resolveStoreAdapter } from './shared.ts';
 
 /** Schema for prune_memories tool input */
 export const pruneMemoriesInputSchema = z.object({
@@ -35,7 +31,7 @@ export interface PruneMemoriesInput {
  */
 export const pruneMemoriesHandler = async (
     ctx: ToolContext,
-    input: PruneMemoriesInput,
+    input: PruneMemoriesInput
 ): Promise<McpToolResponse> => {
     const adapterResult = await resolveStoreAdapter(ctx, input.store);
     if (!adapterResult.ok()) {
@@ -63,10 +59,12 @@ export const pruneMemoriesHandler = async (
         };
 
         return {
-            content: [{
-                type: 'text',
-                text: JSON.stringify(output, null, 2),
-            }],
+            content: [
+                {
+                    type: 'text',
+                    text: JSON.stringify(output, null, 2),
+                },
+            ],
         };
     }
 
@@ -76,9 +74,11 @@ export const pruneMemoriesHandler = async (
     };
 
     return {
-        content: [{
-            type: 'text',
-            text: JSON.stringify(output, null, 2),
-        }],
+        content: [
+            {
+                type: 'text',
+                text: JSON.stringify(output, null, 2),
+            },
+        ],
     };
 };

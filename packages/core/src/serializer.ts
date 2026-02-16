@@ -13,7 +13,6 @@ import type { Result } from '@/result';
 import type { Memory } from './memory/memory';
 import type { MemoryError } from './memory/result';
 
-
 /**
  * Interface for memory file serialization.
  *
@@ -37,4 +36,3 @@ export interface MemorySerializer {
     /** Serialize a Memory object to a string */
     serialize(memory: Memory): Result<string, MemoryError>;
 }
-

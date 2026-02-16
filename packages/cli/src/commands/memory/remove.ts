@@ -42,7 +42,7 @@ import { type CortexContext } from '@yeseh/cortex-core';
 export async function handleRemove(
     ctx: CortexContext,
     path: string,
-    storeName: string | undefined,
+    storeName: string | undefined
 ): Promise<void> {
     // 1. Resolve store context
     const resolvedStoreName = resolveDefaultStoreName(storeName, ctx.cortex);

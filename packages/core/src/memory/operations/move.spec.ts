@@ -21,7 +21,7 @@ const buildMemory = (path: string): Memory => {
             source: 'test',
             citations: [],
         },
-        'Sample memory content',
+        'Sample memory content'
     );
     if (!result.ok()) {
         throw new Error('Test setup failed to create memory.');
@@ -29,9 +29,8 @@ const buildMemory = (path: string): Memory => {
     return result.value;
 };
 
-const pathToString = (memoryPath: MemoryPath): string => (
-    `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`
-);
+const pathToString = (memoryPath: MemoryPath): string =>
+    `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`;
 
 describe('moveMemory', () => {
     it('should move memory successfully', async () => {

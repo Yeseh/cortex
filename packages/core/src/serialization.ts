@@ -47,9 +47,9 @@ export interface SerializationError {
  * ```
  */
 export const serialize = (
-    obj: unknown, 
-    format: OutputFormat): 
-Result<string, SerializationError> => {
+    obj: unknown,
+    format: OutputFormat
+): Result<string, SerializationError> => {
     try {
         switch (format) {
             case 'json':
@@ -64,8 +64,7 @@ Result<string, SerializationError> => {
                     message: `Unsupported output format: ${format}`,
                 });
         }
-    }
-    catch (cause) {
+    } catch (cause) {
         return err({
             code: 'SERIALIZE_FAILED',
             message: `Failed to serialize to ${format}.`,
@@ -87,7 +86,10 @@ Result<string, SerializationError> => {
  * // { name: 'test' }
  * ```
  */
-export const deserialize = <T = unknown>(raw: string, format: 'yaml' | 'json' | 'toon'): Result<T, SerializationError> => {
+export const deserialize = <T = unknown>(
+    raw: string,
+    format: 'yaml' | 'json' | 'toon'
+): Result<T, SerializationError> => {
     try {
         switch (format) {
             case 'json':
@@ -102,8 +104,7 @@ export const deserialize = <T = unknown>(raw: string, format: 'yaml' | 'json' | 
                     message: `Unsupported input format: ${format}`,
                 });
         }
-    }
-    catch (cause) {
+    } catch (cause) {
         return err({
             code: 'PARSE_FAILED',
             message: `Failed to deserialize ${format}.`,

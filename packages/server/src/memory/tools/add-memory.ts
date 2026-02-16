@@ -24,9 +24,12 @@ export const addMemoryInputSchema = z.object({
     content: z.string().min(1, 'Content is required').describe('Memory content'),
     tags: tagsSchema.describe('Optional tags for categorization'),
     expires_at: isoDateSchema.optional().describe('Optional expiration date (ISO 8601)'),
-    citations: z.array(z.string().min(1)).optional().describe(
-        'Optional citations referencing source material (file paths, URLs, document identifiers)',
-    ),
+    citations: z
+        .array(z.string().min(1))
+        .optional()
+        .describe(
+            'Optional citations referencing source material (file paths, URLs, document identifiers)'
+        ),
 });
 
 /**
@@ -71,7 +74,7 @@ export interface AddMemoryInput {
  */
 export const addMemoryHandler = async (
     ctx: ToolContext,
-    input: AddMemoryInput,
+    input: AddMemoryInput
 ): Promise<McpToolResponse> => {
     const adapterResult = await resolveStoreAdapter(ctx, input.store);
     if (!adapterResult.ok()) {

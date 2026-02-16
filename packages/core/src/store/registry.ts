@@ -4,10 +4,7 @@
 
 import { ok } from '@/result.ts';
 import type { StoreResult } from './result.ts';
-import {
-    storeError,
-    type StoreRegistryParseError,
-} from './result.ts';
+import { storeError, type StoreRegistryParseError } from './result.ts';
 
 export interface StoreDefinition {
     path: string;
@@ -42,8 +39,7 @@ const parsePathValue = (raw: string): string => {
                 if (typeof parsed === 'string') {
                     return parsed;
                 }
-            }
-            catch {
+            } catch {
                 return rawValue;
             }
         }
@@ -94,7 +90,7 @@ const validateStoreIndent = (
     mode: RegistryState['mode'],
     indent: number,
     storesIndent: number,
-    line: number,
+    line: number
 ): StoreResult<void, StoreRegistryParseError> => {
     if (mode === 'stores' && indent <= storesIndent) {
         return storeError('UNEXPECTED_ENTRY', "Store entries must be indented under 'stores:'.", {
@@ -110,7 +106,7 @@ const validateStoreIndent = (
 };
 
 const finalizeStore = (
-    state: RegistryState,
+    state: RegistryState
 ): StoreResult<RegistryState, StoreRegistryParseError> => {
     if (state.currentStore && !state.currentStore.path) {
         return storeError('MISSING_STORE_PATH', 'Store entry must include a path.', {
@@ -143,7 +139,7 @@ const handleStoreHeader = (
     state: RegistryState,
     storeName: string,
     indent: number,
-    line: number,
+    line: number
 ): StoreResult<RegistryState, StoreRegistryParseError> => {
     const nextMode = state.mode === 'unknown' ? 'root' : state.mode;
     const indentResult = validateStoreIndent(nextMode, indent, state.storesIndent, line);
@@ -177,14 +173,14 @@ const handlePathValue = (
     state: RegistryState,
     pathValue: string,
     indent: number,
-    line: number,
+    line: number
 ): StoreResult<RegistryState, StoreRegistryParseError> => {
     if (!state.currentStore) {
         if (state.mode === 'unknown') {
             return storeError(
                 'MISSING_STORES_SECTION',
                 "Registry must start with a store entry or a 'stores:' section.",
-                { line },
+                { line }
             );
         }
         return storeError('UNEXPECTED_ENTRY', 'Path entry must belong to a store definition.', {
@@ -198,7 +194,7 @@ const handlePathValue = (
             {
                 line,
                 store: state.currentStore.name,
-            },
+            }
         );
     }
     if (state.currentStore.path) {
@@ -233,7 +229,7 @@ const handleDescriptionValue = (
     state: RegistryState,
     descValue: string,
     indent: number,
-    line: number,
+    line: number
 ): StoreResult<RegistryState, StoreRegistryParseError> => {
     if (!state.currentStore) {
         return storeError(
@@ -241,7 +237,7 @@ const handleDescriptionValue = (
             'Description entry must belong to a store definition.',
             {
                 line,
-            },
+            }
         );
     }
     if (indent <= state.currentStore.indent) {
@@ -251,7 +247,7 @@ const handleDescriptionValue = (
             {
                 line,
                 store: state.currentStore.name,
-            },
+            }
         );
     }
     if (state.currentStore.description !== undefined) {
@@ -271,7 +267,7 @@ const handleDescriptionValue = (
 const handleStoresSection = (
     state: RegistryState,
     rawLine: string,
-    line: number,
+    line: number
 ): StoreResult<{ handled: boolean; state: RegistryState }, StoreRegistryParseError> => {
     if (state.mode !== 'unknown') {
         return ok({ handled: false, state });
@@ -295,7 +291,7 @@ const handleStoresSection = (
 const readRegistryLine = (
     rawLine: string,
     lineNumber: number,
-    state: RegistryState,
+    state: RegistryState
 ): StoreResult<RegistryState, StoreRegistryParseError> => {
     const storesResult = handleStoresSection(state, rawLine, lineNumber);
     if (!storesResult.ok()) {
@@ -325,7 +321,7 @@ const readRegistryLine = (
         return storeError(
             'MISSING_STORES_SECTION',
             "Registry must start with a store entry or a 'stores:' section.",
-            { line: lineNumber },
+            { line: lineNumber }
         );
     }
 
@@ -333,7 +329,7 @@ const readRegistryLine = (
 };
 
 export const parseStoreRegistry = (
-    raw: string,
+    raw: string
 ): StoreResult<StoreRegistry, StoreRegistryParseError> => {
     const normalized = raw.replace(/\r\n/g, '\n');
     const lines = normalized.split('\n');
@@ -368,7 +364,7 @@ export const parseStoreRegistry = (
         return storeError(
             'MISSING_STORES_SECTION',
             'Registry must include at least one store entry.',
-            { line: 1 },
+            { line: 1 }
         );
     }
 
@@ -421,9 +417,7 @@ export const serializeStoreRegistry = (registry: StoreRegistry): SerializeRegist
     }
 
     const lines: string[] = ['stores:'];
-    for (const [
-        name, definition,
-    ] of entries) {
+    for (const [name, definition] of entries) {
         if (!isValidStoreName(name)) {
             return storeError('INVALID_STORE_NAME', 'Store name must be a lowercase slug.', {
                 store: name,
@@ -478,14 +472,14 @@ export interface StoreResolveError {
  */
 export const resolveStorePath = (
     registry: StoreRegistry,
-    storeName: string,
+    storeName: string
 ): StoreResult<string, StoreResolveError> => {
     const definition = registry[storeName];
     if (!definition) {
         return storeError(
             'STORE_NOT_FOUND',
             `Store '${storeName}' is not registered. Use 'cortex store list' to see available stores.`,
-            { store: storeName },
+            { store: storeName }
         ) as StoreResult<string, StoreResolveError>;
     }
     return ok(definition.path);

@@ -4,18 +4,19 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { rm } from 'node:fs/promises';
-import type { ServerConfig } from '../../config.ts';
-import { createTestConfig, createTestDir } from './test-utils.ts';
+import { createTestContext } from './test-utils.ts';
 import { addMemoryHandler, type AddMemoryInput } from './add-memory.ts';
 import { getMemoryHandler } from './get-memory.ts';
+import type { ToolContext } from './shared.ts';
 
 describe('cortex_add_memory tool', () => {
     let testDir: string;
-    let config: ServerConfig;
+    let ctx: ToolContext;
 
     beforeEach(async () => {
-        testDir = await createTestDir();
-        config = createTestConfig(testDir);
+        const result = await createTestContext();
+        testDir = result.testDir;
+        ctx = result.ctx;
     });
 
     afterEach(async () => {
@@ -29,7 +30,7 @@ describe('cortex_add_memory tool', () => {
             content: 'Test content',
         };
 
-        const result = await addMemoryHandler({ config }, input);
+        const result = await addMemoryHandler(ctx, input);
 
         expect(result.content).toHaveLength(1);
         expect(result.content[0]!.text).toContain('Memory created');
@@ -41,26 +42,19 @@ describe('cortex_add_memory tool', () => {
             store: 'default',
             path: 'project/tagged-memory',
             content: 'Content with tags',
-            tags: [
-                'test', 'example',
-            ],
+            tags: ['test', 'example'],
         };
 
-        const result = await addMemoryHandler({ config }, input);
+        const result = await addMemoryHandler(ctx, input);
         expect(result.content[0]!.text).toContain('Memory created');
 
         // Verify by reading back
-        const getResult = await getMemoryHandler(
-            { config },
-            {
-                store: 'default',
-                path: 'project/tagged-memory',
-            },
-        );
+        const getResult = await getMemoryHandler(ctx, {
+            store: 'default',
+            path: 'project/tagged-memory',
+        });
         const output = JSON.parse(getResult.content[0]!.text);
-        expect(output.metadata.tags).toEqual([
-            'test', 'example',
-        ]);
+        expect(output.metadata.tags).toEqual(['test', 'example']);
     });
 
     it('should create a memory with expiration', async () => {
@@ -72,17 +66,14 @@ describe('cortex_add_memory tool', () => {
             expires_at: futureDate,
         };
 
-        const result = await addMemoryHandler({ config }, input);
+        const result = await addMemoryHandler(ctx, input);
         expect(result.content[0]!.text).toContain('Memory created');
 
         // Verify by reading back
-        const getResult = await getMemoryHandler(
-            { config },
-            {
-                store: 'default',
-                path: 'project/expiring-memory',
-            },
-        );
+        const getResult = await getMemoryHandler(ctx, {
+            store: 'default',
+            path: 'project/expiring-memory',
+        });
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.expires_at).toBeDefined();
     });
@@ -94,7 +85,7 @@ describe('cortex_add_memory tool', () => {
             content: 'Content in new store',
         };
 
-        await expect(addMemoryHandler({ config }, input)).rejects.toThrow('not registered');
+        await expect(addMemoryHandler(ctx, input)).rejects.toThrow('not registered');
     });
 
     it('should reject invalid paths', async () => {
@@ -104,6 +95,6 @@ describe('cortex_add_memory tool', () => {
             content: 'Content',
         };
 
-        await expect(addMemoryHandler({ config }, input)).rejects.toThrow();
+        await expect(addMemoryHandler(ctx, input)).rejects.toThrow();
     });
 });

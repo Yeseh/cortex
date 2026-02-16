@@ -37,16 +37,14 @@ export interface ListMemoriesInput {
  */
 export const listMemoriesHandler = async (
     ctx: ToolContext,
-    input: ListMemoriesInput,
+    input: ListMemoriesInput
 ): Promise<McpToolResponse> => {
     const adapterResult = await resolveStoreAdapter(ctx, input.store);
     if (!adapterResult.ok()) {
         throw adapterResult.error;
     }
 
-    const categoryResult = input.category
-        ? CategoryPath.fromString(input.category)
-        : undefined;
+    const categoryResult = input.category ? CategoryPath.fromString(input.category) : undefined;
 
     if (categoryResult && !categoryResult.ok()) {
         const error: MemoryError = {

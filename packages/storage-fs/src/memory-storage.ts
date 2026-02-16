@@ -235,7 +235,7 @@ export class FilesystemMemoryStorage implements MemoryStorage {
      */
     async move(
         sourceSlugPath: MemoryPath,
-        destinationSlugPath: MemoryPath,
+        destinationSlugPath: MemoryPath
     ): Promise<Result<void, StorageAdapterError>> {
         return moveMemory(this.ctx, sourceSlugPath, destinationSlugPath);
     }

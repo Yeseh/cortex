@@ -73,7 +73,7 @@ export interface GetRecentMemoriesResult {
  */
 export const getRecentMemories = async (
     storage: ScopedStorageAdapter,
-    options?: GetRecentMemoriesOptions,
+    options?: GetRecentMemoriesOptions
 ): Promise<Result<GetRecentMemoriesResult, MemoryError>> => {
     const limit = options?.limit ?? 5;
     const includeExpired = options?.includeExpired ?? false;
@@ -89,7 +89,7 @@ export const getRecentMemories = async (
     const allEntries: IndexEntryWithCategory[] = [];
 
     const collectEntriesFromCategory = async (
-        catPath: CategoryPath,
+        catPath: CategoryPath
     ): Promise<Result<void, MemoryError>> => {
         const indexResult = await storage.indexes.read(catPath);
         if (!indexResult.ok()) {
@@ -105,9 +105,10 @@ export const getRecentMemories = async (
 
         // Collect memory entries from this category
         for (const entry of index.memories) {
-            allEntries.push({ 
+            allEntries.push({
                 entry,
-                categoryPath: catPath});
+                categoryPath: catPath,
+            });
         }
 
         // Recurse into subcategories
@@ -136,8 +137,7 @@ export const getRecentMemories = async (
         if (!collectResult.ok()) {
             return collectResult;
         }
-    }
-    else {
+    } else {
         // Walk all root categories
         const rootCategoriesResult = await discoverRootCategories(storage);
         if (!rootCategoriesResult.ok()) {
@@ -175,15 +175,12 @@ export const getRecentMemories = async (
         if (memories.length >= limit) break;
 
         // Read the memory to check expiration and get content
-        const readResult = await storage.memories.read(
-            entryWithCat.entry.path,
-        );
+        const readResult = await storage.memories.read(entryWithCat.entry.path);
 
         if (!readResult.ok() || !readResult.value) {
             // Skip memories that can't be read
             continue;
         }
-
 
         const memory = readResult.value;
         const memoryExpired = memory.isExpired(now);
