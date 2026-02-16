@@ -55,7 +55,7 @@ import { registerStoreResources } from './resources.ts';
 export const registerStoreTools = (
     server: McpServer,
     config: ServerConfig,
-    cortex: Cortex
+    cortex: Cortex,
 ): void => {
     // Register cortex_list_stores tool
     server.registerTool(
@@ -74,7 +74,7 @@ export const registerStoreTools = (
             return {
                 content: [{ type: 'text', text: JSON.stringify(result.value, null, 2) }],
             };
-        }
+        },
     );
 
     // Register cortex_create_store tool with input schema
@@ -84,7 +84,7 @@ export const registerStoreTools = (
             description: 'Create a new memory store',
             inputSchema: {
                 name: storeNameSchema.describe(
-                    'Name of the store to create (alphanumeric, hyphens, underscores only)'
+                    'Name of the store to create (alphanumeric, hyphens, underscores only)',
                 ),
             },
         },
@@ -105,7 +105,7 @@ export const registerStoreTools = (
             return {
                 content: [{ type: 'text', text: JSON.stringify({ created: name }, null, 2) }],
             };
-        }
+        },
     );
 
     // Register store resources

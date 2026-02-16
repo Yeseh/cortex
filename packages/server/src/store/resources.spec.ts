@@ -12,7 +12,7 @@ import type { ServerConfig } from '../config.ts';
 // Type for accessing private MCP server internals for resources
 type ResourceReadCallback = (
     uri: URL,
-    variables: Record<string, string | string[]>
+    variables: Record<string, string | string[]>,
 ) => Promise<{
     contents: { uri: string; mimeType: string; text: string }[];
 }>;
@@ -50,7 +50,7 @@ const getRegisteredResources = (server: McpServer): Record<string, ResourceEntry
 
 // Helper to access private _registeredResourceTemplates (keyed by name)
 const getRegisteredResourceTemplates = (
-    server: McpServer
+    server: McpServer,
 ): Record<string, ResourceTemplateEntry> => {
     return (server as unknown as McpServerInternals)._registeredResourceTemplates;
 };
@@ -223,7 +223,7 @@ describe('Store Resources', () => {
 
             const result = await storeDetailResource!.readCallback(
                 new URL('cortex://store/my-store'),
-                { name: 'my-store' }
+                { name: 'my-store' },
             );
 
             expect(result).toHaveProperty('contents');
@@ -246,7 +246,8 @@ describe('Store Resources', () => {
                     name: 'nonexistent',
                 });
                 expect(true).toBe(false); // Should not reach here
-            } catch (error) {
+            }
+            catch (error) {
                 expect(error).toBeInstanceOf(McpError);
                 expect((error as McpError).code).toBe(ErrorCode.InvalidParams);
                 expect((error as McpError).message).toContain("Store 'nonexistent' not found");
@@ -264,11 +265,12 @@ describe('Store Resources', () => {
                     name: '-invalid',
                 });
                 expect(true).toBe(false); // Should not reach here
-            } catch (error) {
+            }
+            catch (error) {
                 expect(error).toBeInstanceOf(McpError);
                 expect((error as McpError).code).toBe(ErrorCode.InvalidParams);
                 expect((error as McpError).message).toContain(
-                    'Store name must start with alphanumeric'
+                    'Store name must start with alphanumeric',
                 );
             }
         });
@@ -284,7 +286,8 @@ describe('Store Resources', () => {
                     name: '',
                 });
                 expect(true).toBe(false); // Should not reach here
-            } catch (error) {
+            }
+            catch (error) {
                 expect(error).toBeInstanceOf(McpError);
                 expect((error as McpError).code).toBe(ErrorCode.InvalidParams);
                 // Empty string is falsy, so it's treated as missing name
@@ -314,10 +317,11 @@ describe('Store Resources', () => {
             try {
                 await storeDetailResource!.readCallback(
                     new URL('cortex://store/'),
-                    {} // No name variable
+                    {}, // No name variable
                 );
                 expect(true).toBe(false); // Should not reach here
-            } catch (error) {
+            }
+            catch (error) {
                 expect(error).toBeInstanceOf(McpError);
                 expect((error as McpError).code).toBe(ErrorCode.InvalidParams);
                 expect((error as McpError).message).toContain('Store name is required');
@@ -343,7 +347,7 @@ describe('Store Resources', () => {
 
             const result = await storeDetailResource!.readCallback(
                 new URL('cortex://store/array-test-store'),
-                { name: ['array-test-store'] } // Array with single element
+                { name: ['array-test-store'] }, // Array with single element
             );
 
             const parsed = JSON.parse(result.contents[0]!.text);
@@ -359,10 +363,13 @@ describe('Store Resources', () => {
 
             try {
                 await storeDetailResource!.readCallback(new URL('cortex://store/'), {
-                    name: ['store1', 'store2'],
+                    name: [
+                        'store1', 'store2',
+                    ],
                 }); // Array with multiple elements
                 expect(true).toBe(false); // Should not reach here
-            } catch (error) {
+            }
+            catch (error) {
                 expect(error).toBeInstanceOf(McpError);
                 expect((error as McpError).code).toBe(ErrorCode.InvalidParams);
                 expect((error as McpError).message).toContain('Store name is required');
@@ -420,20 +427,20 @@ describe('Store Resources', () => {
 
             // Verify each resource has correct structure
             const storeAlpha = listResult.resources.find(
-                (r) => r.uri === 'cortex://store/store-alpha'
+                (r) => r.uri === 'cortex://store/store-alpha',
             );
             expect(storeAlpha).toBeDefined();
             expect(storeAlpha?.name).toBe('Store: store-alpha');
             expect(storeAlpha?.mimeType).toBe('application/json');
 
             const storeBeta = listResult.resources.find(
-                (r) => r.uri === 'cortex://store/store-beta'
+                (r) => r.uri === 'cortex://store/store-beta',
             );
             expect(storeBeta).toBeDefined();
             expect(storeBeta?.name).toBe('Store: store-beta');
 
             const storeGamma = listResult.resources.find(
-                (r) => r.uri === 'cortex://store/store-gamma'
+                (r) => r.uri === 'cortex://store/store-gamma',
             );
             expect(storeGamma).toBeDefined();
             expect(storeGamma?.name).toBe('Store: store-gamma');
@@ -502,7 +509,8 @@ describe('Store Resources', () => {
                     name: 'does-not-exist',
                 });
                 expect(true).toBe(false); // Should not reach here
-            } catch (error) {
+            }
+            catch (error) {
                 expect(error).toBeInstanceOf(McpError);
                 expect((error as McpError).code).toBe(ErrorCode.InvalidParams);
                 expect((error as McpError).message).toContain("Store 'does-not-exist' not found");
@@ -544,7 +552,7 @@ describe('Store Resources', () => {
 
             const result = await storeDetailResource!.readCallback(
                 new URL('cortex://store/structure-test'),
-                { name: 'structure-test' }
+                { name: 'structure-test' },
             );
 
             expect(result).toHaveProperty('contents');

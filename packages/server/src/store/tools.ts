@@ -48,7 +48,7 @@ export const storeNameSchema = z
     .min(1, 'Store name must not be empty')
     .regex(
         /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/,
-        'Store name must start with alphanumeric and contain only alphanumeric, hyphens, or underscores'
+        'Store name must start with alphanumeric and contain only alphanumeric, hyphens, or underscores',
     );
 
 /**
@@ -100,8 +100,11 @@ export interface ListStoresResult {
  * ```
  */
 export const listStoresFromCortex = (cortex: Cortex): Result<ListStoresResult, StoreToolError> => {
-    const stores: StoreInfo[] = Object.entries(cortex.registry)
-        .map(([name, definition]: [string, StoreDefinition]) => ({
+    const storeDefinitions = cortex.getStoreDefinitions();
+    const stores: StoreInfo[] = Object.entries(storeDefinitions)
+        .map(([
+            name, definition]: [string, StoreDefinition,
+        ]) => ({
             name,
             path: definition.path,
             ...(definition.description !== undefined && { description: definition.description }),

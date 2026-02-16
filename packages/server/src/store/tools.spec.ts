@@ -59,7 +59,7 @@ describe('storeNameSchema', () => {
             if (!result.success) {
                 expect(result.error.issues).toHaveLength(1);
                 expect(result.error.issues[0]?.message).toContain(
-                    'Store name must start with alphanumeric'
+                    'Store name must start with alphanumeric',
                 );
             }
         });
@@ -70,7 +70,7 @@ describe('storeNameSchema', () => {
             if (!result.success) {
                 expect(result.error.issues).toHaveLength(1);
                 expect(result.error.issues[0]?.message).toContain(
-                    'Store name must start with alphanumeric'
+                    'Store name must start with alphanumeric',
                 );
             }
         });
@@ -81,7 +81,7 @@ describe('storeNameSchema', () => {
             if (!result.success) {
                 expect(result.error.issues).toHaveLength(1);
                 expect(result.error.issues[0]?.message).toContain(
-                    'Store name must start with alphanumeric'
+                    'Store name must start with alphanumeric',
                 );
             }
         });
@@ -92,7 +92,7 @@ describe('storeNameSchema', () => {
             if (!result.success) {
                 expect(result.error.issues).toHaveLength(1);
                 expect(result.error.issues[0]?.message).toContain(
-                    'Store name must start with alphanumeric'
+                    'Store name must start with alphanumeric',
                 );
             }
         });
@@ -103,7 +103,7 @@ describe('storeNameSchema', () => {
             if (!result.success) {
                 expect(result.error.issues).toHaveLength(1);
                 expect(result.error.issues[0]?.message).toContain(
-                    'Store name must start with alphanumeric'
+                    'Store name must start with alphanumeric',
                 );
             }
         });
@@ -195,7 +195,11 @@ describe('listStoresFromCortex', () => {
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            expect(result.value.stores.map((s) => s.name)).toEqual(['alpha', 'middle', 'zebra']);
+            expect(result.value.stores.map((s) => s.name)).toEqual([
+                'alpha',
+                'middle',
+                'zebra',
+            ]);
         }
     });
 

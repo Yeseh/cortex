@@ -60,7 +60,7 @@ export interface StoreResourceError {
  */
 export const getStoreCategories = async (
     cortex: Cortex,
-    storeName: string
+    storeName: string,
 ): Promise<Result<string[], StoreResourceError>> => {
     const storeResult = cortex.getStore(storeName);
     if (!storeResult.ok()) {
@@ -106,7 +106,7 @@ export const getStoreCategories = async (
 export const registerStoreResources = (
     server: McpServer,
     _config: ServerConfig,
-    cortex: Cortex
+    cortex: Cortex,
 ): void => {
     // Register cortex://store/ resource for listing all stores
     server.registerResource(
@@ -120,15 +120,13 @@ export const registerStoreResources = (
                 throw new McpError(ErrorCode.InternalError, result.error.message);
             }
             return {
-                contents: [
-                    {
-                        uri: 'cortex://store/',
-                        mimeType: 'application/json',
-                        text: JSON.stringify({ stores: result.value.stores.map((s) => s.name) }),
-                    },
-                ],
+                contents: [{
+                    uri: 'cortex://store/',
+                    mimeType: 'application/json',
+                    text: JSON.stringify({ stores: result.value.stores.map((s) => s.name) }),
+                }],
             };
-        }
+        },
     );
 
     // Register cortex://store/{name} resource template for store details
@@ -177,7 +175,7 @@ export const registerStoreResources = (
             if (!nameValidation.success) {
                 throw new McpError(
                     ErrorCode.InvalidParams,
-                    nameValidation.error.issues.map((i) => i.message).join('; ')
+                    nameValidation.error.issues.map((i) => i.message).join('; '),
                 );
             }
 
@@ -192,17 +190,15 @@ export const registerStoreResources = (
                 throw new McpError(errorCode, result.error.message);
             }
             return {
-                contents: [
-                    {
-                        uri: uri.href,
-                        mimeType: 'application/json',
-                        text: JSON.stringify({
-                            name: storeName,
-                            categories: result.value,
-                        }),
-                    },
-                ],
+                contents: [{
+                    uri: uri.href,
+                    mimeType: 'application/json',
+                    text: JSON.stringify({
+                        name: storeName,
+                        categories: result.value,
+                    }),
+                }],
             };
-        }
+        },
     );
 };

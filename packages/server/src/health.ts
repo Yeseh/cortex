@@ -87,7 +87,7 @@ export interface HealthResponse {
  */
 export const createHealthResponse = (config: ServerConfig, cortex: Cortex): Response => {
     // Count stores from Cortex registry
-    const storeCount = Object.keys(cortex.registry).length;
+    const storeCount = cortex.listStores().length;
 
     const response: HealthResponse = {
         status: 'healthy',
