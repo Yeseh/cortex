@@ -1,0 +1,18 @@
+/**
+ * Cortex module - Root client for the memory system.
+ *
+ * @module core/cortex
+ */
+
+export { Cortex } from './cortex.ts';
+
+export {
+    type AdapterFactory,
+    type CortexSettings,
+    type CortexOptions,
+    type ConfigError,
+    type ConfigErrorCode,
+    type InitializeError,
+    type InitializeErrorCode,
+    DEFAULT_SETTINGS,
+} from './types.ts';

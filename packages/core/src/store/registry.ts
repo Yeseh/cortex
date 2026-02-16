@@ -4,17 +4,22 @@
 
 import { ok } from '@/result.ts';
 import type { StoreResult } from './result.ts';
-import {
-    storeError,
-    type StoreRegistryParseError,
-} from './result.ts';
+import { storeError, type StoreRegistryParseError } from './result.ts';
 
 export interface StoreDefinition {
     path: string;
     description?: string;
 }
 
+/**
+ * Collection of store definitions mapping store names to their configuration.
+ */
 export type StoreRegistry = Record<string, StoreDefinition>;
+
+/**
+ * Alias for StoreRegistry. Use in contexts where the shorter name is preferred.
+ */
+export type Registry = StoreRegistry;
 
 export type { StoreRegistryParseErrorCode, StoreRegistryParseError } from './result.ts';
 
