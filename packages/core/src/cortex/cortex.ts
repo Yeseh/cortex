@@ -35,18 +35,8 @@
 
 import { mkdir } from 'node:fs/promises';
 import { resolve, isAbsolute } from 'path';
+import os from 'os';
 
-/**
- * Gets the user's home directory using Bun-native API.
- * Falls back to process.env.HOME for compatibility.
- */
-const getHomeDir = (): string => {
-    const home = Bun.env.HOME ?? process.env.HOME;
-    if (!home) {
-        throw new Error('Unable to determine home directory: HOME environment variable not set');
-    }
-    return home;
-};
 import z from 'zod';
 import { type Result, ok, err } from '@/result.ts';
 import type { ScopedStorageAdapter, StoreNotFoundError } from '@/storage/adapter.ts';
@@ -59,6 +49,7 @@ import {
     type AdapterFactory,
     DEFAULT_SETTINGS,
 } from './types.ts';
+import { raw } from 'express';
 
 // =============================================================================
 // Zod Schemas for Config Validation
@@ -131,7 +122,7 @@ export class Cortex {
     public readonly settings: CortexSettings;
 
     /** Store definitions mapping store names to their configuration */
-    public readonly registry: StoreRegistry;
+    private readonly registry: StoreRegistry;
 
     /** Factory for creating scoped storage adapters */
     private readonly adapterFactory: AdapterFactory;
@@ -360,7 +351,7 @@ export class Cortex {
  */
 const resolvePath = (pathStr: string): string => {
     if (pathStr.startsWith('~')) {
-        return resolve(getHomeDir(), pathStr.slice(1).replace(/^[/\\]/, ''));
+        return resolve(os.homedir(), pathStr.slice(1).replace(/^[/\\]/, ''));
     }
     return isAbsolute(pathStr) ? pathStr : resolve(pathStr);
 };
@@ -388,16 +379,13 @@ const createDefaultAdapterFactory = (): AdapterFactory => {
  */
 const transformSettings = (rawSettings: ParsedConfigFile['settings']): Partial<CortexSettings> => {
     if (!rawSettings) return {};
-    const settings: Partial<CortexSettings> = {};
-    if (rawSettings.output_format !== undefined) {
-        settings.outputFormat = rawSettings.output_format;
-    }
-    if (rawSettings.auto_summary_threshold !== undefined) {
-        settings.autoSummaryThreshold = rawSettings.auto_summary_threshold;
-    }
-    if (rawSettings.strict_local !== undefined) {
-        settings.strictLocal = rawSettings.strict_local;
-    }
+
+    const settings: Partial<CortexSettings> = {
+        outputFormat: rawSettings.output_format,
+        autoSummaryThreshold: rawSettings.auto_summary_threshold,
+        strictLocal: rawSettings.strict_local, 
+    };
+
     return settings;
 };
 
