@@ -5,6 +5,7 @@
 import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { isAbsolute, resolve } from 'node:path';
+import { z } from 'zod';
 import { type Result, ok, err } from './result.ts';
 import type { StoreDefinition } from './store/registry.ts';
 
@@ -63,6 +64,54 @@ export interface MergedConfigLoadError {
     field?: string;
     cause?: unknown;
 }
+
+/**
+ * Zod schema for store definition.
+ */
+const storeDefinitionSchema = z.object({
+    path: z.string().optional(),
+    description: z.string().optional(),
+}).superRefine((data, ctx) => {
+    if (typeof data.path !== 'string' || data.path.length === 0) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Store must have a non-empty path',
+            path: ['path'],
+        });
+        return;
+    }
+    if (!isAbsolute(data.path)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Store path must be absolute',
+            path: ['path'],
+        });
+    }
+}).transform((data) => ({
+    path: data.path as string,
+    description: data.description,
+}));
+
+/**
+ * Zod schema for Cortex settings.
+ */
+const cortexSettingsSchema = z.object({
+    output_format: z.enum(['yaml', 'json', 'toon']).optional(),
+    auto_summary: z.boolean().optional(),
+    strict_local: z.boolean().optional(),
+}).transform((s) => ({
+    outputFormat: s.output_format ?? DEFAULT_CORTEX_SETTINGS.outputFormat,
+    autoSummary: s.auto_summary ?? DEFAULT_CORTEX_SETTINGS.autoSummary,
+    strictLocal: s.strict_local ?? DEFAULT_CORTEX_SETTINGS.strictLocal,
+}));
+
+/**
+ * Zod schema for merged config file.
+ */
+const mergedConfigSchema = z.object({
+    settings: cortexSettingsSchema.optional().default({ ...DEFAULT_CORTEX_SETTINGS }),
+    stores: z.record(z.string(), storeDefinitionSchema).optional().default({}),
+});
 
 export type ConfigLoadErrorCode =
     | 'CONFIG_READ_FAILED'
@@ -374,133 +423,6 @@ export const loadConfig = async (
 // ---------------------------------------------------------------------------
 
 /**
- * Parses settings section from config object.
- */
-const parseSettingsSection = (settings: unknown): Result<CortexSettings, MergedConfigLoadError> => {
-    if (settings === undefined || settings === null) {
-        return ok({ ...DEFAULT_CORTEX_SETTINGS });
-    }
-
-    if (typeof settings !== 'object') {
-        return err({
-            code: 'CONFIG_PARSE_FAILED',
-            message: 'settings must be an object',
-            field: 'settings',
-        });
-    }
-
-    const s = settings as Record<string, unknown>;
-    const result: CortexSettings = { ...DEFAULT_CORTEX_SETTINGS };
-
-    if (s.output_format !== undefined) {
-        if (
-            s.output_format !== 'yaml' &&
-            s.output_format !== 'json' &&
-            s.output_format !== 'toon'
-        ) {
-            return err({
-                code: 'CONFIG_PARSE_FAILED',
-                message: 'output_format must be yaml, json, or toon',
-                field: 'settings.output_format',
-            });
-        }
-        result.outputFormat = s.output_format;
-    }
-
-    if (s.auto_summary !== undefined) {
-        if (typeof s.auto_summary !== 'boolean') {
-            return err({
-                code: 'CONFIG_PARSE_FAILED',
-                message: 'auto_summary must be a boolean',
-                field: 'settings.auto_summary',
-            });
-        }
-        result.autoSummary = s.auto_summary;
-    }
-
-    if (s.strict_local !== undefined) {
-        if (typeof s.strict_local !== 'boolean') {
-            return err({
-                code: 'CONFIG_PARSE_FAILED',
-                message: 'strict_local must be a boolean',
-                field: 'settings.strict_local',
-            });
-        }
-        result.strictLocal = s.strict_local;
-    }
-
-    return ok(result);
-};
-
-/**
- * Parses stores section from config object.
- */
-const parseStoresSection = (
-    stores: unknown
-): Result<Record<string, StoreDefinition>, MergedConfigLoadError> => {
-    if (stores === undefined || stores === null) {
-        return ok({});
-    }
-
-    if (typeof stores !== 'object') {
-        return err({
-            code: 'CONFIG_PARSE_FAILED',
-            message: 'stores must be an object',
-            field: 'stores',
-        });
-    }
-
-    const registry: Record<string, StoreDefinition> = {};
-    const entries = Object.entries(stores as Record<string, unknown>);
-
-    for (const [name, value] of entries) {
-        if (typeof value !== 'object' || value === null) {
-            return err({
-                code: 'CONFIG_PARSE_FAILED',
-                message: `Store '${name}' must be an object with a path field`,
-                field: `stores.${name}`,
-            });
-        }
-
-        const storeObj = value as Record<string, unknown>;
-        const path = storeObj.path;
-
-        if (typeof path !== 'string' || !path.trim()) {
-            return err({
-                code: 'CONFIG_PARSE_FAILED',
-                message: `Store '${name}' must have a non-empty path`,
-                field: `stores.${name}.path`,
-            });
-        }
-
-        if (!isAbsolute(path)) {
-            return err({
-                code: 'INVALID_STORE_PATH',
-                message: `Store '${name}' path '${path}' must be absolute. Relative paths are not supported.`,
-                field: `stores.${name}.path`,
-            });
-        }
-
-        const definition: StoreDefinition = { path };
-
-        if (storeObj.description !== undefined) {
-            if (typeof storeObj.description !== 'string') {
-                return err({
-                    code: 'CONFIG_PARSE_FAILED',
-                    message: `Store '${name}' description must be a string`,
-                    field: `stores.${name}.description`,
-                });
-            }
-            definition.description = storeObj.description;
-        }
-
-        registry[name] = definition;
-    }
-
-    return ok(registry);
-};
-
-/**
  * Parses a merged config file containing settings and stores sections.
  *
  * @module config
@@ -534,36 +456,30 @@ export const parseMergedConfig = (raw: string): Result<MergedConfig, MergedConfi
         });
     }
 
+    // Handle empty file
     if (parsed === null || parsed === undefined) {
-        // Empty file - use defaults
         return ok({
             settings: { ...DEFAULT_CORTEX_SETTINGS },
             stores: {},
         });
     }
 
-    if (typeof parsed !== 'object') {
+    const result = mergedConfigSchema.safeParse(parsed);
+    if (!result.success) {
+        const issue = result.error.issues[0];
+        const path = issue?.path.join('.') || 'unknown';
         return err({
-            code: 'CONFIG_PARSE_FAILED',
-            message: 'Config must be a YAML object',
+            code: issue?.code === 'custom' && issue.message.includes('absolute') 
+                ? 'INVALID_STORE_PATH' 
+                : 'CONFIG_PARSE_FAILED',
+            message: issue?.message || 'Invalid config format',
+            field: path,
         });
     }
 
-    const config = parsed as Record<string, unknown>;
-
-    const settingsResult = parseSettingsSection(config.settings);
-    if (!settingsResult.ok()) {
-        return settingsResult;
-    }
-
-    const storesResult = parseStoresSection(config.stores);
-    if (!storesResult.ok()) {
-        return storesResult;
-    }
-
     return ok({
-        settings: settingsResult.value,
-        stores: storesResult.value,
+        settings: result.data.settings as CortexSettings,
+        stores: result.data.stores,
     });
 };
 
