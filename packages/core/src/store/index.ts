@@ -12,7 +12,6 @@ export {
     resolveStorePath,
     type StoreDefinition,
     type Registry,
-    type StoreRegistry,
     type StoreRegistryLoadError,
     type StoreRegistryLoadErrorCode,
     type StoreRegistrySaveError,
