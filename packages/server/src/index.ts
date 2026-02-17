@@ -34,7 +34,10 @@ import { createHealthResponse } from './health.ts';
 import { registerMemoryTools } from './memory/index.ts';
 import { registerStoreTools } from './store/index.ts';
 import { registerCategoryTools } from './category/index.ts';
-import { err, ok, type Result } from '@yeseh/cortex-core';
+import { err, ok, type Result, Cortex } from '@yeseh/cortex-core';
+import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
+import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
+import type { ToolContext } from './memory/tools/shared.ts';
 
 /**
  * Complete Cortex server instance with all components.
@@ -153,14 +156,43 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
     }
     const config = configResult.value;
 
+    // Create adapter factory for Cortex
+    const createAdapterFactory = () => {
+        return (storePath: string): ScopedStorageAdapter => {
+            const adapter = new FilesystemStorageAdapter({ rootDirectory: storePath });
+            return {
+                memories: adapter.memories,
+                indexes: adapter.indexes,
+                categories: adapter.categories,
+            };
+        };
+    };
+
+    // Load Cortex from config
+    const cortexResult = await Cortex.fromConfig(config.dataPath);
+    let cortex: Cortex;
+    if (cortexResult.ok()) {
+        cortex = cortexResult.value;
+    }
+    else {
+        // Fall back to minimal init if no config exists
+        cortex = Cortex.init({
+            rootDirectory: config.dataPath,
+            adapterFactory: createAdapterFactory(),
+        });
+    }
+
+    // Create tool context with Cortex
+    const toolContext: ToolContext = { config, cortex };
+
     // Create MCP context
     const mcpContext = createMcpContext();
     const { server: mcpServer, transport } = mcpContext;
 
     // Register MCP tools
-    registerMemoryTools(mcpServer, config);
-    registerStoreTools(mcpServer, config);
-    registerCategoryTools(mcpServer, config);
+    registerMemoryTools(mcpServer, toolContext);
+    registerStoreTools(mcpServer, toolContext);
+    registerCategoryTools(mcpServer, toolContext);
 
     // Connect MCP server to transport
     await mcpServer.connect(transport);
@@ -191,7 +223,7 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
                 },
             },
             '/health': {
-                GET: async () => createHealthResponse(config),
+                GET: async () => createHealthResponse({ config, cortex }),
             },
         },
         fetch: () => new Response('Not Found', { status: 404 }),

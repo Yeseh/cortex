@@ -4,18 +4,18 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { rm } from 'node:fs/promises';
-import type { ServerConfig } from '../../config.ts';
-import { createTestConfig, createTestDir } from './test-utils.ts';
+import { createTestContext, createTestDir } from './test-utils.ts';
+import type { ToolContext } from './shared.ts';
 import { addMemoryHandler, type AddMemoryInput } from './add-memory.ts';
 import { getMemoryHandler } from './get-memory.ts';
 
 describe('cortex_add_memory tool', () => {
     let testDir: string;
-    let config: ServerConfig;
+    let ctx: ToolContext;
 
     beforeEach(async () => {
         testDir = await createTestDir();
-        config = createTestConfig(testDir);
+        ctx = createTestContext(testDir);
     });
 
     afterEach(async () => {
@@ -29,7 +29,7 @@ describe('cortex_add_memory tool', () => {
             content: 'Test content',
         };
 
-        const result = await addMemoryHandler({ config }, input);
+        const result = await addMemoryHandler(ctx, input);
 
         expect(result.content).toHaveLength(1);
         expect(result.content[0]!.text).toContain('Memory created');
@@ -46,12 +46,12 @@ describe('cortex_add_memory tool', () => {
             ],
         };
 
-        const result = await addMemoryHandler({ config }, input);
+        const result = await addMemoryHandler(ctx, input);
         expect(result.content[0]!.text).toContain('Memory created');
 
         // Verify by reading back
         const getResult = await getMemoryHandler(
-            { config },
+            ctx,
             {
                 store: 'default',
                 path: 'project/tagged-memory',
@@ -72,12 +72,12 @@ describe('cortex_add_memory tool', () => {
             expires_at: futureDate,
         };
 
-        const result = await addMemoryHandler({ config }, input);
+        const result = await addMemoryHandler(ctx, input);
         expect(result.content[0]!.text).toContain('Memory created');
 
         // Verify by reading back
         const getResult = await getMemoryHandler(
-            { config },
+            ctx,
             {
                 store: 'default',
                 path: 'project/expiring-memory',
@@ -94,7 +94,7 @@ describe('cortex_add_memory tool', () => {
             content: 'Content in new store',
         };
 
-        await expect(addMemoryHandler({ config }, input)).rejects.toThrow('not registered');
+        await expect(addMemoryHandler(ctx, input)).rejects.toThrow('not registered');
     });
 
     it('should reject invalid paths', async () => {
@@ -104,6 +104,6 @@ describe('cortex_add_memory tool', () => {
             content: 'Content',
         };
 
-        await expect(addMemoryHandler({ config }, input)).rejects.toThrow();
+        await expect(addMemoryHandler(ctx, input)).rejects.toThrow();
     });
 });

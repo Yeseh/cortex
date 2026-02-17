@@ -9,9 +9,10 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { ServerConfig } from '../../config.ts';
 import { MEMORY_SUBDIR } from '../../config.ts';
-import { type Memory, serializeStoreRegistry } from '@yeseh/cortex-core';
+import { type Memory, serializeStoreRegistry, Cortex } from '@yeseh/cortex-core';
 import { createMemory } from '@yeseh/cortex-core/memory';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
+import type { ToolContext } from './shared.ts';
 
 // Test configuration
 export const createTestConfig = (dataPath: string): ServerConfig => ({
@@ -23,6 +24,56 @@ export const createTestConfig = (dataPath: string): ServerConfig => ({
     outputFormat: 'yaml',
     autoSummaryThreshold: 500,
 });
+
+/**
+ * Creates a ToolContext for testing with both config and cortex instance.
+ *
+ * @param testDir - The test directory (from createTestDir)
+ * @returns A ToolContext ready for use in test handlers
+ */
+export const createTestContext = (testDir: string): ToolContext => {
+    const config = createTestConfig(testDir);
+    const memoryDir = join(testDir, MEMORY_SUBDIR);
+
+    const cortex = Cortex.init({
+        rootDirectory: testDir,
+        registry: { default: { path: memoryDir } },
+        adapterFactory: (storePath: string) => new FilesystemStorageAdapter({ rootDirectory: storePath }),
+    });
+
+    return { config, cortex };
+};
+
+/**
+ * Creates a ToolContext with multiple stores registered.
+ *
+ * @param testDir - The test directory (from createTestDir)
+ * @param additionalStores - Additional stores to register (name -> path mapping)
+ * @returns A ToolContext with multiple stores configured
+ */
+export const createTestContextWithStores = (
+    testDir: string,
+    additionalStores: Record<string, string>,
+): ToolContext => {
+    const config = createTestConfig(testDir);
+    const memoryDir = join(testDir, MEMORY_SUBDIR);
+
+    const registry: Record<string, { path: string }> = {
+        default: { path: memoryDir },
+    };
+
+    for (const [name, path] of Object.entries(additionalStores)) {
+        registry[name] = { path };
+    }
+
+    const cortex = Cortex.init({
+        rootDirectory: testDir,
+        registry,
+        adapterFactory: (storePath: string) => new FilesystemStorageAdapter({ rootDirectory: storePath }),
+    });
+
+    return { config, cortex };
+};
 
 // Helper to create test directory with store registry
 export const createTestDir = async (): Promise<string> => {

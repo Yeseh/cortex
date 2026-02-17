@@ -3,26 +3,27 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { rm } from 'node:fs/promises';
+import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ServerConfig } from '../../config.ts';
 import { MEMORY_SUBDIR } from '../../config.ts';
-import { createTestConfig, createTestDir, registerStore } from './test-utils.ts';
+import { createTestContextWithStores, createTestDir } from './test-utils.ts';
+import type { ToolContext } from './shared.ts';
 import { addMemoryHandler, type AddMemoryInput } from './add-memory.ts';
 import { getMemoryHandler, type GetMemoryInput } from './get-memory.ts';
 
 describe('explicit store parameter', () => {
     let testDir: string;
-    let config: ServerConfig;
+    let ctx: ToolContext;
 
     beforeEach(async () => {
         testDir = await createTestDir();
-        config = createTestConfig(testDir);
-
+        
+        // Create a custom store path
         const customStorePath = join(testDir, MEMORY_SUBDIR, 'custom');
-        await registerStore(testDir, 'my-default-store', customStorePath);
-
-        config.defaultStore = 'my-default-store';
+        await mkdir(customStorePath, { recursive: true });
+        
+        // Create context with the additional store
+        ctx = createTestContextWithStores(testDir, { 'my-default-store': customStorePath });
     });
 
     afterEach(async () => {
@@ -36,14 +37,14 @@ describe('explicit store parameter', () => {
             content: 'Test',
         };
 
-        await addMemoryHandler({ config }, addInput);
+        await addMemoryHandler(ctx, addInput);
 
         const getInput: GetMemoryInput = {
             store: 'my-default-store',
             path: 'project/test',
         };
 
-        const result = await getMemoryHandler({ config }, getInput);
+        const result = await getMemoryHandler(ctx, getInput);
         expect(result.content[0]!.text).toContain('Test');
     });
 });

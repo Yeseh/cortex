@@ -11,14 +11,12 @@
  * ```ts
  * import { registerMemoryTools, registerMemoryResources } from './memory';
  * import { createMcpServer } from './mcp';
- * import { loadServerConfig } from './config';
+ * import type { ToolContext } from './memory/tools/shared';
  *
- * const configResult = loadServerConfig();
- * if (configResult.ok()) {
- *   const server = createMcpServer();
- *   registerMemoryTools(server, configResult.value);
- *   registerMemoryResources(server, configResult.value);
- * }
+ * const ctx: ToolContext = { config, cortex };
+ * const server = createMcpServer();
+ * registerMemoryTools(server, ctx);
+ * registerMemoryResources(server, ctx);
  * ```
  */
 

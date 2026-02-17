@@ -5,20 +5,20 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ServerConfig } from '../../config.ts';
 import { MEMORY_SUBDIR } from '../../config.ts';
-import { createMemoryFile, createTestConfig, createTestDir } from './test-utils.ts';
+import { createMemoryFile, createTestContext, createTestDir } from './test-utils.ts';
+import type { ToolContext } from './shared.ts';
 import { addMemoryHandler, type AddMemoryInput } from './add-memory.ts';
 import { getMemoryHandler } from './get-memory.ts';
 import { updateMemoryHandler, type UpdateMemoryInput } from './update-memory.ts';
 
 describe('memory citations', () => {
     let testDir: string;
-    let config: ServerConfig;
+    let ctx: ToolContext;
 
     beforeEach(async () => {
         testDir = await createTestDir();
-        config = createTestConfig(testDir);
+        ctx = createTestContext(testDir);
     });
 
     afterEach(async () => {
@@ -35,11 +35,11 @@ describe('memory citations', () => {
             ],
         };
 
-        const result = await addMemoryHandler({ config }, input);
+        const result = await addMemoryHandler(ctx, input);
         expect(result.content[0]!.text).toContain('Memory created at project/with-citations');
 
         const getResult = await getMemoryHandler(
-            { config },
+            ctx,
             { store: 'default', path: 'project/with-citations' },
         );
         const output = JSON.parse(getResult.content[0]!.text);
@@ -64,7 +64,7 @@ describe('memory citations', () => {
         });
 
         const result = await getMemoryHandler(
-            { config },
+            ctx,
             { store: 'default', path: 'project/cited-memory' },
         );
         const output = JSON.parse(result.content[0]!.text);
@@ -95,10 +95,10 @@ describe('memory citations', () => {
             ],
         };
 
-        await updateMemoryHandler({ config }, updateInput);
+        await updateMemoryHandler(ctx, updateInput);
 
         const getResult = await getMemoryHandler(
-            { config },
+            ctx,
             { store: 'default', path: 'project/update-citations' },
         );
         const output = JSON.parse(getResult.content[0]!.text);
@@ -121,7 +121,7 @@ describe('memory citations', () => {
         });
 
         const result = await getMemoryHandler(
-            { config },
+            ctx,
             { store: 'default', path: 'project/no-citations' },
         );
         const output = JSON.parse(result.content[0]!.text);

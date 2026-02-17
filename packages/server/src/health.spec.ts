@@ -1,21 +1,46 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import type { ServerConfig } from './config.ts';
-import { createHealthResponse, type HealthResponse } from './health.ts';
+import { MEMORY_SUBDIR } from './config.ts';
+import { createHealthResponse, type HealthContext, type HealthResponse } from './health.ts';
+import { Cortex } from '@yeseh/cortex-core';
+import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
+
+/**
+ * Creates a HealthContext for testing with an in-memory registry.
+ */
+const createTestContext = async (
+    tempDir: string,
+    config: ServerConfig,
+    storeRegistry?: Record<string, { path: string }>,
+): Promise<HealthContext> => {
+    const memoryDir = join(tempDir, MEMORY_SUBDIR);
+    await mkdir(memoryDir, { recursive: true });
+
+    const registry = storeRegistry ?? {};
+
+    const cortex = Cortex.init({
+        rootDirectory: tempDir,
+        registry,
+        adapterFactory: (storePath: string) => new FilesystemStorageAdapter({ rootDirectory: storePath }),
+    });
+
+    return { config, cortex };
+};
 
 /**
  * Helper to start a Bun server on a random port and return the base URL.
  */
-const startServer = (config: ServerConfig): { server: ReturnType<typeof Bun.serve>; baseUrl: string } => {
+const startServer = (ctx: HealthContext): { server: ReturnType<typeof Bun.serve>; baseUrl: string } => {
     const server = Bun.serve({
         port: 0, // Random available port
         hostname: '127.0.0.1',
         routes: {
             '/health': {
-                GET: async () => createHealthResponse(config),
+                GET: async () => createHealthResponse(ctx),
             },
         },
         fetch: () => new Response('Not Found', { status: 404 }),
@@ -53,7 +78,8 @@ describe('health endpoint', () => {
 
     describe('basic health response', () => {
         it('should return 200 status', async () => {
-            const { server: s, baseUrl } = startServer(config);
+            const ctx = await createTestContext(tempDir, config);
+            const { server: s, baseUrl } = startServer(ctx);
             server = s;
 
             const response = await fetch(`${baseUrl}/health`);
@@ -62,7 +88,8 @@ describe('health endpoint', () => {
         });
 
         it('should return JSON with correct content type', async () => {
-            const { server: s, baseUrl } = startServer(config);
+            const ctx = await createTestContext(tempDir, config);
+            const { server: s, baseUrl } = startServer(ctx);
             server = s;
 
             const response = await fetch(`${baseUrl}/health`);
@@ -71,7 +98,8 @@ describe('health endpoint', () => {
         });
 
         it('should return status "healthy"', async () => {
-            const { server: s, baseUrl } = startServer(config);
+            const ctx = await createTestContext(tempDir, config);
+            const { server: s, baseUrl } = startServer(ctx);
             server = s;
 
             const response = await fetch(`${baseUrl}/health`);
@@ -81,7 +109,8 @@ describe('health endpoint', () => {
         });
 
         it('should return version "1.0.0"', async () => {
-            const { server: s, baseUrl } = startServer(config);
+            const ctx = await createTestContext(tempDir, config);
+            const { server: s, baseUrl } = startServer(ctx);
             server = s;
 
             const response = await fetch(`${baseUrl}/health`);
@@ -91,7 +120,8 @@ describe('health endpoint', () => {
         });
 
         it('should return response with correct shape', async () => {
-            const { server: s, baseUrl } = startServer(config);
+            const ctx = await createTestContext(tempDir, config);
+            const { server: s, baseUrl } = startServer(ctx);
             server = s;
 
             const response = await fetch(`${baseUrl}/health`);
@@ -116,7 +146,8 @@ describe('health endpoint', () => {
                 dataPath: customDataPath,
             };
 
-            const { server: s, baseUrl } = startServer(customConfig);
+            const ctx = await createTestContext(tempDir, customConfig);
+            const { server: s, baseUrl } = startServer(ctx);
             server = s;
 
             const response = await fetch(`${baseUrl}/health`);
@@ -132,8 +163,11 @@ describe('health endpoint', () => {
             const config1: ServerConfig = { ...config, dataPath: dataPath1 };
             const config2: ServerConfig = { ...config, dataPath: dataPath2 };
 
-            const { server: s1, baseUrl: baseUrl1 } = startServer(config1);
-            const { server: s2, baseUrl: baseUrl2 } = startServer(config2);
+            const ctx1 = await createTestContext(dataPath1, config1);
+            const ctx2 = await createTestContext(dataPath2, config2);
+
+            const { server: s1, baseUrl: baseUrl1 } = startServer(ctx1);
+            const { server: s2, baseUrl: baseUrl2 } = startServer(ctx2);
 
             try {
                 const response1 = await fetch(`${baseUrl1}/health`);
@@ -154,8 +188,9 @@ describe('health endpoint', () => {
     });
 
     describe('store counting', () => {
-        it('should return storeCount 0 when no stores.yaml exists', async () => {
-            const { server: s, baseUrl } = startServer(config);
+        it('should return storeCount 0 when no stores registered', async () => {
+            const ctx = await createTestContext(tempDir, config, {});
+            const { server: s, baseUrl } = startServer(ctx);
             server = s;
 
             const response = await fetch(`${baseUrl}/health`);
@@ -164,19 +199,14 @@ describe('health endpoint', () => {
             expect(json.storeCount).toBe(0);
         });
 
-        it('should count stores correctly when registry exists with one store', async () => {
+        it('should count stores correctly when registry has one store', async () => {
             const storePath = join(tempDir, 'stores', 'test');
-            const storesYaml = `settings:
-  outputFormat: yaml
-  autoSummary: false
-  strictLocal: false
-stores:
-  test-store:
-    path: ${storePath}
-`;
-            await writeFile(join(tempDir, 'stores.yaml'), storesYaml);
+            await mkdir(storePath, { recursive: true });
 
-            const { server: s, baseUrl } = startServer(config);
+            const ctx = await createTestContext(tempDir, config, {
+                'test-store': { path: storePath },
+            });
+            const { server: s, baseUrl } = startServer(ctx);
             server = s;
 
             const response = await fetch(`${baseUrl}/health`);
@@ -185,25 +215,20 @@ stores:
             expect(json.storeCount).toBe(1);
         });
 
-        it('should count stores correctly when registry exists with multiple stores', async () => {
+        it('should count stores correctly when registry has multiple stores', async () => {
             const storePath1 = join(tempDir, 'stores', 'test');
             const storePath2 = join(tempDir, 'stores', 'another');
             const storePath3 = join(tempDir, 'stores', 'third');
-            const storesYaml = `settings:
-  outputFormat: yaml
-  autoSummary: false
-  strictLocal: false
-stores:
-  test-store:
-    path: ${storePath1}
-  another-store:
-    path: ${storePath2}
-  third-store:
-    path: ${storePath3}
-`;
-            await writeFile(join(tempDir, 'stores.yaml'), storesYaml);
+            await mkdir(storePath1, { recursive: true });
+            await mkdir(storePath2, { recursive: true });
+            await mkdir(storePath3, { recursive: true });
 
-            const { server: s, baseUrl } = startServer(config);
+            const ctx = await createTestContext(tempDir, config, {
+                'test-store': { path: storePath1 },
+                'another-store': { path: storePath2 },
+                'third-store': { path: storePath3 },
+            });
+            const { server: s, baseUrl } = startServer(ctx);
             server = s;
 
             const response = await fetch(`${baseUrl}/health`);
@@ -213,19 +238,11 @@ stores:
         });
 
         it('should count stores correctly with two stores', async () => {
-            const storesYaml = `settings:
-  outputFormat: yaml
-  autoSummary: false
-  strictLocal: false
-stores:
-  primary:
-    path: /var/lib/cortex
-  secondary:
-    path: /var/lib/cortex-secondary
-`;
-            await writeFile(join(tempDir, 'stores.yaml'), storesYaml);
-
-            const { server: s, baseUrl } = startServer(config);
+            const ctx = await createTestContext(tempDir, config, {
+                primary: { path: '/var/lib/cortex' },
+                secondary: { path: '/var/lib/cortex-secondary' },
+            });
+            const { server: s, baseUrl } = startServer(ctx);
             server = s;
 
             const response = await fetch(`${baseUrl}/health`);
@@ -236,28 +253,9 @@ stores:
     });
 
     describe('error resilience', () => {
-        it('should return healthy even if store registry has invalid content', async () => {
-            const invalidYaml = `invalid yaml content
-not a valid stores file
-{{{
-`;
-            await writeFile(join(tempDir, 'stores.yaml'), invalidYaml);
-
-            const { server: s, baseUrl } = startServer(config);
-            server = s;
-
-            const response = await fetch(`${baseUrl}/health`);
-            const json = (await response.json()) as HealthResponse;
-
-            expect(response.status).toBe(200);
-            expect(json.status).toBe('healthy');
-            expect(json.storeCount).toBe(0);
-        });
-
-        it('should return healthy with storeCount 0 when registry is empty file', async () => {
-            await writeFile(join(tempDir, 'stores.yaml'), '');
-
-            const { server: s, baseUrl } = startServer(config);
+        it('should return healthy with storeCount 0 when registry is empty', async () => {
+            const ctx = await createTestContext(tempDir, config, {});
+            const { server: s, baseUrl } = startServer(ctx);
             server = s;
 
             const response = await fetch(`${baseUrl}/health`);
@@ -275,7 +273,15 @@ not a valid stores file
                 dataPath: nonExistentPath,
             };
 
-            const { server: s, baseUrl } = startServer(configWithBadPath);
+            // Create context with non-existent path - cortex should still work
+            const cortex = Cortex.init({
+                rootDirectory: nonExistentPath,
+                registry: {},
+                adapterFactory: (storePath: string) => new FilesystemStorageAdapter({ rootDirectory: storePath }),
+            });
+            const ctx: HealthContext = { config: configWithBadPath, cortex };
+
+            const { server: s, baseUrl } = startServer(ctx);
             server = s;
 
             const response = await fetch(`${baseUrl}/health`);
@@ -284,23 +290,6 @@ not a valid stores file
             expect(response.status).toBe(200);
             expect(json.status).toBe('healthy');
             expect(json.dataPath).toBe(nonExistentPath);
-            expect(json.storeCount).toBe(0);
-        });
-
-        it('should return healthy with storeCount 0 when stores.yaml contains only comments', async () => {
-            const commentOnlyYaml = `# This is a comment
-# Another comment
-`;
-            await writeFile(join(tempDir, 'stores.yaml'), commentOnlyYaml);
-
-            const { server: s, baseUrl } = startServer(config);
-            server = s;
-
-            const response = await fetch(`${baseUrl}/health`);
-            const json = (await response.json()) as HealthResponse;
-
-            expect(response.status).toBe(200);
-            expect(json.status).toBe('healthy');
             expect(json.storeCount).toBe(0);
         });
     });

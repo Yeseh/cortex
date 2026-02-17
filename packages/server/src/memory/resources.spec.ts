@@ -3,7 +3,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -20,8 +20,9 @@ import {
     type CategoryListing,
 } from './resources.ts';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
-import type { Memory } from '@yeseh/cortex-core/memory';
+import { Cortex, type Memory } from '@yeseh/cortex-core';
 import { createMemory } from '@yeseh/cortex-core/memory';
+import type { ToolContext } from './tools/shared.ts';
 
 // Test configuration
 const createTestConfig = (dataPath: string): ServerConfig => ({
@@ -79,11 +80,15 @@ const getTextContent = (
     throw new Error('Content does not have text property');
 };
 
-// Helper to create a store registry file for listResources tests
-const createStoreRegistry = async (dataPath: string, storeName: string): Promise<void> => {
-    const storeRoot = join(dataPath, storeName);
-    const registryContent = `stores:\n  ${storeName}:\n    path: "${storeRoot}"\n`;
-    await writeFile(join(dataPath, 'stores.yaml'), registryContent);
+// Helper to create a ToolContext for testing
+const createTestContext = (dataPath: string, storeRoot: string): ToolContext => {
+    const config = createTestConfig(dataPath);
+    const cortex = Cortex.init({
+        rootDirectory: dataPath,
+        registry: { default: { path: storeRoot } },
+        adapterFactory: (storePath: string) => new FilesystemStorageAdapter({ rootDirectory: storePath }),
+    });
+    return { config, cortex };
 };
 
 // ---------------------------------------------------------------------------
@@ -588,13 +593,14 @@ describe('readCategoryListing', () => {
 
 describe('listResources', () => {
     let testDir: string;
-    let config: ServerConfig;
+    let ctx: ToolContext;
+    let storeRoot: string;
 
     beforeEach(async () => {
         testDir = await createTestDir();
-        config = createTestConfig(testDir);
-        // Create the store registry file needed by listResources
-        await createStoreRegistry(testDir, 'default');
+        storeRoot = join(testDir, 'default');
+        await mkdir(storeRoot, { recursive: true });
+        ctx = createTestContext(testDir, storeRoot);
     });
 
     afterEach(async () => {
@@ -602,9 +608,6 @@ describe('listResources', () => {
     });
 
     it('should list available resources', async () => {
-        const storeRoot = join(testDir, 'default');
-        await mkdir(storeRoot, { recursive: true });
-
         await createMemoryFile(storeRoot, 'project/my-memory', {
             metadata: {
                 createdAt: new Date('2024-01-01'),
@@ -616,7 +619,7 @@ describe('listResources', () => {
             content: 'Test memory content',
         });
 
-        const result = await listResources(config);
+        const result = await listResources(ctx);
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -625,9 +628,6 @@ describe('listResources', () => {
     });
 
     it('should include root store resource', async () => {
-        const storeRoot = join(testDir, 'default');
-        await mkdir(storeRoot, { recursive: true });
-
         await createMemoryFile(storeRoot, 'project/root-test', {
             metadata: {
                 createdAt: new Date('2024-01-01'),
@@ -639,7 +639,7 @@ describe('listResources', () => {
             content: 'Root test',
         });
 
-        const result = await listResources(config);
+        const result = await listResources(ctx);
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -653,9 +653,6 @@ describe('listResources', () => {
     });
 
     it('should include category resources', async () => {
-        const storeRoot = join(testDir, 'default');
-        await mkdir(storeRoot, { recursive: true });
-
         await createMemoryFile(storeRoot, 'project/category-test', {
             metadata: {
                 createdAt: new Date('2024-01-01'),
@@ -667,7 +664,7 @@ describe('listResources', () => {
             content: 'Category test',
         });
 
-        const result = await listResources(config);
+        const result = await listResources(ctx);
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -681,9 +678,6 @@ describe('listResources', () => {
     });
 
     it('should include memory resources', async () => {
-        const storeRoot = join(testDir, 'default');
-        await mkdir(storeRoot, { recursive: true });
-
         await createMemoryFile(storeRoot, 'project/memory-resource', {
             metadata: {
                 createdAt: new Date('2024-01-01'),
@@ -695,7 +689,7 @@ describe('listResources', () => {
             content: 'Memory resource test',
         });
 
-        const result = await listResources(config);
+        const result = await listResources(ctx);
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -709,9 +703,6 @@ describe('listResources', () => {
     });
 
     it('should include subcategory resources', async () => {
-        const storeRoot = join(testDir, 'default');
-        await mkdir(storeRoot, { recursive: true });
-
         await createMemoryFile(storeRoot, 'project/sub/nested-memory', {
             metadata: {
                 createdAt: new Date('2024-01-01'),
@@ -723,7 +714,7 @@ describe('listResources', () => {
             content: 'Nested memory',
         });
 
-        const result = await listResources(config);
+        const result = await listResources(ctx);
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -736,10 +727,7 @@ describe('listResources', () => {
     });
 
     it('should return empty resources when no memories exist', async () => {
-        const storeRoot = join(testDir, 'default');
-        await mkdir(storeRoot, { recursive: true });
-
-        const result = await listResources(config);
+        const result = await listResources(ctx);
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -750,9 +738,6 @@ describe('listResources', () => {
     });
 
     it('should list resources from multiple root categories', async () => {
-        const storeRoot = join(testDir, 'default');
-        await mkdir(storeRoot, { recursive: true });
-
         await createMemoryFile(storeRoot, 'project/project-memory', {
             metadata: {
                 createdAt: new Date('2024-01-01'),
@@ -786,7 +771,7 @@ describe('listResources', () => {
             content: 'Persona memory',
         });
 
-        const result = await listResources(config);
+        const result = await listResources(ctx);
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -801,10 +786,7 @@ describe('listResources', () => {
     });
 
     it('should return only root resource when root index is missing', async () => {
-        const storeRoot = join(testDir, 'default');
-        await mkdir(storeRoot, { recursive: true });
-
-        const result = await listResources(config);
+        const result = await listResources(ctx);
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -814,9 +796,6 @@ describe('listResources', () => {
     });
 
     it('should list resources for root categories from root index', async () => {
-        const storeRoot = join(testDir, 'default');
-        await mkdir(storeRoot, { recursive: true });
-
         await createMemoryFile(storeRoot, 'custom/custom-memory', {
             metadata: {
                 createdAt: new Date('2024-01-01'),
@@ -828,7 +807,7 @@ describe('listResources', () => {
             content: 'Custom memory',
         });
 
-        const result = await listResources(config);
+        const result = await listResources(ctx);
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -910,16 +889,14 @@ describe('error handling', () => {
 
 describe('resource workflow', () => {
     let testDir: string;
-    let config: ServerConfig;
+    let ctx: ToolContext;
     let storeRoot: string;
 
     beforeEach(async () => {
         testDir = await createTestDir();
-        config = createTestConfig(testDir);
-        storeRoot = join(testDir, MEMORY_SUBDIR);
+        storeRoot = join(testDir, 'default');
         await mkdir(storeRoot, { recursive: true });
-        // Create the store registry file needed by listResources
-        await createStoreRegistry(testDir, 'default');
+        ctx = createTestContext(testDir, storeRoot);
     });
 
     afterEach(async () => {
@@ -940,7 +917,7 @@ describe('resource workflow', () => {
         });
 
         // Step 1: List all resources
-        const listResult = await listResources(config);
+        const listResult = await listResources(ctx);
         expect(listResult.ok()).toBe(true);
 
         // Step 2: Browse category listing

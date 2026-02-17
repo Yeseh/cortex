@@ -5,9 +5,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ServerConfig } from '../../config.ts';
 import { MEMORY_SUBDIR } from '../../config.ts';
-import { createMemoryFile, createTestConfig, createTestDir } from './test-utils.ts';
+import { createMemoryFile, createTestContext, createTestDir } from './test-utils.ts';
+import type { ToolContext } from './shared.ts';
 import {
     getRecentMemoriesHandler,
     getRecentMemoriesInputSchema,
@@ -16,12 +16,12 @@ import {
 
 describe('cortex_get_recent_memories tool', () => {
     let testDir: string;
-    let config: ServerConfig;
+    let ctx: ToolContext;
     let memoryDir: string;
 
     beforeEach(async () => {
         testDir = await createTestDir();
-        config = createTestConfig(testDir);
+        ctx = createTestContext(testDir);
         memoryDir = join(testDir, MEMORY_SUBDIR);
     });
 
@@ -74,7 +74,7 @@ describe('cortex_get_recent_memories tool', () => {
             limit: 10,
         };
 
-        const result = await getRecentMemoriesHandler({ config }, input);
+        const result = await getRecentMemoriesHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.category).toBe('all');
@@ -119,7 +119,7 @@ describe('cortex_get_recent_memories tool', () => {
             limit: 3,
         };
 
-        const result = await getRecentMemoriesHandler({ config }, input);
+        const result = await getRecentMemoriesHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.count).toBe(3);
@@ -161,7 +161,7 @@ describe('cortex_get_recent_memories tool', () => {
             limit: 10,
         };
 
-        const result = await getRecentMemoriesHandler({ config }, input);
+        const result = await getRecentMemoriesHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.category).toBe('project/cortex');
@@ -203,7 +203,7 @@ describe('cortex_get_recent_memories tool', () => {
             limit: 10,
         };
 
-        const result = await getRecentMemoriesHandler({ config }, input);
+        const result = await getRecentMemoriesHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.count).toBe(1);
@@ -244,7 +244,7 @@ describe('cortex_get_recent_memories tool', () => {
             include_expired: true,
         };
 
-        const result = await getRecentMemoriesHandler({ config }, input);
+        const result = await getRecentMemoriesHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.count).toBe(2);
@@ -259,7 +259,7 @@ describe('cortex_get_recent_memories tool', () => {
             limit: 10,
         };
 
-        const result = await getRecentMemoriesHandler({ config }, input);
+        const result = await getRecentMemoriesHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.category).toBe('all');
@@ -287,7 +287,7 @@ describe('cortex_get_recent_memories tool', () => {
             store: 'default',
         };
 
-        const result = await getRecentMemoriesHandler({ config }, input);
+        const result = await getRecentMemoriesHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.count).toBe(5);
@@ -300,7 +300,7 @@ describe('cortex_get_recent_memories tool', () => {
             limit: 10,
         };
 
-        await expect(getRecentMemoriesHandler({ config }, input)).rejects.toThrow();
+        await expect(getRecentMemoriesHandler(ctx, input)).rejects.toThrow();
     });
 
     it('should validate limit parameter bounds', () => {

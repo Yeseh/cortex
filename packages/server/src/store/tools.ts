@@ -5,6 +5,7 @@
  * - Functions for listing stores from filesystem or registry
  * - Validation schemas for store names and tool inputs
  * - Types for store information and listing results
+ * - Handler functions for MCP tools
  *
  * Store creation is handled by {@link @yeseh/cortex-core/store#initializeStore}
  * in the tool registration layer, keeping this module focused on read operations.
@@ -13,9 +14,12 @@
  */
 
 import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 import { z } from 'zod';
 import { err, ok, type Result } from '@yeseh/cortex-core';
+import { initializeStore } from '@yeseh/cortex-core/store';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
+import type { ToolContext } from '../memory/tools/shared.ts';
 
 /**
  * Error codes for store tool operations.
@@ -174,4 +178,102 @@ export const listStoresFromRegistry = async (
         .sort((a, b) => a.name.localeCompare(b.name));
 
     return ok({ stores });
+};
+
+// ---------------------------------------------------------------------------
+// Tool response types
+// ---------------------------------------------------------------------------
+
+/**
+ * Standard response format for store MCP tools.
+ */
+export interface StoreToolResponse {
+    [key: string]: unknown;
+    content: { type: 'text'; text: string }[];
+    isError?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Tool handlers
+// ---------------------------------------------------------------------------
+
+/**
+ * Handler for the cortex_list_stores MCP tool.
+ *
+ * Lists all available memory stores from the registry.
+ *
+ * @param ctx - Tool context containing config and cortex instance
+ * @returns MCP tool response with list of stores or error
+ *
+ * @example
+ * ```ts
+ * const result = await listStoresHandler(ctx);
+ * // { content: [{ type: 'text', text: '{"stores":[...]}' }] }
+ * ```
+ */
+export const listStoresHandler = async (
+    ctx: ToolContext,
+): Promise<StoreToolResponse> => {
+    const registry = ctx.cortex.getRegistry();
+    const stores: StoreInfo[] = Object.entries(registry)
+        .map(([
+            name, definition,
+        ]) => ({
+            name,
+            path: definition.path,
+            ...(definition.description !== undefined && { description: definition.description }),
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+    return {
+        content: [{ type: 'text', text: JSON.stringify({ stores }, null, 2) }],
+    };
+};
+
+/**
+ * Handler for the cortex_create_store MCP tool.
+ *
+ * Creates a new memory store with the given name.
+ *
+ * @param ctx - Tool context containing config and cortex instance
+ * @param input - Input containing the store name to create
+ * @returns MCP tool response with created store info or error
+ *
+ * @example
+ * ```ts
+ * const result = await createStoreHandler(ctx, { name: 'my-store' });
+ * // { content: [{ type: 'text', text: '{"created":"my-store"}' }] }
+ * ```
+ */
+export const createStoreHandler = async (
+    ctx: ToolContext,
+    input: CreateStoreInput,
+): Promise<StoreToolResponse> => {
+    // Validate input
+    const validation = createStoreInputSchema.safeParse(input);
+    if (!validation.success) {
+        return {
+            content: [{ type: 'text', text: `Error: Store name is invalid: ${validation.error.issues[0]?.message}` }],
+            isError: true,
+        };
+    }
+
+    const registryPath = path.join(ctx.config.dataPath, 'stores.yaml');
+    const registry = new FilesystemRegistry(registryPath);
+    const storePath = path.join(ctx.config.dataPath, input.name);
+
+    // Delegate to core's initializeStore which handles:
+    // 1. Creating the store directory
+    // 2. Registering the store in stores.yaml
+    // 3. Creating the root category index
+    const result = await initializeStore(registry, input.name, storePath);
+    if (!result.ok()) {
+        return {
+            content: [{ type: 'text', text: `Error: ${result.error.message}` }],
+            isError: true,
+        };
+    }
+    return {
+        content: [{ type: 'text', text: JSON.stringify({ created: input.name }, null, 2) }],
+    };
 };

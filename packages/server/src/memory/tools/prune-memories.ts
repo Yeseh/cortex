@@ -37,7 +37,7 @@ export const pruneMemoriesHandler = async (
     ctx: ToolContext,
     input: PruneMemoriesInput,
 ): Promise<McpToolResponse> => {
-    const adapterResult = await resolveStoreAdapter(ctx.config, input.store);
+    const adapterResult = resolveStoreAdapter(ctx, input.store);
     if (!adapterResult.ok()) {
         throw adapterResult.error;
     }

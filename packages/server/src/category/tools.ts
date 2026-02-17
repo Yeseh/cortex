@@ -16,9 +16,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import { join } from 'node:path';
-import { err, ok, type Result } from '@yeseh/cortex-core';
-import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 import type { CategoryStorage } from '@yeseh/cortex-core/category';
 import {
@@ -27,8 +24,8 @@ import {
     deleteCategory,
     MAX_DESCRIPTION_LENGTH,
 } from '@yeseh/cortex-core/category';
-import type { ServerConfig } from '../config.ts';
 import { storeNameSchema } from '../store/tools.ts';
+import { type ToolContext, resolveStoreAdapter } from '../memory/tools/shared.ts';
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -123,60 +120,12 @@ export interface DeleteCategoryInput {
     path: string;
 }
 
-/** Tool execution context containing server configuration */
-interface ToolContext {
-    /** Server configuration with default store and memory path */
-    config: ServerConfig;
-}
-
 /** Standard MCP tool response with JSON text content */
 interface McpToolResponse {
     [key: string]: unknown;
     /** Response content array with JSON-encoded result */
     content: { type: 'text'; text: string }[];
 }
-
-/**
- * Resolves the store adapter from the registry.
- *
- * Loads the registry, resolves the store, and returns a scoped storage adapter.
- * For operations that require auto-creation (like createCategory), the adapter
- * is returned even if the store directory doesn't exist yet.
- *
- * @param config - Server configuration
- * @param storeName - Required store name
- * @returns Result with the ScopedStorageAdapter or MCP error
- */
-const resolveStoreAdapter = async (
-    config: ServerConfig,
-    storeName: string,
-): Promise<Result<ScopedStorageAdapter, McpError>> => {
-    const registryPath = join(config.dataPath, 'stores.yaml');
-    const registry = new FilesystemRegistry(registryPath);
-    const registryResult = await registry.load();
-
-    if (!registryResult.ok()) {
-        // Map REGISTRY_MISSING to appropriate error
-        if (registryResult.error.code === 'REGISTRY_MISSING') {
-            return err(
-                new McpError(ErrorCode.InternalError, `Store registry not found at ${registryPath}`),
-            );
-        }
-        return err(
-            new McpError(
-                ErrorCode.InternalError,
-                `Failed to load store registry: ${registryResult.error.message}`,
-            ),
-        );
-    }
-
-    const storeResult = registry.getStore(storeName);
-    if (!storeResult.ok()) {
-        return err(new McpError(ErrorCode.InvalidParams, storeResult.error.message));
-    }
-
-    return ok(storeResult.value);
-};
 
 /**
  * Creates a CategoryStorage adapter from a ScopedStorageAdapter.
@@ -239,7 +188,7 @@ export const createCategoryHandler = async (
     ctx: ToolContext,
     input: CreateCategoryInput,
 ): Promise<McpToolResponse> => {
-    const adapterResult = await resolveStoreAdapter(ctx.config, input.store);
+    const adapterResult = resolveStoreAdapter(ctx, input.store);
     if (!adapterResult.ok()) {
         throw adapterResult.error;
     }
@@ -299,7 +248,7 @@ export const setCategoryDescriptionHandler = async (
     ctx: ToolContext,
     input: SetCategoryDescriptionInput,
 ): Promise<McpToolResponse> => {
-    const adapterResult = await resolveStoreAdapter(ctx.config, input.store);
+    const adapterResult = resolveStoreAdapter(ctx, input.store);
     if (!adapterResult.ok()) {
         throw adapterResult.error;
     }
@@ -362,7 +311,7 @@ export const deleteCategoryHandler = async (
     ctx: ToolContext,
     input: DeleteCategoryInput,
 ): Promise<McpToolResponse> => {
-    const adapterResult = await resolveStoreAdapter(ctx.config, input.store);
+    const adapterResult = resolveStoreAdapter(ctx, input.store);
     if (!adapterResult.ok()) {
         throw adapterResult.error;
     }
@@ -407,7 +356,7 @@ export const deleteCategoryHandler = async (
  * and converts domain errors to appropriate MCP error codes.
  *
  * @param server - MCP server instance to register tools with
- * @param config - Server configuration with store defaults
+ * @param ctx - Tool context with config and cortex instance
  *
  * @example
  * ```typescript
@@ -415,12 +364,11 @@ export const deleteCategoryHandler = async (
  * import { registerCategoryTools } from './tools.ts';
  *
  * const server = new McpServer({ name: 'cortex', version: '1.0.0' });
- * registerCategoryTools(server, config);
+ * const ctx: ToolContext = { config, cortex };
+ * registerCategoryTools(server, ctx);
  * ```
  */
-export const registerCategoryTools = (server: McpServer, config: ServerConfig): void => {
-    const ctx: ToolContext = { config };
-
+export const registerCategoryTools = (server: McpServer, ctx: ToolContext): void => {
     server.tool(
         'cortex_create_category',
         'Create a category and its parent hierarchy',
