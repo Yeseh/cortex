@@ -32,10 +32,17 @@
 - [x] 3.8 Remove direct `FilesystemRegistry` instantiation
 - [x] 3.9 Update server tests to use `Cortex.init()` with mock adapters
 
-## 4. Cleanup
+## 4. Cleanup (Deferred)
 
-- [ ] 4.1 Remove `FilesystemRegistry` class from `packages/storage-fs`
-- [ ] 4.2 Update storage-fs exports
+> **Note**: `FilesystemRegistry` cannot be fully removed yet because it provides
+> mutable operations (`load()`, `save()`) for store management commands (add/remove
+> stores). The `Cortex` class is currently read-only after initialization.
+> 
+> A follow-up proposal should add `addStore()` and `removeStore()` methods to
+> `Cortex` before `FilesystemRegistry` can be removed.
+
+- [x] ~~4.1 Remove `FilesystemRegistry` class from `packages/storage-fs`~~ (deferred)
+- [x] ~~4.2 Update storage-fs exports~~ (deferred)
 - [ ] 4.3 Create migration guide documentation
 - [ ] 4.4 Update AGENTS.md with new patterns
 
