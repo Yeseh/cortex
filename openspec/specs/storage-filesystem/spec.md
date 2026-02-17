@@ -176,48 +176,6 @@ Index updates during memory writes SHALL be the responsibility of the business l
 - **THEN** only the memory file is written
 - **AND** the caller is responsible for calling `adapter.indexes` or `adapter.categories` to update indexes
 
-### Requirement: FilesystemRegistry
-
-The system SHALL provide a `FilesystemRegistry` class implementing the `Registry` interface for filesystem-based storage.
-
-#### Scenario: Constructor accepts registry path
-
-- **GIVEN** a filesystem path to store registry
-- **WHEN** `new FilesystemRegistry(registryPath)` is called
-- **THEN** the instance is configured to use that path
-
-#### Scenario: Initialize creates registry file
-
-- **GIVEN** a `FilesystemRegistry` instance
-- **WHEN** `initialize()` is called
-- **THEN** the registry file is created at the configured path
-- **AND** parent directories are created if needed
-
-#### Scenario: Load reads and caches registry
-
-- **GIVEN** a registry file exists with store definitions
-- **WHEN** `load()` is called
-- **THEN** the registry is parsed and cached internally
-- **AND** the parsed `StoreRegistry` is returned
-
-#### Scenario: Load with missing file
-
-- **GIVEN** no registry file exists
-- **WHEN** `load()` is called
-- **THEN** it returns error with code `REGISTRY_MISSING`
-
-#### Scenario: Save persists registry
-
-- **GIVEN** a `FilesystemRegistry` instance
-- **WHEN** `save(registry)` is called
-- **THEN** the registry is serialized and written to the configured path
-
-#### Scenario: GetStore creates FilesystemStorageAdapter
-
-- **GIVEN** a loaded registry with store "default" at path "/home/user/.cortex"
-- **WHEN** `getStore("default")` is called
-- **THEN** it returns a `FilesystemStorageAdapter` configured for that path
-
 ### Requirement: AdapterFactory type
 
 The system SHALL provide an `AdapterFactory` type alias:

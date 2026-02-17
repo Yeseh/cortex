@@ -40,25 +40,6 @@ The system SHALL provide a `Registry` interface that abstracts store registry op
 - **WHEN** `getStore("unknown")` is called
 - **THEN** it returns error with code `STORE_NOT_FOUND`
 
-### Requirement: Initialize Store Domain Operation
-
-The system SHALL provide an `initializeStore` domain operation that creates a new store with proper structure.
-
-#### Scenario: Initialize new store
-
-- **GIVEN** a registry and valid store name and path
-- **WHEN** `initializeStore(registry, name, path)` is called
-- **THEN** the store directory structure is created
-- **AND** a root index is initialized
-- **AND** the store is registered in the registry
-
-#### Scenario: Initialize store with categories
-
-- **GIVEN** a registry and options with categories `["global", "projects"]`
-- **WHEN** `initializeStore(registry, name, path, { categories })` is called
-- **THEN** the specified category directories are created
-- **AND** category indexes are initialized
-
 ### Requirement: Store Registry Parsing
 
 The store registry parsing module SHALL be pure (no I/O operations). It SHALL provide:
@@ -273,4 +254,17 @@ The `StoreRegistry` type SHALL be renamed to `Registry` to represent the collect
 - **WHEN** the `Registry` type is used
 - **THEN** it is `Record<string, StoreDefinition>`
 - **AND** `StoreDefinition` has `path: string` and optional `description?: string`
+
+### Requirement: CortexContext for handlers
+
+The system SHALL provide a `CortexContext` interface for dependency injection into handlers:
+
+- `cortex: Cortex` - The root client instance
+
+#### Scenario: Handler receives context
+
+- **GIVEN** a CLI or MCP handler function
+- **WHEN** the handler is invoked
+- **THEN** it receives `CortexContext` as its first parameter
+- **AND** can access `ctx.cortex.getStore(name)`
 
