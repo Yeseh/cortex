@@ -49,7 +49,6 @@ import {
     type AdapterFactory,
     DEFAULT_SETTINGS,
 } from './types.ts';
-import { raw } from 'express';
 
 // =============================================================================
 // Zod Schemas for Config Validation
@@ -60,7 +59,9 @@ import { raw } from 'express';
  */
 const settingsSchema = z
     .object({
-        output_format: z.enum(['yaml', 'json']).optional(),
+        output_format: z.enum([
+            'yaml', 'json',
+        ]).optional(),
         auto_summary_threshold: z.number().int().nonnegative().optional(),
         strict_local: z.boolean().optional(),
     })
@@ -81,7 +82,7 @@ const storeDefinitionSchema = z.object({
 const storesSchema = z
     .record(
         z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Store name must be a lowercase slug'),
-        storeDefinitionSchema
+        storeDefinitionSchema,
     )
     .optional();
 
@@ -208,7 +209,8 @@ export class Cortex {
                 });
             }
             contents = await configFile.text();
-        } catch (error) {
+        }
+        catch (error) {
             return err({
                 code: 'CONFIG_READ_FAILED',
                 message: `Failed to read config file at ${configPath}.`,
@@ -230,7 +232,7 @@ export class Cortex {
                 rootDirectory: resolvedDir,
                 settings,
                 registry,
-            })
+            }),
         );
     }
 
@@ -268,7 +270,8 @@ export class Cortex {
         // Create directory structure
         try {
             await mkdir(this.rootDirectory, { recursive: true });
-        } catch (error) {
+        }
+        catch (error) {
             return err({
                 code: 'DIRECTORY_CREATE_FAILED',
                 message: `Failed to create directory at ${this.rootDirectory}. Check that the parent directory exists and you have write permissions.`,
@@ -281,7 +284,8 @@ export class Cortex {
         try {
             const configContent = serializeConfig(this.settings, this.registry);
             await Bun.write(configPath, configContent);
-        } catch (error) {
+        }
+        catch (error) {
             return err({
                 code: 'CONFIG_WRITE_FAILED',
                 message: `Failed to write config file at ${configPath}. Check that you have write permissions to the directory.`,
@@ -291,6 +295,21 @@ export class Cortex {
         }
 
         return ok(undefined);
+    }
+
+    /**
+     * Returns the store registry containing all registered store definitions.
+     *
+     * @returns The store registry mapping store names to their definitions
+     *
+     * @example
+     * ```typescript
+     * const registry = cortex.getRegistry();
+     * console.log('Registered stores:', Object.keys(registry));
+     * ```
+     */
+    getRegistry(): StoreRegistry {
+        return this.registry;
     }
 
     /**
@@ -369,7 +388,7 @@ const createDefaultAdapterFactory = (): AdapterFactory => {
     return (_storePath: string): ScopedStorageAdapter => {
         throw new Error(
             'No adapter factory provided. Either provide an adapterFactory in CortexOptions, ' +
-                'or use createFilesystemCortex() from @yeseh/cortex-storage-fs.'
+                'or use createFilesystemCortex() from @yeseh/cortex-storage-fs.',
         );
     };
 };
@@ -395,7 +414,9 @@ const transformSettings = (rawSettings: ParsedConfigFile['settings']): Partial<C
 const transformStores = (rawStores: ParsedConfigFile['stores']): StoreRegistry => {
     if (!rawStores) return {};
     const registry: StoreRegistry = {};
-    for (const [name, def] of Object.entries(rawStores)) {
+    for (const [
+        name, def,
+    ] of Object.entries(rawStores)) {
         const storeDefinition: StoreDefinition = { path: def.path };
         if (def.description !== undefined) {
             storeDefinition.description = def.description;
@@ -410,13 +431,14 @@ const transformStores = (rawStores: ParsedConfigFile['stores']): StoreRegistry =
  */
 const parseConfigFile = (
     contents: string,
-    configPath: string
+    configPath: string,
 ): Result<{ settings: Partial<CortexSettings>; registry: StoreRegistry }, ConfigError> => {
     // Parse YAML
     let parsed: unknown;
     try {
         parsed = Bun.YAML.parse(contents);
-    } catch (error) {
+    }
+    catch (error) {
         const yamlError = error as { message?: string };
         return err({
             code: 'CONFIG_PARSE_FAILED',
@@ -466,7 +488,9 @@ const serializeConfig = (settings: CortexSettings, registry: StoreRegistry): str
     };
 
     // Add stores
-    for (const [name, def] of Object.entries(registry)) {
+    for (const [
+        name, def,
+    ] of Object.entries(registry)) {
         config.stores![name] = {
             path: def.path,
             ...(def.description !== undefined && { description: def.description }),

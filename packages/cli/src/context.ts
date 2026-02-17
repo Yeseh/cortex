@@ -78,7 +78,7 @@ export const getDefaultGlobalStorePath = (): string =>
  * Default path to the store registry.
  */
 export const getDefaultRegistryPath = (): string =>
-    resolve(homedir(), '.config', 'cortex', 'stores.yaml');
+    resolve(homedir(), '.config', 'cortex', 'config.yaml');
 
 /**
  * Resolves store context from the registry using a named store.
@@ -288,7 +288,7 @@ export const resolveStoreAdapter = async (
                 name: storeName,
                 scope: 'registry',
             },
-            adapter: adapterResult.value!,
+            adapter: adapterResult.value,
         });
     }
 

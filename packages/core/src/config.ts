@@ -4,10 +4,79 @@
 
 import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { isAbsolute, resolve } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import { type Result, ok, err } from './result.ts';
+import type { StoreRegistry } from './store/registry.ts';
 
-export type OutputFormat = 'yaml' | 'json';
+export type OutputFormat = 'yaml' | 'json' | 'toon';
+
+/**
+ * Expand tilde (~) to the user's home directory.
+ */
+const expandTilde = (path: string): string => {
+    if (path.startsWith('~/')) {
+        return join(homedir(), path.slice(2));
+    }
+    if (path === '~') {
+        return homedir();
+    }
+    return path;
+};
+
+/**
+ * Get the config directory path, respecting CORTEX_CONFIG_PATH env var.
+ *
+ * Resolution order:
+ * 1. CORTEX_CONFIG_PATH environment variable (if set)
+ * 2. Default: ~/.config/cortex
+ *
+ * @returns Absolute path to the config directory
+ *
+ * @example
+ * ```ts
+ * // With CORTEX_CONFIG_PATH=/custom/path
+ * getConfigDir(); // Returns '/custom/path'
+ *
+ * // Without env var
+ * getConfigDir(); // Returns '/home/user/.config/cortex'
+ * ```
+ */
+export const getConfigDir = (): string => {
+    const envPath = process.env.CORTEX_CONFIG_PATH;
+    if (envPath) {
+        return expandTilde(envPath);
+    }
+    return join(homedir(), '.config', 'cortex');
+};
+
+/**
+ * Get the full path to the config file.
+ *
+ * @returns Absolute path to config.yaml
+ */
+export const getConfigPath = (): string => {
+    return join(getConfigDir(), 'config.yaml');
+};
+
+/**
+ * Settings as represented in the config file (snake_case fields).
+ */
+export interface ConfigSettings {
+    output_format: OutputFormat;
+    auto_summary: boolean;
+    strict_local: boolean;
+}
+
+export const getDefaultSettings = (): ConfigSettings => ({
+    output_format: 'yaml',
+    auto_summary: false,
+    strict_local: false,
+});
+
+export interface MergedConfig {
+    settings: ConfigSettings;
+    stores: StoreRegistry;
+}
 
 export interface CortexConfig {
     outputFormat?: OutputFormat;
@@ -20,6 +89,58 @@ export type ConfigLoadErrorCode =
     | 'CONFIG_READ_FAILED'
     | 'CONFIG_PARSE_FAILED'
     | 'CONFIG_VALIDATION_FAILED';
+
+export type ConfigValidationErrorCode =
+    | 'INVALID_STORE_PATH'
+    | 'CONFIG_VALIDATION_FAILED'
+    | 'CONFIG_PARSE_FAILED'
+    | 'CONFIG_READ_FAILED';
+
+export interface ConfigValidationError {
+    code: ConfigValidationErrorCode;
+    message: string;
+    store?: string;
+    field?: string;
+    line?: number;
+    path?: string;
+    cause?: unknown;
+}
+
+/**
+ * Validates that a store path is absolute.
+ *
+ * Store paths must be absolute to ensure consistent resolution across
+ * different working directories. Relative paths are rejected with an
+ * actionable error message.
+ *
+ * @module core/config
+ * @param storePath - The filesystem path to validate
+ * @param storeName - The store name (used in error messages)
+ * @returns Result with void on success, or validation error if path is relative
+ *
+ * @example
+ * ```ts
+ * const result = validateStorePath('/home/user/.cortex', 'default');
+ * // result.ok() === true
+ *
+ * const invalid = validateStorePath('./relative', 'mystore');
+ * // invalid.error.code === 'INVALID_STORE_PATH'
+ * ```
+ */
+export const validateStorePath = (
+    storePath: string,
+    storeName: string,
+): Result<void, ConfigValidationError> => {
+    if (!isAbsolute(storePath)) {
+        return err({
+            code: 'INVALID_STORE_PATH',
+            message: `Store '${storeName}' path must be absolute. Got: ${storePath}. ` +
+                "Use an absolute path like '/home/user/.cortex/memory'.",
+            store: storeName,
+        });
+    }
+    return ok(undefined);
+};
 
 export interface ConfigLoadError {
     code: ConfigLoadErrorCode;
@@ -62,12 +183,12 @@ const parseScalarValue = (raw: string): string => {
 };
 
 const parseOutputFormat = (value: string, line: number): Result<OutputFormat, ConfigLoadError> => {
-    if (value === 'yaml' || value === 'json') {
+    if (value === 'yaml' || value === 'json' || value === 'toon') {
         return ok(value);
     }
     return err({
         code: 'CONFIG_VALIDATION_FAILED',
-        message: 'output_format must be yaml or json.',
+        message: 'output_format must be yaml, json, or toon.',
         field: 'output_format',
         line,
     });
@@ -187,7 +308,8 @@ const validateConfigKey = (
     if (!configKeys.has(key)) {
         return err({
             code: 'CONFIG_VALIDATION_FAILED',
-            message: `Unsupported config field: ${key}. Supported fields: output_format, auto_summary_threshold, strict_local.`,
+            message: `Unsupported config field: ${key}. Supported fields: ` +
+                'output_format, auto_summary_threshold, strict_local.',
             field: key,
             line: lineNumber,
         });
@@ -324,4 +446,151 @@ export const loadConfig = async (
         ...globalConfig.value,
         ...localConfig.value,
     });
+};
+
+// ---------------------------------------------------------------------------
+// Merged Config Parsing and Serialization
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse a unified config file with settings and stores sections.
+ *
+ * @param raw - Raw YAML string content
+ * @returns Result with parsed MergedConfig or validation error
+ *
+ * @example
+ * ```ts
+ * const raw = `
+ * settings:
+ *   output_format: json
+ * stores:
+ *   default:
+ *     path: /home/user/.cortex/memory
+ * `;
+ * const result = parseMergedConfig(raw);
+ * ```
+ */
+export const parseMergedConfig = (raw: string): Result<MergedConfig, ConfigValidationError> => {
+    // Define the expected structure from YAML
+    interface ConfigFileContent {
+        settings?: Partial<ConfigSettings>;
+        stores?: Record<string, { path: string; description?: string }>;
+    }
+
+    let parsed: ConfigFileContent;
+    try {
+        parsed = Bun.YAML.parse(raw) as ConfigFileContent ?? {};
+    }
+    catch (error) {
+        return err({
+            code: 'CONFIG_PARSE_FAILED',
+            message: 'Invalid YAML syntax in config file.',
+            cause: error,
+        });
+    }
+
+    // Get defaults
+    const defaults = getDefaultSettings();
+
+    // Merge settings with defaults
+    const rawOutputFormat = parsed.settings?.output_format;
+    if (rawOutputFormat !== undefined && ![
+        'yaml',
+        'json',
+        'toon',
+    ].includes(rawOutputFormat)) {
+        return err({
+            code: 'CONFIG_VALIDATION_FAILED',
+            message: `Invalid output_format: '${rawOutputFormat}'. Must be 'yaml', 'json', or 'toon'.`,
+            field: 'output_format',
+        });
+    }
+
+    const settings: ConfigSettings = {
+        output_format: (rawOutputFormat as OutputFormat) ?? defaults.output_format,
+        auto_summary: parsed.settings?.auto_summary ?? defaults.auto_summary,
+        strict_local: parsed.settings?.strict_local ?? defaults.strict_local,
+    };
+
+    // Validate and transform stores
+    const stores: StoreRegistry = {};
+    if (parsed.stores) {
+        for (const [
+            name, def,
+        ] of Object.entries(parsed.stores)) {
+            // Skip if path is missing
+            if (!def.path) {
+                return err({
+                    code: 'INVALID_STORE_PATH',
+                    message: `Store '${name}' must have a path.`,
+                    store: name,
+                });
+            }
+
+            // Validate absolute path
+            const pathValidation = validateStorePath(def.path, name);
+            if (!pathValidation.ok()) {
+                return pathValidation;
+            }
+
+            stores[name] = {
+                path: def.path,
+                ...(def.description !== undefined && { description: def.description }),
+            };
+        }
+    }
+
+    return ok({ settings, stores });
+};
+
+/**
+ * Serialize a MergedConfig back to YAML string format.
+ *
+ * @param config - The merged config to serialize
+ * @returns Result with YAML string or validation error
+ *
+ * @example
+ * ```ts
+ * const config: MergedConfig = {
+ *   settings: { output_format: 'json', auto_summary: false, strict_local: true },
+ *   stores: { default: { path: '/data/default' } },
+ * };
+ * const result = serializeMergedConfig(config);
+ * ```
+ */
+export const serializeMergedConfig = (
+    config: MergedConfig,
+): Result<string, ConfigValidationError> => {
+    const lines: string[] = [];
+
+    // Settings section
+    lines.push('settings:');
+    lines.push(`  output_format: ${config.settings.output_format}`);
+    lines.push(`  auto_summary: ${config.settings.auto_summary}`);
+    lines.push(`  strict_local: ${config.settings.strict_local}`);
+
+    // Stores section (if any stores exist)
+    if (Object.keys(config.stores).length > 0) {
+        lines.push('stores:');
+        const sortedStores = Object.entries(config.stores).sort(([a], [b]) => a.localeCompare(b));
+        for (const [
+            name, def,
+        ] of sortedStores) {
+            // Validate store name
+            if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)) {
+                return err({
+                    code: 'CONFIG_VALIDATION_FAILED',
+                    message: `Invalid store name: '${name}'. Store names must be lowercase kebab-case.`,
+                    store: name,
+                });
+            }
+            lines.push(`  ${name}:`);
+            lines.push(`    path: ${JSON.stringify(def.path)}`);
+            if (def.description !== undefined) {
+                lines.push(`    description: ${JSON.stringify(def.description)}`);
+            }
+        }
+    }
+
+    return ok(lines.join('\n'));
 };

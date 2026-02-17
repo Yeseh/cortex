@@ -19,10 +19,19 @@
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { err, ok, type Result } from '@yeseh/cortex-core';
+import {
+    err,
+    getConfigPath,
+    getDefaultSettings,
+    ok,
+    parseMergedConfig,
+    serializeMergedConfig,
+    type ConfigSettings,
+    type MergedConfig,
+    type Result,
+} from '@yeseh/cortex-core';
 import type { Registry, RegistryError, ScopedStorageAdapter, StoreNotFoundError } from '@yeseh/cortex-core/storage';
 import type { StoreRegistry } from '@yeseh/cortex-core/store';
-import { parseStoreRegistry, serializeStoreRegistry } from '@yeseh/cortex-core/store';
 import { FilesystemStorageAdapter } from './index.ts';
 
 /**
@@ -83,20 +92,31 @@ export class FilesystemRegistry implements Registry {
     /** Cached registry data, populated by load() */
     private cache: StoreRegistry | null = null;
 
+    /** Cached settings data, populated by load() */
+    private settingsCache: ConfigSettings | null = null;
+
     /**
      * Creates a new FilesystemRegistry instance.
      *
      * Does not perform any I/O. Call {@link initialize} or {@link load}
      * to interact with the filesystem.
      *
-     * @param registryPath - Absolute filesystem path to the registry YAML file
+     * @param configPath - Absolute filesystem path to the config YAML file
      *
      * @example
      * ```typescript
-     * const registry = new FilesystemRegistry('/home/user/.config/cortex/stores.yaml');
+     * const registry = new FilesystemRegistry('/home/user/.config/cortex/config.yaml');
      * ```
      */
-    constructor(private readonly registryPath: string) {}
+    constructor(private readonly configPath: string = getConfigPath()) {}
+
+    /**
+     * Get the loaded settings.
+     * Returns default settings if not loaded.
+     */
+    getSettings(): ConfigSettings {
+        return this.settingsCache ?? getDefaultSettings();
+    }
 
     /**
      * First-time registry setup.
@@ -121,7 +141,7 @@ export class FilesystemRegistry implements Registry {
         try {
             // Check if file exists
             try {
-                await readFile(this.registryPath, 'utf8');
+                await readFile(this.configPath, 'utf8');
                 // File exists, nothing to do
                 return ok(undefined);
             }
@@ -129,8 +149,8 @@ export class FilesystemRegistry implements Registry {
                 if (!isNotFoundError(error)) {
                     return err({
                         code: 'REGISTRY_READ_FAILED',
-                        message: `Failed to check registry at ${this.registryPath}`,
-                        path: this.registryPath,
+                        message: `Failed to check config at ${this.configPath}`,
+                        path: this.configPath,
                         cause: error,
                     });
                 }
@@ -138,21 +158,23 @@ export class FilesystemRegistry implements Registry {
             }
 
             // Create parent directories
-            await mkdir(dirname(this.registryPath), { recursive: true });
+            await mkdir(dirname(this.configPath), { recursive: true });
 
-            // Create empty registry - write a minimal valid YAML structure
-            // Note: parseStoreRegistry requires at least one store, but for
-            // initialization we write the structure that can be extended
-            const minimalYaml = 'stores:\n';
-            await writeFile(this.registryPath, minimalYaml, 'utf8');
+            // Create default config with settings and empty stores
+            const defaultConfig = `settings:
+  output_format: yaml
+  auto_summary: false
+  strict_local: false
+`;
+            await writeFile(this.configPath, defaultConfig, 'utf8');
 
             return ok(undefined);
         }
         catch (error) {
             return err({
                 code: 'REGISTRY_WRITE_FAILED',
-                message: `Failed to initialize registry at ${this.registryPath}`,
-                path: this.registryPath,
+                message: `Failed to initialize config at ${this.configPath}`,
+                path: this.configPath,
                 cause: error,
             });
         }
@@ -186,36 +208,37 @@ export class FilesystemRegistry implements Registry {
     async load(): Promise<Result<StoreRegistry, RegistryError>> {
         let contents: string;
         try {
-            contents = await readFile(this.registryPath, 'utf8');
+            contents = await readFile(this.configPath, 'utf8');
         }
         catch (error) {
             if (isNotFoundError(error)) {
                 return err({
                     code: 'REGISTRY_MISSING',
-                    message: `Store registry not found at ${this.registryPath}`,
-                    path: this.registryPath,
+                    message: `Config not found at ${this.configPath}`,
+                    path: this.configPath,
                 });
             }
             return err({
                 code: 'REGISTRY_READ_FAILED',
-                message: `Failed to read store registry at ${this.registryPath}`,
-                path: this.registryPath,
+                message: `Failed to read config at ${this.configPath}`,
+                path: this.configPath,
                 cause: error,
             });
         }
 
-        const parsed = parseStoreRegistry(contents);
+        const parsed = parseMergedConfig(contents);
         if (!parsed.ok()) {
             return err({
                 code: 'REGISTRY_PARSE_FAILED',
-                message: `Failed to parse store registry at ${this.registryPath}`,
-                path: this.registryPath,
+                message: `Failed to parse config at ${this.configPath}: ${parsed.error.message}`,
+                path: this.configPath,
                 cause: parsed.error,
             });
         }
 
-        this.cache = parsed.value;
-        return ok(parsed.value);
+        this.cache = parsed.value.stores;
+        this.settingsCache = parsed.value.settings;
+        return ok(parsed.value.stores);
     }
 
     /**
@@ -239,27 +262,46 @@ export class FilesystemRegistry implements Registry {
      * ```
      */
     async save(registry: StoreRegistry): Promise<Result<void, RegistryError>> {
-        const serialized = serializeStoreRegistry(registry);
+        // Read existing config to preserve settings
+        let existingSettings = getDefaultSettings();
+        try {
+            const contents = await readFile(this.configPath, 'utf8');
+            const parsed = parseMergedConfig(contents);
+            if (parsed.ok()) {
+                existingSettings = parsed.value.settings;
+            }
+        }
+        catch {
+            // File doesn't exist yet, use defaults
+        }
+
+        const config: MergedConfig = {
+            settings: existingSettings,
+            stores: registry,
+        };
+
+        const serialized = serializeMergedConfig(config);
         if (!serialized.ok()) {
             return err({
                 code: 'REGISTRY_WRITE_FAILED',
-                message: 'Failed to serialize store registry',
-                path: this.registryPath,
+                message: 'Failed to serialize config',
+                path: this.configPath,
                 cause: serialized.error,
             });
         }
 
         try {
-            await mkdir(dirname(this.registryPath), { recursive: true });
-            await writeFile(this.registryPath, serialized.value, 'utf8');
+            await mkdir(dirname(this.configPath), { recursive: true });
+            await writeFile(this.configPath, serialized.value, 'utf8');
             this.cache = registry;
+            this.settingsCache = existingSettings;
             return ok(undefined);
         }
         catch (error) {
             return err({
                 code: 'REGISTRY_WRITE_FAILED',
-                message: `Failed to write store registry at ${this.registryPath}`,
-                path: this.registryPath,
+                message: `Failed to write config at ${this.configPath}`,
+                path: this.configPath,
                 cause: error,
             });
         }

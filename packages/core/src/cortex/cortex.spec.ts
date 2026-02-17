@@ -16,7 +16,7 @@ const createTempDir = async (prefix: string): Promise<string> => {
     const tempBase = Bun.env.TMPDIR ?? '/tmp';
     const uniqueDir = join(
         tempBase,
-        `${prefix}${Date.now()}-${Math.random().toString(36).slice(2)}`
+        `${prefix}${Date.now()}-${Math.random().toString(36).slice(2)}`,
     );
     await Bun.write(join(uniqueDir, '.keep'), ''); // Creates dir by writing a file
     return uniqueDir;
@@ -42,9 +42,13 @@ const mkdir = async (dirPath: string, _options?: { recursive?: boolean }): Promi
 /** Removes a directory recursively (fallback to shell for reliability) */
 const rm = async (
     dirPath: string,
-    _options?: { recursive?: boolean; force?: boolean }
+    _options?: { recursive?: boolean; force?: boolean },
 ): Promise<void> => {
-    const proc = Bun.spawn(['rm', '-rf', dirPath], { stdout: 'ignore', stderr: 'ignore' });
+    const proc = Bun.spawn([
+        'rm',
+        '-rf',
+        dirPath,
+    ], { stdout: 'ignore', stderr: 'ignore' });
     await proc.exited;
 };
 
@@ -109,7 +113,7 @@ describe('Cortex.init()', () => {
         expect(cortex.settings.outputFormat).toBe('yaml');
         expect(cortex.settings.autoSummaryThreshold).toBe(0);
         expect(cortex.settings.strictLocal).toBe(false);
-        expect(cortex.registry).toEqual({});
+        expect(cortex.getRegistry()).toEqual({});
     });
 
     it('should create instance with custom settings', () => {
@@ -138,9 +142,11 @@ describe('Cortex.init()', () => {
             },
         });
 
-        expect(Object.keys(cortex.registry)).toEqual(['my-store', 'another-store']);
-        expect(cortex.registry['my-store']!.path).toBe('/path/to/store');
-        expect(cortex.registry['another-store']!.description).toBe('Test store');
+        expect(Object.keys(cortex.getRegistry())).toEqual([
+            'my-store', 'another-store',
+        ]);
+        expect(cortex.getRegistry()['my-store']!.path).toBe('/path/to/store');
+        expect(cortex.getRegistry()['another-store']!.description).toBe('Test store');
     });
 
     it('should use custom adapterFactory', () => {
@@ -224,8 +230,10 @@ describe('Cortex.fromConfig()', () => {
             expect(result.value.settings.outputFormat).toBe('json');
             expect(result.value.settings.autoSummaryThreshold).toBe(15);
             expect(result.value.settings.strictLocal).toBe(true);
-            expect(Object.keys(result.value.registry)).toEqual(['my-store', 'another-store']);
-            expect(result.value.registry['another-store']!.description).toBe('Another store');
+            expect(Object.keys(result.value.getRegistry())).toEqual([
+                'my-store', 'another-store',
+            ]);
+            expect(result.value.getRegistry()['another-store']!.description).toBe('Another store');
         }
     });
 
@@ -275,7 +283,7 @@ describe('Cortex.fromConfig()', () => {
         if (result.ok()) {
             // Should use defaults
             expect(result.value.settings.outputFormat).toBe('yaml');
-            expect(result.value.registry).toEqual({});
+            expect(result.value.getRegistry()).toEqual({});
         }
     });
 
