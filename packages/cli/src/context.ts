@@ -8,7 +8,7 @@
 
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
-import { loadConfig, type CortexConfig, type ConfigLoadError, type Result, err, ok } from '@yeseh/cortex-core';
+import { type CortexConfig, type Result, err, ok } from '@yeseh/cortex-core';
 import {
     resolveStore,
     resolveStorePath,
@@ -62,8 +62,7 @@ export type StoreContextErrorCode =
 export interface StoreContextError {
     code: StoreContextErrorCode;
     message: string;
-    cause?: ConfigLoadError 
-        | StoreResolutionError 
+    cause?: StoreResolutionError 
         | RegistryError 
         | StoreResolveError 
         | StoreNotFoundError;
@@ -194,17 +193,19 @@ export const resolveStoreContext = async (
         return resolveFromRegistry(storeName, registryPath);
     }
 
-    // Otherwise, load config and use default resolution
-    const configResult = await loadConfig({ cwd });
-    if (!configResult.ok()) {
-        return err({
-            code: 'CONFIG_LOAD_FAILED',
-            message: `Failed to load config: ${configResult.error.message}`,
-            cause: configResult.error,
-        });
+    // Otherwise, load registry and use default resolution with settings
+    const registry = new FilesystemRegistry(registryPath);
+    const registryResult = await registry.load();
+    
+    // Build config from registry settings
+    const config: CortexConfig = {};
+    if (registryResult.ok()) {
+        const settings = registry.getSettings();
+        config.strictLocal = settings.strictLocal;
     }
+    // If registry load fails (e.g., missing), use empty config (defaults)
 
-    return resolveDefault(cwd, globalStorePath, configResult.value);
+    return resolveDefault(cwd, globalStorePath, config);
 };
 
 /**

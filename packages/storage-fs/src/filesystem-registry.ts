@@ -162,9 +162,9 @@ export class FilesystemRegistry implements Registry {
 
             // Create default config with settings and empty stores
             const defaultConfig = `settings:
-  output_format: yaml
-  auto_summary: false
-  strict_local: false
+  outputFormat: yaml
+  autoSummaryThreshold: 0
+  strictLocal: false
 `;
             await writeFile(this.configPath, defaultConfig, 'utf8');
 

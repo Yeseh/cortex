@@ -209,9 +209,9 @@ describe('Cortex.fromConfig()', () => {
     it('should load from valid config.yaml', async () => {
         const configContent = [
             'settings:',
-            '  output_format: json',
-            '  auto_summary_threshold: 15',
-            '  strict_local: true',
+            '  outputFormat: json',
+            '  autoSummaryThreshold: 15',
+            '  strictLocal: true',
             'stores:',
             '  my-store:',
             '    path: /path/to/store',
@@ -261,7 +261,7 @@ describe('Cortex.fromConfig()', () => {
     it('should return error for invalid config structure', async () => {
         const configContent = [
             'settings:',
-            '  output_format: xml', // invalid value
+            '  outputFormat: xml', // invalid value - xml is not a valid outputFormat
         ].join('\n');
 
         await writeFile(join(tempDir, 'config.yaml'), configContent);
@@ -291,7 +291,7 @@ describe('Cortex.fromConfig()', () => {
         // Create a config in a subdirectory that simulates home
         const homeSubdir = join(tempDir, 'home-test');
         await mkdir(homeSubdir, { recursive: true });
-        await writeFile(join(homeSubdir, 'config.yaml'), 'settings:\n  output_format: yaml');
+        await writeFile(join(homeSubdir, 'config.yaml'), 'settings:\n  outputFormat: yaml');
 
         // Note: This test validates the path resolution logic handles absolute paths
         // Testing actual ~ expansion would require mocking homedir()
@@ -333,7 +333,7 @@ describe('Cortex.initialize()', () => {
 
         // Verify config file was created
         const configContent = await readFile(join(tempDir, 'new-config', 'config.yaml'), 'utf8');
-        expect(configContent).toContain('output_format');
+        expect(configContent).toContain('outputFormat');
         expect(configContent).toContain('my-store');
     });
 
@@ -341,7 +341,7 @@ describe('Cortex.initialize()', () => {
         const configDir = join(tempDir, 'existing-config');
         await mkdir(configDir, { recursive: true });
 
-        const originalContent = 'settings:\n  output_format: json';
+        const originalContent = 'settings:\n  outputFormat: json';
         await writeFile(join(configDir, 'config.yaml'), originalContent);
 
         const cortex = Cortex.init({

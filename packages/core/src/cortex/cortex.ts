@@ -59,11 +59,11 @@ import {
  */
 const settingsSchema = z
     .object({
-        output_format: z.enum([
+        outputFormat: z.enum([
             'yaml', 'json',
         ]).optional(),
-        auto_summary_threshold: z.number().int().nonnegative().optional(),
-        strict_local: z.boolean().optional(),
+        autoSummaryThreshold: z.number().int().nonnegative().optional(),
+        strictLocal: z.boolean().optional(),
     })
     .strict()
     .optional();
@@ -394,15 +394,16 @@ const createDefaultAdapterFactory = (): AdapterFactory => {
 };
 
 /**
- * Transforms settings from snake_case (config file format) to camelCase (internal format).
+ * Transforms settings from config file format to internal format.
+ * Since both use camelCase, this is a pass-through with undefined filtering.
  */
 const transformSettings = (rawSettings: ParsedConfigFile['settings']): Partial<CortexSettings> => {
     if (!rawSettings) return {};
 
     const settings: Partial<CortexSettings> = {
-        outputFormat: rawSettings.output_format,
-        autoSummaryThreshold: rawSettings.auto_summary_threshold,
-        strictLocal: rawSettings.strict_local, 
+        outputFormat: rawSettings.outputFormat,
+        autoSummaryThreshold: rawSettings.autoSummaryThreshold,
+        strictLocal: rawSettings.strictLocal, 
     };
 
     return settings;
@@ -475,14 +476,14 @@ const parseConfigFile = (
 };
 
 /**
- * Serializes settings and registry to config.yaml format.
+ * Serializes settings and registry to config.yaml format with camelCase keys.
  */
 const serializeConfig = (settings: CortexSettings, registry: StoreRegistry): string => {
     const config: ParsedConfigFile = {
         settings: {
-            output_format: settings.outputFormat,
-            auto_summary_threshold: settings.autoSummaryThreshold,
-            strict_local: settings.strictLocal,
+            outputFormat: settings.outputFormat,
+            autoSummaryThreshold: settings.autoSummaryThreshold,
+            strictLocal: settings.strictLocal,
         },
         stores: {},
     };

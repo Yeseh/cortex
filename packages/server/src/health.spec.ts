@@ -167,9 +167,9 @@ describe('health endpoint', () => {
         it('should count stores correctly when registry exists with one store', async () => {
             const storePath = join(tempDir, 'stores', 'test');
             const storesYaml = `settings:
-  output_format: yaml
-  auto_summary: false
-  strict_local: false
+  outputFormat: yaml
+  autoSummary: false
+  strictLocal: false
 stores:
   test-store:
     path: ${storePath}
@@ -190,9 +190,9 @@ stores:
             const storePath2 = join(tempDir, 'stores', 'another');
             const storePath3 = join(tempDir, 'stores', 'third');
             const storesYaml = `settings:
-  output_format: yaml
-  auto_summary: false
-  strict_local: false
+  outputFormat: yaml
+  autoSummary: false
+  strictLocal: false
 stores:
   test-store:
     path: ${storePath1}
@@ -214,9 +214,9 @@ stores:
 
         it('should count stores correctly with two stores', async () => {
             const storesYaml = `settings:
-  output_format: yaml
-  auto_summary: false
-  strict_local: false
+  outputFormat: yaml
+  autoSummary: false
+  strictLocal: false
 stores:
   primary:
     path: /var/lib/cortex

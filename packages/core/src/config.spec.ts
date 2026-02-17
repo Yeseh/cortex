@@ -1,143 +1,21 @@
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { afterEach, describe, expect, it } from 'bun:test';
 
 import {
     getConfigDir,
     getConfigPath,
     getDefaultSettings,
-    loadConfig,
-    parseConfig,
     parseMergedConfig,
     serializeMergedConfig,
     validateStorePath,
     type MergedConfig,
 } from './config.ts';
 
-describe('config parsing', () => {
-    it('should parse supported fields', () => {
-        const raw = [
-            'output_format: json',
-            'auto_summary_threshold: 12',
-            'strict_local: true',
-        ].join('\n');
-
-        const result = parseConfig(raw);
-
-        expect(result.ok()).toBe(true);
-        if (result.ok()) {
-            expect(result.value).toEqual({
-                outputFormat: 'json',
-                autoSummaryThreshold: 12,
-                strictLocal: true,
-                strict_local: true,
-            });
-        }
-    });
-
-    it('should reject unsupported fields', () => {
-        const raw = 'unknown_field: true';
-
-        const result = parseConfig(raw);
-
-        expect(result.ok()).toBe(false);
-        if (!result.ok()) {
-            expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
-            expect(result.error.field).toBe('unknown_field');
-        }
-    });
-
-    it('should reject empty values', () => {
-        const raw = 'output_format:    # empty';
-
-        const result = parseConfig(raw);
-
-        expect(result.ok()).toBe(false);
-        if (!result.ok()) {
-            expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
-            expect(result.error.field).toBe('output_format');
-            expect(result.error.line).toBe(1);
-        }
-    });
-
-    it('should reject non-integer auto_summary_threshold', () => {
-        const raw = 'auto_summary_threshold: 4.5';
-
-        const result = parseConfig(raw);
-
-        expect(result.ok()).toBe(false);
-        if (!result.ok()) {
-            expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
-            expect(result.error.field).toBe('auto_summary_threshold');
-        }
-    });
-
-    it('should reject negative auto_summary_threshold values', () => {
-        const raw = 'auto_summary_threshold: -1';
-
-        const result = parseConfig(raw);
-
-        expect(result.ok()).toBe(false);
-        if (!result.ok()) {
-            expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
-            expect(result.error.field).toBe('auto_summary_threshold');
-        }
-    });
-});
-
-describe('config loading', () => {
-    let tempDir: string;
-
-    beforeEach(async () => {
-        tempDir = await mkdtemp(join(tmpdir(), 'cortex-config-tests-'));
-        await mkdir(join(tempDir, '.cortex'), { recursive: true });
-    });
-
-    afterEach(async () => {
-        if (tempDir) {
-            await rm(tempDir, { recursive: true, force: true });
-        }
-    });
-
-    it('should prefer local config values over global config', async () => {
-        const globalPath = join(tempDir, 'global-config.yaml');
-        const localPath = join(tempDir, '.cortex', 'config.yaml');
-
-        await writeFile(
-            globalPath,
-            [
-                'output_format: yaml',
-                'auto_summary_threshold: 7',
-                'strict_local: false',
-            ].join('\n'),
-        );
-        await writeFile(localPath, 'output_format: json');
-
-        const result = await loadConfig({
-            cwd: tempDir,
-            globalConfigPath: globalPath,
-            localConfigPath: localPath,
-        });
-
-        expect(result.ok()).toBe(true);
-        if (result.ok()) {
-            expect(result.value).toEqual({
-                outputFormat: 'json',
-                autoSummaryThreshold: 7,
-                strictLocal: false,
-                strict_local: false,
-            });
-        }
-    });
-});
-
 describe('ConfigSettings', () => {
     it('should provide default values', () => {
         const defaults = getDefaultSettings();
-        expect(defaults.output_format).toBe('yaml');
-        expect(defaults.auto_summary).toBe(false);
-        expect(defaults.strict_local).toBe(false);
+        expect(defaults.outputFormat).toBe('yaml');
+        expect(defaults.autoSummaryThreshold).toBe(0);
+        expect(defaults.strictLocal).toBe(false);
     });
 });
 
@@ -169,8 +47,8 @@ describe('parseMergedConfig', () => {
     it('should parse config with settings and stores sections', () => {
         const raw = `
 settings:
-  output_format: json
-  auto_summary: true
+  outputFormat: json
+  autoSummaryThreshold: 10
 stores:
   default:
     path: /home/user/.config/cortex/memory
@@ -178,9 +56,9 @@ stores:
         const result = parseMergedConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            expect(result.value.settings.output_format).toBe('json');
-            expect(result.value.settings.auto_summary).toBe(true);
-            expect(result.value.settings.strict_local).toBe(false); // default
+            expect(result.value.settings.outputFormat).toBe('json');
+            expect(result.value.settings.autoSummaryThreshold).toBe(10);
+            expect(result.value.settings.strictLocal).toBe(false); // default
             expect(result.value.stores.default?.path).toBe('/home/user/.config/cortex/memory');
         }
     });
@@ -194,9 +72,9 @@ stores:
         const result = parseMergedConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            expect(result.value.settings.output_format).toBe('yaml');
-            expect(result.value.settings.auto_summary).toBe(false);
-            expect(result.value.settings.strict_local).toBe(false);
+            expect(result.value.settings.outputFormat).toBe('yaml');
+            expect(result.value.settings.autoSummaryThreshold).toBe(0);
+            expect(result.value.settings.strictLocal).toBe(false);
         }
     });
 
@@ -209,16 +87,16 @@ stores:
         }
     });
 
-    it('should reject invalid output_format', () => {
+    it('should reject invalid outputFormat', () => {
         const raw = `
 settings:
-  output_format: invalid
+  outputFormat: invalid
 `;
         const result = parseMergedConfig(raw);
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
             expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
-            expect(result.error.field).toBe('output_format');
+            expect(result.error.field).toBe('outputFormat');
         }
     });
 
@@ -254,15 +132,15 @@ stores:
 describe('serializeMergedConfig', () => {
     it('should serialize merged config to YAML', () => {
         const config: MergedConfig = {
-            settings: { output_format: 'json', auto_summary: false, strict_local: true },
+            settings: { outputFormat: 'json', autoSummaryThreshold: 0, strictLocal: true },
             stores: { default: { path: '/data/default' } },
         };
         const result = serializeMergedConfig(config);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            expect(result.value).toContain('output_format: json');
-            expect(result.value).toContain('strict_local: true');
-            expect(result.value).toContain('path: "/data/default"');
+            expect(result.value).toContain('outputFormat: json');
+            expect(result.value).toContain('strictLocal: true');
+            expect(result.value).toContain('path: /data/default');
         }
     });
 
@@ -281,7 +159,7 @@ describe('serializeMergedConfig', () => {
 
     it('should round-trip config correctly', () => {
         const original: MergedConfig = {
-            settings: { output_format: 'toon', auto_summary: true, strict_local: false },
+            settings: { outputFormat: 'toon', autoSummaryThreshold: 10, strictLocal: false },
             stores: {
                 default: { path: '/home/user/.cortex', description: 'Default store' },
                 project: { path: '/project/.cortex' },

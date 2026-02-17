@@ -31,9 +31,9 @@ describe('FilesystemRegistry', () => {
             // Verify file was created with merged format
             const content = await fs.readFile(configPath, 'utf8');
             expect(content).toContain('settings:');
-            expect(content).toContain('output_format: yaml');
-            expect(content).toContain('auto_summary: false');
-            expect(content).toContain('strict_local: false');
+            expect(content).toContain('outputFormat: yaml');
+            expect(content).toContain('autoSummaryThreshold: 0');
+            expect(content).toContain('strictLocal: false');
         });
 
         it('should create parent directories if needed', async () => {
@@ -50,9 +50,9 @@ describe('FilesystemRegistry', () => {
 
         it('should not overwrite existing config file', async () => {
             const existingContent = `settings:
-  output_format: json
-  auto_summary: true
-  strict_local: false
+  outputFormat: json
+  autoSummaryThreshold: 10
+  strictLocal: false
 stores:
   default:
     path: "/existing"
@@ -73,9 +73,9 @@ stores:
     describe('load', () => {
         it('should load an existing config file', async () => {
             const configContent = `settings:
-  output_format: yaml
-  auto_summary: false
-  strict_local: false
+  outputFormat: yaml
+  autoSummaryThreshold: 0
+  strictLocal: false
 stores:
   default:
     path: ${tempDir}/default
@@ -170,32 +170,32 @@ stores:
 
         it('should overwrite existing registry file', async () => {
             const existingContent = `settings:
-  output_format: yaml
-  auto_summary: false
-  strict_local: false
+  outputFormat: yaml
+  autoSummaryThreshold: 0
+  strictLocal: false
 stores:
-  old:
-    path: "/old"
+  existing-store:
+    path: "/existing"
 `;
             await fs.writeFile(configPath, existingContent);
 
             const registry = new FilesystemRegistry(configPath);
-            const storeRegistry = { new: { path: '/new' } };
+            const storeRegistry = { 'new-store': { path: '/new' } };
 
             const result = await registry.save(storeRegistry);
 
             expect(result.ok()).toBe(true);
 
             const content = await fs.readFile(configPath, 'utf8');
-            expect(content).toContain('new:');
-            expect(content).not.toContain('old:');
+            expect(content).toContain('new-store:');
+            expect(content).not.toContain('existing-store:');
         });
 
         it('should preserve existing settings when saving', async () => {
             const existingContent = `settings:
-  output_format: json
-  auto_summary: true
-  strict_local: true
+  outputFormat: json
+  autoSummaryThreshold: 10
+  strictLocal: true
 stores:
   old:
     path: "/old"
@@ -210,9 +210,9 @@ stores:
             expect(result.ok()).toBe(true);
 
             const content = await fs.readFile(configPath, 'utf8');
-            expect(content).toContain('output_format: json');
-            expect(content).toContain('auto_summary: true');
-            expect(content).toContain('strict_local: true');
+            expect(content).toContain('outputFormat: json');
+            expect(content).toContain('autoSummaryThreshold: 10');
+            expect(content).toContain('strictLocal: true');
         });
 
         it('should update internal cache', async () => {
@@ -231,9 +231,9 @@ stores:
         it('should return settings from loaded config', async () => {
             const content = `
 settings:
-  output_format: json
-  auto_summary: true
-  strict_local: false
+  outputFormat: json
+  autoSummaryThreshold: 10
+  strictLocal: false
 stores:
   test:
     path: ${tempDir}/test
@@ -243,17 +243,17 @@ stores:
             await registry.load();
 
             const settings = registry.getSettings();
-            expect(settings.output_format).toBe('json');
-            expect(settings.auto_summary).toBe(true);
+            expect(settings.outputFormat).toBe('json');
+            expect(settings.autoSummaryThreshold).toBe(10);
         });
 
         it('should return default settings if not loaded', async () => {
             const registry = new FilesystemRegistry(configPath);
 
             const settings = registry.getSettings();
-            expect(settings.output_format).toBe('yaml');
-            expect(settings.auto_summary).toBe(false);
-            expect(settings.strict_local).toBe(false);
+            expect(settings.outputFormat).toBe('yaml');
+            expect(settings.autoSummaryThreshold).toBe(0);
+            expect(settings.strictLocal).toBe(false);
         });
     });
 
@@ -271,9 +271,9 @@ stores:
             await fs.mkdir(storePath, { recursive: true });
 
             const configContent = `settings:
-  output_format: yaml
-  auto_summary: false
-  strict_local: false
+  outputFormat: yaml
+  autoSummaryThreshold: 0
+  strictLocal: false
 stores:
   mystore:
     path: ${storePath}
@@ -295,9 +295,9 @@ stores:
 
         it('should return error for non-existent store', async () => {
             const configContent = `settings:
-  output_format: yaml
-  auto_summary: false
-  strict_local: false
+  outputFormat: yaml
+  autoSummaryThreshold: 0
+  strictLocal: false
 stores:
   default:
     path: /default
@@ -321,9 +321,9 @@ stores:
             await fs.mkdir(storePath, { recursive: true });
 
             const configContent = `settings:
-  output_format: yaml
-  auto_summary: false
-  strict_local: false
+  outputFormat: yaml
+  autoSummaryThreshold: 0
+  strictLocal: false
 stores:
   workingstore:
     path: ${storePath}
