@@ -73,7 +73,7 @@ describe('store resolution', () => {
         }
     });
 
-    it('should reject missing local store when strict_local is enabled', async () => {
+    it('should reject missing local store when strictLocal is enabled', async () => {
         // Create only global store
         const globalStore = join(tempDir, 'global');
         await mkdir(globalStore, { recursive: true });
@@ -82,7 +82,7 @@ describe('store resolution', () => {
         const result = await resolveStore({
             cwd,
             globalStorePath: globalStore,
-            config: { strict_local: true },
+            config: { strictLocal: true },
         });
 
         expect(result.ok()).toBe(false);

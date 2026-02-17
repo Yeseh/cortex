@@ -165,9 +165,14 @@ describe('health endpoint', () => {
         });
 
         it('should count stores correctly when registry exists with one store', async () => {
-            const storesYaml = `stores:
+            const storePath = join(tempDir, 'stores', 'test');
+            const storesYaml = `settings:
+  outputFormat: yaml
+  autoSummary: false
+  strictLocal: false
+stores:
   test-store:
-    path: "./stores/test"
+    path: ${storePath}
 `;
             await writeFile(join(tempDir, 'stores.yaml'), storesYaml);
 
@@ -181,13 +186,20 @@ describe('health endpoint', () => {
         });
 
         it('should count stores correctly when registry exists with multiple stores', async () => {
-            const storesYaml = `stores:
+            const storePath1 = join(tempDir, 'stores', 'test');
+            const storePath2 = join(tempDir, 'stores', 'another');
+            const storePath3 = join(tempDir, 'stores', 'third');
+            const storesYaml = `settings:
+  outputFormat: yaml
+  autoSummary: false
+  strictLocal: false
+stores:
   test-store:
-    path: "./stores/test"
+    path: ${storePath1}
   another-store:
-    path: "./stores/another"
+    path: ${storePath2}
   third-store:
-    path: "./stores/third"
+    path: ${storePath3}
 `;
             await writeFile(join(tempDir, 'stores.yaml'), storesYaml);
 
@@ -200,11 +212,16 @@ describe('health endpoint', () => {
             expect(json.storeCount).toBe(3);
         });
 
-        it('should count stores correctly with top-level format', async () => {
-            const storesYaml = `primary:
-  path: /var/lib/cortex
-secondary:
-  path: /var/lib/cortex-secondary
+        it('should count stores correctly with two stores', async () => {
+            const storesYaml = `settings:
+  outputFormat: yaml
+  autoSummary: false
+  strictLocal: false
+stores:
+  primary:
+    path: /var/lib/cortex
+  secondary:
+    path: /var/lib/cortex-secondary
 `;
             await writeFile(join(tempDir, 'stores.yaml'), storesYaml);
 

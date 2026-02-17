@@ -35,9 +35,9 @@ describe('context', () => {
     });
 
     describe('getDefaultRegistryPath', () => {
-        it('should return path ending with .config/cortex/stores.yaml', () => {
+        it('should return path ending with .config/cortex/config.yaml', () => {
             const path = getDefaultRegistryPath();
-            expect(path.endsWith(join('.config', 'cortex', 'stores.yaml'))).toBe(true);
+            expect(path.endsWith(join('.config', 'cortex', 'config.yaml'))).toBe(true);
         });
 
         it('should use homedir as base', () => {
@@ -207,7 +207,8 @@ describe('context', () => {
             });
 
             it('should return REGISTRY_LOAD_FAILED error for invalid registry format', async () => {
-                await fs.writeFile(registryPath, 'this is not valid yaml structure');
+                // Write invalid YAML that will fail parsing
+                await fs.writeFile(registryPath, 'invalid: yaml: content: here\n  bad indentation');
 
                 const result = await resolveStoreContext('my-store', {
                     cwd: tempDir,
@@ -295,15 +296,23 @@ describe('context', () => {
         });
 
         describe('config integration', () => {
-            it('should respect strict_local config when local store missing', async () => {
-                const configDir = join(tempDir, '.cortex');
-                await fs.mkdir(configDir, { recursive: true });
-                await fs.writeFile(join(configDir, 'config.yaml'), 'strict_local: true\n');
+            it('should respect strictLocal setting from registry when local store missing', async () => {
+                // Create registry with strictLocal enabled
+                await fs.writeFile(
+                    registryPath,
+                    `settings:
+  strictLocal: true
+stores:
+  test-store:
+    path: /some/path
+`,
+                );
                 await fs.mkdir(globalStoreDir, { recursive: true });
 
                 const result = await resolveStoreContext(undefined, {
                     cwd: tempDir,
                     globalStorePath: globalStoreDir,
+                    registryPath,
                 });
 
                 expect(result.ok()).toBe(false);
@@ -312,23 +321,24 @@ describe('context', () => {
                 }
             });
 
-            it('should return CONFIG_LOAD_FAILED error when config is invalid', async () => {
-                const configDir = join(tempDir, '.cortex');
-                await fs.mkdir(configDir, { recursive: true });
-                // Create an invalid YAML that will fail parsing
+            it('should return REGISTRY_LOAD_FAILED error when registry config is invalid', async () => {
+                // Create an invalid YAML registry that will fail parsing
                 await fs.writeFile(
-                    join(configDir, 'config.yaml'),
+                    registryPath,
                     'invalid: yaml: content: here\n  bad indentation',
                 );
 
                 const result = await resolveStoreContext(undefined, {
                     cwd: tempDir,
                     globalStorePath: globalStoreDir,
+                    registryPath,
                 });
 
+                // When registry fails to load, we fall back to empty config (defaults)
+                // and try default resolution, which will fail if no stores exist
                 expect(result.ok()).toBe(false);
                 if (!result.ok()) {
-                    expect(result.error.code).toBe('CONFIG_LOAD_FAILED');
+                    expect(result.error.code).toBe('STORE_RESOLUTION_FAILED');
                 }
             });
         });
@@ -503,14 +513,15 @@ stores:
             }
         });
 
-        it('should return error when registry has no stores section', async () => {
-            await fs.writeFile(registryPath, 'random: content\n');
+        it('should return empty registry when no stores section exists', async () => {
+            // Merged config format accepts files without stores section
+            await fs.writeFile(registryPath, 'settings:\n  outputFormat: yaml\n');
 
             const result = await loadRegistry(registryPath);
 
-            expect(result.ok()).toBe(false);
-            if (!result.ok()) {
-                expect(result.error.code).toBe('REGISTRY_LOAD_FAILED');
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
+                expect(Object.keys(result.value)).toHaveLength(0);
             }
         });
 
@@ -531,7 +542,9 @@ stores:
             }
         });
 
-        it('should return error for invalid store name', async () => {
+        it('should accept store names with underscores (validation only on save)', async () => {
+            // The merged config parser accepts any store name during parsing.
+            // Validation for kebab-case names only happens during serialization.
             await fs.writeFile(
                 registryPath,
                 `stores:
@@ -542,9 +555,10 @@ stores:
 
             const result = await loadRegistry(registryPath);
 
-            expect(result.ok()).toBe(false);
-            if (!result.ok()) {
-                expect(result.error.code).toBe('REGISTRY_LOAD_FAILED');
+            // Parsing succeeds - the store is loaded as-is
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
+                expect(result.value['Invalid_Store_Name']?.path).toBe('/some/path');
             }
         });
     });

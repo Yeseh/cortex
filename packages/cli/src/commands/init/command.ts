@@ -60,9 +60,9 @@ const DEFAULT_CATEGORIES = [
 const DEFAULT_CONFIG_CONTENT = `# Cortex global configuration
 # See 'cortex --help' for available options
 
-output_format: yaml
-auto_summary_threshold: 10
-strict_local: false
+outputFormat: yaml
+autoSummaryThreshold: 10
+strictLocal: false
 `;
 
 const formatInit = (path: string, categories: readonly string[]): OutputInit => ({
