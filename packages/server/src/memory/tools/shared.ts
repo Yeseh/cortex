@@ -6,11 +6,9 @@
 
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import { join } from 'node:path';
-import type { Result } from '@yeseh/cortex-core';
+import type { Result, Cortex } from '@yeseh/cortex-core';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 import { err, ok, type MemoryError } from '@yeseh/cortex-core';
-import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import type { ServerConfig } from '../../config.ts';
 
 // ---------------------------------------------------------------------------
@@ -34,6 +32,7 @@ export const tagsSchema = z.array(z.string()).optional();
 
 export interface ToolContext {
     config: ServerConfig;
+    cortex: Cortex;
 }
 
 /** Standard MCP tool response with text content */
@@ -49,42 +48,18 @@ export interface McpToolResponse {
 /**
  * Resolves a storage adapter for the given store.
  *
- * @param config - Server configuration containing data path
+ * @param ctx - Tool context containing cortex instance
  * @param storeName - Name of the store to resolve
  * @returns A Result containing either the adapter or an MCP error
  */
-export const resolveStoreAdapter = async (
-    config: ServerConfig,
+export const resolveStoreAdapter = (
+    ctx: ToolContext,
     storeName: string,
-): Promise<Result<ScopedStorageAdapter, McpError>> => {
-    const registryPath = join(config.dataPath, 'stores.yaml');
-    const registry = new FilesystemRegistry(registryPath);
-    const registryResult = await registry.load();
-
-    if (!registryResult.ok()) {
-        // Map REGISTRY_MISSING to appropriate error (like allowMissing: false did)
-        if (registryResult.error.code === 'REGISTRY_MISSING') {
-            return err(
-                new McpError(
-                    ErrorCode.InternalError,
-                    `Store registry not found at ${registryPath}`,
-                ),
-            );
-        }
-        return err(
-            new McpError(
-                ErrorCode.InternalError,
-                `Failed to load store registry: ${registryResult.error.message}`,
-            ),
-        );
-    }
-
-    // Use registry.getStore() to get scoped adapter
-    const storeResult = registry.getStore(storeName);
+): Result<ScopedStorageAdapter, McpError> => {
+    const storeResult = ctx.cortex.getStore(storeName);
     if (!storeResult.ok()) {
         return err(new McpError(ErrorCode.InvalidParams, storeResult.error.message));
     }
-
     return ok(storeResult.value);
 };
 

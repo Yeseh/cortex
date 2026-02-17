@@ -5,19 +5,19 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ServerConfig } from '../../config.ts';
 import { MEMORY_SUBDIR } from '../../config.ts';
-import { createMemoryFile, createTestConfig, createTestDir } from './test-utils.ts';
+import { createMemoryFile, createTestContext, createTestDir } from './test-utils.ts';
+import type { ToolContext } from './shared.ts';
 import { getMemoryHandler } from './get-memory.ts';
 import { removeMemoryHandler, type RemoveMemoryInput } from './remove-memory.ts';
 
 describe('cortex_remove_memory tool', () => {
     let testDir: string;
-    let config: ServerConfig;
+    let ctx: ToolContext;
 
     beforeEach(async () => {
         testDir = await createTestDir();
-        config = createTestConfig(testDir);
+        ctx = createTestContext(testDir);
 
         const storeRoot = join(testDir, MEMORY_SUBDIR);
 
@@ -43,11 +43,11 @@ describe('cortex_remove_memory tool', () => {
             path: 'project/remove-target',
         };
 
-        const result = await removeMemoryHandler({ config }, input);
+        const result = await removeMemoryHandler(ctx, input);
         expect(result.content[0]!.text).toContain('Memory removed');
 
         await expect(
-            getMemoryHandler({ config }, { store: 'default', path: 'project/remove-target' }),
+            getMemoryHandler(ctx, { store: 'default', path: 'project/remove-target' }),
         ).rejects.toThrow('not found');
     });
 
@@ -57,6 +57,6 @@ describe('cortex_remove_memory tool', () => {
             path: 'project/non-existent',
         };
 
-        await expect(removeMemoryHandler({ config }, input)).rejects.toThrow('not found');
+        await expect(removeMemoryHandler(ctx, input)).rejects.toThrow('not found');
     });
 });

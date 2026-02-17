@@ -5,19 +5,19 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ServerConfig } from '../../config.ts';
 import { MEMORY_SUBDIR } from '../../config.ts';
-import { createMemoryFile, createTestConfig, createTestDir } from './test-utils.ts';
+import { createMemoryFile, createTestContext, createTestDir } from './test-utils.ts';
+import type { ToolContext } from './shared.ts';
 import { getMemoryHandler } from './get-memory.ts';
 import { moveMemoryHandler, type MoveMemoryInput } from './move-memory.ts';
 
 describe('cortex_move_memory tool', () => {
     let testDir: string;
-    let config: ServerConfig;
+    let ctx: ToolContext;
 
     beforeEach(async () => {
         testDir = await createTestDir();
-        config = createTestConfig(testDir);
+        ctx = createTestContext(testDir);
 
         const storeRoot = join(testDir, MEMORY_SUBDIR);
 
@@ -44,15 +44,15 @@ describe('cortex_move_memory tool', () => {
             to_path: 'project/move-destination',
         };
 
-        const result = await moveMemoryHandler({ config }, input);
+        const result = await moveMemoryHandler(ctx, input);
         expect(result.content[0]!.text).toContain('Memory moved');
 
         await expect(
-            getMemoryHandler({ config }, { store: 'default', path: 'project/move-source' }),
+            getMemoryHandler(ctx, { store: 'default', path: 'project/move-source' }),
         ).rejects.toThrow('not found');
 
         const getResult = await getMemoryHandler(
-            { config },
+            ctx,
             { store: 'default', path: 'project/move-destination' },
         );
         const output = JSON.parse(getResult.content[0]!.text);
@@ -66,7 +66,7 @@ describe('cortex_move_memory tool', () => {
             to_path: 'project/destination',
         };
 
-        await expect(moveMemoryHandler({ config }, input)).rejects.toThrow('not found');
+        await expect(moveMemoryHandler(ctx, input)).rejects.toThrow('not found');
     });
 
     it('should return error when destination exists', async () => {
@@ -88,6 +88,6 @@ describe('cortex_move_memory tool', () => {
             to_path: 'project/existing-destination',
         };
 
-        await expect(moveMemoryHandler({ config }, input)).rejects.toThrow('already exists');
+        await expect(moveMemoryHandler(ctx, input)).rejects.toThrow('already exists');
     });
 });

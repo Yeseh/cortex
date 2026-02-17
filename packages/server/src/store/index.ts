@@ -18,16 +18,13 @@
  * import { registerStoreTools } from './store/index.ts';
  *
  * const ctx = createMcpContext();
- * registerStoreTools(ctx.server, config);
+ * registerStoreTools(ctx.server, ctx);
  * ```
  */
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import * as path from 'node:path';
-import { initializeStore } from '@yeseh/cortex-core/store';
-import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
-import type { ServerConfig } from '../config.ts';
-import { listStoresFromRegistry, storeNameSchema } from './tools.ts';
+import type { ToolContext } from '../memory/tools/shared.ts';
+import { listStoresHandler, createStoreHandler, storeNameSchema } from './tools.ts';
 import { registerStoreResources } from './resources.ts';
 
 /**
@@ -42,35 +39,25 @@ import { registerStoreResources } from './resources.ts';
  * - `cortex://store/{name}` - Gets store metadata and root category listing
  *
  * @param server - MCP server instance for tool registration
- * @param config - Server configuration containing data path
+ * @param ctx - Tool context containing config and cortex instance
  *
  * @example
  * ```ts
  * const server = createMcpServer();
- * const config = { dataPath: './.cortex-data', ... };
- * registerStoreTools(server, config);
+ * const ctx: ToolContext = { config, cortex };
+ * registerStoreTools(server, ctx);
  * ```
  */
-export const registerStoreTools = (server: McpServer, config: ServerConfig): void => {
+export const registerStoreTools = (server: McpServer, ctx: ToolContext): void => {
+    const { config } = ctx;
+
     // Register cortex_list_stores tool
     server.registerTool(
         'cortex_list_stores',
         {
             description: 'List all available memory stores',
         },
-        async () => {
-            const registryPath = path.join(config.dataPath, 'stores.yaml');
-            const result = await listStoresFromRegistry(registryPath);
-            if (!result.ok()) {
-                return {
-                    content: [{ type: 'text', text: `Error: ${result.error.message}` }],
-                    isError: true,
-                };
-            }
-            return {
-                content: [{ type: 'text', text: JSON.stringify(result.value, null, 2) }],
-            };
-        },
+        async () => listStoresHandler(ctx),
     );
 
     // Register cortex_create_store tool with input schema
@@ -84,26 +71,7 @@ export const registerStoreTools = (server: McpServer, config: ServerConfig): voi
                 ),
             },
         },
-        async ({ name }) => {
-            const registryPath = path.join(config.dataPath, 'stores.yaml');
-            const registry = new FilesystemRegistry(registryPath);
-            const storePath = path.join(config.dataPath, name);
-
-            // Delegate to core's initializeStore which handles:
-            // 1. Creating the store directory
-            // 2. Registering the store in stores.yaml
-            // 3. Creating the root category index
-            const result = await initializeStore(registry, name, storePath);
-            if (!result.ok()) {
-                return {
-                    content: [{ type: 'text', text: `Error: ${result.error.message}` }],
-                    isError: true,
-                };
-            }
-            return {
-                content: [{ type: 'text', text: JSON.stringify({ created: name }, null, 2) }],
-            };
-        },
+        async ({ name }) => createStoreHandler(ctx, { name: name as string }),
     );
 
     // Register store resources

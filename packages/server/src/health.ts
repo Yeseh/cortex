@@ -11,9 +11,10 @@
  * ```ts
  * // Use with Bun.serve routes
  * const config = loadServerConfig().value;
+ * const cortex = Cortex.init({ rootDirectory: config.dataPath, adapterFactory });
  * Bun.serve({
  *     routes: {
- *         '/health': { GET: async () => createHealthResponse(config) },
+ *         '/health': { GET: async () => createHealthResponse({ config, cortex }) },
  *     },
  *     fetch: () => new Response('Not Found', { status: 404 }),
  * });
@@ -23,9 +24,27 @@
  * ```
  */
 
-import { resolve } from 'node:path';
 import { SERVER_VERSION, type ServerConfig } from './config.ts';
-import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
+import type { Cortex } from '@yeseh/cortex-core';
+
+/**
+ * Health check response structure.
+ *
+ * This interface defines the JSON response returned by the `/health`
+ * endpoint. It provides essential information for monitoring systems
+ * and operational dashboards.
+ */
+/**
+ * Health check context containing required dependencies.
+ *
+ * This interface defines the dependencies needed by the health check handler.
+ */
+export interface HealthContext {
+    /** Server configuration */
+    config: ServerConfig;
+    /** Cortex client instance */
+    cortex: Cortex;
+}
 
 /**
  * Health check response structure.
@@ -56,10 +75,9 @@ export interface HealthResponse {
  * Creates a health check response for container orchestration.
  *
  * This function returns a JSON response with server health information.
- * It attempts to load the store registry to report the current store count,
- * but gracefully handles missing registries.
+ * It uses the Cortex client to report the current store count.
  *
- * @param config - Server configuration (required, must be valid)
+ * @param ctx - Health context containing config and cortex instance
  * @returns Promise resolving to Web Standard Response with health status
  *
  * @example
@@ -68,12 +86,13 @@ export interface HealthResponse {
  * import { loadServerConfig } from './config.ts';
  *
  * const config = loadServerConfig().value!;
+ * const cortex = Cortex.init({ rootDirectory: config.dataPath, adapterFactory });
  *
  * // Use with Bun.serve routes
  * Bun.serve({
  *     routes: {
  *         '/health': {
- *             GET: async () => createHealthResponse(config),
+ *             GET: async () => createHealthResponse({ config, cortex }),
  *         },
  *     },
  *     fetch: () => new Response('Not Found', { status: 404 }),
@@ -86,18 +105,15 @@ export interface HealthResponse {
  * //     port: 3000
  * ```
  */
-export const createHealthResponse = async (config: ServerConfig): Promise<Response> => {
-    // Try to load store registry and count stores
-    const registryPath = resolve(config.dataPath, 'stores.yaml');
-    const registry = new FilesystemRegistry(registryPath);
-    const registryResult = await registry.load();
-    // Treat REGISTRY_MISSING as 0 stores (like allowMissing: true did)
-    const storeCount = registryResult.ok() ? Object.keys(registryResult.value).length : 0;
+export const createHealthResponse = async (ctx: HealthContext): Promise<Response> => {
+    // Get store count from Cortex registry
+    const registry = ctx.cortex.getRegistry();
+    const storeCount = Object.keys(registry).length;
 
     const response: HealthResponse = {
         status: 'healthy',
         version: SERVER_VERSION,
-        dataPath: config.dataPath,
+        dataPath: ctx.config.dataPath,
         storeCount,
     };
 

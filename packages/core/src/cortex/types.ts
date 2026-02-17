@@ -6,6 +6,7 @@
 
 import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
 import type { StoreRegistry } from '@/store/registry.ts';
+import type { Cortex } from './cortex.ts';
 
 /**
  * Factory function for creating scoped storage adapters.
@@ -215,4 +216,40 @@ export interface InitializeError {
     path?: string;
     /** Underlying error cause (for debugging) */
     cause?: unknown;
+}
+
+/**
+ * Context object for dependency injection into handlers.
+ *
+ * Provides access to the Cortex client for store operations.
+ * Handlers receive this as their first parameter for consistent
+ * dependency injection across CLI and MCP server.
+ *
+ * @module core/cortex/types
+ *
+ * @example
+ * ```typescript
+ * // CLI handler
+ * async function handleAdd(
+ *     ctx: CortexContext,
+ *     path: string,
+ *     options: AddOptions
+ * ): Promise<void> {
+ *     const store = ctx.cortex.getStore('my-store');
+ *     // ...
+ * }
+ *
+ * // MCP tool handler
+ * async function addMemoryHandler(
+ *     ctx: CortexContext,
+ *     input: AddMemoryInput
+ * ): Promise<McpToolResponse> {
+ *     const store = ctx.cortex.getStore(input.store);
+ *     // ...
+ * }
+ * ```
+ */
+export interface CortexContext {
+    /** The root Cortex client instance */
+    cortex: Cortex;
 }

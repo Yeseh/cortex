@@ -67,7 +67,7 @@ describe('context', () => {
             tempDir = await fs.mkdtemp(join(tmpdir(), 'cortex-context-'));
             localStoreDir = join(tempDir, '.cortex', 'memory');
             globalStoreDir = join(tempDir, 'global-store');
-            registryPath = join(tempDir, 'stores.yaml');
+            registryPath = join(tempDir, 'config.yaml');
         });
 
         afterEach(async () => {
@@ -382,7 +382,7 @@ stores:
 
         beforeEach(async () => {
             tempDir = await fs.mkdtemp(join(tmpdir(), 'cortex-registry-'));
-            registryPath = join(tempDir, 'stores.yaml');
+            registryPath = join(tempDir, 'config.yaml');
         });
 
         afterEach(async () => {
@@ -542,9 +542,9 @@ stores:
             }
         });
 
-        it('should accept store names with underscores (validation only on save)', async () => {
-            // The merged config parser accepts any store name during parsing.
-            // Validation for kebab-case names only happens during serialization.
+        it('should reject store names with underscores (validation on load)', async () => {
+            // The Cortex client validates store names on load using Zod schema.
+            // Store names must be lowercase kebab-case (e.g., "my-store").
             await fs.writeFile(
                 registryPath,
                 `stores:
@@ -555,10 +555,10 @@ stores:
 
             const result = await loadRegistry(registryPath);
 
-            // Parsing succeeds - the store is loaded as-is
-            expect(result.ok()).toBe(true);
-            if (result.ok()) {
-                expect(result.value['Invalid_Store_Name']?.path).toBe('/some/path');
+            // Parsing fails - invalid store name format
+            expect(result.ok()).toBe(false);
+            if (!result.ok()) {
+                expect(result.error.code).toBe('REGISTRY_LOAD_FAILED');
             }
         });
     });

@@ -10,6 +10,7 @@ export {
     type AdapterFactory,
     type CortexSettings,
     type CortexOptions,
+    type CortexContext,
     type ConfigError,
     type ConfigErrorCode,
     type InitializeError,
