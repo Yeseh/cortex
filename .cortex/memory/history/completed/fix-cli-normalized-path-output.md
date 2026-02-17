@@ -1,15 +1,5 @@
 ---
-created_at: 2026-02-15T12:46:28.783Z
-updated_at: 2026-02-15T12:46:28.783Z
-tags:
-  - bug-fix
-  - cli
-  - completed
-  - path-normalization
-source: mcp
-citations:
-  - https://github.com/Yeseh/cortex/pull/29
-  - .context/plans/2026-02-15-normalize-path-output.md
+{created_at: 2026-02-15T12:46:28.783Z,updated_at: 2026-02-17T19:15:06.351Z,tags: [bug-fix,cli,completed,path-normalization],source: mcp,expires_at: 2026-05-17T23:59:59.000Z,citations: [https://github.com/Yeseh/cortex/pull/29,.context/plans/2026-02-15-normalize-path-output.md]}
 ---
 # Fix CLI Normalized Path Output - COMPLETED
 

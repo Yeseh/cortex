@@ -1,5 +1,1 @@
-memories:
-  - path: decisions/testing/split-operations-test-file
-    token_estimate: 340
-    updated_at: 2026-01-31T15:26:04.418Z
-subcategories: []
+{memories: [{path: decisions/testing/split-operations-test-file,token_estimate: 332,updated_at: 2026-01-31T15:26:04.418Z}],subcategories: []}

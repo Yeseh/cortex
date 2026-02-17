@@ -1,15 +1,1 @@
-memories:
-  - path: standards/architecture/patterns/interface-segregation
-    token_estimate: 298
-    updated_at: 2026-02-05T19:16:28.811Z
-  - path: standards/architecture/patterns/ports-adapters
-    token_estimate: 302
-    updated_at: 2026-02-05T19:16:24.284Z
-  - path: standards/architecture/patterns/storage-adapter-composition
-    token_estimate: 351
-    updated_at: 2026-01-29T16:36:21.478Z
-subcategories:
-  - path: standards/architecture/patterns/core-module
-    memory_count: 3
-  - path: standards/architecture/patterns/registry-caching
-    memory_count: 2
+{memories: [{path: standards/architecture/patterns/interface-segregation,token_estimate: 286,updated_at: 2026-02-05T19:16:28.811Z},{path: standards/architecture/patterns/ports-adapters,token_estimate: 291,updated_at: 2026-02-05T19:16:24.284Z},{path: standards/architecture/patterns/storage-adapter-composition,token_estimate: 344,updated_at: 2026-01-29T16:36:21.478Z}],subcategories: []}

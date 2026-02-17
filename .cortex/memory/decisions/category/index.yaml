@@ -1,8 +1,1 @@
-memories:
-  - path: decisions/category/categorypath-error-coupling
-    token_estimate: 480
-    updated_at: 2026-02-14T21:36:08.951Z
-  - path: decisions/category/root-category-descriptions
-    token_estimate: 350
-    updated_at: 2026-01-29T21:07:46.931Z
-subcategories: []
+{memories: [{path: decisions/category/root-category-descriptions,token_estimate: 341,updated_at: 2026-01-29T21:07:46.931Z}],subcategories: []}

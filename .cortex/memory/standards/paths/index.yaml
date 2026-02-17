@@ -1,4 +1,1 @@
-memories: []
-subcategories:
-  - path: standards/paths/cross-platform
-    memory_count: 3
+{memories: [{path: standards/paths/cross-platform,token_estimate: 215,updated_at: 2026-02-17T19:14:12.722Z}],subcategories: []}

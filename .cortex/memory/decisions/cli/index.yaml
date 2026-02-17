@@ -1,14 +1,1 @@
-memories:
-  - path: decisions/cli/commander-negation-pattern
-    token_estimate: 181
-    updated_at: 2026-02-13T18:58:49.840Z
-  - path: decisions/cli/commander-refactor
-    token_estimate: 244
-    updated_at: 2026-01-29T20:11:39.637Z
-  - path: decisions/cli/dynamic-root-category-discovery
-    token_estimate: 242
-    updated_at: 2026-01-29T21:07:40.788Z
-  - path: decisions/cli/store-init-project-support
-    token_estimate: 350
-    updated_at: 2026-01-29T16:45:00.106Z
-subcategories: []
+{memories: [{path: decisions/cli/commander-negation-pattern,token_estimate: 176,updated_at: 2026-02-13T18:58:49.840Z},{path: decisions/cli/commander-refactor,token_estimate: 236,updated_at: 2026-01-29T20:11:39.637Z},{path: decisions/cli/dynamic-root-category-discovery,token_estimate: 235,updated_at: 2026-01-29T21:07:40.788Z},{path: decisions/cli/store-init-project-support,token_estimate: 340,updated_at: 2026-01-29T16:45:00.106Z}],subcategories: []}

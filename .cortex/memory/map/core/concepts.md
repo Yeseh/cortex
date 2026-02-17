@@ -1,12 +1,5 @@
 ---
-created_at: 2026-02-05T19:15:50.362Z
-updated_at: 2026-02-05T19:15:50.362Z
-tags:
-  - map
-  - core
-  - concepts
-  - domain
-source: mcp
+{created_at: 2026-02-05T19:15:50.362Z,updated_at: 2026-02-17T19:15:23.890Z,tags: [map,core,concepts,domain,operations],source: mcp}
 ---
 # Core Package Key Concepts
 
@@ -34,3 +27,10 @@ source: mcp
 ## Root Categories
 - Protected categories: `human`, `persona`
 - Cannot be deleted or have descriptions set
+
+## Domain Operations
+Core memory operations in `packages/core/src/memory/operations.ts`:
+- createMemory, getMemory, updateMemory, moveMemory, removeMemory
+- listMemories, pruneExpiredMemories (supports dryRun option)
+
+MCP tools and CLI commands should delegate to these core operations.

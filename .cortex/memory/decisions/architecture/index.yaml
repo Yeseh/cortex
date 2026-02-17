@@ -1,5 +1,1 @@
-memories:
-  - path: decisions/architecture/storage-abstraction-cli-server
-    token_estimate: 366
-    updated_at: 2026-01-31T14:47:40.100Z
-subcategories: []
+{memories: [{path: decisions/architecture/storage-abstraction-cli-server,token_estimate: 355,updated_at: 2026-01-31T14:47:40.100Z}],subcategories: []}

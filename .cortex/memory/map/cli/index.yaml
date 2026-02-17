@@ -1,11 +1,1 @@
-memories:
-  - path: map/cli/concepts
-    token_estimate: 292
-    updated_at: 2026-02-05T19:16:02.058Z
-  - path: map/cli/files
-    token_estimate: 391
-    updated_at: 2026-02-05T19:15:30.896Z
-  - path: map/cli/summary-index
-    token_estimate: 74
-    updated_at: 2026-02-13T19:56:05.513Z
-subcategories: []
+{memories: [{path: map/cli/concepts,token_estimate: 282,updated_at: 2026-02-05T19:16:02.058Z},{path: map/cli/files,token_estimate: 381,updated_at: 2026-02-05T19:15:30.896Z}],subcategories: []}

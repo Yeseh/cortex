@@ -1,13 +1,5 @@
 ---
-created_at: 2026-02-11T20:27:00.920Z
-updated_at: 2026-02-13T18:54:56.150Z
-tags:
-  - todo
-  - completed
-  - prune
-  - reindex
-  - pr-19
-source: mcp
+{created_at: 2026-02-11T20:27:00.920Z,updated_at: 2026-02-17T19:15:07.403Z,tags: [todo,completed,prune,reindex,pr-19],source: mcp,expires_at: 2026-05-17T23:59:59.000Z}
 ---
 COMPLETED — PR #19 (fix/prune-reindex-consistency branch)
 

@@ -1,8 +1,0 @@
-memories:
-  - path: standards/architecture/patterns/registry-caching/rule
-    token_estimate: 63
-    updated_at: 2026-02-13T19:52:48.718Z
-  - path: standards/architecture/patterns/registry-caching/usage
-    token_estimate: 73
-    updated_at: 2026-02-13T19:52:48.750Z
-subcategories: []

@@ -1,13 +1,5 @@
 ---
-created_at: 2026-02-11T20:21:33.671Z
-updated_at: 2026-02-13T18:58:28.483Z
-tags:
-  - todo
-  - completed
-  - refactor
-  - api
-  - pr-20
-source: mcp
+{created_at: 2026-02-11T20:21:33.671Z,updated_at: 2026-02-17T19:15:07.954Z,tags: [todo,completed,refactor,api,pr-20],source: mcp,expires_at: 2026-05-17T23:59:59.000Z}
 ---
 COMPLETED — PR #20 (refactor/remove-clear-expiry-flag branch)
 

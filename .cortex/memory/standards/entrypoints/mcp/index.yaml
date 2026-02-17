@@ -1,6 +1,0 @@
-memories: []
-subcategories:
-  - path: standards/entrypoints/mcp/thin-wrapper
-    memory_count: 2
-  - path: standards/entrypoints/mcp/tool-pattern
-    memory_count: 3

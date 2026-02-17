@@ -1,21 +1,27 @@
 ---
-created_at: 2026-02-05T20:31:13.818Z
-updated_at: 2026-02-05T20:31:13.818Z
-tags:
-  - runbook
-  - debugging
-  - mcp
-  - typescript
-source: mcp
+{created_at: 2026-02-05T20:31:13.818Z,updated_at: 2026-02-17T19:13:48.833Z,tags: [runbook,debugging,mcp,cli,typescript],source: mcp}
 ---
-# Debugging MCP Tools with Direct TypeScript
+# Debugging Cortex Locally
 
-When MCP tools behave unexpectedly, test the underlying functions directly.
+## Running CLI Commands
+Run CLI commands via bun from the repository root:
+```bash
+bun run packages/cli/src/run.ts <command>
+```
 
-## Pattern
+Examples:
+```bash
+bun run packages/cli/src/run.ts store list
+bun run packages/cli/src/run.ts store prune --store cortex --dry-run
+bun run packages/cli/src/run.ts memory list --store cortex
+```
 
-Create a temporary test script using direct TypeScript imports:
+## Debugging MCP Tools with Direct TypeScript
 
+When MCP tools behave unexpectedly, test the underlying functions directly by bypassing the MCP transport layer.
+
+### Pattern
+Create a temporary test script:
 ```typescript
 // debug-test.ts
 import { FilesystemStorageAdapter } from './packages/storage-fs/src/index.ts';
@@ -23,7 +29,7 @@ import { setDescription } from './packages/core/src/category/index.ts';
 
 async function main() {
     const adapter = new FilesystemStorageAdapter({ 
-        rootDirectory: 'F:/repo/cortex/.cortex/memory' 
+        rootDirectory: '/path/to/.cortex/memory' 
     });
     const port = adapter.categories;
     
@@ -34,22 +40,18 @@ async function main() {
 main().catch(console.error);
 ```
 
-## Run
-
+### Run
 ```bash
 bun debug-test.ts
 ```
 
-## Benefits
-
+### Benefits
 - Bypasses MCP transport layer
 - Direct access to Result types and errors
 - Can add breakpoints/logging
 - Verifies core logic vs MCP wrapper issues
 
-## Cleanup
-
-Delete the test file after debugging:
+### Cleanup
 ```bash
 rm debug-test.ts
 ```

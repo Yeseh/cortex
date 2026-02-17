@@ -1,5 +1,1 @@
-memories:
-  - path: standards/architecture/layout/file-organization
-    token_estimate: 277
-    updated_at: 2026-01-27T20:54:34.870Z
-subcategories: []
+{memories: [{path: standards/architecture/layout/file-organization,token_estimate: 271,updated_at: 2026-01-27T20:54:34.870Z}],subcategories: []}

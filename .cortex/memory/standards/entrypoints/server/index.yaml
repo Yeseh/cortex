@@ -1,5 +1,1 @@
-memories:
-  - path: standards/entrypoints/server/server-lint
-    token_estimate: 196
-    updated_at: 2026-01-31T14:47:36.816Z
-subcategories: []
+{memories: [{path: standards/entrypoints/server/server-lint,token_estimate: 188,updated_at: 2026-01-31T14:47:36.816Z}],subcategories: []}

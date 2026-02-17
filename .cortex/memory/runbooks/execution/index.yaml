@@ -1,5 +1,1 @@
-memories:
-  - path: runbooks/execution/cli-runbook-2026-02-14
-    token_estimate: 778
-    updated_at: 2026-02-15T11:48:51.490Z
-subcategories: []
+{memories: [{path: runbooks/execution/cli-runbook-2026-02-14,token_estimate: 760,updated_at: 2026-02-17T19:13:50.414Z}],subcategories: []}

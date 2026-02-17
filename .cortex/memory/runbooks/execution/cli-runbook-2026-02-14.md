@@ -1,16 +1,5 @@
 ---
-created_at: 2026-02-14T21:32:55.979Z
-updated_at: 2026-02-15T11:48:51.490Z
-tags:
-  - runbook
-  - cli
-  - testing
-  - qa
-  - execution-report
-  - updated
-source: mcp
-citations:
-  - runbooks/user-test-cli
+{created_at: 2026-02-14T21:32:55.979Z,updated_at: 2026-02-17T19:13:50.414Z,tags: [runbook,cli,testing,qa,execution-report,updated],source: mcp,expires_at: 2026-08-15T23:59:59.000Z,citations: [runbooks/user-test-cli]}
 ---
 # CLI Runbook Execution - 2026-02-14
 

@@ -1,14 +1,1 @@
-memories:
-  - path: features/citations
-    token_estimate: 337
-    updated_at: 2026-02-13T19:33:26.898Z
-  - path: features/dashboard
-    token_estimate: 388
-    updated_at: 2026-02-05T21:09:01.437Z
-  - path: features/get-recent-memories
-    token_estimate: 210
-    updated_at: 2026-02-13T18:41:21.509Z
-  - path: features/sqlite-derived-index
-    token_estimate: 441
-    updated_at: 2026-02-13T21:47:14.829Z
-subcategories: []
+{memories: [{path: features/dashboard,token_estimate: 378,updated_at: 2026-02-05T21:09:01.437Z},{path: features/get-recent-memories,token_estimate: 204,updated_at: 2026-02-13T18:41:21.509Z},{path: features/sqlite-derived-index,token_estimate: 428,updated_at: 2026-02-13T21:47:14.829Z}],subcategories: []}
