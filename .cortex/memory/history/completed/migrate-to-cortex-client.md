@@ -1,7 +1,7 @@
 ---
-{created_at: 2026-02-17T20:19:56.964Z,updated_at: 2026-02-17T20:37:22.308Z,tags: [in-progress,migration,cortex-client,pr-38],source: mcp}
+{created_at: 2026-02-17T20:19:56.964Z,updated_at: 2026-02-17T20:40:44.903Z,tags: [completed,migration,cortex-client,pr-38],source: mcp}
 ---
-# In Progress: Migrate to Cortex Client (PR #38)
+# Completed: Migrate to Cortex Client (PR #38)
 
 ## Date
 2026-02-17
@@ -28,12 +28,10 @@ Migrated MCP server and CLI to use `Cortex` client facade instead of direct `Fil
 - CLI/MCP store commands (add/remove/init) need to modify the config file
 - `Cortex` is currently read-only after initialization
 
-**Follow-up needed**: Add `addStore()` and `removeStore()` methods to `Cortex` class before `FilesystemRegistry` can be deprecated.
+**Follow-up**: See `todo/add-cortex-mutation-methods` for plan to add store mutation methods to Cortex.
 
 ## PR
 https://github.com/Yeseh/cortex/pull/38
 
-## Commits
-1. `refactor(mcp): migrate server to Cortex client for dependency injection`
-2. `chore: update tasks.md with completed items`
-3. `docs: update proposal to reflect FilesystemRegistry scope limitation`
+## Archive
+`openspec/changes/archive/2026-02-17-migrate-to-cortex-client/`
