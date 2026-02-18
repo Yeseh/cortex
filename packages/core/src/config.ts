@@ -10,6 +10,25 @@ import type { StoreRegistry } from './store/registry.ts';
 export type OutputFormat = 'yaml' | 'json' | 'toon';
 
 /**
+ * Category creation/deletion mode for a store.
+ * - `free` - Categories can be created/deleted freely (default)
+ * - `subcategories` - Only subcategories of config-defined categories allowed
+ * - `strict` - Only config-defined categories allowed
+ */
+export type CategoryMode = 'free' | 'subcategories' | 'strict';
+
+/**
+ * Definition of a category in the store configuration.
+ * Supports arbitrary nesting depth via subcategories.
+ */
+export type CategoryDefinition = {
+    /** Optional description (max 500 chars) */
+    description?: string;
+    /** Nested subcategories */
+    subcategories?: Record<string, CategoryDefinition>;
+};
+
+/**
  * Expand tilde (~) to the user's home directory.
  */
 const expandTilde = (path: string): string => {
@@ -20,6 +39,80 @@ const expandTilde = (path: string): string => {
         return homedir();
     }
     return path;
+};
+
+/**
+ * Flattens a nested CategoryDefinition hierarchy to an array of paths.
+ * Includes all paths at all nesting levels.
+ *
+ * @module core/config
+ * @param categories - Record of category name to definition
+ * @param prefix - Path prefix for nested categories
+ * @returns Array of all category paths
+ *
+ * @example
+ * ```ts
+ * const cats = { standards: { subcategories: { arch: {} } } };
+ * flattenCategoryPaths(cats); // ['standards', 'standards/arch']
+ * ```
+ */
+export const flattenCategoryPaths = (
+    categories: Record<string, CategoryDefinition> | undefined,
+    prefix = '',
+): string[] => {
+    if (!categories) {
+        return [];
+    }
+
+    const paths: string[] = [];
+    for (const [
+        name, def,
+    ] of Object.entries(categories)) {
+        const path = prefix ? `${prefix}/${name}` : name;
+        paths.push(path);
+        if (def.subcategories) {
+            paths.push(...flattenCategoryPaths(def.subcategories, path));
+        }
+    }
+    return paths.sort();
+};
+
+/**
+ * Checks if a category path is defined in config.
+ * All ancestors of explicitly defined categories are implicitly config-defined.
+ *
+ * @module core/config
+ * @param path - The category path to check
+ * @param categories - The config-defined category hierarchy
+ * @returns true if the path is explicitly or implicitly config-defined
+ *
+ * @example
+ * ```ts
+ * const cats = { standards: { subcategories: { architecture: {} } } };
+ * isConfigDefined('standards', cats); // true (explicit)
+ * isConfigDefined('standards/architecture', cats); // true (explicit)
+ * isConfigDefined('legacy', cats); // false
+ * ```
+ */
+export const isConfigDefined = (
+    path: string,
+    categories: Record<string, CategoryDefinition> | undefined,
+): boolean => {
+    if (!categories || !path) {
+        return false;
+    }
+
+    const segments = path.split('/');
+    let current: Record<string, CategoryDefinition> | undefined = categories;
+
+    for (const segment of segments) {
+        if (!current || !(segment in current)) {
+            return false;
+        }
+        current = current[segment]?.subcategories;
+    }
+
+    return true;
 };
 
 /**
@@ -156,6 +249,123 @@ export interface MergedConfig {
 }
 
 /**
+ * Validates a category definition recursively.
+ *
+ * @param def - The raw category definition to validate
+ * @param categoryPath - The path to this category (for error messages)
+ * @param storeName - The store name (for error messages)
+ * @returns Result with validated CategoryDefinition or validation error
+ */
+const validateCategoryDefinition = (
+    def: unknown,
+    categoryPath: string,
+    storeName: string,
+): Result<CategoryDefinition, ConfigValidationError> => {
+    // Empty object or null/undefined is valid (no description, no subcategories)
+    if (def === null || def === undefined || (typeof def === 'object' && Object.keys(def as object).length === 0)) {
+        return ok({});
+    }
+
+    if (typeof def !== 'object') {
+        return err({
+            code: 'CONFIG_VALIDATION_FAILED',
+            message: `Category '${categoryPath}' in store '${storeName}' must be an object.`,
+            store: storeName,
+            field: categoryPath,
+        });
+    }
+
+    const defObj = def as Record<string, unknown>;
+    const result: CategoryDefinition = {};
+
+    // Validate description
+    if ('description' in defObj) {
+        if (typeof defObj.description !== 'string') {
+            return err({
+                code: 'CONFIG_VALIDATION_FAILED',
+                message: `Category '${categoryPath}' description in store '${storeName}' must be a string.`,
+                store: storeName,
+                field: `${categoryPath}.description`,
+            });
+        }
+        if (defObj.description.length > 500) {
+            return err({
+                code: 'CONFIG_VALIDATION_FAILED',
+                message: `Category '${categoryPath}' description in store '${storeName}' exceeds 500 characters.`,
+                store: storeName,
+                field: `${categoryPath}.description`,
+            });
+        }
+        result.description = defObj.description;
+    }
+
+    // Validate subcategories recursively
+    if ('subcategories' in defObj) {
+        if (typeof defObj.subcategories !== 'object' || defObj.subcategories === null) {
+            return err({
+                code: 'CONFIG_VALIDATION_FAILED',
+                message: `Category '${categoryPath}' subcategories in store '${storeName}' must be an object.`,
+                store: storeName,
+                field: `${categoryPath}.subcategories`,
+            });
+        }
+
+        const subcategories: Record<string, CategoryDefinition> = {};
+        for (const [
+            name, subDef,
+        ] of Object.entries(defObj.subcategories as Record<string, unknown>)) {
+            const subPath = categoryPath ? `${categoryPath}/${name}` : name;
+            const subResult = validateCategoryDefinition(subDef, subPath, storeName);
+            if (!subResult.ok()) {
+                return subResult;
+            }
+            subcategories[name] = subResult.value;
+        }
+        result.subcategories = subcategories;
+    }
+
+    return ok(result);
+};
+
+/**
+ * Validates a category hierarchy from config.
+ *
+ * @param categories - The raw categories object from config
+ * @param storeName - The store name (for error messages)
+ * @returns Result with validated category hierarchy or validation error
+ */
+const validateCategoryHierarchy = (
+    categories: unknown,
+    storeName: string,
+): Result<Record<string, CategoryDefinition>, ConfigValidationError> => {
+    if (categories === null || categories === undefined) {
+        return ok({});
+    }
+
+    if (typeof categories !== 'object') {
+        return err({
+            code: 'CONFIG_VALIDATION_FAILED',
+            message: `Categories in store '${storeName}' must be an object.`,
+            store: storeName,
+            field: 'categories',
+        });
+    }
+
+    const result: Record<string, CategoryDefinition> = {};
+    for (const [
+        name, def,
+    ] of Object.entries(categories as Record<string, unknown>)) {
+        const defResult = validateCategoryDefinition(def, name, storeName);
+        if (!defResult.ok()) {
+            return defResult;
+        }
+        result[name] = defResult.value;
+    }
+
+    return ok(result);
+};
+
+/**
  * Parse a unified config file with settings and stores sections.
  *
  * @param raw - Raw YAML string content
@@ -174,10 +384,22 @@ export interface MergedConfig {
  * ```
  */
 export const parseMergedConfig = (raw: string): Result<MergedConfig, ConfigValidationError> => {
+    // Valid category modes
+    const validCategoryModes: readonly CategoryMode[] = [
+        'free',
+        'subcategories',
+        'strict',
+    ] as const;
+
     // Define the expected structure from YAML
     interface ConfigFileContent {
         settings?: Partial<ConfigSettings>;
-        stores?: Record<string, { path: string; description?: string }>;
+        stores?: Record<string, {
+            path: string;
+            description?: string;
+            categoryMode?: string;
+            categories?: Record<string, unknown>;
+        }>;
     }
 
     let parsed: ConfigFileContent;
@@ -211,7 +433,8 @@ export const parseMergedConfig = (raw: string): Result<MergedConfig, ConfigValid
 
     const settings: ConfigSettings = {
         outputFormat: (rawOutputFormat as OutputFormat) ?? defaults.outputFormat,
-        autoSummaryThreshold: parsed.settings?.autoSummaryThreshold ?? defaults.autoSummaryThreshold,
+        autoSummaryThreshold:
+            parsed.settings?.autoSummaryThreshold ?? defaults.autoSummaryThreshold,
         strictLocal: parsed.settings?.strictLocal ?? defaults.strictLocal,
     };
 
@@ -236,9 +459,35 @@ export const parseMergedConfig = (raw: string): Result<MergedConfig, ConfigValid
                 return pathValidation;
             }
 
+            // Validate category mode
+            const rawCategoryMode = def.categoryMode;
+            const isValidMode = rawCategoryMode !== undefined &&
+                validCategoryModes.includes(rawCategoryMode as CategoryMode);
+            if (rawCategoryMode !== undefined && !isValidMode) {
+                return err({
+                    code: 'CONFIG_VALIDATION_FAILED',
+                    message: `Invalid categoryMode '${rawCategoryMode}' in store '${name}'. ` +
+                        'Must be \'free\', \'subcategories\', or \'strict\'.',
+                    store: name,
+                    field: 'categoryMode',
+                });
+            }
+
+            // Validate categories
+            const categoriesResult = validateCategoryHierarchy(def.categories, name);
+            if (!categoriesResult.ok()) {
+                return categoriesResult;
+            }
+
             stores[name] = {
                 path: def.path,
                 ...(def.description !== undefined && { description: def.description }),
+                ...(rawCategoryMode !== undefined && {
+                    categoryMode: rawCategoryMode as CategoryMode,
+                }),
+                ...(Object.keys(categoriesResult.value).length > 0 && {
+                    categories: categoriesResult.value,
+                }),
             };
         }
     }

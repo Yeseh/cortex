@@ -113,6 +113,52 @@ Cortex resolves which store to use in this order:
 2. **Local**: `.cortex/memory` in current directory
 3. **Global**: `~/.config/cortex/memory`
 
+## Configuration
+
+Cortex uses a YAML configuration file at `~/.config/cortex/config.yaml`:
+
+```yaml
+settings:
+  outputFormat: yaml  # Output format: yaml, json, or toon
+  autoSummaryThreshold: 0
+  strictLocal: false
+
+stores:
+  default:
+    path: /home/user/.config/cortex/memory
+    description: Global user memory store
+    categoryMode: subcategories  # free, subcategories, or strict
+    categories:
+      human:
+        description: User identity and preferences
+        subcategories:
+          profile:
+            description: User profile information
+          preferences:
+            description: Coding style and workflow preferences
+      standards:
+        description: Coding standards and architecture decisions
+```
+
+### Category Modes
+
+Control how categories can be created and deleted:
+
+| Mode | Description |
+|------|-------------|
+| `free` | Categories can be created/deleted freely (default) |
+| `subcategories` | Only subcategories of config-defined root categories allowed |
+| `strict` | Only config-defined categories allowed, no runtime creation |
+
+### Category Hierarchy
+
+Define protected category structures in your config. Each category supports:
+
+- `description`: Optional description (max 500 characters)
+- `subcategories`: Nested category definitions
+
+Categories defined in config are protected from deletion. In `subcategories` mode, new categories can be created under config-defined roots. In `strict` mode, only explicitly defined categories are allowed.
+
 ## Development
 
 ```bash

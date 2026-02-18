@@ -3,12 +3,17 @@
  */
 
 import { ok } from '@/result.ts';
+import type { CategoryMode, CategoryDefinition } from '../config.ts';
 import type { StoreResult } from './result.ts';
 import { storeError, type StoreRegistryParseError } from './result.ts';
 
 export interface StoreDefinition {
     path: string;
     description?: string;
+    /** Category creation/deletion mode (default: 'free') */
+    categoryMode?: CategoryMode;
+    /** Config-defined category hierarchy */
+    categories?: Record<string, CategoryDefinition>;
 }
 
 /**

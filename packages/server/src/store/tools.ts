@@ -17,9 +17,11 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { z } from 'zod';
 import { err, ok, type Result } from '@yeseh/cortex-core';
+import type { CategoryMode } from '@yeseh/cortex-core';
 import { initializeStore } from '@yeseh/cortex-core/store';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import type { ToolContext } from '../memory/tools/shared.ts';
+import { convertToCategories, type CategoryInfo } from './shared.ts';
 
 /**
  * Error codes for store tool operations.
@@ -78,6 +80,10 @@ export interface StoreInfo {
     path: string;
     /** Optional description of the store */
     description?: string;
+    /** Category creation/deletion mode */
+    categoryMode: CategoryMode;
+    /** Config-defined category hierarchy */
+    categories: CategoryInfo[];
 }
 
 /**
@@ -174,6 +180,8 @@ export const listStoresFromRegistry = async (
             name,
             path: definition.path,
             ...(definition.description !== undefined && { description: definition.description }),
+            categoryMode: definition.categoryMode ?? 'free',
+            categories: convertToCategories(definition.categories),
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -222,6 +230,8 @@ export const listStoresHandler = async (
             name,
             path: definition.path,
             ...(definition.description !== undefined && { description: definition.description }),
+            categoryMode: definition.categoryMode ?? 'free',
+            categories: convertToCategories(definition.categories),
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
 

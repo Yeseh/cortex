@@ -18,7 +18,9 @@ import type { ReadResourceResult } from '@modelcontextprotocol/sdk/types.js';
 import type { Variables } from '@modelcontextprotocol/sdk/shared/uriTemplate.js';
 import type { ServerConfig } from '../config.ts';
 import { err, ok, type Result } from '@yeseh/cortex-core';
+import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { listStores, storeNameSchema } from './tools.ts';
+import { convertToCategories } from './shared.ts';
 
 /**
  * Extracts a single string value from a Variables entry.
@@ -173,12 +175,10 @@ export const registerStoreResources = (
         ): Promise<ReadResourceResult> => {
             const storeName = getStringVariable(variables.name);
 
-            // Validate store name is present and valid format
-            // MCP SDK callbacks require thrown errors - convert validation failures to exceptions
             if (!storeName) {
                 throw new McpError(
                     ErrorCode.InvalidParams, 'Store name is required',
-                ); 
+                );
             }
 
             const nameValidation = storeNameSchema.safeParse(storeName);
@@ -186,30 +186,44 @@ export const registerStoreResources = (
                 throw new McpError(
                     ErrorCode.InvalidParams,
                     nameValidation.error.issues.map((i) => i.message).join('; '),
-                ); 
-            }
-
-            // Get store categories
-            const result = await getStoreCategories(
-                config.dataPath, storeName,
-            );
-            // MCP SDK callbacks require thrown errors - convert Result to exception at SDK boundary
-            if (!result.ok()) {
-                const errorCode =
-                    result.error.code === 'STORE_NOT_FOUND'
-                        ? ErrorCode.InvalidParams
-                        : ErrorCode.InternalError;
-                throw new McpError(
-                    errorCode, result.error.message,
                 );
             }
+
+            // Load registry to get store definition with config
+            const registryPath = path.join(config.dataPath, 'stores.yaml');
+            const registry = new FilesystemRegistry(registryPath);
+            const loadResult = await registry.load();
+
+            // If registry doesn't exist or store not found, check disk
+            if (!loadResult.ok()) {
+                if (loadResult.error.code === 'REGISTRY_MISSING') {
+                    throw new McpError(
+                        ErrorCode.InvalidParams, `Store '${storeName}' not found`,
+                    );
+                }
+                throw new McpError(
+                    ErrorCode.InternalError, loadResult.error.message,
+                );
+            }
+
+            const definition = loadResult.value[storeName];
+            if (!definition) {
+                throw new McpError(
+                    ErrorCode.InvalidParams, `Store '${storeName}' not found`,
+                );
+            }
+
             return {
                 contents: [{
                     uri: uri.href,
                     mimeType: 'application/json',
                     text: JSON.stringify({
                         name: storeName,
-                        categories: result.value,
+                        path: definition.path,
+                        ...(definition.description !== undefined &&
+                            { description: definition.description }),
+                        categoryMode: definition.categoryMode ?? 'free',
+                        categories: convertToCategories(definition.categories),
                     }),
                 }],
             };
