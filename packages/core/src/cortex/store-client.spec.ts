@@ -189,6 +189,19 @@ describe('StoreClient', () => {
     });
 
     // =========================================================================
+    // getAdapter() Tests
+    // =========================================================================
+
+    describe('getAdapter()', () => {
+        it('should return the underlying storage adapter', () => {
+            const adapter = createMockAdapter();
+            const client = StoreClient.create('test-store', '/test/path', adapter);
+
+            expect(client.getAdapter()).toBe(adapter);
+        });
+    });
+
+    // =========================================================================
     // Edge Cases Tests
     // =========================================================================
 
