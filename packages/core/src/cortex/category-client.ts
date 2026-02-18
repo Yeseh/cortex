@@ -70,20 +70,30 @@ export class CategoryClient {
     private readonly adapter: ScopedStorageAdapter;
 
     /**
-     * Creates a new CategoryClient instance.
+     * Private constructor - use StoreClient.rootCategory() or navigation methods.
      *
      * @param rawPath - The category path (normalized to canonical format)
      * @param adapter - The storage adapter for performing operations
-     *
-     * @example
-     * ```typescript
-     * // Usually created via StoreClient.rootCategory() or CategoryClient.getCategory()
-     * const client = new CategoryClient('/standards/typescript', adapter);
-     * ```
      */
-    constructor(rawPath: string, adapter: ScopedStorageAdapter) {
+    private constructor(rawPath: string, adapter: ScopedStorageAdapter) {
         this.rawPath = CategoryClient.normalizePath(rawPath);
         this.adapter = adapter;
+    }
+
+    /**
+     * Creates a CategoryClient for a specific path.
+     *
+     * This is an internal factory method for creating clients at arbitrary paths.
+     * Used by StoreClient, navigation methods, and tests. External callers should
+     * use `store.rootCategory().getCategory(path)` instead.
+     *
+     * @internal
+     * @param path - The category path (will be normalized)
+     * @param adapter - The storage adapter for the store
+     * @returns A CategoryClient for the specified path
+     */
+    static create(path: string, adapter: ScopedStorageAdapter): CategoryClient {
+        return new CategoryClient(path, adapter);
     }
 
     /**
@@ -219,7 +229,7 @@ export class CategoryClient {
 
         // Handle empty relative path (return equivalent instance)
         if (!relativePath || relativePath.trim() === '') {
-            return new CategoryClient(this.rawPath, this.adapter);
+            return CategoryClient.create(this.rawPath, this.adapter);
         }
 
         // Concatenate with current path
@@ -227,7 +237,7 @@ export class CategoryClient {
             ? '/' + relativePath
             : this.rawPath + '/' + relativePath;
 
-        return new CategoryClient(newPath, this.adapter);
+        return CategoryClient.create(newPath, this.adapter);
     }
 
     /**
@@ -286,12 +296,12 @@ export class CategoryClient {
 
         // If the only slash is at position 0, parent is root
         if (lastSlashIndex === 0) {
-            return new CategoryClient('/', this.adapter);
+            return CategoryClient.create('/', this.adapter);
         }
 
         // Otherwise, parent is everything before the last slash
         const parentPath = this.rawPath.slice(0, lastSlashIndex);
-        return new CategoryClient(parentPath, this.adapter);
+        return CategoryClient.create(parentPath, this.adapter);
     }
 
     // =========================================================================
