@@ -27,8 +27,7 @@ export type CategoryErrorCode =
     | 'ROOT_CATEGORY_REJECTED'
     | 'DESCRIPTION_TOO_LONG'
     | 'STORAGE_ERROR'
-    | 'INVALID_PATH'
-    | 'NOT_IMPLEMENTED';
+    | 'INVALID_PATH';
 
 /**
  * Error details for category operations.

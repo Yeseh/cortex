@@ -982,16 +982,34 @@ describe('CategoryClient', () => {
     // =========================================================================
 
     describe('getMemory()', () => {
-        it('should return NOT_IMPLEMENTED error', () => {
+        it('should return a MemoryClient with correct path for non-root category', () => {
             const adapter = createMockAdapter();
             const client = CategoryClient.create('/standards', adapter);
 
-            const result = client.getMemory('test');
+            const memory = client.getMemory('architecture');
 
-            expect(result.ok()).toBe(false);
-            if (!result.ok()) {
-                expect(result.error.code).toBe('NOT_IMPLEMENTED');
-            }
+            expect(memory.rawPath).toBe('/standards/architecture');
+            expect(memory.rawSlug).toBe('architecture');
+        });
+
+        it('should return a MemoryClient with correct path for root category', () => {
+            const adapter = createMockAdapter();
+            const client = CategoryClient.create('/', adapter);
+
+            const memory = client.getMemory('overview');
+
+            expect(memory.rawPath).toBe('/overview');
+            expect(memory.rawSlug).toBe('overview');
+        });
+
+        it('should return a MemoryClient with correct path for nested category', () => {
+            const adapter = createMockAdapter();
+            const client = CategoryClient.create('/standards/typescript', adapter);
+
+            const memory = client.getMemory('style-guide');
+
+            expect(memory.rawPath).toBe('/standards/typescript/style-guide');
+            expect(memory.rawSlug).toBe('style-guide');
         });
     });
 });
