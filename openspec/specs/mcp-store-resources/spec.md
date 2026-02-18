@@ -19,20 +19,44 @@ The MCP server SHALL provide a `cortex://store/` resource that lists all availab
 
 ### Requirement: Store detail resource
 
-The MCP server SHALL provide a `cortex://store/{name}` resource that returns store metadata and root category listing.
+The MCP server SHALL provide a `cortex://store/{name}` resource that returns store metadata including category mode and defined hierarchy.
 
 #### Scenario: Accessing store details
 
 - **WHEN** an agent requests `cortex://store/global`
-- **THEN** the server returns metadata for the "global" store and its root categories
+- **THEN** the server returns metadata for the "global" store including `categoryMode` and root categories
 
 #### Scenario: Non-existent store
 
 - **WHEN** an agent requests a resource for a store that does not exist
 - **THEN** the server returns an appropriate not-found error
 
-#### Scenario: Store with categories
+#### Scenario: Store with category hierarchy
 
-- **WHEN** a store contains categories at the root level
-- **THEN** the resource response includes the category listing
+- **WHEN** a store has categories defined in config
+- **THEN** the resource response includes the full category hierarchy with paths and descriptions
+
+#### Scenario: Store without category config
+
+- **WHEN** a store has no `categories` defined in config
+- **THEN** the resource response includes an empty categories array
+
+### Requirement: List stores includes hierarchy
+
+The `cortex_list_stores` tool response SHALL include the config-defined category hierarchy, not disk state. Each store entry includes `categoryMode` and a recursive `categories` array.
+
+#### Scenario: List stores response shape
+
+- **WHEN** an agent calls `cortex_list_stores`
+- **THEN** each store includes `name`, `path`, `description`, `categoryMode`, and `categories`
+
+#### Scenario: Category hierarchy in response
+
+- **WHEN** a store defines nested categories in config
+- **THEN** the `categories` array contains recursive objects with `path`, `description`, and `subcategories`
+
+#### Scenario: Store in free mode with no defined categories
+
+- **WHEN** a store has `categoryMode: free` and no `categories` defined
+- **THEN** the response shows `categoryMode: "free"` and `categories: []`
 
