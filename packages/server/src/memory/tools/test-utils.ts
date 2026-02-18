@@ -62,7 +62,9 @@ export const createTestContextWithStores = (
         default: { path: memoryDir },
     };
 
-    for (const [name, path] of Object.entries(additionalStores)) {
+    for (const [
+        name, path,
+    ] of Object.entries(additionalStores)) {
         registry[name] = { path };
     }
 

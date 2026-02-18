@@ -7,7 +7,7 @@
  */
 
 import { homedir } from 'node:os';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import {
     type CortexConfig,
     type Result,
@@ -195,8 +195,8 @@ export const resolveStoreContext = async (
     const cwd = options.cwd ?? process.cwd();
     const globalStorePath = options.globalStorePath ?? getDefaultGlobalStorePath();
     const registryPath = options.registryPath ?? getDefaultRegistryPath();
-    // Extract config directory from registryPath (remove /config.yaml)
-    const configDir = registryPath.replace(/\/config\.yaml$/, '');
+    // Extract config directory from registryPath
+    const configDir = dirname(registryPath);
 
     // If a store name is provided, resolve from registry
     if (storeName) {
@@ -262,8 +262,8 @@ export const resolveStoreAdapter = async (
     options: StoreContextOptions = {},
 ): Promise<Result<ResolvedStore, StoreContextError>> => {
     const registryPath = options.registryPath ?? getDefaultRegistryPath();
-    // Extract config directory from registryPath (remove /config.yaml)
-    const configDir = registryPath.replace(/\/config\.yaml$/, '');
+    // Extract config directory from registryPath
+    const configDir = dirname(registryPath);
 
     // If a store name is provided, use cortex.getStore() for the adapter
     if (storeName) {
@@ -277,12 +277,14 @@ export const resolveStoreAdapter = async (
         }
 
         const cortex = cortexResult.value;
-        const adapterResult = cortex.getStore(storeName);
-        if (!adapterResult.ok()) {
+        const store = cortex.getStore(storeName);
+        
+        // Check if store exists (lazy validation)
+        if (!store.exists()) {
             return err({
                 code: 'STORE_NOT_FOUND',
                 message: `Store '${storeName}' not found in registry`,
-                cause: adapterResult.error,
+                cause: store.getError() ?? undefined,
             });
         }
 
@@ -302,7 +304,7 @@ export const resolveStoreAdapter = async (
                 name: storeName,
                 scope: 'registry',
             },
-            adapter: adapterResult.value,
+            adapter: store.getAdapter(),
         });
     }
 

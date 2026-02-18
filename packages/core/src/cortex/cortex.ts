@@ -15,10 +15,11 @@
  *     registry: { 'my-store': { path: '/path/to/store' } },
  * });
  *
- * // Get a store adapter
- * const adapter = cortex.getStore('my-store');
- * if (adapter.ok()) {
- *     const memory = await adapter.value.memories.read(memoryPath);
+ * // Get a store client
+ * const store = cortex.getStore('my-store');
+ * if (store.ok()) {
+ *     const root = store.value.rootCategory();
+ *     const result = await root.getCategory('standards').exists();
  * }
  * ```
  *
@@ -39,7 +40,7 @@ import os from 'os';
 
 import z from 'zod';
 import { type Result, ok, err } from '@/result.ts';
-import type { ScopedStorageAdapter, StoreNotFoundError } from '@/storage/adapter.ts';
+import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
 import type { StoreRegistry, StoreDefinition } from '@/store/registry.ts';
 import {
     type CortexOptions,
@@ -49,6 +50,7 @@ import {
     type AdapterFactory,
     DEFAULT_SETTINGS,
 } from './types.ts';
+import { StoreClient } from './store-client.ts';
 
 // =============================================================================
 // Zod Schemas for Config Validation
@@ -313,51 +315,56 @@ export class Cortex {
     }
 
     /**
-     * Returns a scoped storage adapter for the specified store.
+     * Returns a store client for the specified store.
      *
-     * The adapter provides access to memory, index, and category operations
-     * within the store's context. Adapters are cached for reuse.
+     * The client provides access to store metadata and category operations.
+     * Adapters are cached internally for reuse.
      *
-     * @param name - The store name to get an adapter for
-     * @returns Result with the adapter or StoreNotFoundError
+     * Uses lazy validation: the StoreClient is always returned synchronously,
+     * but operations (rootCategory(), getAdapter()) will throw if the store
+     * doesn't exist. Use store.exists() to check validity before operations.
+     *
+     * @param name - The store name to get a client for
+     * @returns A StoreClient for the store (throws on operations if not found)
      *
      * @example
      * ```typescript
-     * const adapter = cortex.getStore('my-project');
-     * if (adapter.ok()) {
-     *     // Read a memory
-     *     const memory = await adapter.value.memories.read(memoryPath);
+     * // Always returns a StoreClient (lazy validation)
+     * const store = cortex.getStore('my-project');
+     * console.log(store.name);  // 'my-project'
      *
-     *     // Write a memory
-     *     await adapter.value.memories.write(memory);
-     *
-     *     // Reindex the store
-     *     await adapter.value.indexes.reindex();
+     * // Check if store exists before operations
+     * if (store.exists()) {
+     *     const root = store.rootCategory();
+     *     const result = await root.getCategory('standards').exists();
      * } else {
-     *     console.error(`Store not found: ${adapter.error.store}`);
+     *     console.error('Store not found:', store.getError()?.message);
+     * }
+     *
+     * // Or use try/catch for operations
+     * try {
+     *     const root = store.rootCategory();
+     * } catch (e) {
+     *     console.error('Store not found:', e.message);
      * }
      * ```
      */
-    getStore(name: string): Result<ScopedStorageAdapter, StoreNotFoundError> {
+    getStore(name: string): StoreClient {
         const definition = this.registry[name];
         if (!definition) {
-            return err({
-                code: 'STORE_NOT_FOUND',
-                message: `Store '${name}' is not registered. Available stores: ${Object.keys(this.registry).join(', ') || '(none)'}`,
-                store: name,
-            });
+            return StoreClient.createNotFound(name, Object.keys(this.registry));
         }
 
         // Check cache first
         const cached = this.adapterCache.get(name);
         if (cached) {
-            return ok(cached);
+            return StoreClient.create(name, definition.path, cached, definition.description);
         }
 
         // Create new adapter
         const adapter = this.adapterFactory(definition.path);
         this.adapterCache.set(name, adapter);
-        return ok(adapter);
+        return StoreClient.create(name, definition.path, adapter, definition.description);
     }
 }
 

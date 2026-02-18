@@ -5,7 +5,8 @@
  */
 
 export { Cortex } from './cortex.ts';
-export { CategoryClient } from './category-client.ts';
+export { CategoryClient } from './category-client.ts'
+export { StoreClient } from './store-client.ts';
 export { MemoryClient } from './memory-client.ts';
 
 export {
