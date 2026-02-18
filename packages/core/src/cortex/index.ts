@@ -5,6 +5,7 @@
  */
 
 export { Cortex } from './cortex.ts';
+export { CategoryClient } from './category-client.ts';
 
 export {
     type AdapterFactory,
