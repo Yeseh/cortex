@@ -160,10 +160,10 @@ The system SHALL provide a `Cortex` class as the root client for the memory syst
 1. `static fromConfig(configDir: string): Promise<Result<Cortex, ConfigError>>` - Load from filesystem
 2. `static init(options: CortexOptions): Cortex` - Create programmatically (sync, no filesystem)
 3. `initialize(): Promise<Result<void, InitializeError>>` - Create folder structure (idempotent)
-4. `getStore(name: string): Result<ScopedStorageAdapter, StoreNotFoundError>` - Factory for store adapters
+4. `getStore(name: string): Result<StoreClient, StoreNotFoundError>` - Factory for store clients
 5. `readonly rootDirectory: string` - Config directory path
 6. `readonly settings: CortexSettings` - Current settings
-7. `readonly registry: Registry` - Store definitions
+7. `getRegistry(): StoreRegistry` - Store definitions
 
 #### Scenario: Create Cortex from config file
 
@@ -213,12 +213,12 @@ The system SHALL provide a `Cortex` class as the root client for the memory syst
 - **THEN** it succeeds without error
 - **AND** existing config is preserved
 
-#### Scenario: Get store returns scoped adapter
+#### Scenario: Get store returns StoreClient
 
 - **GIVEN** a Cortex instance with store "my-project" in registry
 - **WHEN** `getStore("my-project")` is called
-- **THEN** it returns `Result<ScopedStorageAdapter, StoreNotFoundError>`
-- **AND** the adapter is scoped to the store's path
+- **THEN** it returns `Result<StoreClient, StoreNotFoundError>`
+- **AND** the client wraps the store's adapter
 
 #### Scenario: Get store for unknown store
 
@@ -267,4 +267,270 @@ The system SHALL provide a `CortexContext` interface for dependency injection in
 - **WHEN** the handler is invoked
 - **THEN** it receives `CortexContext` as its first parameter
 - **AND** can access `ctx.cortex.getStore(name)`
+
+### Requirement: StoreClient class
+
+The system SHALL provide a `StoreClient` class that wraps a store's storage adapter and provides fluent access to categories. The class SHALL include:
+
+1. `readonly name: string` - Store name
+2. `readonly path: string` - Filesystem path to store
+3. `readonly description?: string` - Optional store description
+4. `rootCategory(): CategoryClient` - Entry point to category tree
+
+#### Scenario: StoreClient exposes metadata
+
+- **GIVEN** a `StoreClient` for store "my-project" at path "/data/my-project"
+- **WHEN** the client properties are accessed
+- **THEN** `name` equals "my-project"
+- **AND** `path` equals "/data/my-project"
+
+#### Scenario: StoreClient with description
+
+- **GIVEN** a store definition with description "My project memories"
+- **WHEN** a `StoreClient` is created for this store
+- **THEN** `description` equals "My project memories"
+
+#### Scenario: StoreClient without description
+
+- **GIVEN** a store definition without description
+- **WHEN** a `StoreClient` is created for this store
+- **THEN** `description` is undefined
+
+#### Scenario: Access root category
+
+- **GIVEN** a `StoreClient` instance
+- **WHEN** `rootCategory()` is called
+- **THEN** it returns a `CategoryClient` with `rawPath` equal to "/"
+
+### Requirement: CategoryClient class
+
+The system SHALL provide a `CategoryClient` class that enables fluent navigation and operations on categories. The class SHALL include:
+
+**Properties:**
+
+1. `readonly rawPath: string` - Canonical path with leading slash (e.g., `/standards/javascript`)
+
+**Parsing:** 2. `parsePath(): Result<CategoryPath, PathError>` - Parse raw path to value object
+
+**Navigation (synchronous, lazy validation):** 3. `getCategory(path: string): CategoryClient` - Get subcategory by relative path 4. `getMemory(slug: string): MemoryClient` - Get memory client for slug 5. `parent(): CategoryClient | null` - Parent category, null if root
+
+**Lifecycle:** 6. `create(): Promise<Result<Category, CategoryError>>` - Create category on disk 7. `delete(): Promise<Result<void, CategoryError>>` - Delete category (always recursive) 8. `exists(): Promise<Result<boolean, CategoryError>>` - Check if category exists
+
+**Metadata:** 9. `setDescription(description: string | null): Promise<Result<void, CategoryError>>` - Update description
+
+**Listing:** 10. `listMemories(options?): Promise<Result<MemoryInfo[], CategoryError>>` - List memories 11. `listSubcategories(): Promise<Result<CategoryInfo[], CategoryError>>` - List child categories
+
+**Store-wide operations (scoped to subtree):** 12. `reindex(): Promise<Result<ReindexResult, CategoryError>>` - Rebuild indexes 13. `prune(options?): Promise<Result<PruneResult, CategoryError>>` - Remove expired memories
+
+#### Scenario: Root category path
+
+- **GIVEN** a `StoreClient` instance
+- **WHEN** `rootCategory()` is called
+- **THEN** it returns `CategoryClient` with `rawPath` equal to "/"
+
+#### Scenario: Canonical path format
+
+- **GIVEN** a root category
+- **WHEN** `getCategory('standards')` is called
+- **THEN** the returned client has `rawPath` equal to "/standards"
+
+#### Scenario: Path normalization - leading slash
+
+- **GIVEN** a root category
+- **WHEN** `getCategory('/standards')` is called (with leading slash)
+- **THEN** the returned client has `rawPath` equal to "/standards"
+
+#### Scenario: Path normalization - trailing slash
+
+- **GIVEN** a root category
+- **WHEN** `getCategory('standards/')` is called (with trailing slash)
+- **THEN** the returned client has `rawPath` equal to "/standards"
+
+#### Scenario: Path normalization - multiple slashes
+
+- **GIVEN** a root category
+- **WHEN** `getCategory('standards//javascript')` is called
+- **THEN** the returned client has `rawPath` equal to "/standards/javascript"
+
+#### Scenario: Nested navigation
+
+- **GIVEN** a category client with `rawPath` "/standards"
+- **WHEN** `getCategory('javascript')` is called
+- **THEN** the returned client has `rawPath` equal to "/standards/javascript"
+
+#### Scenario: Parent of nested category
+
+- **GIVEN** a category client with `rawPath` "/standards/javascript"
+- **WHEN** `parent()` is called
+- **THEN** it returns a `CategoryClient` with `rawPath` equal to "/standards"
+
+#### Scenario: Parent of depth-1 category
+
+- **GIVEN** a category client with `rawPath` "/standards"
+- **WHEN** `parent()` is called
+- **THEN** it returns a `CategoryClient` with `rawPath` equal to "/"
+
+#### Scenario: Parent of root category
+
+- **GIVEN** a category client with `rawPath` "/"
+- **WHEN** `parent()` is called
+- **THEN** it returns null
+
+#### Scenario: Lazy validation - valid path
+
+- **GIVEN** a category client created with valid path "standards/javascript"
+- **WHEN** `exists()` is called
+- **THEN** the path is validated successfully
+- **AND** the operation proceeds
+
+#### Scenario: Lazy validation - invalid path
+
+- **GIVEN** a category client created with invalid path "INVALID PATH!!!"
+- **WHEN** `exists()` is called
+- **THEN** it returns error with code `INVALID_PATH`
+
+#### Scenario: Create category
+
+- **GIVEN** a category client for path "/standards/typescript"
+- **WHEN** `create()` is called
+- **THEN** the category is created on disk
+- **AND** it returns `Result<Category, CategoryError>`
+
+#### Scenario: Delete category is recursive
+
+- **GIVEN** a category with subcategories and memories
+- **WHEN** `delete()` is called
+- **THEN** the category and all contents are deleted
+
+#### Scenario: List subcategories
+
+- **GIVEN** a category with subcategories "api" and "utils"
+- **WHEN** `listSubcategories()` is called
+- **THEN** it returns `CategoryInfo[]` for both subcategories
+
+#### Scenario: Reindex scoped to subtree
+
+- **GIVEN** a category client for "/standards"
+- **WHEN** `reindex()` is called
+- **THEN** only indexes under "/standards" are rebuilt
+
+#### Scenario: Prune scoped to subtree
+
+- **GIVEN** a category client for "/archive"
+- **WHEN** `prune()` is called
+- **THEN** only expired memories under "/archive" are removed
+
+### Requirement: MemoryClient class
+
+The system SHALL provide a `MemoryClient` class that enables fluent operations on individual memories. The class SHALL include:
+
+**Properties:**
+
+1. `readonly rawPath: string` - Full path including category (e.g., `/standards/javascript/style`)
+2. `readonly rawSlug: string` - Memory name only (e.g., `style`)
+
+**Parsing:** 3. `parsePath(): Result<MemoryPath, PathError>` - Parse raw path to value object 4. `parseSlug(): Result<Slug, PathError>` - Parse raw slug to value object
+
+**Lifecycle (lazy validation):** 5. `create(input: CreateMemoryInput): Promise<Result<Memory, MemoryError>>` - Create memory 6. `get(options?: GetMemoryOptions): Promise<Result<Memory, MemoryError>>` - Retrieve memory 7. `update(input: UpdateMemoryInput): Promise<Result<Memory, MemoryError>>` - Update memory 8. `delete(): Promise<Result<void, MemoryError>>` - Remove memory 9. `exists(): Promise<Result<boolean, MemoryError>>` - Check if memory exists
+
+**Movement:** 10. `move(destination: MemoryClient | MemoryPath): Promise<Result<MemoryClient, MemoryError>>` - Move memory
+
+#### Scenario: MemoryClient path and slug
+
+- **GIVEN** a category client for "/standards/javascript"
+- **WHEN** `getMemory('style')` is called
+- **THEN** the returned `MemoryClient` has `rawPath` "/standards/javascript/style"
+- **AND** `rawSlug` equals "style"
+
+#### Scenario: Parse path
+
+- **GIVEN** a `MemoryClient` with `rawPath` "/standards/javascript/style"
+- **WHEN** `parsePath()` is called
+- **THEN** it returns `Result.ok(MemoryPath)` with correct segments
+
+#### Scenario: Parse slug
+
+- **GIVEN** a `MemoryClient` with `rawSlug` "style"
+- **WHEN** `parseSlug()` is called
+- **THEN** it returns `Result.ok(Slug)` with value "style"
+
+#### Scenario: Lazy validation - valid slug
+
+- **GIVEN** a `MemoryClient` created with valid slug "style-guide"
+- **WHEN** `get()` is called
+- **THEN** the slug is validated successfully
+- **AND** the operation proceeds
+
+#### Scenario: Lazy validation - invalid slug
+
+- **GIVEN** a `MemoryClient` created with invalid slug "INVALID SLUG!!!"
+- **WHEN** `get()` is called
+- **THEN** it returns error with code `INVALID_PATH`
+
+#### Scenario: Create memory
+
+- **GIVEN** a `MemoryClient` for "/standards/typescript/style"
+- **WHEN** `create({ content: '# Style Guide' })` is called
+- **THEN** the memory is created on disk
+- **AND** it returns `Result<Memory, MemoryError>`
+
+#### Scenario: Get memory
+
+- **GIVEN** a `MemoryClient` for an existing memory
+- **WHEN** `get()` is called
+- **THEN** it returns `Result<Memory, MemoryError>` with content and metadata
+
+#### Scenario: Get memory with expiration filtering
+
+- **GIVEN** a `MemoryClient` for an expired memory
+- **WHEN** `get()` is called without options
+- **THEN** it returns error with code `MEMORY_EXPIRED`
+
+#### Scenario: Get memory including expired
+
+- **GIVEN** a `MemoryClient` for an expired memory
+- **WHEN** `get({ includeExpired: true })` is called
+- **THEN** it returns the memory content
+
+#### Scenario: Update memory
+
+- **GIVEN** a `MemoryClient` for an existing memory
+- **WHEN** `update({ content: 'new content' })` is called
+- **THEN** the memory is updated on disk
+- **AND** it returns the updated `Memory`
+
+#### Scenario: Delete memory
+
+- **GIVEN** a `MemoryClient` for an existing memory
+- **WHEN** `delete()` is called
+- **THEN** the memory is removed from disk
+
+#### Scenario: Check memory exists
+
+- **GIVEN** a `MemoryClient` for path "/standards/style"
+- **WHEN** `exists()` is called
+- **THEN** it returns `Result<boolean, MemoryError>`
+
+#### Scenario: Move memory to MemoryClient destination
+
+- **GIVEN** a `MemoryClient` for "/standards/old-style"
+- **AND** a destination `MemoryClient` for "/archive/old-style"
+- **WHEN** `move(destinationClient)` is called
+- **THEN** the memory is moved on disk
+- **AND** it returns a new `MemoryClient` for "/archive/old-style"
+
+#### Scenario: Move memory to MemoryPath destination
+
+- **GIVEN** a `MemoryClient` for "/standards/old-style"
+- **AND** a `MemoryPath` for "/archive/2024/old-style"
+- **WHEN** `move(memoryPath)` is called
+- **THEN** the memory is moved on disk
+- **AND** it returns a new `MemoryClient` for "/archive/2024/old-style"
+
+#### Scenario: Move preserves source client rawPath
+
+- **GIVEN** a `MemoryClient` source for "/standards/style"
+- **WHEN** `move(destination)` is called
+- **THEN** the source client's `rawPath` remains "/standards/style"
+- **AND** a new client is returned for the destination
 
