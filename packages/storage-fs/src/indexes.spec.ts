@@ -79,7 +79,7 @@ describe('reindexCategoryIndexes', () => {
         await fs.unlink(join(tempDir, 'beta', 'memory-b.md'));
 
         // Reindex
-        const result = await reindexCategoryIndexes(ctx);
+        const result = await reindexCategoryIndexes(ctx, CategoryPath.root());
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -148,7 +148,7 @@ describe('reindexCategoryIndexes', () => {
         await fs.unlink(join(tempDir, 'a', 'b', 'c', 'memory.md'));
 
         // Reindex
-        const result = await reindexCategoryIndexes(ctx);
+        const result = await reindexCategoryIndexes(ctx, CategoryPath.root());
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -188,7 +188,7 @@ describe('reindexCategoryIndexes', () => {
         await fs.writeFile(join(tempDir, 'project', 'index.yaml'), projectIndex);
 
         // Reindex
-        const result = await reindexCategoryIndexes(ctx);
+        const result = await reindexCategoryIndexes(ctx, CategoryPath.root());
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -202,7 +202,7 @@ describe('reindexCategoryIndexes', () => {
 
     it('should handle empty store gracefully', async () => {
         // Empty temp dir - no memory files, no index files
-        const result = await reindexCategoryIndexes(ctx);
+        const result = await reindexCategoryIndexes(ctx, CategoryPath.root());
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -233,7 +233,7 @@ describe('reindexCategoryIndexes', () => {
         await fs.writeFile(join(tempDir, 'old-cat', 'index.yaml'), oldCatIndex);
 
         // Reindex
-        const result = await reindexCategoryIndexes(ctx);
+        const result = await reindexCategoryIndexes(ctx, CategoryPath.root());
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -277,7 +277,7 @@ describe('reindexCategoryIndexes', () => {
         await fs.writeFile(join(tempDir, 'project', 'memory-2.md'), memory2);
 
         // Reindex
-        const result = await reindexCategoryIndexes(ctx);
+        const result = await reindexCategoryIndexes(ctx, CategoryPath.root());
 
         expect(result.ok()).toBe(true);
 
@@ -316,7 +316,7 @@ describe('reindexCategoryIndexes', () => {
         await fs.writeFile(join(tempDir, 'project', 'memory-legacy.md'), memoryWithoutUpdatedAt);
 
         // Reindex should succeed, but entry should have undefined updatedAt
-        const result = await reindexCategoryIndexes(ctx);
+        const result = await reindexCategoryIndexes(ctx, CategoryPath.root());
 
         expect(result.ok()).toBe(true);
 
@@ -331,6 +331,51 @@ describe('reindexCategoryIndexes', () => {
             const entry = index.memories[0];
             expect(entry?.path.toString()).toBe('project/memory-legacy');
             expect(entry?.updatedAt).toBeUndefined();
+        }
+    });
+
+    it('should only reindex categories under scope', async () => {
+        // Create directories and files both inside and outside scope
+        const projectDir = join(tempDir, 'project');
+        const humanDir = join(tempDir, 'human');
+        await fs.mkdir(projectDir, { recursive: true });
+        await fs.mkdir(humanDir, { recursive: true });
+
+        // Create memories in both directories
+        await fs.writeFile(join(projectDir, 'memory.md'), MEMORY_CONTENT);
+        await fs.writeFile(join(humanDir, 'other.md'), MEMORY_CONTENT);
+
+        // Create initial indexes for both
+        await fs.writeFile(
+            join(tempDir, 'index.yaml'),
+            'memories: []\nsubcategories:\n  - path: project\n    memory_count: 0\n  - path: human\n    memory_count: 0',
+        );
+        await fs.writeFile(join(projectDir, 'index.yaml'), 'memories: []\nsubcategories: []');
+        await fs.writeFile(join(humanDir, 'index.yaml'), 'memories: []\nsubcategories: []');
+
+        // Reindex only the 'project' scope
+        const scope = CategoryPath.fromString('project').unwrap();
+        const result = await reindexCategoryIndexes(ctx, scope);
+
+        expect(result.ok()).toBe(true);
+
+        // Verify project index was updated
+        const projectIndexContent = await fs.readFile(join(projectDir, 'index.yaml'), 'utf8');
+        expect(projectIndexContent).toContain('memory');
+
+        // Verify human index was NOT updated (still shows empty)
+        const humanIndexContent = await fs.readFile(join(humanDir, 'index.yaml'), 'utf8');
+        expect(humanIndexContent).toContain('memories: []');
+    });
+
+    it('should handle non-existent scope directory gracefully', async () => {
+        // Scope directory doesn't exist
+        const scope = CategoryPath.fromString('nonexistent').unwrap();
+        const result = await reindexCategoryIndexes(ctx, scope);
+
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
+            expect(result.value.warnings).toEqual([]);
         }
     });
 });

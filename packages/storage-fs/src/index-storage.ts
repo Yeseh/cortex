@@ -181,28 +181,33 @@ export class FilesystemIndexStorage implements IndexStorage {
     }
 
     /**
-     * Rebuilds all category indexes from the current filesystem state.
+     * Rebuilds category indexes from the current filesystem state.
      *
-     * This is a potentially expensive operation that scans all categories
+     * This is a potentially expensive operation that scans categories
      * and regenerates their index files. Use sparingly, typically for
      * repair operations or initial setup.
      *
+     * @param scope - The category scope to reindex. Pass CategoryPath.root()
+     *                for store-wide reindexing. Non-root scopes only rebuild
+     *                indexes for categories under that path.
      * @returns Result with warnings array, or error on failure
      *
      * @example
      * ```typescript
-     * const result = await storage.reindex();
-     * if (result.ok()) {
-     *   console.log(result.value.warnings);
-     * }
+     * // Reindex entire store
+     * const result = await storage.reindex(CategoryPath.root());
+     *
+     * // Reindex only 'standards' subtree
+     * const scope = CategoryPath.fromString('standards').value;
+     * const result = await storage.reindex(scope);
      * ```
      *
      * @edgeCases
      * - Large stores can take noticeable time; consider running off the hot path.
      * - Slug collisions and skipped files are reported via `warnings`.
      */
-    async reindex(): Promise<Result<ReindexResult, StorageAdapterError>> {
-        return reindexCategoryIndexes(this.ctx);
+    async reindex(scope: CategoryPath): Promise<Result<ReindexResult, StorageAdapterError>> {
+        return reindexCategoryIndexes(this.ctx, scope);
     }
 
     /**

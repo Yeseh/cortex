@@ -99,4 +99,77 @@ describe('CategoryPath', () => {
             }
         });
     });
+
+    describe('isUnder', () => {
+        it('should match everything when scope is root', () => {
+            const root = CategoryPath.root();
+            const standards = CategoryPath.fromString('standards');
+            const nested = CategoryPath.fromString('standards/typescript/rules');
+
+            expect(root.isUnder(root)).toBe(true);
+            expect(standards.ok() && standards.value.isUnder(root)).toBe(true);
+            expect(nested.ok() && nested.value.isUnder(root)).toBe(true);
+        });
+
+        it('should match itself for non-root scope', () => {
+            const standardsResult = CategoryPath.fromString('standards');
+            expect(standardsResult.ok()).toBe(true);
+            if (standardsResult.ok()) {
+                expect(standardsResult.value.isUnder(standardsResult.value)).toBe(true);
+            }
+        });
+
+        it('should match descendants for non-root scope', () => {
+            const standardsResult = CategoryPath.fromString('standards');
+            const typescriptResult = CategoryPath.fromString('standards/typescript');
+            const rulesResult = CategoryPath.fromString('standards/typescript/rules');
+
+            expect(standardsResult.ok()).toBe(true);
+            expect(typescriptResult.ok()).toBe(true);
+            expect(rulesResult.ok()).toBe(true);
+
+            if (standardsResult.ok() && typescriptResult.ok() && rulesResult.ok()) {
+                expect(typescriptResult.value.isUnder(standardsResult.value)).toBe(true);
+                expect(rulesResult.value.isUnder(standardsResult.value)).toBe(true);
+            }
+        });
+
+        it('should NOT match unrelated paths', () => {
+            const standardsResult = CategoryPath.fromString('standards');
+            const humanResult = CategoryPath.fromString('human');
+            const humanProfileResult = CategoryPath.fromString('human/profile');
+
+            expect(standardsResult.ok()).toBe(true);
+            expect(humanResult.ok()).toBe(true);
+            expect(humanProfileResult.ok()).toBe(true);
+
+            if (standardsResult.ok() && humanResult.ok() && humanProfileResult.ok()) {
+                expect(humanResult.value.isUnder(standardsResult.value)).toBe(false);
+                expect(humanProfileResult.value.isUnder(standardsResult.value)).toBe(false);
+            }
+        });
+
+        it('should NOT match ancestors', () => {
+            const standardsResult = CategoryPath.fromString('standards');
+            const typescriptResult = CategoryPath.fromString('standards/typescript');
+
+            expect(standardsResult.ok()).toBe(true);
+            expect(typescriptResult.ok()).toBe(true);
+
+            if (standardsResult.ok() && typescriptResult.ok()) {
+                // standards is an ancestor of standards/typescript, not under it
+                expect(standardsResult.value.isUnder(typescriptResult.value)).toBe(false);
+            }
+        });
+
+        it('should return false when root path checks against non-root scope', () => {
+            const root = CategoryPath.root();
+            const standardsResult = CategoryPath.fromString('standards');
+            
+            expect(standardsResult.ok()).toBe(true);
+            if (standardsResult.ok()) {
+                expect(root.isUnder(standardsResult.value)).toBe(false);
+            }
+        });
+    });
 });

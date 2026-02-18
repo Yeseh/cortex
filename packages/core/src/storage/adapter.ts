@@ -196,9 +196,9 @@ export interface IndexStorage {
     ): Promise<Result<void, StorageAdapterError>>;
 
     /**
-     * Rebuilds all category indexes from the current filesystem state.
+     * Rebuilds category indexes from the current filesystem state.
      *
-     * This is a potentially expensive operation that scans all categories
+     * This is a potentially expensive operation that scans categories
      * and regenerates their index files. Use sparingly, typically for
      * repair operations or initial setup.
      *
@@ -211,21 +211,26 @@ export interface IndexStorage {
      * Collisions (multiple files normalizing to the same path) are
      * resolved by appending numeric suffixes (-2, -3, etc.).
      *
+     * @param scope - The category scope to reindex. Pass CategoryPath.root()
+     *                for store-wide reindexing. Non-root scopes only rebuild
+     *                indexes for categories under that path.
      * @returns Result with warnings array, or error on failure
      *
      * @example
      * ```typescript
-     * const result = await storage.reindex();
-     * if (result.ok) {
-     *   console.log(result.value.warnings);
-     * }
+     * // Reindex entire store
+     * const result = await storage.reindex(CategoryPath.root());
+     *
+     * // Reindex only 'standards' subtree
+     * const scope = CategoryPath.fromString('standards').value;
+     * const result = await storage.reindex(scope);
      * ```
      *
      * @edgeCases
      * - Empty or missing directories return `ok({ warnings: [] })`.
      * - Slug collisions are resolved automatically and reported in `warnings`.
      */
-    reindex(): Promise<Result<ReindexResult, StorageAdapterError>>;
+    reindex(scope: CategoryPath): Promise<Result<ReindexResult, StorageAdapterError>>;
 
     /**
      * Updates indexes after a memory write operation.

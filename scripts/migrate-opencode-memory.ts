@@ -19,6 +19,7 @@ import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 import { $ } from 'bun';
 import { FilesystemStorageAdapter } from '../packages/storage-fs/src/index.ts';
+import { CategoryPath } from '../packages/core/src/index.ts';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -507,7 +508,7 @@ async function runMigration(options: CLIOptions): Promise<void> {
         console.log('\nStep 3: Rebuilding indexes...');
         try {
             const adapter = new FilesystemStorageAdapter({ rootDirectory: options.target });
-            const reindexResult = await adapter.indexes.reindex();
+            const reindexResult = await adapter.indexes.reindex(CategoryPath.root());
             if (reindexResult.ok()) {
                 console.log('  Indexes rebuilt successfully.');
             } else {

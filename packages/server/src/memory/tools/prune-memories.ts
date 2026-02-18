@@ -6,7 +6,7 @@
 
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import { pruneExpiredMemories } from '@yeseh/cortex-core';
+import { pruneExpiredMemories, CategoryPath } from '@yeseh/cortex-core';
 import { storeNameSchema } from '../../store/tools.ts';
 import {
     type ToolContext,
@@ -44,7 +44,7 @@ export const pruneMemoriesHandler = async (
 
     const dryRun = input.dry_run ?? false;
 
-    const result = await pruneExpiredMemories(adapterResult.value, { dryRun });
+    const result = await pruneExpiredMemories(adapterResult.value, CategoryPath.root(), { dryRun });
     if (!result.ok()) {
         throw new McpError(ErrorCode.InternalError, result.error.message);
     }

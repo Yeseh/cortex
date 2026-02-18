@@ -56,7 +56,7 @@ export const createMockStorage = (
     indexes: {
         read: async () => ok(null),
         write: async () => ok(undefined),
-        reindex: async () => ok(undefined),
+        reindex: async (_scope: CategoryPath) => ok({ warnings: [] }),
         updateAfterMemoryWrite: async () => ok(undefined),
         ...overrides.indexes,
     } as IndexStorage,

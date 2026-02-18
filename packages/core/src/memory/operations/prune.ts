@@ -10,6 +10,7 @@ import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
 import type { MemoryError } from '@/memory/result.ts';
 import { discoverRootCategories, collectMemoriesFromCategory } from './helpers.ts';
 import { type MemoryPath } from '@/memory/memory-path.ts';
+import type { CategoryPath } from '@/category/category-path.ts';
 
 /** Options for pruning expired memories */
 export interface PruneOptions {
@@ -34,48 +35,64 @@ export interface PruneResult {
 }
 
 /**
- * Finds and optionally deletes all expired memories.
+ * Finds and optionally deletes all expired memories within a scope.
  *
- * Discovers root categories dynamically, collects all expired memories
- * recursively, and either returns a dry-run list or deletes them and
+ * When scope is root, discovers root categories dynamically. Otherwise,
+ * starts from the scoped category directly. Collects all expired memories
+ * recursively and either returns a dry-run list or deletes them and
  * reindexes the store.
  *
  * @param storage - The composed storage adapter
- * @param serializer - Memory serializer for format conversion
+ * @param scope - Category scope to prune within (use CategoryPath.root() for all)
  * @param options - Prune options (dryRun, now)
  * @returns Result containing PruneResult or MemoryError
  *
  * @example
  * ```typescript
- * // Dry run to see what would be pruned
- * const result = await pruneExpiredMemories(storage, serializer, { dryRun: true });
+ * // Dry run to see what would be pruned in all categories
+ * const result = await pruneExpiredMemories(storage, CategoryPath.root(), { dryRun: true });
  *
- * // Actually prune expired memories
- * const result = await pruneExpiredMemories(storage, serializer);
+ * // Actually prune expired memories in the 'todo' category
+ * const todoScope = CategoryPath.fromString('todo').value;
+ * const result = await pruneExpiredMemories(storage, todoScope);
  * ```
+ *
+ * @edgeCases
+ * - Returns empty result if scope category doesn't exist
+ * - Non-expired memories within scope are not affected
+ * - When dryRun is true, no memories are deleted and no reindex occurs
  */
 export const pruneExpiredMemories = async (
     storage: ScopedStorageAdapter,
+    scope: CategoryPath,
     options?: PruneOptions,
 ): Promise<Result<PruneResult, MemoryError>> => {
     const dryRun = options?.dryRun ?? false;
     const now = options?.now ?? new Date();
 
-    // 1. Discover all root categories dynamically from the store's root index
-    const rootCategoriesResult = await discoverRootCategories(storage);
-    if (!rootCategoriesResult.ok()) {
-        return rootCategoriesResult;
+    // 1. Determine starting categories based on scope
+    let startingCategories: CategoryPath[];
+    if (scope.isRoot) {
+        // Discover all root categories dynamically from the store's root index
+        const rootCategoriesResult = await discoverRootCategories(storage);
+        if (!rootCategoriesResult.ok()) {
+            return rootCategoriesResult;
+        }
+        startingCategories = rootCategoriesResult.value;
     }
-    const rootCategories = rootCategoriesResult.value;
+    else {
+        // Start from the scoped category directly
+        startingCategories = [scope];
+    }
 
     // 2. Collect all expired memories from discovered categories
     const expiredMemories: PrunedMemory[] = [];
 
-    for (const rootCat of rootCategories) {
+    for (const category of startingCategories) {
         const visited = new Set<string>();
         const collectResult = await collectMemoriesFromCategory(
             storage,
-            rootCat,
+            category,
             true, // Include expired
             now,
             visited,
@@ -92,12 +109,12 @@ export const pruneExpiredMemories = async (
         }
     }
 
-    // 2. If dryRun, return list without deleting
+    // 3. If dryRun, return list without deleting
     if (dryRun) {
         return ok({ pruned: expiredMemories });
     }
 
-    // 3. Delete each expired memory
+    // 4. Delete each expired memory
     for (const memory of expiredMemories) {
         const removeResult = await storage.memories.remove(memory.path);
         if (!removeResult.ok()) {
@@ -108,9 +125,9 @@ export const pruneExpiredMemories = async (
         }
     }
 
-    // 4. Reindex if any were deleted
+    // 5. Reindex if any were deleted
     if (expiredMemories.length > 0) {
-        const reindexResult = await storage.indexes.reindex();
+        const reindexResult = await storage.indexes.reindex(scope);
         if (!reindexResult.ok()) {
             return memoryError('STORAGE_ERROR', 'Failed to reindex after prune', {
                 cause: reindexResult.error,
@@ -118,6 +135,6 @@ export const pruneExpiredMemories = async (
         }
     }
 
-    // 5. Return list of pruned memories
+    // 6. Return list of pruned memories
     return ok({ pruned: expiredMemories });
 };

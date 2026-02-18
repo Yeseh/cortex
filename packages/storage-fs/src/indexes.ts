@@ -827,12 +827,12 @@ const removeStaleIndexFiles = async (
 };
 
 /**
- * Reindexes all category indexes by scanning the filesystem.
+ * Reindexes category indexes by scanning the filesystem.
  *
- * Walks the storage directory, collects all memory files, and rebuilds
- * every category index from scratch. File paths are normalized to valid
- * slugs during indexing; slug collisions are resolved by appending
- * numeric suffixes (`-2`, `-3`, …).
+ * Walks the storage directory (or a scoped subtree), collects all memory
+ * files, and rebuilds category indexes from scratch. File paths are
+ * normalized to valid slugs during indexing; slug collisions are resolved
+ * by appending numeric suffixes (`-2`, `-3`, …).
  *
  * After writing the new index files, stale index files for categories
  * that no longer contain any memories are removed from disk, keeping
@@ -840,6 +840,9 @@ const removeStaleIndexFiles = async (
  *
  * @param ctx - Filesystem context providing `storeRoot`, `memoryExtension`,
  *   and `indexExtension`
+ * @param scope - The category scope to reindex. Pass CategoryPath.root()
+ *   for store-wide reindexing. Non-root scopes only rebuild indexes for
+ *   categories under that path.
  * @returns `Result` containing a {@link ReindexResult} with a `warnings`
  *   array describing skipped files and slug collisions on success, or a
  *   `StorageAdapterError` on failure (e.g., I/O errors during read, write,
@@ -847,25 +850,33 @@ const removeStaleIndexFiles = async (
  *
  * @example
  * ```typescript
- * const result = await reindexCategoryIndexes(ctx);
- * if (result.ok()) {
- *   for (const warning of result.value.warnings) {
- *     console.warn(warning);
- *   }
- * }
+ * // Reindex entire store
+ * const result = await reindexCategoryIndexes(ctx, CategoryPath.root());
+ *
+ * // Reindex only 'standards' subtree
+ * const scope = CategoryPath.fromString('standards').unwrap();
+ * const result = await reindexCategoryIndexes(ctx, scope);
  * ```
  */
 export const reindexCategoryIndexes = async (
     ctx: FilesystemContext,
+    scope: CategoryPath,
 ): Promise<Result<ReindexResult, StorageAdapterError>> => {
-    // 1. Collect existing index files before rebuild
-    const existingIndexesResult = await collectIndexFiles(ctx, ctx.storeRoot);
+    // Determine the target root for scanning
+    // When scope is root, scan entire store
+    // When scope is specific, scan only that subtree
+    const scanRoot = scope.isRoot
+        ? ctx.storeRoot
+        : resolve(ctx.storeRoot, scope.toString());
+
+    // 1. Collect existing index files before rebuild (within scope)
+    const existingIndexesResult = await collectIndexFiles(ctx, scanRoot);
     if (!existingIndexesResult.ok()) {
         return existingIndexesResult;
     }
 
-    // 2. Build new index state from memory files
-    const filesResult = await collectMemoryFiles(ctx, ctx.storeRoot);
+    // 2. Build new index state from memory files (within scope)
+    const filesResult = await collectMemoryFiles(ctx, scanRoot);
     if (!filesResult.ok()) {
         return filesResult;
     }
@@ -877,12 +888,14 @@ export const reindexCategoryIndexes = async (
     applyParentSubcategories(buildState.value.indexes, buildState.value.parentSubcategories);
 
     // 3. Write new index files
+    // Note: rebuildIndexFiles uses ctx.storeRoot for path resolution, which is correct
+    // because index paths are relative to store root, not scan root
     const buildResult = await rebuildIndexFiles(ctx, ctx.storeRoot, buildState.value.indexes);
     if (!buildResult.ok()) {
         return buildResult;
     }
 
-    // 4. Remove stale index files that are no longer needed
+    // 4. Remove stale index files (only those discovered in scanRoot)
     const removeResult = await removeStaleIndexFiles(
         ctx,
         buildState.value.indexes,

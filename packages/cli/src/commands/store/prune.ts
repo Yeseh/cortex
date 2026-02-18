@@ -25,6 +25,7 @@ import { resolveStoreAdapter } from '../../context.ts';
 import {
     pruneExpiredMemories,
 } from '@yeseh/cortex-core/memory';
+import { CategoryPath } from '@yeseh/cortex-core';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 
 /**
@@ -105,7 +106,7 @@ export async function handlePrune(
     }
 
     // 2. Delegate to core operation
-    const result = await pruneExpiredMemories(adapter, {
+    const result = await pruneExpiredMemories(adapter, CategoryPath.root(), {
         dryRun: options.dryRun,
         now,
     });
