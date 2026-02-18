@@ -6,10 +6,10 @@ Currently `CategoryClient.prune()` and `CategoryClient.reindex()` operate on the
 
 ## What Changes
 
-- Add optional `scope?: CategoryPath` parameter to `pruneExpiredMemories()` operation
-- Add optional `scope?: CategoryPath` parameter to reindex operations
-- When scope is provided, only process memories/categories under that path
-- Default behavior (no scope) remains store-wide for backwards compatibility
+- **BREAKING**: Add required `scope: CategoryPath` parameter to `pruneExpiredMemories()` operation
+- **BREAKING**: Add required `scope: CategoryPath` parameter to reindex operations
+- Operations only process memories/categories under the specified path
+- Pass `CategoryPath.root()` explicitly for store-wide operations
 - Update `CategoryClient.prune()` to pass `this.parsePath()` as scope
 - Update `CategoryClient.reindex()` to pass `this.parsePath()` as scope
 

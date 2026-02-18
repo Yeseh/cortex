@@ -2,15 +2,17 @@
 
 ## 1. Update Prune Operation
 
-- [ ] 1.1 Add optional `scope?: CategoryPath` parameter to `PruneOptions`
-- [ ] 1.2 Update `pruneExpiredMemories()` to filter by scope when provided
-- [ ] 1.3 Add tests for scoped pruning
+- [ ] 1.1 Add required `scope: CategoryPath` parameter to `pruneExpiredMemories()`
+- [ ] 1.2 Update `pruneExpiredMemories()` to filter by scope
+- [ ] 1.3 Update existing callers to pass `CategoryPath.root()` for store-wide behavior
+- [ ] 1.4 Add tests for scoped pruning
 
 ## 2. Update Reindex Operation
 
-- [ ] 2.1 Add optional `scope?: CategoryPath` parameter to reindex
-- [ ] 2.2 Update reindex to only process subtree when scope provided
-- [ ] 2.3 Add tests for scoped reindexing
+- [ ] 2.1 Add required `scope: CategoryPath` parameter to reindex
+- [ ] 2.2 Update reindex to only process subtree under scope
+- [ ] 2.3 Update existing callers to pass `CategoryPath.root()` for store-wide behavior
+- [ ] 2.4 Add tests for scoped reindexing
 
 ## 3. Update CategoryClient
 
