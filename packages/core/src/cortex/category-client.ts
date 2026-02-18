@@ -22,6 +22,7 @@ import type {
 import { createCategory, deleteCategory, setDescription } from '@/category/operations/index.ts';
 import type { PruneOptions, PruneResult } from '@/memory/operations/prune.ts';
 import { pruneExpiredMemories } from '@/memory/operations/prune.ts';
+import { MemoryClient } from './memory-client.ts';
 
 /**
  * Client for category navigation and operations.
@@ -243,25 +244,39 @@ export class CategoryClient {
     /**
      * Get a memory client by slug.
      *
-     * Returns a client for interacting with a memory in this category.
-     * This is a placeholder implementation that will be replaced when
-     * MemoryClient is implemented.
+     * Creates a new MemoryClient for interacting with the specified memory.
+     * This is a synchronous operation - path validation happens lazily on
+     * first async call.
      *
      * @param slug - The memory slug within this category
-     * @returns Result with error indicating not implemented yet
+     * @returns A MemoryClient for the specified memory
      *
      * @example
      * ```typescript
      * const memory = category.getMemory('architecture');
-     * // Currently returns NOT_IMPLEMENTED error
+     * const result = await memory.get();
+     * if (result.ok()) {
+     *     console.log(result.value.content);
+     * }
+     * ```
+     *
+     * @example
+     * ```typescript
+     * // Create a new memory
+     * const memory = category.getMemory('new-standard');
+     * const createResult = await memory.create({
+     *     content: '# New Standard',
+     *     source: 'user',
+     * });
      * ```
      */
-    getMemory(_slug: string): Result<never, CategoryError> {
-        return err({
-            code: 'NOT_IMPLEMENTED',
-            message: 'getMemory() is not implemented yet. MemoryClient will be added in a future change.',
-            path: this.rawPath,
-        });
+    getMemory(slug: string): MemoryClient {
+        // Construct full path: category rawPath + / + slug
+        const memoryPath = this.rawPath === '/'
+            ? '/' + slug
+            : this.rawPath + '/' + slug;
+
+        return MemoryClient.create(memoryPath, slug, this.adapter);
     }
 
     /**
