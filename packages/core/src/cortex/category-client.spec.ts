@@ -933,7 +933,8 @@ describe('CategoryClient', () => {
                     }),
                 },
             });
-            const client = CategoryClient.create('/standards', adapter);
+            // Use root path so discoverRootCategories is called and error propagates
+            const client = CategoryClient.create('/', adapter);
 
             const result = await client.prune();
 

@@ -578,42 +578,45 @@ export class CategoryClient {
     // =========================================================================
 
     /**
-     * Rebuild indexes for the entire store.
+     * Rebuild indexes for this category subtree.
      *
-     * **Note:** This operation affects the entire store, not just this category's
-     * subtree. It can be called from any CategoryClient instance in the store.
+     * Scans categories under this path and regenerates their index files
+     * from the current filesystem state. Call from root category for
+     * store-wide reindexing.
      *
-     * Scans all categories and regenerates their index files from the
-     * current filesystem state. This is useful for repairing corrupted
-     * indexes or after manual file operations.
+     * This is useful for repairing corrupted indexes or after manual
+     * file operations within a specific category.
      *
      * @returns Result with ReindexResult containing warnings, or CategoryError
      *
      * @example
      * ```typescript
-     * // Can be called from any category - affects entire store
-     * const result = await anyCategory.reindex();
-     * if (result.ok()) {
-     *     if (result.value.warnings.length > 0) {
-     *         console.log('Warnings:', result.value.warnings);
-     *     } else {
-     *         console.log('Reindex completed successfully');
-     *     }
-     * }
+     * // Reindex just the 'standards' subtree
+     * const standards = root.getCategory('standards');
+     * const result = await standards.reindex();
+     *
+     * // Reindex entire store from root
+     * const root = store.rootCategory();
+     * const result = await root.reindex();
      * ```
      *
      * @edgeCases
-     * - This is a potentially expensive operation on large stores
+     * - This is a potentially expensive operation on large subtrees
      * - File paths are normalized to valid slugs during reindexing
      * - Collisions are resolved with numeric suffixes (-2, -3, etc.)
      */
     async reindex(): Promise<Result<ReindexResult, CategoryError>> {
-        const reindexResult = await this.adapter.indexes.reindex();
+        const pathResult = this.parsePath();
+        if (!pathResult.ok()) {
+            return pathResult;
+        }
+
+        const reindexResult = await this.adapter.indexes.reindex(pathResult.value);
         if (!reindexResult.ok()) {
             return err({
                 code: 'STORAGE_ERROR',
-                message: `Failed to reindex store: ${reindexResult.error.message ?? 'unknown error'}`,
-                path: '/',
+                message: `Failed to reindex category subtree: ${reindexResult.error.message ?? 'unknown error'}`,
+                path: this.rawPath,
                 cause: reindexResult.error,
             });
         }
@@ -622,13 +625,14 @@ export class CategoryClient {
     }
 
     /**
-     * Remove expired memories from the entire store.
-     *
-     * **Note:** This operation affects the entire store, not just this category's
-     * subtree. It can be called from any CategoryClient instance in the store.
+     * Remove expired memories from this category subtree.
      *
      * Finds and deletes all memories that have passed their expiration
-     * date. Supports dry-run mode to preview what would be deleted.
+     * date within this category and its subcategories. Call from root
+     * category for store-wide pruning.
+     *
+     * Supports dry-run mode to preview what would be deleted without
+     * actually deleting.
      *
      * @param options - Prune options
      * @param options.dryRun - If true, return what would be pruned without deleting
@@ -637,30 +641,34 @@ export class CategoryClient {
      *
      * @example
      * ```typescript
-     * // Dry run to preview - can be called from any category
-     * const preview = await anyCategory.prune({ dryRun: true });
+     * // Prune just the 'human' subtree
+     * const human = root.getCategory('human');
+     * const result = await human.prune();
+     *
+     * // Dry run to preview pruning on entire store
+     * const root = store.rootCategory();
+     * const preview = await root.prune({ dryRun: true });
      * if (preview.ok()) {
      *     console.log('Would prune:', preview.value.pruned.length, 'memories');
-     * }
-     *
-     * // Actually prune
-     * const result = await category.prune();
-     * if (result.ok()) {
-     *     console.log('Pruned:', result.value.pruned.length, 'memories');
      * }
      * ```
      *
      * @edgeCases
-     * - Returns empty pruned array if no memories are expired
-     * - Reindexes the store after pruning (unless dryRun)
+     * - Returns empty pruned array if no memories are expired in the subtree
+     * - Reindexes the scoped subtree after pruning (unless dryRun)
      */
     async prune(options?: PruneOptions): Promise<Result<PruneResult, CategoryError>> {
-        const pruneResult = await pruneExpiredMemories(this.adapter, options);
+        const pathResult = this.parsePath();
+        if (!pathResult.ok()) {
+            return pathResult;
+        }
+
+        const pruneResult = await pruneExpiredMemories(this.adapter, pathResult.value, options);
         if (!pruneResult.ok()) {
             return err({
                 code: 'STORAGE_ERROR',
                 message: `Failed to prune expired memories: ${pruneResult.error.message ?? 'unknown error'}`,
-                path: '/',
+                path: this.rawPath,
                 cause: pruneResult.error,
             });
         }

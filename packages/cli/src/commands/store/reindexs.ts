@@ -17,6 +17,7 @@
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
 import { resolveStoreAdapter } from '../../context.ts';
+import { CategoryPath } from '@yeseh/cortex-core';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 
 /**
@@ -55,7 +56,7 @@ export async function handleReindex(
 
     // 2. Create adapter and reindex
     const adapter = deps.adapter ?? storeResult.value.adapter;
-    const reindexResult = await adapter.indexes.reindex();
+    const reindexResult = await adapter.indexes.reindex(CategoryPath.root());
     if (!reindexResult.ok()) {
         throwCoreError({ code: 'REINDEX_FAILED', message: reindexResult.error.message });
     }

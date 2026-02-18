@@ -6,6 +6,7 @@
 
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import { CategoryPath } from '@yeseh/cortex-core';
 import { storeNameSchema } from '../../store/tools.ts';
 import {
     type ToolContext,
@@ -50,7 +51,7 @@ export const reindexStoreHandler = async (
         throw adapterResult.error;
     }
 
-    const result = await adapterResult.value.indexes.reindex();
+    const result = await adapterResult.value.indexes.reindex(CategoryPath.root());
     if (!result.ok()) {
         throw new McpError(ErrorCode.InternalError, result.error.message);
     }

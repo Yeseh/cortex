@@ -83,6 +83,53 @@ export class CategoryPath {
         return true;
     }
 
+    /**
+     * Check if this path is under or equal to the given scope.
+     *
+     * Root scope matches everything. For non-root scopes,
+     * this path must either equal the scope or be a descendant.
+     *
+     * @module core/category
+     * @param scope - The scope to check against
+     * @returns true if this path is under or equal to scope, false otherwise
+     *
+     * @example
+     * ```typescript
+     * const standards = CategoryPath.fromString('standards').unwrap();
+     * const typescript = CategoryPath.fromString('standards/typescript').unwrap();
+     * const human = CategoryPath.fromString('human').unwrap();
+     *
+     * typescript.isUnder(standards); // true
+     * standards.isUnder(standards);  // true
+     * human.isUnder(standards);      // false
+     * standards.isUnder(CategoryPath.root()); // true
+     * ```
+     *
+     * @edgeCases
+     * - Root scope always returns true
+     * - Self-comparison returns true
+     * - Ancestor paths return false (standards is NOT under standards/typescript)
+     */
+    isUnder(scope: CategoryPath): boolean {
+        // Root scope matches everything
+        if (scope.isRoot) {
+            return true;
+        }
+
+        // This path must have at least as many segments as scope
+        if (this.#segments.length < scope.#segments.length) {
+            return false;
+        }
+
+        // Check that this path starts with scope's segments
+        for (let i = 0; i < scope.#segments.length; i++) {
+            if (!this.#segments[i]!.equals(scope.#segments[i]!)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     [Symbol.toPrimitive](hint: string): string {
         if (hint === 'string') {
             return this.toString();

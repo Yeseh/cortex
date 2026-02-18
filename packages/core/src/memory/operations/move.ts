@@ -9,6 +9,7 @@ import { memoryError } from '../result.ts';
 import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
 import type { MemoryError } from '@/memory/result.ts';
 import { MemoryPath } from '@/memory/memory-path.ts';
+import { CategoryPath } from '@/category/category-path.ts';
 import { getCategoryFromSlugPath } from './helpers.ts';
 
 /**
@@ -104,7 +105,7 @@ export const moveMemory = async (
     }
 
     // 6. Reindex using storage.indexes.reindex()
-    const reindexResult = await storage.indexes.reindex();
+    const reindexResult = await storage.indexes.reindex(CategoryPath.root());
     if (!reindexResult.ok()) {
         const reason = reindexResult.error.message ?? 'Unknown error';
         return memoryError(

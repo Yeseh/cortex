@@ -7,6 +7,7 @@
 import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
 import { ok, type Result } from '@/result.ts';
 import { MemoryPath } from '../memory-path.ts';
+import { CategoryPath } from '@/category/category-path.ts';
 import { memoryError, type MemoryError } from '../result.ts';
 
 /**
@@ -62,7 +63,7 @@ export const removeMemory = async (
     }
 
     // 4. Reindex using storage.indexes.reindex()
-    const reindexResult = await storage.indexes.reindex();
+    const reindexResult = await storage.indexes.reindex(CategoryPath.root());
     if (!reindexResult.ok()) {
         return memoryError('STORAGE_ERROR', 'Failed to reindex after remove', {
             cause: reindexResult.error,
