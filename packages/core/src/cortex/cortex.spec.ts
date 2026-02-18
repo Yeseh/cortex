@@ -407,9 +407,9 @@ describe('Cortex.getStore()', () => {
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            expect(result.value.memories).toBeDefined();
-            expect(result.value.indexes).toBeDefined();
-            expect(result.value.categories).toBeDefined();
+            expect(result.value.name).toBe('test-store');
+            expect(result.value.path).toBe('/path/to/store');
+            expect(result.value.rootCategory()).toBeDefined();
         }
     });
 
@@ -457,12 +457,13 @@ describe('Cortex.getStore()', () => {
         expect(result2.ok()).toBe(true);
         expect(result3.ok()).toBe(true);
 
-        // Factory should only be called once
+        // Factory should only be called once (adapter is cached internally)
         expect(factoryCallCount).toBe(1);
 
-        // Same adapter instance should be returned
+        // StoreClient instances wrap the same cached adapter
         if (result1.ok() && result2.ok()) {
-            expect(result1.value).toBe(result2.value);
+            expect(result1.value.name).toBe(result2.value.name);
+            expect(result1.value.path).toBe(result2.value.path);
         }
     });
 

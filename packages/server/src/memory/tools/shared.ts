@@ -60,7 +60,7 @@ export const resolveStoreAdapter = (
     if (!storeResult.ok()) {
         return err(new McpError(ErrorCode.InvalidParams, storeResult.error.message));
     }
-    return ok(storeResult.value);
+    return ok(storeResult.value.getAdapter());
 };
 
 /**

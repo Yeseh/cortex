@@ -15,10 +15,11 @@
  *     registry: { 'my-store': { path: '/path/to/store' } },
  * });
  *
- * // Get a store adapter
- * const adapter = cortex.getStore('my-store');
- * if (adapter.ok()) {
- *     const memory = await adapter.value.memories.read(memoryPath);
+ * // Get a store client
+ * const store = cortex.getStore('my-store');
+ * if (store.ok()) {
+ *     const root = store.value.rootCategory();
+ *     const result = await root.getCategory('standards').exists();
  * }
  * ```
  *
@@ -49,6 +50,7 @@ import {
     type AdapterFactory,
     DEFAULT_SETTINGS,
 } from './types.ts';
+import { StoreClient } from './store-client.ts';
 
 // =============================================================================
 // Zod Schemas for Config Validation
@@ -313,32 +315,29 @@ export class Cortex {
     }
 
     /**
-     * Returns a scoped storage adapter for the specified store.
+     * Returns a store client for the specified store.
      *
-     * The adapter provides access to memory, index, and category operations
-     * within the store's context. Adapters are cached for reuse.
+     * The client provides access to store metadata and category operations.
+     * Adapters are cached internally for reuse.
      *
-     * @param name - The store name to get an adapter for
-     * @returns Result with the adapter or StoreNotFoundError
+     * @param name - The store name to get a client for
+     * @returns Result with the StoreClient or StoreNotFoundError
      *
      * @example
      * ```typescript
-     * const adapter = cortex.getStore('my-project');
-     * if (adapter.ok()) {
-     *     // Read a memory
-     *     const memory = await adapter.value.memories.read(memoryPath);
+     * const store = cortex.getStore('my-project');
+     * if (store.ok()) {
+     *     console.log(store.value.name);  // 'my-project'
+     *     console.log(store.value.path);  // '/path/to/store'
      *
-     *     // Write a memory
-     *     await adapter.value.memories.write(memory);
-     *
-     *     // Reindex the store
-     *     await adapter.value.indexes.reindex();
+     *     const root = store.value.rootCategory();
+     *     const result = await root.getCategory('standards').exists();
      * } else {
-     *     console.error(`Store not found: ${adapter.error.store}`);
+     *     console.error(`Store not found: ${store.error.store}`);
      * }
      * ```
      */
-    getStore(name: string): Result<ScopedStorageAdapter, StoreNotFoundError> {
+    getStore(name: string): Result<StoreClient, StoreNotFoundError> {
         const definition = this.registry[name];
         if (!definition) {
             return err({
@@ -351,13 +350,13 @@ export class Cortex {
         // Check cache first
         const cached = this.adapterCache.get(name);
         if (cached) {
-            return ok(cached);
+            return ok(StoreClient.create(name, definition.path, cached, definition.description));
         }
 
         // Create new adapter
         const adapter = this.adapterFactory(definition.path);
         this.adapterCache.set(name, adapter);
-        return ok(adapter);
+        return ok(StoreClient.create(name, definition.path, adapter, definition.description));
     }
 }
 
