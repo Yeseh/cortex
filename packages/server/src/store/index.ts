@@ -82,6 +82,10 @@ export const registerStoreTools = (server: McpServer, ctx: ToolContext): void =>
 export { listStores, listStoresFromRegistry, storeNameSchema, createStoreInputSchema } from './tools.ts';
 export type { StoreToolError, StoreToolErrorCode, CreateStoreInput, StoreInfo, ListStoresResult } from './tools.ts';
 
+// Re-export shared utilities
+export { convertToCategories } from './shared.ts';
+export type { CategoryInfo } from './shared.ts';
+
 // Re-export resources
 export { registerStoreResources } from './resources.ts';
 export type { StoreResourceError, StoreResourceErrorCode } from './resources.ts';

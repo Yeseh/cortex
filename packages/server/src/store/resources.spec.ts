@@ -51,6 +51,50 @@ const getRegisteredResourceTemplates = (server: McpServer): Record<string, Resou
     return (server as unknown as McpServerInternals)._registeredResourceTemplates; 
 };
 
+/**
+ * Helper to write a stores.yaml registry file for tests.
+ * @param testDir - The test data directory
+ * @param stores - Object mapping store names to their definitions
+ */
+const writeRegistry = async (
+    testDir: string,
+    stores: Record<string, { path: string; description?: string; categoryMode?: string; categories?: Record<string, unknown> }>,
+): Promise<void> => {
+    const yaml = ['stores:'];
+    for (const [
+        name, def,
+    ] of Object.entries(stores)) {
+        yaml.push(`  ${name}:`);
+        yaml.push(`    path: "${def.path}"`);
+        if (def.description) {
+            yaml.push(`    description: "${def.description}"`);
+        }
+        if (def.categoryMode) {
+            yaml.push(`    categoryMode: ${def.categoryMode}`);
+        }
+        if (def.categories) {
+            yaml.push('    categories:');
+            const addCategories = (cats: Record<string, unknown>, indent: number): void => {
+                for (const [
+                    catName, catDef,
+                ] of Object.entries(cats)) {
+                    yaml.push(`${' '.repeat(indent)}${catName}:`);
+                    const typedDef = catDef as { description?: string; subcategories?: Record<string, unknown> };
+                    if (typedDef.description) {
+                        yaml.push(`${' '.repeat(indent + 2)}description: "${typedDef.description}"`);
+                    }
+                    if (typedDef.subcategories) {
+                        yaml.push(`${' '.repeat(indent + 2)}subcategories:`);
+                        addCategories(typedDef.subcategories, indent + 4);
+                    }
+                }
+            };
+            addCategories(def.categories, 6);
+        }
+    }
+    await fs.writeFile(path.join(testDir, 'stores.yaml'), yaml.join('\n'));
+};
+
 describe(
     'Store Resources', () => {
         let server: McpServer;
@@ -312,16 +356,20 @@ describe(
             'Store Detail Resource (cortex://store/{name})', () => {
                 it(
                     'should return store metadata and categories for valid store', async () => {
-                        // Create store with categories
-                        await fs.mkdir(path.join(
-                            testDir, 'my-store',
-                        ));
-                        await fs.mkdir(path.join(
-                            testDir, 'my-store', 'category-a',
-                        ));
-                        await fs.mkdir(path.join(
-                            testDir, 'my-store', 'category-b',
-                        ));
+                        // Create store directory
+                        const storePath = path.join(testDir, 'my-store');
+                        await fs.mkdir(storePath);
+                        
+                        // Write registry with categories defined in config
+                        await writeRegistry(testDir, {
+                            'my-store': {
+                                path: storePath,
+                                categories: {
+                                    'category-a': {},
+                                    'category-b': {},
+                                },
+                            },
+                        });
 
                         registerStoreResources(
                             server, config,
@@ -345,28 +393,32 @@ describe(
                         expect(parsed).toHaveProperty(
                             'name', 'my-store',
                         );
+                        expect(parsed).toHaveProperty('path', storePath);
+                        expect(parsed).toHaveProperty('categoryMode', 'free');
                         expect(parsed).toHaveProperty('categories');
                         expect(parsed.categories).toHaveLength(2);
-                        expect(parsed.categories).toContain('category-a');
-                        expect(parsed.categories).toContain('category-b');
+                        expect(parsed.categories.map((c: { path: string }) => c.path)).toContain('category-a');
+                        expect(parsed.categories.map((c: { path: string }) => c.path)).toContain('category-b');
                     },
                 );
 
                 it(
                     'should return categories list for store with subdirectories', async () => {
-                        // Create store with nested subdirectories
-                        await fs.mkdir(path.join(
-                            testDir, 'project-store',
-                        ));
-                        await fs.mkdir(path.join(
-                            testDir, 'project-store', 'docs',
-                        ));
-                        await fs.mkdir(path.join(
-                            testDir, 'project-store', 'code',
-                        ));
-                        await fs.mkdir(path.join(
-                            testDir, 'project-store', 'tests',
-                        ));
+                        // Create store directory
+                        const storePath = path.join(testDir, 'project-store');
+                        await fs.mkdir(storePath);
+
+                        // Write registry with categories defined in config
+                        await writeRegistry(testDir, {
+                            'project-store': {
+                                path: storePath,
+                                categories: {
+                                    'code': {},
+                                    'docs': {},
+                                    'tests': {},
+                                },
+                            },
+                        });
 
                         registerStoreResources(
                             server, config,
@@ -382,18 +434,25 @@ describe(
 
                         const parsed = JSON.parse(result.contents[0]!.text);
                         expect(parsed.categories).toHaveLength(3);
-                        expect(parsed.categories).toContain('docs');
-                        expect(parsed.categories).toContain('code');
-                        expect(parsed.categories).toContain('tests');
+                        const paths = parsed.categories.map((c: { path: string }) => c.path);
+                        expect(paths).toContain('docs');
+                        expect(paths).toContain('code');
+                        expect(paths).toContain('tests');
                     },
                 );
 
                 it(
                     'should return empty categories for store with no subdirectories', async () => {
-                        // Create empty store
-                        await fs.mkdir(path.join(
-                            testDir, 'empty-store',
-                        ));
+                        // Create store directory
+                        const storePath = path.join(testDir, 'empty-store');
+                        await fs.mkdir(storePath);
+
+                        // Write registry with no categories
+                        await writeRegistry(testDir, {
+                            'empty-store': {
+                                path: storePath,
+                            },
+                        });
 
                         registerStoreResources(
                             server, config,
@@ -415,20 +474,22 @@ describe(
 
                 it(
                     'should return empty categories when store contains only files', async () => {
-                        // Create store with only files
-                        await fs.mkdir(path.join(
-                            testDir, 'files-only-store',
-                        ));
+                        // Create store directory (files don't affect config categories)
+                        const storePath = path.join(testDir, 'files-only-store');
+                        await fs.mkdir(storePath);
                         await fs.writeFile(
-                            path.join(
-                                testDir, 'files-only-store', 'file1.txt',
-                            ), 'content',
+                            path.join(storePath, 'file1.txt'), 'content',
                         );
                         await fs.writeFile(
-                            path.join(
-                                testDir, 'files-only-store', 'file2.md',
-                            ), 'content',
+                            path.join(storePath, 'file2.md'), 'content',
                         );
+
+                        // Write registry with no categories
+                        await writeRegistry(testDir, {
+                            'files-only-store': {
+                                path: storePath,
+                            },
+                        });
 
                         registerStoreResources(
                             server, config,
@@ -568,10 +629,16 @@ describe(
 
                 it(
                     'should handle array variable with single element', async () => {
-                        // Create store
-                        await fs.mkdir(path.join(
-                            testDir, 'array-test-store',
-                        ));
+                        // Create store directory
+                        const storePath = path.join(testDir, 'array-test-store');
+                        await fs.mkdir(storePath);
+
+                        // Write registry
+                        await writeRegistry(testDir, {
+                            'array-test-store': {
+                                path: storePath,
+                            },
+                        });
 
                         registerStoreResources(
                             server, config,
@@ -623,9 +690,15 @@ describe(
 
                 it(
                     'should include correct URI in response', async () => {
-                        await fs.mkdir(path.join(
-                            testDir, 'uri-test',
-                        ));
+                        const storePath = path.join(testDir, 'uri-test');
+                        await fs.mkdir(storePath);
+
+                        // Write registry
+                        await writeRegistry(testDir, {
+                            'uri-test': {
+                                path: storePath,
+                            },
+                        });
 
                         registerStoreResources(
                             server, config,
@@ -853,19 +926,21 @@ describe(
         describe(
             'getStoreCategories (tested via store-detail resource)', () => {
                 it(
-                    'should successfully list subdirectories', async () => {
-                        await fs.mkdir(path.join(
-                            testDir, 'test-store',
-                        ));
-                        await fs.mkdir(path.join(
-                            testDir, 'test-store', 'subdir-1',
-                        ));
-                        await fs.mkdir(path.join(
-                            testDir, 'test-store', 'subdir-2',
-                        ));
-                        await fs.mkdir(path.join(
-                            testDir, 'test-store', 'subdir-3',
-                        ));
+                    'should successfully list config-defined categories', async () => {
+                        const storePath = path.join(testDir, 'test-store');
+                        await fs.mkdir(storePath);
+
+                        // Write registry with categories
+                        await writeRegistry(testDir, {
+                            'test-store': {
+                                path: storePath,
+                                categories: {
+                                    'subdir-1': {},
+                                    'subdir-2': {},
+                                    'subdir-3': {},
+                                },
+                            },
+                        });
 
                         registerStoreResources(
                             server, config,
@@ -881,9 +956,10 @@ describe(
 
                         const parsed = JSON.parse(result.contents[0]!.text);
                         expect(parsed.categories).toHaveLength(3);
-                        expect(parsed.categories).toContain('subdir-1');
-                        expect(parsed.categories).toContain('subdir-2');
-                        expect(parsed.categories).toContain('subdir-3');
+                        const paths = parsed.categories.map((c: { path: string }) => c.path);
+                        expect(paths).toContain('subdir-1');
+                        expect(paths).toContain('subdir-2');
+                        expect(paths).toContain('subdir-3');
                     },
                 );
 
@@ -913,23 +989,26 @@ describe(
                 );
 
                 it(
-                    'should filter out files and only return directories', async () => {
-                        await fs.mkdir(path.join(
-                            testDir, 'mixed-store',
-                        ));
-                        await fs.mkdir(path.join(
-                            testDir, 'mixed-store', 'actual-category',
-                        ));
+                    'should return config-defined categories regardless of disk contents', async () => {
+                        const storePath = path.join(testDir, 'mixed-store');
+                        await fs.mkdir(storePath);
+                        // Files on disk don't affect config-defined categories
                         await fs.writeFile(
-                            path.join(
-                                testDir, 'mixed-store', 'some-file.txt',
-                            ), 'content',
+                            path.join(storePath, 'some-file.txt'), 'content',
                         );
                         await fs.writeFile(
-                            path.join(
-                                testDir, 'mixed-store', 'another-file.md',
-                            ), 'content',
+                            path.join(storePath, 'another-file.md'), 'content',
                         );
+
+                        // Write registry with only one category
+                        await writeRegistry(testDir, {
+                            'mixed-store': {
+                                path: storePath,
+                                categories: {
+                                    'actual-category': {},
+                                },
+                            },
+                        });
 
                         registerStoreResources(
                             server, config,
@@ -944,7 +1023,8 @@ describe(
                         );
 
                         const parsed = JSON.parse(result.contents[0]!.text);
-                        expect(parsed.categories).toEqual(['actual-category']);
+                        expect(parsed.categories).toHaveLength(1);
+                        expect(parsed.categories[0].path).toBe('actual-category');
                     },
                 );
             },
@@ -975,9 +1055,15 @@ describe(
 
                 it(
                     'should return proper content structure for successful store detail', async () => {
-                        await fs.mkdir(path.join(
-                            testDir, 'structure-test',
-                        ));
+                        const storePath = path.join(testDir, 'structure-test');
+                        await fs.mkdir(storePath);
+
+                        // Write registry
+                        await writeRegistry(testDir, {
+                            'structure-test': {
+                                path: storePath,
+                            },
+                        });
 
                         registerStoreResources(
                             server, config,

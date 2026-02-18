@@ -328,3 +328,94 @@ describe('listStoresFromRegistry', () => {
         }
     });
 });
+
+describe('listStoresFromRegistry with categories', () => {
+    let testDir: string;
+
+    beforeEach(async () => {
+        testDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cortex-store-cats-'));
+    });
+
+    afterEach(async () => {
+        if (testDir) {
+            await fs.rm(testDir, { recursive: true, force: true });
+        }
+    });
+
+    it('should include categoryMode in store response', async () => {
+        const registryContent = [
+            'stores:',
+            '  default:',
+            '    path: "/data/default"',
+            '    categoryMode: strict',
+        ].join('\n');
+
+        await fs.writeFile(path.join(testDir, 'stores.yaml'), registryContent);
+        const result = await listStoresFromRegistry(path.join(testDir, 'stores.yaml'));
+
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
+            expect(result.value.stores[0]?.categoryMode).toBe('strict');
+        }
+    });
+
+    it('should default categoryMode to free when not specified', async () => {
+        const registryContent = [
+            'stores:',
+            '  default:',
+            '    path: "/data/default"',
+        ].join('\n');
+
+        await fs.writeFile(path.join(testDir, 'stores.yaml'), registryContent);
+        const result = await listStoresFromRegistry(path.join(testDir, 'stores.yaml'));
+
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
+            expect(result.value.stores[0]?.categoryMode).toBe('free');
+        }
+    });
+
+    it('should include empty categories array when none defined', async () => {
+        const registryContent = [
+            'stores:',
+            '  default:',
+            '    path: "/data/default"',
+        ].join('\n');
+
+        await fs.writeFile(path.join(testDir, 'stores.yaml'), registryContent);
+        const result = await listStoresFromRegistry(path.join(testDir, 'stores.yaml'));
+
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
+            expect(result.value.stores[0]?.categories).toEqual([]);
+        }
+    });
+
+    it('should include nested categories with full paths', async () => {
+        const registryContent = [
+            'stores:',
+            '  default:',
+            '    path: "/data/default"',
+            '    categories:',
+            '      standards:',
+            '        description: "Coding standards"',
+            '        subcategories:',
+            '          architecture:',
+            '            description: "Architecture decisions"',
+        ].join('\n');
+
+        await fs.writeFile(path.join(testDir, 'stores.yaml'), registryContent);
+        const result = await listStoresFromRegistry(path.join(testDir, 'stores.yaml'));
+
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
+            const categories = result.value.stores[0]?.categories;
+            expect(categories).toHaveLength(1);
+            expect(categories?.[0]?.path).toBe('standards');
+            expect(categories?.[0]?.description).toBe('Coding standards');
+            expect(categories?.[0]?.subcategories).toHaveLength(1);
+            expect(categories?.[0]?.subcategories[0]?.path).toBe('standards/architecture');
+            expect(categories?.[0]?.subcategories[0]?.description).toBe('Architecture decisions');
+        }
+    });
+});
