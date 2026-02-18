@@ -69,14 +69,15 @@ const resolveAdapter = (
     ctx: ToolContext,
     storeName: string | undefined,
 ): Result<ScopedStorageAdapter, McpError> => {
-    const store = storeName ?? ctx.config.defaultStore;
-    const storeResult = ctx.cortex.getStore(store);
+    const name = storeName ?? ctx.config.defaultStore;
+    const store = ctx.cortex.getStore(name);
 
-    if (!storeResult.ok()) {
-        return err(new McpError(ErrorCode.InvalidParams, storeResult.error.message));
+    if (!store.exists()) {
+        const error = store.getError();
+        return err(new McpError(ErrorCode.InvalidParams, error?.message ?? `Store '${name}' not found`));
     }
 
-    return ok(storeResult.value.getAdapter());
+    return ok(store.getAdapter());
 };
 
 /**

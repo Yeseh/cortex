@@ -277,12 +277,14 @@ export const resolveStoreAdapter = async (
         }
 
         const cortex = cortexResult.value;
-        const adapterResult = cortex.getStore(storeName);
-        if (!adapterResult.ok()) {
+        const store = cortex.getStore(storeName);
+        
+        // Check if store exists (lazy validation)
+        if (!store.exists()) {
             return err({
                 code: 'STORE_NOT_FOUND',
                 message: `Store '${storeName}' not found in registry`,
-                cause: adapterResult.error,
+                cause: store.getError() ?? undefined,
             });
         }
 
@@ -302,7 +304,7 @@ export const resolveStoreAdapter = async (
                 name: storeName,
                 scope: 'registry',
             },
-            adapter: adapterResult.value.getAdapter(),
+            adapter: store.getAdapter(),
         });
     }
 

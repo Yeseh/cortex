@@ -171,8 +171,8 @@ describe('Cortex.init()', () => {
         expect(factoryCalled).toBe(false);
 
         // Now call getStore
-        const result = cortex.getStore('test-store');
-        expect(result.ok()).toBe(true);
+        const store = cortex.getStore('test-store');
+        expect(store.exists()).toBe(true);
         expect(factoryCalled).toBe(true);
         expect(factoryPath).toBe('/custom/path');
     });
@@ -185,6 +185,7 @@ describe('Cortex.init()', () => {
             },
         });
 
+        // getStore throws because the default factory throws when called
         expect(() => cortex.getStore('test-store')).toThrow('No adapter factory provided');
     });
 });
@@ -394,7 +395,7 @@ describe('Cortex.getStore()', () => {
         }
     });
 
-    it('should return adapter for registered store', () => {
+    it('should return StoreClient for registered store', () => {
         const cortex = Cortex.init({
             rootDirectory: tempDir,
             adapterFactory: mockAdapterFactory,
@@ -403,17 +404,15 @@ describe('Cortex.getStore()', () => {
             },
         });
 
-        const result = cortex.getStore('test-store');
+        const store = cortex.getStore('test-store');
 
-        expect(result.ok()).toBe(true);
-        if (result.ok()) {
-            expect(result.value.name).toBe('test-store');
-            expect(result.value.path).toBe('/path/to/store');
-            expect(result.value.rootCategory()).toBeDefined();
-        }
+        expect(store.name).toBe('test-store');
+        expect(store.path).toBe('/path/to/store');
+        expect(store.exists()).toBe(true);
+        expect(store.rootCategory()).toBeDefined();
     });
 
-    it('should return error for unregistered store', () => {
+    it('should return StoreClient that throws for unregistered store', () => {
         const cortex = Cortex.init({
             rootDirectory: tempDir,
             adapterFactory: mockAdapterFactory,
@@ -422,14 +421,23 @@ describe('Cortex.getStore()', () => {
             },
         });
 
-        const result = cortex.getStore('nonexistent-store');
+        const store = cortex.getStore('nonexistent-store');
 
-        expect(result.ok()).toBe(false);
-        if (!result.ok()) {
-            expect(result.error.code).toBe('STORE_NOT_FOUND');
-            expect(result.error.store).toBe('nonexistent-store');
-            expect(result.error.message).toContain('existing-store');
-        }
+        // StoreClient is always returned (lazy validation)
+        expect(store.name).toBe('nonexistent-store');
+        expect(store.path).toBe('');
+        expect(store.exists()).toBe(false);
+        
+        // Error is accessible
+        const error = store.getError();
+        expect(error).not.toBeNull();
+        expect(error?.code).toBe('STORE_NOT_FOUND');
+        expect(error?.store).toBe('nonexistent-store');
+        expect(error?.message).toContain('existing-store');
+        
+        // Operations throw
+        expect(() => store.rootCategory()).toThrow('nonexistent-store');
+        expect(() => store.getAdapter()).toThrow('nonexistent-store');
     });
 
     it('should cache adapters for repeated calls', () => {
@@ -449,37 +457,34 @@ describe('Cortex.getStore()', () => {
         });
 
         // Call getStore multiple times
-        const result1 = cortex.getStore('cached-store');
-        const result2 = cortex.getStore('cached-store');
-        const result3 = cortex.getStore('cached-store');
+        const store1 = cortex.getStore('cached-store');
+        const store2 = cortex.getStore('cached-store');
+        const store3 = cortex.getStore('cached-store');
 
-        expect(result1.ok()).toBe(true);
-        expect(result2.ok()).toBe(true);
-        expect(result3.ok()).toBe(true);
+        expect(store1.exists()).toBe(true);
+        expect(store2.exists()).toBe(true);
+        expect(store3.exists()).toBe(true);
 
         // Factory should only be called once (adapter is cached internally)
         expect(factoryCallCount).toBe(1);
 
         // StoreClient instances wrap the same cached adapter
-        if (result1.ok() && result2.ok()) {
-            expect(result1.value.name).toBe(result2.value.name);
-            expect(result1.value.path).toBe(result2.value.path);
-        }
+        expect(store1.name).toBe(store2.name);
+        expect(store1.path).toBe(store2.path);
     });
 
-    it('should return error with helpful message when no stores registered', () => {
+    it('should return StoreClient with helpful error when no stores registered', () => {
         const cortex = Cortex.init({
             rootDirectory: tempDir,
             adapterFactory: mockAdapterFactory,
             registry: {},
         });
 
-        const result = cortex.getStore('any-store');
+        const store = cortex.getStore('any-store');
 
-        expect(result.ok()).toBe(false);
-        if (!result.ok()) {
-            expect(result.error.code).toBe('STORE_NOT_FOUND');
-            expect(result.error.message).toContain('(none)');
-        }
+        expect(store.exists()).toBe(false);
+        const error = store.getError();
+        expect(error?.code).toBe('STORE_NOT_FOUND');
+        expect(error?.message).toContain('(none)');
     });
 });
