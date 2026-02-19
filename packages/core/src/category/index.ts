@@ -13,6 +13,7 @@ export type {
     SetDescriptionResult,
     DeleteCategoryResult,
     CategoryStorage,
+    CategoryModeContext,
     // New types from index module
     Category,
     CategoryMemoryEntry,

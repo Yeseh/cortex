@@ -22,6 +22,7 @@ import {
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 import { Cortex, type Memory } from '@yeseh/cortex-core';
 import { createMemory } from '@yeseh/cortex-core/memory';
+import { createCategory } from '@yeseh/cortex-core/category';
 import type { ToolContext } from './tools/shared.ts';
 
 // Test configuration
@@ -51,8 +52,18 @@ const createMemoryFile = async (
     slugPath: string,
     contents: Partial<Memory>,
 ): Promise<void> => {
-    // Use the proper core createMemory operation which updates indexes
     const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
+
+    // Extract category path from memory path and ensure it exists
+    const pathSegments = slugPath.split('/');
+    if (pathSegments.length >= 2) {
+        const categoryPath = pathSegments.slice(0, -1).join('/');
+        // Create category (idempotent - succeeds if already exists)
+        const categoryResult = await createCategory(adapter.categories, categoryPath);
+        if (!categoryResult.ok()) {
+            throw new Error(`Failed to create category '${categoryPath}': ${categoryResult.error.message}`);
+        }
+    }
 
     const result = await createMemory(adapter, slugPath, {
         content: contents.content!,

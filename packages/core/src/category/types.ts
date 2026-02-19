@@ -11,6 +11,35 @@
 import type { Result } from '../result.ts';
 import type { CategoryPath } from './category-path.ts';
 import type { MemoryPath } from '@/memory/memory-path.ts';
+import type { CategoryMode, CategoryDefinition } from '../config.ts';
+
+/**
+ * Context for category mode enforcement.
+ *
+ * When provided to category operations, enables mode-based
+ * permission checks and config-defined category protection.
+ *
+ * @example
+ * ```typescript
+ * const modeContext: CategoryModeContext = {
+ *     mode: 'subcategories',
+ *     configCategories: {
+ *         standards: { subcategories: { architecture: {} } },
+ *         projects: {},
+ *     },
+ * };
+ *
+ * // In subcategories mode, new root categories are rejected
+ * const result = await createCategory(storage, 'legacy/notes', modeContext);
+ * // Returns error: ROOT_CATEGORY_NOT_ALLOWED
+ * ```
+ */
+export interface CategoryModeContext {
+    /** Category creation/deletion mode */
+    mode: CategoryMode;
+    /** Config-defined category hierarchy (for protection checks) */
+    configCategories?: Record<string, CategoryDefinition>;
+}
 
 /**
  * Error codes for category operations.
@@ -21,13 +50,17 @@ import type { MemoryPath } from '@/memory/memory-path.ts';
  * - `DESCRIPTION_TOO_LONG` - Description exceeds {@link MAX_DESCRIPTION_LENGTH} characters
  * - `STORAGE_ERROR` - Underlying storage operation failed (filesystem, network, etc.)
  * - `INVALID_PATH` - Category path is malformed or empty
+ * - `CATEGORY_PROTECTED` - Operation rejected on config-defined category
+ * - `ROOT_CATEGORY_NOT_ALLOWED` - New root category rejected in subcategories mode
  */
 export type CategoryErrorCode =
     | 'CATEGORY_NOT_FOUND'
     | 'ROOT_CATEGORY_REJECTED'
     | 'DESCRIPTION_TOO_LONG'
     | 'STORAGE_ERROR'
-    | 'INVALID_PATH';
+    | 'INVALID_PATH'
+    | 'CATEGORY_PROTECTED'
+    | 'ROOT_CATEGORY_NOT_ALLOWED';
 
 /**
  * Error details for category operations.

@@ -6,8 +6,9 @@
 
 import { ok, err, type Result } from '../../result.ts';
 import { CategoryPath } from '../category-path.ts';
-import type { CategoryStorage, CategoryError, SetDescriptionResult } from '../types.ts';
+import type { CategoryStorage, CategoryError, SetDescriptionResult, CategoryModeContext } from '../types.ts';
 import { MAX_DESCRIPTION_LENGTH } from '../types.ts';
+import { isConfigDefined } from '../../config.ts';
 
 /**
  * Sets or clears a category's description.
@@ -21,10 +22,12 @@ import { MAX_DESCRIPTION_LENGTH } from '../types.ts';
  * - Descriptions are trimmed; empty strings clear the description
  * - Maximum length is {@link MAX_DESCRIPTION_LENGTH} characters
  * - Category must exist (returns CATEGORY_NOT_FOUND if not)
+ * - Config-defined categories are protected (returns CATEGORY_PROTECTED)
  *
  * @param storage - Storage port for persistence operations
  * @param path - Category path (can be root or nested)
  * @param description - Description text (empty string to clear)
+ * @param modeContext - Optional mode context for protection checks
  * @returns Result with the final description value or error
  *
  * @example
@@ -47,6 +50,7 @@ export const setDescription = async (
     storage: CategoryStorage,
     path: string,
     description: string,
+    modeContext?: CategoryModeContext,
 ): Promise<Result<SetDescriptionResult, CategoryError>> => {
     // Trim and validate length
     const trimmed = description.trim();
@@ -63,6 +67,16 @@ export const setDescription = async (
         return err({
             code: 'INVALID_PATH',
             message: `Invalid category path: ${path}`,
+            path,
+        });
+    }
+
+    // Reject config-defined categories (descriptions come from config)
+    if (modeContext?.configCategories && isConfigDefined(path, modeContext.configCategories)) {
+        return err({
+            code: 'CATEGORY_PROTECTED',
+            message: `Cannot set description on config-defined category '${path}'. ` +
+                'Update the description in config.yaml instead.',
             path,
         });
     }

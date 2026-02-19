@@ -17,7 +17,8 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
-import type { CategoryStorage } from '@yeseh/cortex-core/category';
+import type { CategoryStorage, CategoryModeContext } from '@yeseh/cortex-core/category';
+import type { CategoryMode, CategoryDefinition } from '@yeseh/cortex-core';
 import {
     createCategory,
     setDescription,
@@ -26,6 +27,62 @@ import {
 } from '@yeseh/cortex-core/category';
 import { storeNameSchema } from '../store/tools.ts';
 import { type ToolContext, resolveStoreAdapter } from '../memory/tools/shared.ts';
+
+/**
+ * Options for category tool registration.
+ *
+ * Controls which category tools are registered and how they enforce
+ * category mode restrictions. When provided to `registerCategoryTools`,
+ * these options determine tool availability and permission enforcement.
+ *
+ * @module server/category/tools
+ *
+ * @example
+ * ```typescript
+ * // Free mode (default) - all tools available, no restrictions
+ * const freeOptions: CategoryToolsOptions = {
+ *     mode: 'free',
+ * };
+ *
+ * // Subcategories mode - only subcategories of config-defined allowed
+ * const subOptions: CategoryToolsOptions = {
+ *     mode: 'subcategories',
+ *     configCategories: {
+ *         standards: { subcategories: { architecture: {} } },
+ *         projects: {},
+ *     },
+ * };
+ *
+ * // Strict mode - create/delete tools not registered
+ * const strictOptions: CategoryToolsOptions = {
+ *     mode: 'strict',
+ *     configCategories: {
+ *         standards: {},
+ *         projects: {},
+ *     },
+ * };
+ * ```
+ *
+ * @see {@link registerCategoryTools} for usage in tool registration
+ * @see {@link CategoryModeContext} for the context passed to handlers
+ */
+export interface CategoryToolsOptions {
+    /**
+     * Category creation/deletion mode for the store.
+     *
+     * - `free` (default) - Categories can be created/deleted freely
+     * - `subcategories` - Only subcategories of config-defined categories allowed
+     * - `strict` - Only config-defined categories allowed; create/delete tools not registered
+     */
+    mode?: CategoryMode;
+    /**
+     * Config-defined category hierarchy for protection checks.
+     *
+     * In `subcategories` or `strict` mode, this hierarchy determines which
+     * categories are protected and which root categories are allowed.
+     */
+    configCategories?: Record<string, CategoryDefinition>;
+}
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -172,6 +229,7 @@ const parseInput = <T>(schema: z.ZodSchema<T>, input: unknown): T => {
  *
  * @param ctx - Tool context with server configuration
  * @param input - Validated input with store and path
+ * @param modeContext - Optional mode context for permission enforcement
  * @returns MCP response with JSON containing path and created flag
  * @throws McpError on validation failure or storage error
  *
@@ -187,6 +245,7 @@ const parseInput = <T>(schema: z.ZodSchema<T>, input: unknown): T => {
 export const createCategoryHandler = async (
     ctx: ToolContext,
     input: CreateCategoryInput,
+    modeContext?: CategoryModeContext,
 ): Promise<McpToolResponse> => {
     const adapterResult = resolveStoreAdapter(ctx, input.store);
     if (!adapterResult.ok()) {
@@ -194,10 +253,13 @@ export const createCategoryHandler = async (
     }
 
     const port = createCategoryStoragePort(adapterResult.value);
-    const result = await createCategory(port, input.path);
+    const result = await createCategory(port, input.path, modeContext);
 
     if (!result.ok()) {
         if (result.error.code === 'INVALID_PATH') {
+            throw new McpError(ErrorCode.InvalidParams, result.error.message);
+        }
+        if (result.error.code === 'ROOT_CATEGORY_NOT_ALLOWED' || result.error.code === 'CATEGORY_PROTECTED') {
             throw new McpError(ErrorCode.InvalidParams, result.error.message);
         }
         throw new McpError(ErrorCode.InternalError, result.error.message);
@@ -229,6 +291,7 @@ export const createCategoryHandler = async (
  *
  * @param ctx - Tool context with server configuration
  * @param input - Validated input with store, path, and description
+ * @param modeContext - Optional mode context for protection checks
  * @returns MCP response with JSON containing path and final description
  * @throws McpError on validation failure or storage error
  *
@@ -247,6 +310,7 @@ export const createCategoryHandler = async (
 export const setCategoryDescriptionHandler = async (
     ctx: ToolContext,
     input: SetCategoryDescriptionInput,
+    modeContext?: CategoryModeContext,
 ): Promise<McpToolResponse> => {
     const adapterResult = resolveStoreAdapter(ctx, input.store);
     if (!adapterResult.ok()) {
@@ -256,18 +320,24 @@ export const setCategoryDescriptionHandler = async (
     const port = createCategoryStoragePort(adapterResult.value);
 
     // MCP convenience: auto-create category if it doesn't exist
-    const createResult = await createCategory(port, input.path);
+    const createResult = await createCategory(port, input.path, modeContext);
     if (!createResult.ok() && createResult.error.code !== 'INVALID_PATH') {
+        if (createResult.error.code === 'ROOT_CATEGORY_NOT_ALLOWED' || createResult.error.code === 'CATEGORY_PROTECTED') {
+            throw new McpError(ErrorCode.InvalidParams, createResult.error.message);
+        }
         throw new McpError(ErrorCode.InternalError, createResult.error.message);
     }
 
-    const result = await setDescription(port, input.path, input.description);
+    const result = await setDescription(port, input.path, input.description, modeContext);
 
     if (!result.ok()) {
         if (result.error.code === 'DESCRIPTION_TOO_LONG') {
             throw new McpError(ErrorCode.InvalidParams, result.error.message);
         }
         if (result.error.code === 'CATEGORY_NOT_FOUND') {
+            throw new McpError(ErrorCode.InvalidParams, result.error.message);
+        }
+        if (result.error.code === 'CATEGORY_PROTECTED') {
             throw new McpError(ErrorCode.InvalidParams, result.error.message);
         }
         throw new McpError(ErrorCode.InternalError, result.error.message);
@@ -298,6 +368,7 @@ export const setCategoryDescriptionHandler = async (
  *
  * @param ctx - Tool context with server configuration
  * @param input - Validated input with store and path
+ * @param modeContext - Optional mode context for protection checks
  * @returns MCP response with JSON containing path and deleted flag
  * @throws McpError on validation failure, missing category, or storage error
  *
@@ -310,6 +381,7 @@ export const setCategoryDescriptionHandler = async (
 export const deleteCategoryHandler = async (
     ctx: ToolContext,
     input: DeleteCategoryInput,
+    modeContext?: CategoryModeContext,
 ): Promise<McpToolResponse> => {
     const adapterResult = resolveStoreAdapter(ctx, input.store);
     if (!adapterResult.ok()) {
@@ -317,13 +389,16 @@ export const deleteCategoryHandler = async (
     }
 
     const port = createCategoryStoragePort(adapterResult.value);
-    const result = await deleteCategory(port, input.path);
+    const result = await deleteCategory(port, input.path, modeContext);
 
     if (!result.ok()) {
         if (result.error.code === 'ROOT_CATEGORY_REJECTED') {
             throw new McpError(ErrorCode.InvalidParams, result.error.message);
         }
         if (result.error.code === 'CATEGORY_NOT_FOUND') {
+            throw new McpError(ErrorCode.InvalidParams, result.error.message);
+        }
+        if (result.error.code === 'CATEGORY_PROTECTED') {
             throw new McpError(ErrorCode.InvalidParams, result.error.message);
         }
         throw new McpError(ErrorCode.InternalError, result.error.message);
@@ -352,11 +427,17 @@ export const deleteCategoryHandler = async (
  * - `cortex_set_category_description` - Set or clear category descriptions
  * - `cortex_delete_category` - Delete categories recursively
  *
+ * Tool registration is affected by the category mode:
+ * - `free` mode (default): All tools registered
+ * - `subcategories` mode: All tools registered with mode enforcement
+ * - `strict` mode: create/delete tools NOT registered
+ *
  * Each tool automatically handles input validation via Zod schemas
  * and converts domain errors to appropriate MCP error codes.
  *
  * @param server - MCP server instance to register tools with
  * @param ctx - Tool context with config and cortex instance
+ * @param options - Optional configuration for mode enforcement
  *
  * @example
  * ```typescript
@@ -365,37 +446,56 @@ export const deleteCategoryHandler = async (
  *
  * const server = new McpServer({ name: 'cortex', version: '1.0.0' });
  * const ctx: ToolContext = { config, cortex };
+ *
+ * // Free mode (default)
  * registerCategoryTools(server, ctx);
+ *
+ * // Strict mode - create/delete tools not registered
+ * registerCategoryTools(server, ctx, { mode: 'strict' });
  * ```
  */
-export const registerCategoryTools = (server: McpServer, ctx: ToolContext): void => {
-    server.tool(
-        'cortex_create_category',
-        'Create a category and its parent hierarchy',
-        createCategoryInputSchema.shape,
-        async (input) => {
-            const parsed = parseInput(createCategoryInputSchema, input);
-            return createCategoryHandler(ctx, parsed);
-        },
-    );
+export const registerCategoryTools = (
+    server: McpServer,
+    ctx: ToolContext,
+    options?: CategoryToolsOptions,
+): void => {
+    const mode = options?.mode ?? 'free';
+    const modeContext: CategoryModeContext | undefined = options ? {
+        mode,
+        configCategories: options.configCategories,
+    } : undefined;
 
+    // In strict mode, don't register create/delete tools
+    if (mode !== 'strict') {
+        server.tool(
+            'cortex_create_category',
+            'Create a category and its parent hierarchy',
+            createCategoryInputSchema.shape,
+            async (input) => {
+                const parsed = parseInput(createCategoryInputSchema, input);
+                return createCategoryHandler(ctx, parsed, modeContext);
+            },
+        );
+
+        server.tool(
+            'cortex_delete_category',
+            'Delete a category and all its contents recursively',
+            deleteCategoryInputSchema.shape,
+            async (input) => {
+                const parsed = parseInput(deleteCategoryInputSchema, input);
+                return deleteCategoryHandler(ctx, parsed, modeContext);
+            },
+        );
+    }
+
+    // set_category_description is always registered but enforces protection
     server.tool(
         'cortex_set_category_description',
         'Set or clear a category description (auto-creates category)',
         setCategoryDescriptionInputSchema.shape,
         async (input) => {
             const parsed = parseInput(setCategoryDescriptionInputSchema, input);
-            return setCategoryDescriptionHandler(ctx, parsed);
-        },
-    );
-
-    server.tool(
-        'cortex_delete_category',
-        'Delete a category and all its contents recursively',
-        deleteCategoryInputSchema.shape,
-        async (input) => {
-            const parsed = parseInput(deleteCategoryInputSchema, input);
-            return deleteCategoryHandler(ctx, parsed);
+            return setCategoryDescriptionHandler(ctx, parsed, modeContext);
         },
     );
 };

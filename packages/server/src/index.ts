@@ -33,7 +33,7 @@ import { createMcpContext, type McpContext } from './mcp.ts';
 import { createHealthResponse } from './health.ts';
 import { registerMemoryTools } from './memory/index.ts';
 import { registerStoreTools } from './store/index.ts';
-import { registerCategoryTools } from './category/index.ts';
+import { registerCategoryTools, type CategoryToolsOptions } from './category/index.ts';
 import { err, ok, type Result, Cortex } from '@yeseh/cortex-core';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
@@ -189,10 +189,18 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
     const mcpContext = createMcpContext();
     const { server: mcpServer, transport } = mcpContext;
 
+    // Get category mode options from default store config
+    const registry = cortex.getRegistry();
+    const defaultStoreConfig = registry[config.defaultStore];
+    const categoryToolsOptions: CategoryToolsOptions = {
+        mode: defaultStoreConfig?.categoryMode ?? 'free',
+        configCategories: defaultStoreConfig?.categories,
+    };
+
     // Register MCP tools
     registerMemoryTools(mcpServer, toolContext);
     registerStoreTools(mcpServer, toolContext);
-    registerCategoryTools(mcpServer, toolContext);
+    registerCategoryTools(mcpServer, toolContext, categoryToolsOptions);
 
     // Connect MCP server to transport
     await mcpServer.connect(transport);

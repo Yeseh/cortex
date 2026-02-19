@@ -6,7 +6,8 @@
 
 import { ok, err, type Result } from '../../result.ts';
 import { CategoryPath } from '../category-path.ts';
-import type { CategoryStorage, CategoryError, DeleteCategoryResult } from '../types.ts';
+import type { CategoryStorage, CategoryError, DeleteCategoryResult, CategoryModeContext } from '../types.ts';
+import { isConfigDefined, flattenCategoryPaths } from '../../config.ts';
 
 /**
  * Deletes a category and all its contents recursively.
@@ -19,10 +20,13 @@ import type { CategoryStorage, CategoryError, DeleteCategoryResult } from '../ty
  * Constraints:
  * - Root categories cannot be deleted (returns ROOT_CATEGORY_REJECTED)
  * - Category must exist (returns CATEGORY_NOT_FOUND if not)
+ * - Config-defined categories are protected (returns CATEGORY_PROTECTED)
+ * - Ancestors of config-defined categories are protected
  * - Not idempotent: deleting a non-existent category is an error
  *
  * @param storage - Storage port for persistence operations
  * @param path - Category path to delete (must not be a root category)
+ * @param modeContext - Optional mode context for protection checks
  * @returns Result confirming deletion or error
  *
  * @example
@@ -38,6 +42,7 @@ import type { CategoryStorage, CategoryError, DeleteCategoryResult } from '../ty
 export const deleteCategory = async (
     storage: CategoryStorage,
     path: string,
+    modeContext?: CategoryModeContext,
 ): Promise<Result<DeleteCategoryResult, CategoryError>> => {
     const pathResult = CategoryPath.fromString(path);
     if (!pathResult.ok()) {
@@ -55,6 +60,32 @@ export const deleteCategory = async (
             message: 'Cannot delete root category',
             path,
         });
+    }
+
+    // Reject config-defined categories (protected)
+    if (modeContext?.configCategories) {
+        // Direct config-defined check
+        if (isConfigDefined(path, modeContext.configCategories)) {
+            return err({
+                code: 'CATEGORY_PROTECTED',
+                message: `Cannot delete config-defined category '${path}'. ` +
+                    'Remove it from config.yaml first.',
+                path,
+            });
+        }
+
+        // Check if this is an ancestor of any config-defined category
+        const allConfigPaths = flattenCategoryPaths(modeContext.configCategories);
+        const isAncestor = allConfigPaths.some((configPath) =>
+            configPath.startsWith(path + '/'));
+        if (isAncestor) {
+            return err({
+                code: 'CATEGORY_PROTECTED',
+                message: `Cannot delete '${path}' because it contains config-defined subcategories. ` +
+                    'Remove subcategories from config.yaml first.',
+                path,
+            });
+        }
     }
 
     // Check category exists

@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it, mock } from 'bun:test';
-import type { CategoryError } from '../types.ts';
+import type { CategoryError, CategoryModeContext } from '../types.ts';
 import type { CategoryPath } from '../category-path.ts';
 import { createMockStorage, ok, err } from './test-helpers.spec.ts';
 import { setDescription } from './set-description.ts';
@@ -163,5 +163,76 @@ describe('setDescription', () => {
             expect(result.error.code).toBe('STORAGE_ERROR');
             expect(result.error.message).toBe('Disk full');
         }
+    });
+});
+
+describe('setDescription config protection', () => {
+    const configCategories = {
+        standards: {
+            description: 'Config description',
+            subcategories: {
+                architecture: {},
+            },
+        },
+    };
+
+    const modeContext: CategoryModeContext = {
+        mode: 'free', // Mode doesn't matter for description protection
+        configCategories,
+    };
+
+    it('should reject setting description on config-defined category', async () => {
+        const storage = createMockStorage({
+            exists: mock(async () => ok(true)),
+        });
+        const result = await setDescription(storage, 'standards', 'New description', modeContext);
+
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
+            expect(result.error.code).toBe('CATEGORY_PROTECTED');
+            expect(result.error.message).toContain('config-defined');
+        }
+    });
+
+    it('should reject setting description on nested config-defined category', async () => {
+        const storage = createMockStorage({
+            exists: mock(async () => ok(true)),
+        });
+        const result = await setDescription(storage, 'standards/architecture', 'New', modeContext);
+
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
+            expect(result.error.code).toBe('CATEGORY_PROTECTED');
+        }
+    });
+
+    it('should allow setting description on non-config category', async () => {
+        const updateDescriptionCalls: string[] = [];
+        const storage = createMockStorage({
+            exists: mock(async () => ok(true)),
+            updateSubcategoryDescription: mock(async (path: CategoryPath) => {
+                updateDescriptionCalls.push(path.toString());
+                return ok(undefined);
+            }),
+        });
+        const result = await setDescription(storage, 'legacy/notes', 'My notes', modeContext);
+
+        expect(result.ok()).toBe(true);
+        expect(updateDescriptionCalls.length).toBe(1);
+    });
+
+    it('should allow setting description when no mode context', async () => {
+        const updateDescriptionCalls: string[] = [];
+        const storage = createMockStorage({
+            exists: mock(async () => ok(true)),
+            updateSubcategoryDescription: mock(async (path: CategoryPath) => {
+                updateDescriptionCalls.push(path.toString());
+                return ok(undefined);
+            }),
+        });
+        const result = await setDescription(storage, 'standards', 'Updated');
+
+        expect(result.ok()).toBe(true);
+        expect(updateDescriptionCalls.length).toBe(1);
     });
 });

@@ -308,6 +308,9 @@ describe('MemoryClient', () => {
                 indexes: {
                     updateAfterMemoryWrite: async () => ok(undefined),
                 },
+                categories: {
+                    exists: async () => ok(true),
+                },
             });
             const client = MemoryClient.create('/standards/typescript/architecture', 'architecture', adapter);
 
@@ -340,6 +343,9 @@ describe('MemoryClient', () => {
                         return ok(undefined);
                     },
                 },
+                categories: {
+                    exists: async () => ok(true),
+                },
             });
             const client = MemoryClient.create('/standards/typescript/temp', 'temp', adapter);
             const expiresAt = new Date('2030-01-01T00:00:00Z');
@@ -362,6 +368,9 @@ describe('MemoryClient', () => {
                         writtenMemory = memory;
                         return ok(undefined);
                     },
+                },
+                categories: {
+                    exists: async () => ok(true),
                 },
             });
             const client = MemoryClient.create('/standards/typescript/decision', 'decision', adapter);
@@ -389,6 +398,9 @@ describe('MemoryClient', () => {
                         message: 'Disk full',
                     }),
                 },
+                categories: {
+                    exists: async () => ok(true),
+                },
             });
             const client = MemoryClient.create('/standards/typescript/test', 'test', adapter);
 
@@ -413,6 +425,9 @@ describe('MemoryClient', () => {
                         code: 'INDEX_ERROR',
                         message: 'Index corruption',
                     }),
+                },
+                categories: {
+                    exists: async () => ok(true),
                 },
             });
             const client = MemoryClient.create('/standards/typescript/test', 'test', adapter);
@@ -1114,6 +1129,9 @@ describe('MemoryClient', () => {
                 indexes: {
                     updateAfterMemoryWrite: async () => ok(undefined),
                     reindex: async () => ok({ warnings: [] }),
+                },
+                categories: {
+                    exists: async () => ok(true),
                 },
             });
 

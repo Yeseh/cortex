@@ -5,6 +5,7 @@
  */
 
 import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
+import { CategoryPath } from '@/category/category-path.ts';
 import { Memory } from '@/memory';
 import { ok } from '@/result.ts';
 import { memoryError, type MemoryResult } from '../result.ts';
@@ -42,18 +43,23 @@ export interface CreateMemoryInput {
 
 /**
  * Creates a new memory at the specified path.
- * Auto-creates parent categories as needed.
+ *
+ * **Breaking Change**: Categories are no longer auto-created. The category
+ * must exist before creating a memory. Use `createCategory` first if needed.
  *
  * @param storage - The composed storage adapter
- * @param serializer - Memory serializer for format conversion
- * @param path - Memory path (e.g., "project/cortex/config")
+ * @param path - Memory path (e.g., "project/cortex/config") - category must exist
  * @param input - Memory creation input
  * @param now - Current time (defaults to new Date())
  * @returns Result containing the created Memory object on success, or MemoryError on failure
  *
  * @example
  * ```typescript
- * const result = await create(storage, 'project/cortex/config', {
+ * // Ensure category exists first
+ * await createCategory(storage.categories, 'project/cortex');
+ *
+ * // Then create memory
+ * const result = await createMemory(storage, 'project/cortex/config', {
  *     content: 'Configuration notes',
  *     source: 'user',
  *     tags: ['config'],
@@ -66,6 +72,38 @@ export const createMemory = async (
     input: CreateMemoryInput,
     now?: Date,
 ): Promise<MemoryResult<Memory>> => {
+    // Extract category path from memory path
+    const pathSegments = path.split('/');
+    if (pathSegments.length < 2) {
+        return memoryError('INVALID_PATH',
+            `Memory path '${path}' must include at least one category. ` +
+            'Example: "category/memory-name"',
+            { path });
+    }
+
+    const categoryPath = pathSegments.slice(0, -1).join('/');
+    const categoryPathResult = CategoryPath.fromString(categoryPath);
+    if (!categoryPathResult.ok()) {
+        return memoryError('INVALID_PATH',
+            `Invalid category in memory path: ${categoryPath}`,
+            { path });
+    }
+
+    // Check category exists
+    const categoryExists = await storage.categories.exists(categoryPathResult.value);
+    if (!categoryExists.ok()) {
+        return memoryError('STORAGE_ERROR',
+            `Failed to check category existence: ${categoryPath}`,
+            { path, cause: categoryExists.error });
+    }
+
+    if (!categoryExists.value) {
+        return memoryError('CATEGORY_NOT_FOUND',
+            `Category '${categoryPath}' does not exist. ` +
+            `Create it first with 'cortex category create ${categoryPath}' or use the cortex_create_category MCP tool.`,
+            { path });
+    }
+
     const timestamp = now ?? new Date();
     const memoryResult = Memory.init(
         path,

@@ -11,6 +11,7 @@ import type { ServerConfig } from '../../config.ts';
 import { MEMORY_SUBDIR } from '../../config.ts';
 import { type Memory, serializeStoreRegistry, Cortex } from '@yeseh/cortex-core';
 import { createMemory } from '@yeseh/cortex-core/memory';
+import { createCategory } from '@yeseh/cortex-core/category';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 import type { ToolContext } from './shared.ts';
 
@@ -122,14 +123,65 @@ export const registerStore = async (
     await writeFile(registryPath, serialized.value);
 };
 
+/**
+ * Creates a category in a test store.
+ *
+ * Utility function for test setup that creates a category at the specified
+ * path within a test store. Uses the core `createCategory` operation with
+ * a fresh FilesystemStorageAdapter instance.
+ *
+ * @module server/memory/tools/test-utils
+ * @param storeRoot - Absolute path to the store's root directory
+ * @param categoryPath - Category path to create (e.g., "project/cortex")
+ * @returns Promise that resolves when the category is created
+ * @throws Error if category creation fails (wraps the core error message)
+ *
+ * @example
+ * ```typescript
+ * const testDir = await createTestDir();
+ * const storeRoot = join(testDir, MEMORY_SUBDIR);
+ *
+ * // Create a simple category
+ * await createTestCategory(storeRoot, 'project');
+ *
+ * // Create a nested category (auto-creates parents)
+ * await createTestCategory(storeRoot, 'project/cortex/docs');
+ * ```
+ *
+ * @edgeCases
+ * - Creating an existing category succeeds (operation is idempotent)
+ * - Parent categories are auto-created if missing
+ * - Throws on invalid paths (empty, malformed)
+ */
+export const createTestCategory = async (
+    storeRoot: string,
+    categoryPath: string,
+): Promise<void> => {
+    const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
+    const result = await createCategory(adapter.categories, categoryPath);
+    if (!result.ok()) {
+        throw new Error(`Failed to create category '${categoryPath}': ${result.error.message}`);
+    }
+};
+
 // Helper to create a memory file directly
 export const createMemoryFile = async (
     storeRoot: string,
     slugPath: string,
     contents: Partial<Memory>,
 ): Promise<void> => {
-    // Use the proper core createMemory operation which updates indexes
     const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
+
+    // Extract category path from memory path and ensure it exists
+    const pathSegments = slugPath.split('/');
+    if (pathSegments.length >= 2) {
+        const categoryPath = pathSegments.slice(0, -1).join('/');
+        // Create category (idempotent - succeeds if already exists)
+        const categoryResult = await createCategory(adapter.categories, categoryPath);
+        if (!categoryResult.ok()) {
+            throw new Error(`Failed to create category '${categoryPath}': ${categoryResult.error.message}`);
+        }
+    }
 
     const result = await createMemory(
         adapter,

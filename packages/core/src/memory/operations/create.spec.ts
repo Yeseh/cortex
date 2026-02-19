@@ -222,4 +222,54 @@ describe('createMemory', () => {
             expect(result.value.path.toString()).toBe('project/test/memory');
         }
     });
+
+    it('should return CATEGORY_NOT_FOUND when category does not exist', async () => {
+        const adapter = createMockStorage({
+            categories: { exists: async () => ok(false) },
+        });
+
+        const result = await createMemory(adapter, 'missing-category/memory', {
+            content: 'Test content',
+            source: 'test',
+        });
+
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
+            expect(result.error.code).toBe('CATEGORY_NOT_FOUND');
+            expect(result.error.message).toContain('missing-category');
+            expect(result.error.message).toContain('Create it first');
+        }
+    });
+
+    it('should return CATEGORY_NOT_FOUND when nested category does not exist', async () => {
+        const adapter = createMockStorage({
+            categories: { exists: async () => ok(false) },
+        });
+
+        const result = await createMemory(adapter, 'existing/missing/memory', {
+            content: 'Test content',
+            source: 'test',
+        });
+
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
+            expect(result.error.code).toBe('CATEGORY_NOT_FOUND');
+            expect(result.error.message).toContain('existing/missing');
+        }
+    });
+
+    it('should return INVALID_PATH for memory without category', async () => {
+        const adapter = createMockStorage();
+
+        const result = await createMemory(adapter, 'just-a-memory', {
+            content: 'Test content',
+            source: 'test',
+        });
+
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
+            expect(result.error.code).toBe('INVALID_PATH');
+            expect(result.error.message).toContain('must include at least one category');
+        }
+    });
 });

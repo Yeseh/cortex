@@ -43,6 +43,7 @@ export type MemoryError = {
  * - `MEMORY_EXPIRED` - The requested memory exists but has passed its expiration date
  * - `INVALID_INPUT` - No updates provided, or invalid arguments
  * - `DESTINATION_EXISTS` - Move destination already exists
+ * - `CATEGORY_NOT_FOUND` - Category doesn't exist for memory creation
  *
  * @example
  * ```typescript
@@ -68,7 +69,8 @@ export type MemoryErrorCode =
     | 'INVALID_PATH'
     | 'MEMORY_EXPIRED'
     | 'INVALID_INPUT'
-    | 'DESTINATION_EXISTS';
+    | 'DESTINATION_EXISTS'
+    | 'CATEGORY_NOT_FOUND';
 
 /**
  * Creates a MemoryError with the given code and message.

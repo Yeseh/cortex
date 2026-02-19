@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { MEMORY_SUBDIR } from '../../config.ts';
-import { createTestContextWithStores, createTestDir } from './test-utils.ts';
+import { createTestCategory, createTestContextWithStores, createTestDir } from './test-utils.ts';
 import type { ToolContext } from './shared.ts';
 import { addMemoryHandler, type AddMemoryInput } from './add-memory.ts';
 import { getMemoryHandler, type GetMemoryInput } from './get-memory.ts';
@@ -31,6 +31,10 @@ describe('explicit store parameter', () => {
     });
 
     it('should use explicit store from input', async () => {
+        // Create category in the custom store
+        const customStorePath = join(testDir, MEMORY_SUBDIR, 'custom');
+        await createTestCategory(customStorePath, 'project');
+
         const addInput: AddMemoryInput = {
             store: 'my-default-store',
             path: 'project/test',

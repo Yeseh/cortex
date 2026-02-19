@@ -43,18 +43,42 @@ const expandTilde = (path: string): string => {
 
 /**
  * Flattens a nested CategoryDefinition hierarchy to an array of paths.
- * Includes all paths at all nesting levels.
+ *
+ * Recursively traverses the category hierarchy and collects all paths
+ * at all nesting levels. Useful for listing all config-defined categories
+ * or validating that a path exists in the hierarchy.
  *
  * @module core/config
- * @param categories - Record of category name to definition
- * @param prefix - Path prefix for nested categories
- * @returns Array of all category paths
+ * @param categories - Record of category name to definition (may be undefined)
+ * @param prefix - Path prefix for nested categories (used internally for recursion)
+ * @returns Sorted array of all category paths at all nesting levels
  *
  * @example
- * ```ts
- * const cats = { standards: { subcategories: { arch: {} } } };
- * flattenCategoryPaths(cats); // ['standards', 'standards/arch']
+ * ```typescript
+ * const categories = {
+ *     standards: {
+ *         subcategories: {
+ *             architecture: {},
+ *             conventions: { subcategories: { naming: {} } },
+ *         },
+ *     },
+ *     projects: {},
+ * };
+ *
+ * flattenCategoryPaths(categories);
+ * // Returns: [
+ * //   'projects',
+ * //   'standards',
+ * //   'standards/architecture',
+ * //   'standards/conventions',
+ * //   'standards/conventions/naming'
+ * // ]
  * ```
+ *
+ * @edgeCases
+ * - Returns empty array when categories is undefined or empty
+ * - Results are sorted alphabetically for consistent output
+ * - Does not validate category names (accepts any string keys)
  */
 export const flattenCategoryPaths = (
     categories: Record<string, CategoryDefinition> | undefined,
@@ -78,21 +102,43 @@ export const flattenCategoryPaths = (
 };
 
 /**
- * Checks if a category path is defined in config.
- * All ancestors of explicitly defined categories are implicitly config-defined.
+ * Checks if a category path is defined in the config hierarchy.
+ *
+ * Recursively searches the config-defined categories to determine if
+ * a given path exists either as a direct category or nested subcategory.
+ * Used by category mode enforcement to distinguish config-defined paths
+ * from user-created paths.
  *
  * @module core/config
- * @param path - The category path to check
- * @param categories - The config-defined category hierarchy
- * @returns true if the path is explicitly or implicitly config-defined
+ * @param path - Category path to check (e.g., "standards/architecture")
+ * @param categories - Config-defined category hierarchy
+ * @returns True if the path is defined in config, false otherwise
  *
  * @example
- * ```ts
- * const cats = { standards: { subcategories: { architecture: {} } } };
- * isConfigDefined('standards', cats); // true (explicit)
- * isConfigDefined('standards/architecture', cats); // true (explicit)
- * isConfigDefined('legacy', cats); // false
+ * ```typescript
+ * const categories = {
+ *     standards: {
+ *         subcategories: {
+ *             architecture: {},
+ *             conventions: {},
+ *         },
+ *     },
+ *     projects: {},
+ * };
+ *
+ * isConfigDefined('standards', categories);               // true
+ * isConfigDefined('standards/architecture', categories);  // true
+ * isConfigDefined('standards/conventions', categories);   // true
+ * isConfigDefined('projects', categories);                // true
+ * isConfigDefined('legacy', categories);                  // false
+ * isConfigDefined('standards/unknown', categories);       // false
  * ```
+ *
+ * @edgeCases
+ * - Empty path returns false
+ * - Empty or undefined categories returns false for any path
+ * - Paths with trailing slashes are not normalized (may return false)
+ * - Path segments must match exactly (case-sensitive)
  */
 export const isConfigDefined = (
     path: string,
