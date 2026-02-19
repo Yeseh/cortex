@@ -5,8 +5,8 @@
  */
 
 import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
-import type { StoreRegistry } from '@/store/registry.ts';
 import type { Cortex } from './cortex.ts';
+import type { CortexSettings, Registry } from '@/config/types.ts';
 
 /**
  * Factory function for creating scoped storage adapters.
@@ -29,32 +29,6 @@ import type { Cortex } from './cortex.ts';
  * ```
  */
 export type AdapterFactory = (storePath: string) => ScopedStorageAdapter;
-
-/**
- * Runtime settings for Cortex behavior.
- *
- * These settings control how Cortex operates, including output format
- * preferences and automatic summarization thresholds.
- *
- * @module core/cortex/types
- */
-export interface CortexSettings {
-    /** Output format for serialization (yaml or json). Default: 'yaml' */
-    outputFormat: 'yaml' | 'json';
-    /** Threshold for automatic summarization. 0 disables. Default: 0 */
-    autoSummaryThreshold: number;
-    /** Require local store, don't fall back to global. Default: false */
-    strictLocal: boolean;
-}
-
-/**
- * Default settings for new Cortex instances.
- */
-export const DEFAULT_SETTINGS: CortexSettings = {
-    outputFormat: 'yaml',
-    autoSummaryThreshold: 0,
-    strictLocal: false,
-};
 
 /**
  * Options for programmatic Cortex creation via `Cortex.init()`.
@@ -81,12 +55,6 @@ export const DEFAULT_SETTINGS: CortexSettings = {
  */
 export interface CortexOptions {
     /**
-     * Path to the Cortex configuration directory.
-     * This is where config.yaml and other Cortex files are stored.
-     */
-    rootDirectory: string;
-
-    /**
      * Override default settings.
      * Unspecified fields use defaults from `DEFAULT_SETTINGS`.
      */
@@ -96,7 +64,7 @@ export interface CortexOptions {
      * Store definitions mapping store names to their configuration.
      * Default: empty registry `{}`
      */
-    registry?: StoreRegistry;
+    registry?: Registry;
 
     /**
      * Custom adapter factory for creating storage adapters.
@@ -107,66 +75,7 @@ export interface CortexOptions {
     adapterFactory?: AdapterFactory;
 }
 
-/**
- * Error codes for Cortex configuration operations.
- *
- * @module core/cortex/types
- *
- * - `CONFIG_NOT_FOUND` - Configuration file does not exist at expected path
- * - `CONFIG_READ_FAILED` - Failed to read configuration file (permissions, I/O error)
- * - `CONFIG_PARSE_FAILED` - Configuration file contains invalid YAML/JSON syntax
- * - `CONFIG_VALIDATION_FAILED` - Configuration values fail schema validation
- *
- * @example
- * ```typescript
- * function handleConfigError(error: ConfigError): void {
- *     switch (error.code) {
- *         case 'CONFIG_NOT_FOUND':
- *             console.log('Run "cortex init" to create configuration');
- *             break;
- *         case 'CONFIG_PARSE_FAILED':
- *             console.log(`Fix syntax error at line ${error.line}`);
- *             break;
- *         default:
- *             console.log(error.message);
- *     }
- * }
- * ```
- */
-export type ConfigErrorCode =
-    | 'CONFIG_NOT_FOUND'
-    | 'CONFIG_READ_FAILED'
-    | 'CONFIG_PARSE_FAILED'
-    | 'CONFIG_VALIDATION_FAILED';
 
-/**
- * Error returned when loading Cortex configuration fails.
- *
- * @module core/cortex/types
- *
- * @example
- * ```typescript
- * const error: ConfigError = {
- *     code: 'CONFIG_PARSE_FAILED',
- *     message: 'Invalid YAML syntax: unexpected indentation',
- *     path: '/home/user/.config/cortex/config.yaml',
- *     line: 15,
- *     cause: new SyntaxError('Unexpected token'),
- * };
- * ```
- */
-export interface ConfigError {
-    /** Machine-readable error code */
-    code: ConfigErrorCode;
-    /** Human-readable error message */
-    message: string;
-    /** Path to the config file (when applicable) */
-    path?: string;
-    /** Line number in config file (for parse errors) */
-    line?: number;
-    /** Underlying error cause (for debugging) */
-    cause?: unknown;
-}
 
 /**
  * Error codes for Cortex initialization operations.
@@ -252,4 +161,7 @@ export interface InitializeError {
 export interface CortexContext {
     /** The root Cortex client instance */
     cortex: Cortex;
+    now: () => Date;
+    stdin: NodeJS.ReadStream;
+    stdout: NodeJS.WriteStream;
 }

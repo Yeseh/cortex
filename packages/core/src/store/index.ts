@@ -1,27 +1,3 @@
-/**
- * Store management module.
- *
- * @module core/store
- */
-
-// Re-export registry parsing utilities
-export {
-    parseStoreRegistry,
-    serializeStoreRegistry,
-    isValidStoreName,
-    resolveStorePath,
-    type StoreDefinition,
-    type StoreRegistry,
-    type StoreRegistryLoadError,
-    type StoreRegistryLoadErrorCode,
-    type StoreRegistrySaveError,
-    type StoreRegistrySaveErrorCode,
-    type StoreRegistrySerializeError,
-    type StoreRegistrySerializeErrorCode,
-    type StoreResolveError,
-    type StoreResolveErrorCode,
-} from './registry.ts';
-
 export type { StoreRegistryParseError, StoreRegistryParseErrorCode } from './result.ts';
 
 // Re-export domain operations

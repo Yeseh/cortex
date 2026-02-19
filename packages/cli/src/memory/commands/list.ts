@@ -30,12 +30,9 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
-import { resolveStoreAdapter } from '../../context.ts';
 
 import { CategoryPath, listMemories, type ScopedStorageAdapter } from '@yeseh/cortex-core';
-import type { OutputFormat } from '../../output.ts';
-import { toonOptions } from '../../output.ts';
-import { encode as toonEncode } from '@toon-format/toon';
+import { serializeOutput, type OutputFormat } from '../../output.ts';
 
 /**
  * Options for the list command.
@@ -109,61 +106,21 @@ const formatOutput = (result: ListResult, format: OutputFormat): string => {
         description: subcategory.description,
     }));
 
-    if (format === 'json') {
-        return JSON.stringify(
-            { memories: outputMemories, subcategories: outputSubcategories },
-            null,
-            2,
-        );
+    const data = {
+        memories: outputMemories,
+        subcategories: outputSubcategories,
     }
 
-    if (format === 'toon') {
-        return toonEncode(
-            { memories: outputMemories, subcategories: outputSubcategories },
-            toonOptions,
-        );
+    const serialized = serializeOutput(
+        {kind: 'memory', value: data},
+        format,
+    )
+
+    if (!serialized.ok()) {
+        throwCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message }); 
     }
 
-    // YAML format (default)
-    const lines: string[] = [];
-
-    // Memories section
-    if (result.memories.length === 0) {
-        lines.push('memories: []');
-    }
-    else {
-        lines.push('memories:');
-        for (const memory of result.memories) {
-            lines.push(`  - path: ${memory.path}`);
-            lines.push(`    token_estimate: ${memory.tokenEstimate}`);
-            if (memory.summary) {
-                lines.push(`    summary: ${memory.summary}`);
-            }
-            if (memory.expiresAt) {
-                lines.push(`    expires_at: ${memory.expiresAt.toISOString()}`);
-            }
-            if (memory.isExpired) {
-                lines.push('    expired: true');
-            }
-        }
-    }
-
-    // Subcategories section
-    if (result.subcategories.length === 0) {
-        lines.push('subcategories: []');
-    }
-    else {
-        lines.push('subcategories:');
-        for (const subcategory of result.subcategories) {
-            lines.push(`  - path: ${subcategory.path}`);
-            lines.push(`    memory_count: ${subcategory.memoryCount}`);
-            if (subcategory.description) {
-                lines.push(`    description: ${subcategory.description}`);
-            }
-        }
-    }
-
-    return lines.join('\n');
+    return serialized.value;
 };
 
 /**

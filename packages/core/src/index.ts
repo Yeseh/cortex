@@ -3,7 +3,7 @@
  */
 
 export * from './tokens.ts';
-export * from './config.ts';
+export * from './config/config.ts';
 export * from './result.ts';
 export * from './memory';
 export * from './category';

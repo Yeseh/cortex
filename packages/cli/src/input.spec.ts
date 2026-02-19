@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
 
-import { resolveMemoryContentInput } from './input.ts';
+import { resolveInput } from './input.ts';
 
 describe('resolveMemoryContentInput', () => {
     let tempDir: string;
@@ -21,7 +21,7 @@ describe('resolveMemoryContentInput', () => {
 
     describe('content flag', () => {
         it('should return content from --content flag', async () => {
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 content: 'Hello, world!',
             });
 
@@ -33,7 +33,7 @@ describe('resolveMemoryContentInput', () => {
         });
 
         it('should return empty string when content is empty', async () => {
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 content: '',
             });
 
@@ -50,7 +50,7 @@ describe('resolveMemoryContentInput', () => {
             const filePath = join(tempDir, 'input.txt');
             await fs.writeFile(filePath, 'File content here');
 
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 filePath,
             });
 
@@ -62,7 +62,7 @@ describe('resolveMemoryContentInput', () => {
         });
 
         it('should return error for non-existent file', async () => {
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 filePath: join(tempDir, 'nonexistent.txt'),
             });
 
@@ -74,7 +74,7 @@ describe('resolveMemoryContentInput', () => {
         });
 
         it('should return error for empty file path', async () => {
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 filePath: '   ',
             });
 
@@ -88,7 +88,7 @@ describe('resolveMemoryContentInput', () => {
             const filePath = join(tempDir, 'trimmed.txt');
             await fs.writeFile(filePath, 'Trimmed content');
 
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 filePath: `  ${filePath}  `,
             });
 
@@ -109,7 +109,7 @@ describe('resolveMemoryContentInput', () => {
         it('should read content from stdin', async () => {
             const mockStdin = createMockStdin('Stdin content');
 
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 stdin: mockStdin,
             });
 
@@ -123,7 +123,7 @@ describe('resolveMemoryContentInput', () => {
         it('should return null for TTY stdin', async () => {
             const mockStdin = createMockStdin('', true);
 
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 stdin: mockStdin,
             });
 
@@ -137,7 +137,7 @@ describe('resolveMemoryContentInput', () => {
         it('should read stdin when stdinRequested is true', async () => {
             const mockStdin = createMockStdin('Requested stdin');
 
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 stdin: mockStdin,
                 stdinRequested: true,
             });
@@ -152,7 +152,7 @@ describe('resolveMemoryContentInput', () => {
         it('should skip stdin when requireStdinFlag is true but not requested', async () => {
             const mockStdin = createMockStdin('Ignored stdin');
 
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 stdin: mockStdin,
                 requireStdinFlag: true,
                 stdinRequested: false,
@@ -168,7 +168,7 @@ describe('resolveMemoryContentInput', () => {
         it('should read stdin when requireStdinFlag and stdinRequested are both true', async () => {
             const mockStdin = createMockStdin('Required stdin');
 
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 stdin: mockStdin,
                 requireStdinFlag: true,
                 stdinRequested: true,
@@ -184,7 +184,7 @@ describe('resolveMemoryContentInput', () => {
 
     describe('multiple sources error', () => {
         it('should error when content and file are both provided', async () => {
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 content: 'Content',
                 filePath: '/some/file.txt',
             });
@@ -196,7 +196,7 @@ describe('resolveMemoryContentInput', () => {
         });
 
         it('should error when content and stdin are both requested', async () => {
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 content: 'Content',
                 stdinRequested: true,
             });
@@ -208,7 +208,7 @@ describe('resolveMemoryContentInput', () => {
         });
 
         it('should error when file and stdin are both requested', async () => {
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 filePath: '/some/file.txt',
                 stdinRequested: true,
             });
@@ -220,7 +220,7 @@ describe('resolveMemoryContentInput', () => {
         });
 
         it('should error when all three sources are provided', async () => {
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 content: 'Content',
                 filePath: '/some/file.txt',
                 stdinRequested: true,
@@ -238,7 +238,7 @@ describe('resolveMemoryContentInput', () => {
             const mockStdin = Readable.from([]) as NodeJS.ReadableStream & { isTTY?: boolean };
             mockStdin.isTTY = true;
 
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 stdin: mockStdin,
                 requireContent: true,
             });
@@ -253,7 +253,7 @@ describe('resolveMemoryContentInput', () => {
             const mockStdin = Readable.from([]) as NodeJS.ReadableStream & { isTTY?: boolean };
             mockStdin.isTTY = true;
 
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 stdin: mockStdin,
                 requireContent: false,
             });
@@ -269,7 +269,7 @@ describe('resolveMemoryContentInput', () => {
     describe('priority order', () => {
         it('should prefer content flag over file', async () => {
             // This should error because both are provided
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 content: 'Flag content',
                 filePath: join(tempDir, 'file.txt'),
             });
@@ -290,7 +290,7 @@ describe('resolveMemoryContentInput', () => {
             ]) as NodeJS.ReadableStream & { isTTY?: boolean };
             mockStdin.isTTY = false;
 
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 stdin: mockStdin,
             });
 
@@ -309,7 +309,7 @@ describe('resolveMemoryContentInput', () => {
                 },
             } as unknown as NodeJS.ReadableStream;
 
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 stdin: mockStdin,
             });
 
@@ -323,7 +323,7 @@ describe('resolveMemoryContentInput', () => {
             const mockStdin = Readable.from([]) as NodeJS.ReadableStream & { isTTY?: boolean };
             mockStdin.isTTY = true;
 
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 stdin: mockStdin,
             });
 

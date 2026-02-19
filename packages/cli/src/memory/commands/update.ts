@@ -31,7 +31,7 @@ import { throwCoreError } from '../../errors.ts';
 import { resolveStoreAdapter } from '../../context.ts';
 import { updateMemory, type UpdateMemoryInput } from '@yeseh/cortex-core/memory';
 import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
-import { resolveMemoryContentInput } from '../../input.ts';
+import { resolveInput } from '../../input.ts';
 
 /** Options parsed by Commander for the update command */
 export interface UpdateCommandOptions {
@@ -95,7 +95,7 @@ const resolveContent = async (
         return { content: null };
     }
 
-    const contentResult = await resolveMemoryContentInput({
+    const contentResult = await resolveInput({
         content: options.content,
         filePath: options.file,
         stdin: deps.stdin ?? process.stdin,

@@ -6,11 +6,11 @@ import {
     getConfigPath,
     getDefaultSettings,
     isConfigDefined,
-    parseMergedConfig,
+    parseConfig,
     serializeMergedConfig,
     validateStorePath,
     type MergedConfig,
-} from './config.ts';
+} from './config/config.ts';
 
 describe('ConfigSettings', () => {
     it('should provide default values', () => {
@@ -55,7 +55,7 @@ stores:
   default:
     path: /home/user/.config/cortex/memory
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             expect(result.value.settings.outputFormat).toBe('json');
@@ -71,7 +71,7 @@ stores:
   default:
     path: /data/default
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             expect(result.value.settings.outputFormat).toBe('yaml');
@@ -81,7 +81,7 @@ stores:
     });
 
     it('should parse empty config', () => {
-        const result = parseMergedConfig('');
+        const result = parseConfig('');
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             expect(result.value.settings).toEqual(getDefaultSettings());
@@ -94,7 +94,7 @@ stores:
 settings:
   outputFormat: invalid
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
             expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
@@ -108,7 +108,7 @@ stores:
   invalid:
     path: ./relative/path
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_STORE_PATH');
@@ -123,7 +123,7 @@ stores:
     path: /data/default
     description: The default memory store
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             expect(result.value.stores.default?.description).toBe('The default memory store');
@@ -171,7 +171,7 @@ describe('serializeMergedConfig', () => {
         expect(serialized.ok()).toBe(true);
         if (!serialized.ok()) return;
 
-        const parsed = parseMergedConfig(serialized.value);
+        const parsed = parseConfig(serialized.value);
         expect(parsed.ok()).toBe(true);
         if (!parsed.ok()) return;
 
@@ -247,7 +247,7 @@ stores:
     path: /data/default
     categoryMode: strict
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             expect(result.value.stores.default?.categoryMode).toBe('strict');
@@ -260,7 +260,7 @@ stores:
   default:
     path: /data/default
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             expect(result.value.stores.default?.categoryMode).toBeUndefined();
@@ -274,7 +274,7 @@ stores:
     path: /data/default
     categoryMode: invalid
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
             expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
@@ -297,7 +297,7 @@ stores:
           testing:
             description: Testing guidelines
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             const categories = result.value.stores.default?.categories;
@@ -316,7 +316,7 @@ stores:
     categories:
       todos: {}
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             expect(result.value.stores.default?.categories?.todos).toEqual({});
@@ -336,7 +336,7 @@ stores:
               level3:
                 description: Third level
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             const level3 = result.value.stores.default?.categories?.level1?.subcategories?.level2?.subcategories?.level3;
@@ -354,7 +354,7 @@ stores:
       test:
         description: "${longDescription}"
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
             expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
@@ -384,7 +384,7 @@ stores:
         expect(serialized.ok()).toBe(true);
         if (!serialized.ok()) return;
 
-        const parsed = parseMergedConfig(serialized.value);
+        const parsed = parseConfig(serialized.value);
         expect(parsed.ok()).toBe(true);
         if (!parsed.ok()) return;
 

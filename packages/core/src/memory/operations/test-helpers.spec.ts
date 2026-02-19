@@ -17,7 +17,7 @@ import { err, ok } from '@/result.ts';
 import { Memory, type MemoryMetadata } from '@/memory/memory.ts';
 import type { Category } from '@/category/types.ts';
 import type { CategoryStorage } from '@/category/types.ts';
-import type { StoreRegistry } from '@/store/registry.ts';
+import type { Registry } from '@/config/registry';
 import { CategoryPath } from '@/category/category-path.ts';
 import { MemoryPath } from '@/memory/memory-path.ts';
 
@@ -69,7 +69,7 @@ export const createMockStorage = (
         ...overrides.categories,
     } as CategoryStorage,
     stores: {
-        load: async () => ok({} as StoreRegistry),
+        load: async () => ok({} as Registry),
         save: async () => ok(undefined),
         remove: async () => ok(undefined),
         ...overrides.stores,

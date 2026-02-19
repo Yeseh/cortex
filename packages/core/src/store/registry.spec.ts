@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
-import { parseStoreRegistry, resolveStorePath, serializeStoreRegistry } from './registry.ts';
+import { parseStoreRegistry, resolveStorePath, serializeStoreRegistry } from '../config/registry.ts';
 
 describe('store registry parsing', () => {
     it('should parse top-level store entries', () => {

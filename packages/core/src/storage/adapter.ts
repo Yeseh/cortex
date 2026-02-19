@@ -24,10 +24,10 @@ import type { Result } from '@/result.ts';
 import type { Category } from '../category/types.ts';
 import type { CategoryStorage } from '../category/types.ts';
 import type {
-    StoreRegistry,
+    Registry,
     StoreRegistryLoadError,
     StoreRegistrySaveError,
-} from '../store/registry.ts';
+} from '../config/registry.ts';
 import type { MemoryPath } from '@/memory/memory-path.ts';
 import type { CategoryPath } from '@/category/category-path.ts';
 
@@ -289,7 +289,7 @@ export interface StoreStorage {
     load(
         path: string,
         options?: { allowMissing?: boolean }
-    ): Promise<Result<StoreRegistry, StoreRegistryLoadError>>;
+    ): Promise<Result<Registry, StoreRegistryLoadError>>;
 
     /**
      * Saves the store registry to a file.
@@ -300,7 +300,7 @@ export interface StoreStorage {
      * @param registry - The registry data to persist
      * @returns Result indicating success or failure
      */
-    save(path: string, registry: StoreRegistry): Promise<Result<void, StoreRegistrySaveError>>;
+    save(path: string, registry: Registry): Promise<Result<void, StoreRegistrySaveError>>;
 
     /**
      * Removes a store registry file.
@@ -527,7 +527,7 @@ export interface Registry {
      * refresh the internal cache, which is useful when the registry file
      * may have been modified externally.
      *
-     * @returns Result with the parsed {@link StoreRegistry}, or {@link RegistryError} on failure
+     * @returns Result with the parsed {@link Registry}, or {@link RegistryError} on failure
      *
      * @example
      * ```typescript
@@ -539,7 +539,7 @@ export interface Registry {
      * }
      * ```
      */
-    load(): Promise<Result<StoreRegistry, RegistryError>>;
+    load(): Promise<Result<Registry, RegistryError>>;
 
     /**
      * Persist registry data to storage.
@@ -563,7 +563,7 @@ export interface Registry {
      * }
      * ```
      */
-    save(registry: StoreRegistry): Promise<Result<void, RegistryError>>;
+    save(registry: Registry): Promise<Result<void, RegistryError>>;
 
     /**
      * Synchronous factory returning a storage adapter scoped to a specific store.

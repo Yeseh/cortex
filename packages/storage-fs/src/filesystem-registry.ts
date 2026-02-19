@@ -24,9 +24,9 @@ import {
     getConfigPath,
     getDefaultSettings,
     ok,
-    parseMergedConfig,
+    parseConfig,
     serializeMergedConfig,
-    type ConfigSettings,
+    type CortexSettings,
     type MergedConfig,
     type Result,
 } from '@yeseh/cortex-core';
@@ -93,7 +93,7 @@ export class FilesystemRegistry implements Registry {
     private cache: StoreRegistry | null = null;
 
     /** Cached settings data, populated by load() */
-    private settingsCache: ConfigSettings | null = null;
+    private settingsCache: CortexSettings | null = null;
 
     /**
      * Creates a new FilesystemRegistry instance.
@@ -114,7 +114,7 @@ export class FilesystemRegistry implements Registry {
      * Get the loaded settings.
      * Returns default settings if not loaded.
      */
-    getSettings(): ConfigSettings {
+    getSettings(): CortexSettings {
         return this.settingsCache ?? getDefaultSettings();
     }
 
@@ -226,7 +226,7 @@ export class FilesystemRegistry implements Registry {
             });
         }
 
-        const parsed = parseMergedConfig(contents);
+        const parsed = parseConfig(contents);
         if (!parsed.ok()) {
             return err({
                 code: 'REGISTRY_PARSE_FAILED',
@@ -266,7 +266,7 @@ export class FilesystemRegistry implements Registry {
         let existingSettings = getDefaultSettings();
         try {
             const contents = await readFile(this.configPath, 'utf8');
-            const parsed = parseMergedConfig(contents);
+            const parsed = parseConfig(contents);
             if (parsed.ok()) {
                 existingSettings = parsed.value.settings;
             }

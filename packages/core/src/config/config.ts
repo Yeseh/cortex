@@ -2,12 +2,9 @@
  * Configuration definitions for store resolution and output defaults.
  */
 
-import { homedir } from 'node:os';
-import { isAbsolute, join } from 'node:path';
-import { type Result, ok, err } from './result.ts';
-import type { StoreRegistry } from './store/registry.ts';
-
-export type OutputFormat = 'yaml' | 'json' | 'toon';
+import { type Result, ok, err } from '../result.ts';
+import z from 'zod';
+import type { CategoryDefinition, ConfigCategories, CortexSettings } from './types.ts';
 
 /**
  * Category creation/deletion mode for a store.
@@ -15,31 +12,66 @@ export type OutputFormat = 'yaml' | 'json' | 'toon';
  * - `subcategories` - Only subcategories of config-defined categories allowed
  * - `strict` - Only config-defined categories allowed
  */
-export type CategoryMode = 'free' | 'subcategories' | 'strict';
+export const categoryMode = z.enum(['free', 'subcategories', 'strict']);
+export type CategoryMode = z.infer<typeof categoryMode>;
+
+export const category = z.object({
+    description: z.string().optional(),
+    subcategories: z.record(z.string(), z.unknown()).optional(),
+});
 
 /**
- * Definition of a category in the store configuration.
- * Supports arbitrary nesting depth via subcategories.
+ * Output formats for handlers that support multiple formats. 
  */
-export type CategoryDefinition = {
-    /** Optional description (max 500 chars) */
-    description?: string;
-    /** Nested subcategories */
-    subcategories?: Record<string, CategoryDefinition>;
-};
+export const outputFormat = z.enum(['yaml', 'json', 'toon']);
+export type OutputFormat = z.infer<typeof outputFormat>;
 
 /**
- * Expand tilde (~) to the user's home directory.
+ * Schema for settings section of config.yaml.
  */
-const expandTilde = (path: string): string => {
-    if (path.startsWith('~/')) {
-        return join(homedir(), path.slice(2));
-    }
-    if (path === '~') {
-        return homedir();
-    }
-    return path;
-};
+const settingsSchema = z
+    .strictObject({
+        outputFormat: outputFormat.optional(),
+    })
+    .optional();
+/**
+ * Settings as represented in the config  
+ */
+export const getDefaultSettings = (): CortexSettings => ({
+    outputFormat: 'yaml'
+});
+
+const categoriesSchema = z.record(z.string(), z.unknown()).optional();
+export type ConfiguredCategories = z.infer<typeof categoriesSchema>;
+
+/**
+ * Schema for a single store definition.
+ */
+const storeDefinitionSchema = z.object({
+    path: z.string().min(1, 'Store path must be a non-empty string'),
+    description: z.string().optional(),
+    categoryMode: categoryMode.optional(),
+    categories: z.record(z.string(), z.unknown()).optional(),
+});
+
+/**
+ * Schema for stores section of config.yaml.
+ */
+const storesSchema = z
+    .record(
+        z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Store name must be a lowercase slug'),
+        storeDefinitionSchema,
+    )
+    .optional();
+
+/**
+ * Schema for the entire config.yaml file.
+ */
+export const configFileSchema = z.object({
+    settings: settingsSchema,
+    stores: storesSchema,
+});
+export type CortexConfig = z.infer<typeof configFileSchema>;
 
 /**
  * Flattens a nested CategoryDefinition hierarchy to an array of paths.
@@ -81,7 +113,7 @@ const expandTilde = (path: string): string => {
  * - Does not validate category names (accepts any string keys)
  */
 export const flattenCategoryPaths = (
-    categories: Record<string, CategoryDefinition> | undefined,
+    categories: ConfigCategories | undefined,
     prefix = '',
 ): string[] => {
     if (!categories) {
@@ -89,15 +121,17 @@ export const flattenCategoryPaths = (
     }
 
     const paths: string[] = [];
-    for (const [
-        name, def,
-    ] of Object.entries(categories)) {
+    const entries = Object.entries(categories) as [string, CategoryDefinition][];
+
+    for (const [name, def] of entries) {
         const path = prefix ? `${prefix}/${name}` : name;
         paths.push(path);
+
         if (def.subcategories) {
             paths.push(...flattenCategoryPaths(def.subcategories, path));
         }
     }
+
     return paths.sort();
 };
 
@@ -142,65 +176,30 @@ export const flattenCategoryPaths = (
  */
 export const isConfigDefined = (
     path: string,
-    categories: Record<string, CategoryDefinition> | undefined,
+    categories: ConfigCategories | undefined,
 ): boolean => {
     if (!categories || !path) {
         return false;
     }
 
     const segments = path.split('/');
-    let current: Record<string, CategoryDefinition> | undefined = categories;
+    let current: ConfigCategories | undefined = categories;
 
     for (const segment of segments) {
-        if (!current || !(segment in current)) {
+        if (!current) {
             return false;
         }
-        current = current[segment]?.subcategories;
+
+        const category: CategoryDefinition | undefined = current[segment];
+        if (!category) {
+            return false;
+        }
+
+        current = category.subcategories;
     }
 
     return true;
 };
-
-/**
- * Get the config directory path, respecting CORTEX_CONFIG_PATH env var.
- *
- * Resolution order:
- * 1. CORTEX_CONFIG_PATH environment variable (if set)
- * 2. Default: ~/.config/cortex
- *
- * @returns Absolute path to the config directory
- *
- * @example
- * ```ts
- * // With CORTEX_CONFIG_PATH=/custom/path
- * getConfigDir(); // Returns '/custom/path'
- *
- * // Without env var
- * getConfigDir(); // Returns '/home/user/.config/cortex'
- * ```
- */
-export const getConfigDir = (): string => {
-    const envPath = process.env.CORTEX_CONFIG_PATH;
-    if (envPath) {
-        return expandTilde(envPath);
-    }
-    return join(homedir(), '.config', 'cortex');
-};
-
-/**
- * Get the full path to the config file.
- *
- * @returns Absolute path to config.yaml
- */
-export const getConfigPath = (): string => {
-    return join(getConfigDir(), 'config.yaml');
-};
-
-export interface CortexConfig {
-    outputFormat?: OutputFormat;
-    autoSummaryThreshold?: number;
-    strictLocal?: boolean;
-}
 
 export type ConfigLoadErrorCode =
     | 'CONFIG_READ_FAILED'
@@ -223,42 +222,6 @@ export interface ConfigValidationError {
     cause?: unknown;
 }
 
-/**
- * Validates that a store path is absolute.
- *
- * Store paths must be absolute to ensure consistent resolution across
- * different working directories. Relative paths are rejected with an
- * actionable error message.
- *
- * @module core/config
- * @param storePath - The filesystem path to validate
- * @param storeName - The store name (used in error messages)
- * @returns Result with void on success, or validation error if path is relative
- *
- * @example
- * ```ts
- * const result = validateStorePath('/home/user/.cortex', 'default');
- * // result.ok() === true
- *
- * const invalid = validateStorePath('./relative', 'mystore');
- * // invalid.error.code === 'INVALID_STORE_PATH'
- * ```
- */
-export const validateStorePath = (
-    storePath: string,
-    storeName: string,
-): Result<void, ConfigValidationError> => {
-    if (!isAbsolute(storePath)) {
-        return err({
-            code: 'INVALID_STORE_PATH',
-            message: `Store '${storeName}' path must be absolute. Got: ${storePath}. ` +
-                "Use an absolute path like '/home/user/.cortex/memory'.",
-            store: storeName,
-        });
-    }
-    return ok(undefined);
-};
-
 export interface ConfigLoadError {
     code: ConfigLoadErrorCode;
     message: string;
@@ -268,31 +231,6 @@ export interface ConfigLoadError {
     cause?: unknown;
 }
 
-export interface ConfigLoadOptions {
-    cwd?: string;
-    globalConfigPath?: string;
-    localConfigPath?: string;
-}
-
-/**
- * Settings as represented in the config file (camelCase fields).
- */
-export interface ConfigSettings {
-    outputFormat: OutputFormat;
-    autoSummaryThreshold: number;
-    strictLocal: boolean;
-}
-
-export const getDefaultSettings = (): ConfigSettings => ({
-    outputFormat: 'yaml',
-    autoSummaryThreshold: 0,
-    strictLocal: false,
-});
-
-export interface MergedConfig {
-    settings: ConfigSettings;
-    stores: StoreRegistry;
-}
 
 /**
  * Validates a category definition recursively.
@@ -415,7 +353,7 @@ const validateCategoryHierarchy = (
  * Parse a unified config file with settings and stores sections.
  *
  * @param raw - Raw YAML string content
- * @returns Result with parsed MergedConfig or validation error
+ * @returns Result with parsed CortexConfig or validation error
  *
  * @example
  * ```ts
@@ -429,30 +367,20 @@ const validateCategoryHierarchy = (
  * const result = parseMergedConfig(raw);
  * ```
  */
-export const parseMergedConfig = (raw: string): Result<MergedConfig, ConfigValidationError> => {
-    // Valid category modes
-    const validCategoryModes: readonly CategoryMode[] = [
-        'free',
-        'subcategories',
-        'strict',
-    ] as const;
-
-    // Define the expected structure from YAML
-    interface ConfigFileContent {
-        settings?: Partial<ConfigSettings>;
-        stores?: Record<string, {
-            path: string;
-            description?: string;
-            categoryMode?: string;
-            categories?: Record<string, unknown>;
-        }>;
-    }
-
-    let parsed: ConfigFileContent;
+export const parseConfig = (raw: string): Result<CortexConfig, ConfigValidationError> => {
+    let config: CortexConfig;
     try {
-        parsed = Bun.YAML.parse(raw) as ConfigFileContent ?? {};
+        const yamlParse = Bun.YAML.parse(raw) ?? {};
+        config = configFileSchema.parse(yamlParse) as CortexConfig;
     }
     catch (error) {
+        if (error instanceof z.ZodError) {
+            return err({
+                code: 'CONFIG_VALIDATION_FAILED',
+                message: 'Config validation failed: ' + error.issues.map(e => `${e.path.join('.')} - ${e.message}`).join('; '),
+                cause: error.message,
+            });
+        }
         return err({
             code: 'CONFIG_PARSE_FAILED',
             message: 'Invalid YAML syntax in config file.',
@@ -461,125 +389,26 @@ export const parseMergedConfig = (raw: string): Result<MergedConfig, ConfigValid
     }
 
     // Get defaults
-    const defaults = getDefaultSettings();
+    if (config.stores) {
+        for (const key of Object.keys(config.stores)) {
+            const def = config.stores[key]!;
 
-    // Merge settings with defaults
-    const rawOutputFormat = parsed.settings?.outputFormat;
-    if (rawOutputFormat !== undefined && ![
-        'yaml',
-        'json',
-        'toon',
-    ].includes(rawOutputFormat)) {
-        return err({
-            code: 'CONFIG_VALIDATION_FAILED',
-            message: `Invalid outputFormat: '${rawOutputFormat}'. Must be 'yaml', 'json', or 'toon'.`,
-            field: 'outputFormat',
-        });
-    }
-
-    const settings: ConfigSettings = {
-        outputFormat: (rawOutputFormat as OutputFormat) ?? defaults.outputFormat,
-        autoSummaryThreshold:
-            parsed.settings?.autoSummaryThreshold ?? defaults.autoSummaryThreshold,
-        strictLocal: parsed.settings?.strictLocal ?? defaults.strictLocal,
-    };
-
-    // Validate and transform stores
-    const stores: StoreRegistry = {};
-    if (parsed.stores) {
-        for (const [
-            name, def,
-        ] of Object.entries(parsed.stores)) {
             // Skip if path is missing
             if (!def.path) {
                 return err({
                     code: 'INVALID_STORE_PATH',
-                    message: `Store '${name}' must have a path.`,
-                    store: name,
-                });
-            }
-
-            // Validate absolute path
-            const pathValidation = validateStorePath(def.path, name);
-            if (!pathValidation.ok()) {
-                return pathValidation;
-            }
-
-            // Validate category mode
-            const rawCategoryMode = def.categoryMode;
-            const isValidMode = rawCategoryMode !== undefined &&
-                validCategoryModes.includes(rawCategoryMode as CategoryMode);
-            if (rawCategoryMode !== undefined && !isValidMode) {
-                return err({
-                    code: 'CONFIG_VALIDATION_FAILED',
-                    message: `Invalid categoryMode '${rawCategoryMode}' in store '${name}'. ` +
-                        'Must be \'free\', \'subcategories\', or \'strict\'.',
-                    store: name,
-                    field: 'categoryMode',
+                    message: `Store '${key}' must have a path.`,
+                    store: key,
                 });
             }
 
             // Validate categories
-            const categoriesResult = validateCategoryHierarchy(def.categories, name);
+            const categoriesResult = validateCategoryHierarchy(def.categories, key);
             if (!categoriesResult.ok()) {
                 return categoriesResult;
             }
-
-            stores[name] = {
-                path: def.path,
-                ...(def.description !== undefined && { description: def.description }),
-                ...(rawCategoryMode !== undefined && {
-                    categoryMode: rawCategoryMode as CategoryMode,
-                }),
-                ...(Object.keys(categoriesResult.value).length > 0 && {
-                    categories: categoriesResult.value,
-                }),
-            };
         }
     }
 
-    return ok({ settings, stores });
-};
-
-/**
- * Serialize a MergedConfig back to YAML string format.
- *
- * @param config - The merged config to serialize
- * @returns Result with YAML string or validation error
- *
- * @example
- * ```ts
- * const config: MergedConfig = {
- *   settings: { outputFormat: 'json', autoSummaryThreshold: 10, strictLocal: true },
- *   stores: { default: { path: '/data/default' } },
- * };
- * const result = serializeMergedConfig(config);
- * ```
- */
-export const serializeMergedConfig = (
-    config: MergedConfig,
-): Result<string, ConfigValidationError> => {
-    // Validate store names before serialization
-    for (const name of Object.keys(config.stores)) {
-        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)) {
-            return err({
-                code: 'CONFIG_VALIDATION_FAILED',
-                message: `Invalid store name: '${name}'. Store names must be lowercase kebab-case.`,
-                store: name,
-            });
-        }
-    }
-
-    // Sort stores alphabetically for consistent output
-    const sortedStores: Record<string, { path: string; description?: string }> = {};
-    for (const name of Object.keys(config.stores).sort()) {
-        sortedStores[name] = config.stores[name]!;
-    }
-
-    const yamlObject = {
-        settings: config.settings,
-        ...(Object.keys(sortedStores).length > 0 && { stores: sortedStores }),
-    };
-
-    return ok(Bun.YAML.stringify(yamlObject, null, 2).trimEnd());
+    return ok(config);
 };

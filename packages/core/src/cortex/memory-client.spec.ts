@@ -1084,7 +1084,7 @@ describe('MemoryClient', () => {
     describe('integration', () => {
         it('should work with CategoryClient.getMemory()', () => {
             const adapter = createMockAdapter();
-            const category = CategoryClient.create('/standards/typescript', adapter);
+            const category = CategoryClient.init('/standards/typescript', adapter);
 
             const memoryClient = category.getMemory('style');
 
@@ -1095,7 +1095,7 @@ describe('MemoryClient', () => {
 
         it('should work with CategoryClient.getMemory() from root', () => {
             const adapter = createMockAdapter();
-            const root = CategoryClient.create('/', adapter);
+            const root = CategoryClient.init('/', adapter);
             const standards = root.getCategory('standards');
             const typescript = standards.getCategory('typescript');
 
@@ -1196,7 +1196,7 @@ describe('MemoryClient', () => {
 
         it('should fail with INVALID_PATH when memory is created directly under root', async () => {
             const adapter = createMockAdapter();
-            const root = CategoryClient.create('/', adapter);
+            const root = CategoryClient.init('/', adapter);
             const memory = root.getMemory('orphan-memory');
 
             // Path is /orphan-memory which is only 1 segment, needs at least 2

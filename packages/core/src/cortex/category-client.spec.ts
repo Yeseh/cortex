@@ -53,55 +53,55 @@ describe('CategoryClient', () => {
     describe('normalizePath (via create)', () => {
         it('should normalize root category path "/" to "/"', () => {
             const adapter = createMockAdapter();
-            const client = CategoryClient.create('/', adapter);
+            const client = CategoryClient.init('/', adapter);
             expect(client.rawPath).toBe('/');
         });
 
         it('should normalize empty string to "/"', () => {
             const adapter = createMockAdapter();
-            const client = CategoryClient.create('', adapter);
+            const client = CategoryClient.init('', adapter);
             expect(client.rawPath).toBe('/');
         });
 
         it('should normalize whitespace-only string to "/"', () => {
             const adapter = createMockAdapter();
-            const client = CategoryClient.create('   ', adapter);
+            const client = CategoryClient.init('   ', adapter);
             expect(client.rawPath).toBe('/');
         });
 
         it('should add leading slash to path without one', () => {
             const adapter = createMockAdapter();
-            const client = CategoryClient.create('standards', adapter);
+            const client = CategoryClient.init('standards', adapter);
             expect(client.rawPath).toBe('/standards');
         });
 
         it('should preserve leading slash when present', () => {
             const adapter = createMockAdapter();
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
             expect(client.rawPath).toBe('/standards');
         });
 
         it('should remove trailing slash from non-root path', () => {
             const adapter = createMockAdapter();
-            const client = CategoryClient.create('standards/', adapter);
+            const client = CategoryClient.init('standards/', adapter);
             expect(client.rawPath).toBe('/standards');
         });
 
         it('should collapse multiple consecutive slashes to single slash', () => {
             const adapter = createMockAdapter();
-            const client = CategoryClient.create('standards//javascript', adapter);
+            const client = CategoryClient.init('standards//javascript', adapter);
             expect(client.rawPath).toBe('/standards/javascript');
         });
 
         it('should handle multiple leading slashes', () => {
             const adapter = createMockAdapter();
-            const client = CategoryClient.create('///standards', adapter);
+            const client = CategoryClient.init('///standards', adapter);
             expect(client.rawPath).toBe('/standards');
         });
 
         it('should handle nested paths correctly', () => {
             const adapter = createMockAdapter();
-            const client = CategoryClient.create('standards/typescript/formatting', adapter);
+            const client = CategoryClient.init('standards/typescript/formatting', adapter);
             expect(client.rawPath).toBe('/standards/typescript/formatting');
         });
     });
@@ -113,7 +113,7 @@ describe('CategoryClient', () => {
     describe('parsePath()', () => {
         it('should return CategoryPath.root() for "/" path', () => {
             const adapter = createMockAdapter();
-            const client = CategoryClient.create('/', adapter);
+            const client = CategoryClient.init('/', adapter);
 
             const result = client.parsePath();
 
@@ -126,7 +126,7 @@ describe('CategoryClient', () => {
 
         it('should parse single-segment path correctly', () => {
             const adapter = createMockAdapter();
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const result = client.parsePath();
 
@@ -139,7 +139,7 @@ describe('CategoryClient', () => {
 
         it('should parse multi-segment path correctly', () => {
             const adapter = createMockAdapter();
-            const client = CategoryClient.create('/standards/typescript', adapter);
+            const client = CategoryClient.init('/standards/typescript', adapter);
 
             const result = client.parsePath();
 
@@ -153,7 +153,7 @@ describe('CategoryClient', () => {
             const adapter = createMockAdapter();
             // Special characters are stripped during slug normalization
             // '!!!' normalizes to an empty slug which is still considered valid by CategoryPath
-            const client = CategoryClient.create('/!!!', adapter);
+            const client = CategoryClient.init('/!!!', adapter);
 
             const result = client.parsePath();
 
@@ -173,7 +173,7 @@ describe('CategoryClient', () => {
     describe('getCategory()', () => {
         it('should return subcategory with correct path from root', () => {
             const adapter = createMockAdapter();
-            const root = CategoryClient.create('/', adapter);
+            const root = CategoryClient.init('/', adapter);
 
             const child = root.getCategory('standards');
 
@@ -182,7 +182,7 @@ describe('CategoryClient', () => {
 
         it('should treat leading slash as relative path from root', () => {
             const adapter = createMockAdapter();
-            const root = CategoryClient.create('/', adapter);
+            const root = CategoryClient.init('/', adapter);
 
             const child = root.getCategory('/standards');
 
@@ -191,7 +191,7 @@ describe('CategoryClient', () => {
 
         it('should concatenate relative path from non-root category', () => {
             const adapter = createMockAdapter();
-            const standards = CategoryClient.create('/standards', adapter);
+            const standards = CategoryClient.init('/standards', adapter);
 
             const child = standards.getCategory('javascript');
 
@@ -200,7 +200,7 @@ describe('CategoryClient', () => {
 
         it('should handle deep relative paths', () => {
             const adapter = createMockAdapter();
-            const root = CategoryClient.create('/', adapter);
+            const root = CategoryClient.init('/', adapter);
 
             const deep = root.getCategory('a/b/c');
 
@@ -209,7 +209,7 @@ describe('CategoryClient', () => {
 
         it('should return self when relative path is empty', () => {
             const adapter = createMockAdapter();
-            const category = CategoryClient.create('/standards', adapter);
+            const category = CategoryClient.init('/standards', adapter);
 
             const same = category.getCategory('');
 
@@ -218,7 +218,7 @@ describe('CategoryClient', () => {
 
         it('should return self when relative path is whitespace', () => {
             const adapter = createMockAdapter();
-            const category = CategoryClient.create('/standards', adapter);
+            const category = CategoryClient.init('/standards', adapter);
 
             const same = category.getCategory('   ');
 
@@ -227,7 +227,7 @@ describe('CategoryClient', () => {
 
         it('should strip multiple leading slashes from relative path', () => {
             const adapter = createMockAdapter();
-            const root = CategoryClient.create('/', adapter);
+            const root = CategoryClient.init('/', adapter);
 
             const child = root.getCategory('///foo');
 
@@ -242,7 +242,7 @@ describe('CategoryClient', () => {
     describe('parent()', () => {
         it('should return null for root category', () => {
             const adapter = createMockAdapter();
-            const root = CategoryClient.create('/', adapter);
+            const root = CategoryClient.init('/', adapter);
 
             const parent = root.parent();
 
@@ -251,7 +251,7 @@ describe('CategoryClient', () => {
 
         it('should return root for depth-1 category', () => {
             const adapter = createMockAdapter();
-            const category = CategoryClient.create('/standards', adapter);
+            const category = CategoryClient.init('/standards', adapter);
 
             const parent = category.parent();
 
@@ -261,7 +261,7 @@ describe('CategoryClient', () => {
 
         it('should return parent path for nested category', () => {
             const adapter = createMockAdapter();
-            const category = CategoryClient.create('/standards/javascript', adapter);
+            const category = CategoryClient.init('/standards/javascript', adapter);
 
             const parent = category.parent();
 
@@ -271,7 +271,7 @@ describe('CategoryClient', () => {
 
         it('should enable chain navigation to root', () => {
             const adapter = createMockAdapter();
-            const category = CategoryClient.create('/a/b/c', adapter);
+            const category = CategoryClient.init('/a/b/c', adapter);
 
             const parent1 = category.parent();
             expect(parent1!.rawPath).toBe('/a/b');
@@ -303,7 +303,7 @@ describe('CategoryClient', () => {
                     },
                 },
             });
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const result = await client.exists();
 
@@ -319,7 +319,7 @@ describe('CategoryClient', () => {
                     exists: async () => ok(false),
                 },
             });
-            const client = CategoryClient.create('/nonexistent', adapter);
+            const client = CategoryClient.init('/nonexistent', adapter);
 
             const result = await client.exists();
 
@@ -336,7 +336,7 @@ describe('CategoryClient', () => {
                 },
             });
             // Special characters normalize to empty string which is still valid
-            const client = CategoryClient.create('/!!!', adapter);
+            const client = CategoryClient.init('/!!!', adapter);
 
             const result = await client.exists();
 
@@ -354,7 +354,7 @@ describe('CategoryClient', () => {
                     },
                 },
             });
-            const client = CategoryClient.create('/', adapter);
+            const client = CategoryClient.init('/', adapter);
 
             await client.exists();
 
@@ -375,7 +375,7 @@ describe('CategoryClient', () => {
                     ensure: async () => ok(undefined),
                 },
             });
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const result = await client.create();
 
@@ -393,7 +393,7 @@ describe('CategoryClient', () => {
                     ensure: async () => ok(undefined),
                 },
             });
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const result = await client.create();
 
@@ -405,7 +405,7 @@ describe('CategoryClient', () => {
 
         it('should return INVALID_PATH error when creating root category', async () => {
             const adapter = createMockAdapter();
-            const client = CategoryClient.create('/', adapter);
+            const client = CategoryClient.init('/', adapter);
 
             const result = await client.create();
 
@@ -417,7 +417,7 @@ describe('CategoryClient', () => {
 
         it('should return INVALID_PATH error for invalid path', async () => {
             const adapter = createMockAdapter();
-            const client = CategoryClient.create('/!!!', adapter);
+            const client = CategoryClient.init('/!!!', adapter);
 
             const result = await client.create();
 
@@ -442,7 +442,7 @@ describe('CategoryClient', () => {
                 },
             });
             // Use a nested path since root categories (depth=1) cannot be deleted
-            const client = CategoryClient.create('/standards/typescript', adapter);
+            const client = CategoryClient.init('/standards/typescript', adapter);
 
             const result = await client.delete();
 
@@ -460,7 +460,7 @@ describe('CategoryClient', () => {
                 },
             });
             // Use nested path to avoid ROOT_CATEGORY_REJECTED
-            const client = CategoryClient.create('/standards/nonexistent', adapter);
+            const client = CategoryClient.init('/standards/nonexistent', adapter);
 
             const result = await client.delete();
 
@@ -473,7 +473,7 @@ describe('CategoryClient', () => {
         it('should return ROOT_CATEGORY_REJECTED error when deleting root-level category', async () => {
             const adapter = createMockAdapter();
             // Root-level categories (depth=1) cannot be deleted
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const result = await client.delete();
 
@@ -487,7 +487,7 @@ describe('CategoryClient', () => {
             // Note: Root path (depth 0) passes through the ROOT_CATEGORY_REJECTED check
             // and hits the exists check, which returns false by default
             const adapter = createMockAdapter();
-            const client = CategoryClient.create('/', adapter);
+            const client = CategoryClient.init('/', adapter);
 
             const result = await client.delete();
 
@@ -511,7 +511,7 @@ describe('CategoryClient', () => {
                     updateSubcategoryDescription: async () => ok(undefined),
                 },
             });
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const result = await client.setDescription('TypeScript coding standards');
 
@@ -529,7 +529,7 @@ describe('CategoryClient', () => {
                     updateSubcategoryDescription: async () => ok(undefined),
                 },
             });
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const result = await client.setDescription(null);
 
@@ -546,7 +546,7 @@ describe('CategoryClient', () => {
                     updateSubcategoryDescription: async () => ok(undefined),
                 },
             });
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const result = await client.setDescription('');
 
@@ -562,7 +562,7 @@ describe('CategoryClient', () => {
                     exists: async () => ok(false),
                 },
             });
-            const client = CategoryClient.create('/nonexistent', adapter);
+            const client = CategoryClient.init('/nonexistent', adapter);
 
             const result = await client.setDescription('test');
 
@@ -584,7 +584,7 @@ describe('CategoryClient', () => {
                     read: async () => ok(null),
                 },
             });
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const result = await client.listMemories();
 
@@ -605,7 +605,7 @@ describe('CategoryClient', () => {
                     } as Category),
                 },
             });
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const result = await client.listMemories();
 
@@ -639,7 +639,7 @@ describe('CategoryClient', () => {
                     } as Category),
                 },
             });
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const result = await client.listMemories();
 
@@ -669,7 +669,7 @@ describe('CategoryClient', () => {
                     } as Category),
                 },
             });
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const resultWithOption = await client.listMemories({ includeExpired: true });
             const resultWithoutOption = await client.listMemories();
@@ -693,7 +693,7 @@ describe('CategoryClient', () => {
                     }),
                 },
             });
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const result = await client.listMemories();
 
@@ -710,7 +710,7 @@ describe('CategoryClient', () => {
                 },
             });
             // Special characters are normalized, so this becomes a valid (though empty) path
-            const client = CategoryClient.create('/!!!', adapter);
+            const client = CategoryClient.init('/!!!', adapter);
 
             const result = await client.listMemories();
 
@@ -733,7 +733,7 @@ describe('CategoryClient', () => {
                     read: async () => ok(null),
                 },
             });
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const result = await client.listSubcategories();
 
@@ -754,7 +754,7 @@ describe('CategoryClient', () => {
                     } as Category),
                 },
             });
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const result = await client.listSubcategories();
 
@@ -775,7 +775,7 @@ describe('CategoryClient', () => {
                     }),
                 },
             });
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const result = await client.listSubcategories();
 
@@ -792,7 +792,7 @@ describe('CategoryClient', () => {
                 },
             });
             // Special characters are normalized
-            const client = CategoryClient.create('/!!!', adapter);
+            const client = CategoryClient.init('/!!!', adapter);
 
             const result = await client.listSubcategories();
 
@@ -816,7 +816,7 @@ describe('CategoryClient', () => {
                     reindex: async () => ok(expectedResult),
                 },
             });
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const result = await client.reindex();
 
@@ -832,7 +832,7 @@ describe('CategoryClient', () => {
                     reindex: async () => ok({ warnings: [] }),
                 },
             });
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const result = await client.reindex();
 
@@ -851,7 +851,7 @@ describe('CategoryClient', () => {
                     }),
                 },
             });
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const result = await client.reindex();
 
@@ -872,7 +872,7 @@ describe('CategoryClient', () => {
                     },
                 },
             });
-            const client = CategoryClient.create('/', adapter);
+            const client = CategoryClient.init('/', adapter);
 
             const result = await client.reindex();
 
@@ -895,7 +895,7 @@ describe('CategoryClient', () => {
                     } as Category),
                 },
             });
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const result = await client.prune();
 
@@ -914,7 +914,7 @@ describe('CategoryClient', () => {
                     } as Category),
                 },
             });
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const result = await client.prune({ dryRun: true });
 
@@ -934,7 +934,7 @@ describe('CategoryClient', () => {
                 },
             });
             // Use root path so discoverRootCategories is called and error propagates
-            const client = CategoryClient.create('/', adapter);
+            const client = CategoryClient.init('/', adapter);
 
             const result = await client.prune();
 
@@ -954,7 +954,7 @@ describe('CategoryClient', () => {
                 },
             });
             // Special characters are normalized
-            const client = CategoryClient.create('/!!!', adapter);
+            const client = CategoryClient.init('/!!!', adapter);
 
             const result = await client.prune();
 
@@ -970,7 +970,7 @@ describe('CategoryClient', () => {
                     } as Category),
                 },
             });
-            const client = CategoryClient.create('/', adapter);
+            const client = CategoryClient.init('/', adapter);
 
             const result = await client.prune();
 
@@ -985,7 +985,7 @@ describe('CategoryClient', () => {
     describe('getMemory()', () => {
         it('should return a MemoryClient with correct path for non-root category', () => {
             const adapter = createMockAdapter();
-            const client = CategoryClient.create('/standards', adapter);
+            const client = CategoryClient.init('/standards', adapter);
 
             const memory = client.getMemory('architecture');
 
@@ -995,7 +995,7 @@ describe('CategoryClient', () => {
 
         it('should return a MemoryClient with correct path for root category', () => {
             const adapter = createMockAdapter();
-            const client = CategoryClient.create('/', adapter);
+            const client = CategoryClient.init('/', adapter);
 
             const memory = client.getMemory('overview');
 
@@ -1005,7 +1005,7 @@ describe('CategoryClient', () => {
 
         it('should return a MemoryClient with correct path for nested category', () => {
             const adapter = createMockAdapter();
-            const client = CategoryClient.create('/standards/typescript', adapter);
+            const client = CategoryClient.init('/standards/typescript', adapter);
 
             const memory = client.getMemory('style-guide');
 

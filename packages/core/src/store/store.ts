@@ -5,7 +5,7 @@
 import { access } from 'node:fs/promises';
 import { resolve, isAbsolute } from 'node:path';
 import { ok } from '@/result.ts';
-import type { CortexConfig } from '../config.ts';
+import type { CortexConfig } from '../config/config.ts';
 import { storeError, type StoreResult, type StoreResolutionError } from './result.ts';
 
 export interface StoreResolution {

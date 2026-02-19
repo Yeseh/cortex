@@ -34,69 +34,20 @@
  * ```
  */
 
-import { mkdir } from 'node:fs/promises';
-import { resolve, isAbsolute } from 'path';
-import os from 'os';
-
-import z from 'zod';
-import { type Result, ok, err } from '@/result.ts';
 import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
-import type { StoreRegistry, StoreDefinition } from '@/store/registry.ts';
 import {
     type CortexOptions,
-    type CortexSettings,
-    type ConfigError,
-    type InitializeError,
     type AdapterFactory,
-    DEFAULT_SETTINGS,
 } from './types.ts';
-import { StoreClient } from './store-client.ts';
+import { StoreClient, type StoreClientResult } from './store-client.ts';
+import { getDefaultSettings } from '@/config/config.ts';
+import type {  CortexSettings, Registry } from '@/config/types.ts';
+import { err, ok, type ErrorDetails, type Result } from '@/result.ts';
 
-// =============================================================================
-// Zod Schemas for Config Validation
-// =============================================================================
 
-/**
- * Schema for settings section of config.yaml.
- */
-const settingsSchema = z
-    .object({
-        outputFormat: z.enum([
-            'yaml', 'json',
-        ]).optional(),
-        autoSummaryThreshold: z.number().int().nonnegative().optional(),
-        strictLocal: z.boolean().optional(),
-    })
-    .strict()
-    .optional();
-
-/**
- * Schema for a single store definition.
- */
-const storeDefinitionSchema = z.object({
-    path: z.string().min(1, 'Store path must be a non-empty string'),
-    description: z.string().optional(),
-});
-
-/**
- * Schema for stores section of config.yaml.
- */
-const storesSchema = z
-    .record(
-        z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Store name must be a lowercase slug'),
-        storeDefinitionSchema,
-    )
-    .optional();
-
-/**
- * Schema for the entire config.yaml file.
- */
-const configFileSchema = z.object({
-    settings: settingsSchema,
-    stores: storesSchema,
-});
-
-type ParsedConfigFile = z.infer<typeof configFileSchema>;
+export type CortexErrorCode = 'STORE_NOT_FOUND' | 'INVALID_STORE_ADAPTER'; 
+export type CortexClientError = ErrorDetails<CortexErrorCode>;
+export type CortexClientResult<T> = Result<T, CortexClientError>;
 
 // =============================================================================
 // Cortex Class
@@ -110,7 +61,6 @@ type ParsedConfigFile = z.infer<typeof configFileSchema>;
  *
  * **Creation patterns:**
  * - `Cortex.init(options)` - Synchronous, programmatic creation
- * - `Cortex.fromConfig(configDir)` - Async, loads from config.yaml
  *
  * **Lifecycle:**
  * 1. Create via `init()` or `fromConfig()`
@@ -118,27 +68,20 @@ type ParsedConfigFile = z.infer<typeof configFileSchema>;
  * 3. Use `getStore(name)` to get adapters for specific stores
  */
 export class Cortex {
-    /** Path to the Cortex configuration directory */
-    public readonly rootDirectory: string;
-
     /** Current runtime settings */
     public readonly settings: CortexSettings;
 
     /** Store definitions mapping store names to their configuration */
-    private readonly registry: StoreRegistry;
+    private readonly registry: Registry 
 
     /** Factory for creating scoped storage adapters */
     private readonly adapterFactory: AdapterFactory;
-
-    /** Cache of created adapters by store name */
-    private readonly adapterCache: Map<string, ScopedStorageAdapter> = new Map();
 
     /**
      * Private constructor - use `Cortex.init()` or `Cortex.fromConfig()`.
      */
     private constructor(options: CortexOptions & { adapterFactory: AdapterFactory }) {
-        this.rootDirectory = resolve(options.rootDirectory);
-        this.settings = { ...DEFAULT_SETTINGS, ...options.settings };
+        this.settings = { ...getDefaultSettings(), ...options.settings };
         this.registry = options.registry ?? {};
         this.adapterFactory = options.adapterFactory;
     }
@@ -176,145 +119,6 @@ export class Cortex {
     }
 
     /**
-     * Loads a Cortex instance from a configuration directory.
-     *
-     * Reads `config.yaml` from the specified directory and parses both
-     * settings and store definitions using YAML parsing and Zod validation.
-     *
-     * @param configDir - Path to the configuration directory
-     * @returns Result with the loaded Cortex instance or a ConfigError
-     *
-     * @example
-     * ```typescript
-     * const result = await Cortex.fromConfig('~/.config/cortex');
-     * if (result.ok()) {
-     *     console.log('Output format:', result.value.settings.outputFormat);
-     *     console.log('Stores:', Object.keys(result.value.registry));
-     * } else {
-     *     console.error('Failed to load:', result.error.message);
-     * }
-     * ```
-     */
-    static async fromConfig(configDir: string): Promise<Result<Cortex, ConfigError>> {
-        const resolvedDir = resolvePath(configDir);
-        const configPath = resolve(resolvedDir, 'config.yaml');
-
-        // Read config file using Bun.file()
-        const configFile = Bun.file(configPath);
-        let contents: string;
-        try {
-            if (!(await configFile.exists())) {
-                return err({
-                    code: 'CONFIG_NOT_FOUND',
-                    message: `Config file not found at ${configPath}. Run 'cortex init' to create one.`,
-                    path: configPath,
-                });
-            }
-            contents = await configFile.text();
-        }
-        catch (error) {
-            return err({
-                code: 'CONFIG_READ_FAILED',
-                message: `Failed to read config file at ${configPath}.`,
-                path: configPath,
-                cause: error,
-            });
-        }
-
-        // Parse and validate config file
-        const parseResult = parseConfigFile(contents, configPath);
-        if (!parseResult.ok()) {
-            return parseResult;
-        }
-
-        const { settings, registry } = parseResult.value;
-
-        return ok(
-            Cortex.init({
-                rootDirectory: resolvedDir,
-                settings,
-                registry,
-            }),
-        );
-    }
-
-    /**
-     * Creates the folder structure and config file for this Cortex instance.
-     *
-     * This operation is idempotent - calling it multiple times is safe.
-     * If the directory and config already exist, they are preserved.
-     *
-     * @returns Result indicating success or failure
-     *
-     * @example
-     * ```typescript
-     * const cortex = Cortex.init({
-     *     rootDirectory: '/path/to/new/config',
-     *     registry: { 'default': { path: '/path/to/store' } },
-     * });
-     *
-     * const result = await cortex.initialize();
-     * if (result.ok()) {
-     *     console.log('Cortex initialized successfully');
-     * }
-     * ```
-     */
-    async initialize(): Promise<Result<void, InitializeError>> {
-        const configPath = resolve(this.rootDirectory, 'config.yaml');
-        const configFile = Bun.file(configPath);
-
-        // Check if config already exists using Bun.file()
-        if (await configFile.exists()) {
-            // Config exists, preserve it (idempotent)
-            return ok(undefined);
-        }
-
-        // Create directory structure
-        try {
-            await mkdir(this.rootDirectory, { recursive: true });
-        }
-        catch (error) {
-            return err({
-                code: 'DIRECTORY_CREATE_FAILED',
-                message: `Failed to create directory at ${this.rootDirectory}. Check that the parent directory exists and you have write permissions.`,
-                path: this.rootDirectory,
-                cause: error,
-            });
-        }
-
-        // Write config file using Bun.write()
-        try {
-            const configContent = serializeConfig(this.settings, this.registry);
-            await Bun.write(configPath, configContent);
-        }
-        catch (error) {
-            return err({
-                code: 'CONFIG_WRITE_FAILED',
-                message: `Failed to write config file at ${configPath}. Check that you have write permissions to the directory.`,
-                path: configPath,
-                cause: error,
-            });
-        }
-
-        return ok(undefined);
-    }
-
-    /**
-     * Returns the store registry containing all registered store definitions.
-     *
-     * @returns The store registry mapping store names to their definitions
-     *
-     * @example
-     * ```typescript
-     * const registry = cortex.getRegistry();
-     * console.log('Registered stores:', Object.keys(registry));
-     * ```
-     */
-    getRegistry(): StoreRegistry {
-        return this.registry;
-    }
-
-    /**
      * Returns a store client for the specified store.
      *
      * The client provides access to store metadata and category operations.
@@ -349,22 +153,28 @@ export class Cortex {
      * }
      * ```
      */
-    getStore(name: string): StoreClient {
+    getStore(name: string): CortexClientResult<StoreClient> {
         const definition = this.registry[name];
         if (!definition) {
-            return StoreClient.createNotFound(name, Object.keys(this.registry));
-        }
-
-        // Check cache first
-        const cached = this.adapterCache.get(name);
-        if (cached) {
-            return StoreClient.create(name, definition.path, cached, definition.description);
+            return err({
+                code: 'STORE_NOT_FOUND',
+                message: `Store '${name}' not found in registry`,
+                store: name,
+            });
         }
 
         // Create new adapter
         const adapter = this.adapterFactory(definition.path);
-        this.adapterCache.set(name, adapter);
-        return StoreClient.create(name, definition.path, adapter, definition.description);
+        const storeClient = StoreClient.init(name, definition.path, adapter, definition.description);
+        if (!storeClient.ok()) {
+             return err({
+                code: 'INVALID_STORE_ADAPTER',
+                message: `Adapter was null or undefined for store '${name}' at path '${definition.path}'`,
+                store: name,
+             });
+        }
+
+        return ok(storeClient.value);
     }
 }
 
@@ -372,15 +182,6 @@ export class Cortex {
 // Helper Functions
 // =============================================================================
 
-/**
- * Resolves a path, expanding ~ to home directory using Bun-native API.
- */
-const resolvePath = (pathStr: string): string => {
-    if (pathStr.startsWith('~')) {
-        return resolve(os.homedir(), pathStr.slice(1).replace(/^[/\\]/, ''));
-    }
-    return isAbsolute(pathStr) ? pathStr : resolve(pathStr);
-};
 
 /**
  * Creates a default adapter factory that throws until storage-fs is available.
@@ -400,110 +201,3 @@ const createDefaultAdapterFactory = (): AdapterFactory => {
     };
 };
 
-/**
- * Transforms settings from config file format to internal format.
- * Since both use camelCase, this is a pass-through with undefined filtering.
- */
-const transformSettings = (rawSettings: ParsedConfigFile['settings']): Partial<CortexSettings> => {
-    if (!rawSettings) return {};
-
-    const settings: Partial<CortexSettings> = {
-        outputFormat: rawSettings.outputFormat,
-        autoSummaryThreshold: rawSettings.autoSummaryThreshold,
-        strictLocal: rawSettings.strictLocal, 
-    };
-
-    return settings;
-};
-
-/**
- * Transforms stores from config file format to StoreRegistry format.
- */
-const transformStores = (rawStores: ParsedConfigFile['stores']): StoreRegistry => {
-    if (!rawStores) return {};
-    const registry: StoreRegistry = {};
-    for (const [
-        name, def,
-    ] of Object.entries(rawStores)) {
-        const storeDefinition: StoreDefinition = { path: def.path };
-        if (def.description !== undefined) {
-            storeDefinition.description = def.description;
-        }
-        registry[name] = storeDefinition;
-    }
-    return registry;
-};
-
-/**
- * Parses a config.yaml file content using YAML parsing and Zod validation.
- */
-const parseConfigFile = (
-    contents: string,
-    configPath: string,
-): Result<{ settings: Partial<CortexSettings>; registry: StoreRegistry }, ConfigError> => {
-    // Parse YAML
-    let parsed: unknown;
-    try {
-        parsed = Bun.YAML.parse(contents);
-    }
-    catch (error) {
-        const yamlError = error as { message?: string };
-        return err({
-            code: 'CONFIG_PARSE_FAILED',
-            message: `Invalid YAML in config file: ${yamlError.message ?? 'Unknown parse error'}`,
-            path: configPath,
-            cause: error,
-        });
-    }
-
-    // Handle empty file
-    if (parsed === null || parsed === undefined) {
-        return ok({ settings: {}, registry: {} });
-    }
-
-    // Validate with Zod
-    const validation = configFileSchema.safeParse(parsed);
-    if (!validation.success) {
-        const firstError = validation.error.issues[0];
-        const fieldPath = firstError?.path.join('.') || 'unknown';
-        return err({
-            code: 'CONFIG_VALIDATION_FAILED',
-            message: `Invalid config: ${firstError?.message ?? 'Validation failed'} at '${fieldPath}'`,
-            path: configPath,
-            cause: validation.error,
-        });
-    }
-
-    const config = validation.data;
-
-    return ok({
-        settings: transformSettings(config.settings),
-        registry: transformStores(config.stores),
-    });
-};
-
-/**
- * Serializes settings and registry to config.yaml format with camelCase keys.
- */
-const serializeConfig = (settings: CortexSettings, registry: StoreRegistry): string => {
-    const config: ParsedConfigFile = {
-        settings: {
-            outputFormat: settings.outputFormat,
-            autoSummaryThreshold: settings.autoSummaryThreshold,
-            strictLocal: settings.strictLocal,
-        },
-        stores: {},
-    };
-
-    // Add stores
-    for (const [
-        name, def,
-    ] of Object.entries(registry)) {
-        config.stores![name] = {
-            path: def.path,
-            ...(def.description !== undefined && { description: def.description }),
-        };
-    }
-
-    return Bun.YAML.stringify(config);
-};

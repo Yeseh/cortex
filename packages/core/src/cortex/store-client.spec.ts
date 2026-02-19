@@ -54,7 +54,7 @@ describe('StoreClient', () => {
     describe('create()', () => {
         it('should create a StoreClient with name and path', () => {
             const adapter = createMockAdapter();
-            const client = StoreClient.create('my-project', '/data/my-project', adapter);
+            const client = StoreClient.init('my-project', '/data/my-project', adapter);
 
             expect(client.name).toBe('my-project');
             expect(client.path).toBe('/data/my-project');
@@ -62,7 +62,7 @@ describe('StoreClient', () => {
 
         it('should create a StoreClient with description', () => {
             const adapter = createMockAdapter();
-            const client = StoreClient.create(
+            const client = StoreClient.init(
                 'my-project',
                 '/data/my-project',
                 adapter,
@@ -76,7 +76,7 @@ describe('StoreClient', () => {
 
         it('should create a StoreClient without description', () => {
             const adapter = createMockAdapter();
-            const client = StoreClient.create('my-project', '/data/my-project', adapter);
+            const client = StoreClient.init('my-project', '/data/my-project', adapter);
 
             expect(client.name).toBe('my-project');
             expect(client.path).toBe('/data/my-project');
@@ -91,7 +91,7 @@ describe('StoreClient', () => {
     describe('readonly properties', () => {
         it('should expose name as readonly', () => {
             const adapter = createMockAdapter();
-            const client = StoreClient.create('test-store', '/test/path', adapter);
+            const client = StoreClient.init('test-store', '/test/path', adapter);
 
             expect(client.name).toBe('test-store');
             // TypeScript would prevent: client.name = 'modified';
@@ -100,7 +100,7 @@ describe('StoreClient', () => {
 
         it('should expose path as readonly', () => {
             const adapter = createMockAdapter();
-            const client = StoreClient.create('test-store', '/test/path', adapter);
+            const client = StoreClient.init('test-store', '/test/path', adapter);
 
             expect(client.path).toBe('/test/path');
             // TypeScript would prevent: client.path = '/modified';
@@ -108,7 +108,7 @@ describe('StoreClient', () => {
 
         it('should expose description as readonly when present', () => {
             const adapter = createMockAdapter();
-            const client = StoreClient.create(
+            const client = StoreClient.init(
                 'test-store',
                 '/test/path',
                 adapter,
@@ -121,7 +121,7 @@ describe('StoreClient', () => {
 
         it('should have undefined description when not provided', () => {
             const adapter = createMockAdapter();
-            const client = StoreClient.create('test-store', '/test/path', adapter);
+            const client = StoreClient.init('test-store', '/test/path', adapter);
 
             expect(client.description).toBeUndefined();
         });
@@ -134,9 +134,9 @@ describe('StoreClient', () => {
     describe('rootCategory()', () => {
         it('should return a CategoryClient with rawPath "/"', () => {
             const adapter = createMockAdapter();
-            const store = StoreClient.create('my-project', '/data/my-project', adapter);
+            const store = StoreClient.init('my-project', '/data/my-project', adapter);
 
-            const root = store.rootCategory();
+            const root = store.root();
 
             expect(root.rawPath).toBe('/');
         });
@@ -153,9 +153,9 @@ describe('StoreClient', () => {
                     },
                 },
             });
-            const store = StoreClient.create('my-project', '/data/my-project', adapter);
+            const store = StoreClient.init('my-project', '/data/my-project', adapter);
 
-            const root = store.rootCategory();
+            const root = store.root();
             await root.exists();
 
             expect(existsCalled).toBe(true);
@@ -163,9 +163,9 @@ describe('StoreClient', () => {
 
         it('should allow navigation to subcategories', () => {
             const adapter = createMockAdapter();
-            const store = StoreClient.create('my-project', '/data/my-project', adapter);
+            const store = StoreClient.init('my-project', '/data/my-project', adapter);
 
-            const root = store.rootCategory();
+            const root = store.root();
             const standards = root.getCategory('standards');
             const typescript = standards.getCategory('typescript');
 
@@ -176,10 +176,10 @@ describe('StoreClient', () => {
 
         it('should return new CategoryClient instance on each call', () => {
             const adapter = createMockAdapter();
-            const store = StoreClient.create('my-project', '/data/my-project', adapter);
+            const store = StoreClient.init('my-project', '/data/my-project', adapter);
 
-            const root1 = store.rootCategory();
-            const root2 = store.rootCategory();
+            const root1 = store.root();
+            const root2 = store.root();
 
             // Different instances
             expect(root1).not.toBe(root2);
@@ -195,7 +195,7 @@ describe('StoreClient', () => {
     describe('getAdapter()', () => {
         it('should return the underlying storage adapter', () => {
             const adapter = createMockAdapter();
-            const client = StoreClient.create('test-store', '/test/path', adapter);
+            const client = StoreClient.init('test-store', '/test/path', adapter);
 
             expect(client.getAdapter()).toBe(adapter);
         });
@@ -208,7 +208,7 @@ describe('StoreClient', () => {
     describe('edge cases', () => {
         it('should handle empty string name', () => {
             const adapter = createMockAdapter();
-            const client = StoreClient.create('', '/data/unnamed', adapter);
+            const client = StoreClient.init('', '/data/unnamed', adapter);
 
             expect(client.name).toBe('');
             expect(client.path).toBe('/data/unnamed');
@@ -216,7 +216,7 @@ describe('StoreClient', () => {
 
         it('should handle empty string path', () => {
             const adapter = createMockAdapter();
-            const client = StoreClient.create('my-store', '', adapter);
+            const client = StoreClient.init('my-store', '', adapter);
 
             expect(client.name).toBe('my-store');
             expect(client.path).toBe('');
@@ -224,7 +224,7 @@ describe('StoreClient', () => {
 
         it('should handle empty string description', () => {
             const adapter = createMockAdapter();
-            const client = StoreClient.create('my-store', '/data/store', adapter, '');
+            const client = StoreClient.init('my-store', '/data/store', adapter, '');
 
             // Empty string is still a defined value
             expect(client.description).toBe('');
@@ -232,7 +232,7 @@ describe('StoreClient', () => {
 
         it('should handle path with special characters', () => {
             const adapter = createMockAdapter();
-            const client = StoreClient.create(
+            const client = StoreClient.init(
                 'my-store',
                 '/data/my store with spaces',
                 adapter,
@@ -243,7 +243,7 @@ describe('StoreClient', () => {
 
         it('should handle name with special characters', () => {
             const adapter = createMockAdapter();
-            const client = StoreClient.create(
+            const client = StoreClient.init(
                 'my-store_v2.0',
                 '/data/my-store',
                 adapter,
@@ -254,7 +254,7 @@ describe('StoreClient', () => {
 
         it('should preserve unicode in name and description', () => {
             const adapter = createMockAdapter();
-            const client = StoreClient.create(
+            const client = StoreClient.init(
                 'store-emoji',
                 '/data/store',
                 adapter,

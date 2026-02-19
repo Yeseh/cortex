@@ -8,7 +8,7 @@
  * @module core/cortex/category-client
  */
 
-import { ok, err, type Result } from '@/result.ts';
+import { ok, err, type Result, type ErrorDetails } from '@/result.ts';
 import type { ScopedStorageAdapter, ReindexResult } from '@/storage/adapter.ts';
 import { CategoryPath } from '@/category/category-path.ts';
 import type {
@@ -18,11 +18,15 @@ import type {
     SetDescriptionResult,
     CategoryMemoryEntry,
     SubcategoryEntry,
+    CategoryErrorCode,
+    CategoryResult,
 } from '@/category/types.ts';
 import { createCategory, deleteCategory, setDescription } from '@/category/operations/index.ts';
 import type { PruneOptions, PruneResult } from '@/memory/operations/prune.ts';
 import { pruneExpiredMemories } from '@/memory/operations/prune.ts';
 import { MemoryClient } from './memory-client.ts';
+import { Slug } from '@/slug.ts';
+import type { MemoryResult } from '@/memory/result.ts';
 
 /**
  * Client for category navigation and operations.
@@ -91,10 +95,20 @@ export class CategoryClient {
      * @internal
      * @param path - The category path (will be normalized)
      * @param adapter - The storage adapter for the store
-     * @returns A CategoryClient for the specified path
+     * @returns A CategoryResult with a CategoryClient for the specified path
      */
-    static create(path: string, adapter: ScopedStorageAdapter): CategoryClient {
-        return new CategoryClient(path, adapter);
+    static init(path: string, adapter: ScopedStorageAdapter): CategoryResult<CategoryClient> {
+        const pathResult = CategoryPath.fromString(path);
+        if (!pathResult.ok()) {
+            return err({
+                code: 'INVALID_PATH',
+                message: `Invalid category path: ${pathResult.error.message}`,
+                path,
+                cause: pathResult.error,
+            });
+        }
+
+        return ok(new CategoryClient(path, adapter));
     }
 
     /**
@@ -224,13 +238,13 @@ export class CategoryClient {
      * console.log(deep.rawPath); // '/a/b/c'
      * ```
      */
-    getCategory(path: string): CategoryClient {
+    getCategory(path: string): CategoryResult<CategoryClient> {
         // Strip leading slashes to treat as relative
         const relativePath = path.replace(/^\/+/, '');
 
         // Handle empty relative path (return equivalent instance)
         if (!relativePath || relativePath.trim() === '') {
-            return CategoryClient.create(this.rawPath, this.adapter);
+            return CategoryClient.init(this.rawPath, this.adapter);
         }
 
         // Concatenate with current path
@@ -238,7 +252,7 @@ export class CategoryClient {
             ? '/' + relativePath
             : this.rawPath + '/' + relativePath;
 
-        return CategoryClient.create(newPath, this.adapter);
+        return CategoryClient.init(newPath, this.adapter);
     }
 
     /**
@@ -270,13 +284,23 @@ export class CategoryClient {
      * });
      * ```
      */
-    getMemory(slug: string): MemoryClient {
+    getMemory(slug: string): MemoryResult<MemoryClient> {
         // Construct full path: category rawPath + / + slug
+        const slugResult = Slug.from(slug);
+        if (!slugResult.ok()) {
+            return err({
+                code: 'INVALID_SLUG',
+                message: `Invalid memory slug: ${slugResult.error.message}`,
+                slug,
+                cause: slugResult.error,
+            });
+        }
+
         const memoryPath = this.rawPath === '/'
             ? '/' + slug
             : this.rawPath + '/' + slug;
 
-        return MemoryClient.create(memoryPath, slug, this.adapter);
+        return ok(MemoryClient.create(memoryPath, slug, this.adapter));
     }
 
     /**
@@ -300,10 +324,10 @@ export class CategoryClient {
      * console.log(greatGrandparent); // null
      * ```
      */
-    parent(): CategoryClient | null {
+    parent(): CategoryResult<CategoryClient | null> {
         // Root has no parent
         if (this.rawPath === '/') {
-            return null;
+            return ok(null);
         }
 
         // Find the last slash to get parent path
@@ -311,12 +335,12 @@ export class CategoryClient {
 
         // If the only slash is at position 0, parent is root
         if (lastSlashIndex === 0) {
-            return CategoryClient.create('/', this.adapter);
+            return CategoryClient.init('/', this.adapter);
         }
 
         // Otherwise, parent is everything before the last slash
         const parentPath = this.rawPath.slice(0, lastSlashIndex);
-        return CategoryClient.create(parentPath, this.adapter);
+        return CategoryClient.init(parentPath, this.adapter);
     }
 
     // =========================================================================
@@ -354,7 +378,10 @@ export class CategoryClient {
             return pathResult;
         }
 
-        return createCategory(this.adapter.categories, pathResult.value.toString());
+        return createCategory(
+            this.adapter.categories, 
+            pathResult.value.toString()
+        );
     }
 
     /**
@@ -389,7 +416,10 @@ export class CategoryClient {
             return pathResult;
         }
 
-        return deleteCategory(this.adapter.categories, pathResult.value.toString());
+        return deleteCategory(
+            this.adapter.categories, 
+            pathResult.value.toString()
+        );
     }
 
     /**

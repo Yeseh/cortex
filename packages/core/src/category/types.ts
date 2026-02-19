@@ -8,10 +8,10 @@
  * @module core/category/types
  */
 
-import type { Result } from '../result.ts';
+import type { ErrorDetails, Result } from '../result.ts';
 import type { CategoryPath } from './category-path.ts';
 import type { MemoryPath } from '@/memory/memory-path.ts';
-import type { CategoryMode, CategoryDefinition } from '../config.ts';
+import type { CategoryMode, ConfiguredCategories, } from '../config/config.ts';
 
 /**
  * Context for category mode enforcement.
@@ -38,7 +38,7 @@ export interface CategoryModeContext {
     /** Category creation/deletion mode */
     mode: CategoryMode;
     /** Config-defined category hierarchy (for protection checks) */
-    configCategories?: Record<string, CategoryDefinition>;
+    configCategories?: ConfiguredCategories;
 }
 
 /**
@@ -69,16 +69,8 @@ export type CategoryErrorCode =
  * programmatic handling, a human-readable message, and optional
  * context about the failing path or underlying cause.
  */
-export interface CategoryError {
-    /** Machine-readable error code for programmatic handling */
-    code: CategoryErrorCode;
-    /** Human-readable error message */
-    message: string;
-    /** Category path that caused the error (when applicable) */
-    path?: string;
-    /** Underlying error that caused this failure (for debugging) */
-    cause?: unknown;
-}
+export type CategoryError = ErrorDetails<CategoryErrorCode>;
+export type CategoryResult<T> = Result<T, CategoryError>;
 
 /**
  * Result of the createCategory operation.

@@ -409,7 +409,7 @@ describe('Cortex.getStore()', () => {
         expect(store.name).toBe('test-store');
         expect(store.path).toBe('/path/to/store');
         expect(store.exists()).toBe(true);
-        expect(store.rootCategory()).toBeDefined();
+        expect(store.root()).toBeDefined();
     });
 
     it('should return StoreClient that throws for unregistered store', () => {
@@ -436,7 +436,7 @@ describe('Cortex.getStore()', () => {
         expect(error?.message).toContain('existing-store');
         
         // Operations throw
-        expect(() => store.rootCategory()).toThrow('nonexistent-store');
+        expect(() => store.root()).toThrow('nonexistent-store');
         expect(() => store.getAdapter()).toThrow('nonexistent-store');
     });
 

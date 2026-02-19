@@ -11,12 +11,8 @@ export { MemoryClient } from './memory-client.ts';
 
 export {
     type AdapterFactory,
-    type CortexSettings,
     type CortexOptions,
     type CortexContext,
-    type ConfigError,
-    type ConfigErrorCode,
     type InitializeError,
     type InitializeErrorCode,
-    DEFAULT_SETTINGS,
 } from './types.ts';

@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { CategoryPath } from '@/category/category-path.ts';
 import type { Registry } from '@/storage/adapter.ts';
 import { ok } from '@/result.ts';
-import { isValidStoreName } from '@/store/registry.ts';
+import { isValidStoreName } from '@/config/registry.ts';
 import { storeError, type InitStoreError, type StoreResult } from '@/store/result.ts';
 import { buildEmptyIndex } from './helpers.ts';
 
