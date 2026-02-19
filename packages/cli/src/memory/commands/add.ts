@@ -23,7 +23,7 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
-import { createMemory, type CortexConfig, type CortexContext, type ScopedStorageAdapter } from '@yeseh/cortex-core';
+import { createMemory, MemoryPath, type CortexConfig, type CortexContext, type ScopedStorageAdapter } from '@yeseh/cortex-core';
 import { resolveInput as resolveCliContent } from '../../input.ts';
 import { parseExpiresAt, parseTags } from '../parsing.ts';
 import { createCliCommandContext } from '../../create-cli-command.ts';
@@ -51,9 +51,12 @@ export async function handleAdd(
     path: string,
     options: AddCommandOptions,
 ): Promise<void> {
-    const store = ctx.cortex.getStore(storeName ?? 'default'); 
-    const adapter = store.getAdapter();
+    const pathResult = MemoryPath.fromString(path);   
+    if (!pathResult.ok()) {
+        throwCoreError(pathResult.error);
+    }
 
+    const memoryPath = pathResult.value;
     const content = await resolveCliContent({
         content: options.content,
         filePath: options.file,
@@ -75,26 +78,27 @@ export async function handleAdd(
     const tags = parseTags(options.tags);
     const expiresAt = parseExpiresAt(options.expiresAt);
     const citations = options.citations ?? [];
-    const now = ctx.now ?? (() => new Date());
 
-    const createResult = await createMemory(
-        adapter,
-        path,
-        {
-            content: memoryContent!,
-            tags,
-            source: source, 
-            expiresAt,
-            citations,
-        },
-        now(),
-    );
-
-    if (!createResult.ok()) {
-        throwCoreError(createResult.error);
+    const storeResult = ctx.cortex.getStore(storeName ?? 'default')
+    if (!storeResult.ok()) {
+        throwCoreError(storeResult.error);
     }
 
-    const memory = createResult.value;
+    const store = storeResult.value;
+    const memoryClient = store.getMemory(memoryPath.toString()); 
+    const memoryResult = await memoryClient.create({
+        content: memoryContent!, 
+        tags, 
+        source, 
+        expiresAt, 
+        citations
+    });
+
+    if (!memoryResult.ok()) {
+        throwCoreError(memoryResult.error);
+    }
+
+    const memory = memoryResult.value;
     const out = ctx.stdout ?? process.stdout;
 
     out.write(`Added memory ${memory.path} (${source}).\n`);

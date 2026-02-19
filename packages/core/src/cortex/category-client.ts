@@ -8,7 +8,7 @@
  * @module core/cortex/category-client
  */
 
-import { ok, err, type Result, type ErrorDetails } from '@/result.ts';
+import { ok, err, type Result } from '@/result.ts';
 import type { ScopedStorageAdapter, ReindexResult } from '@/storage/adapter.ts';
 import { CategoryPath } from '@/category/category-path.ts';
 import type {
@@ -18,7 +18,6 @@ import type {
     SetDescriptionResult,
     CategoryMemoryEntry,
     SubcategoryEntry,
-    CategoryErrorCode,
     CategoryResult,
 } from '@/category/types.ts';
 import { createCategory, deleteCategory, setDescription } from '@/category/operations/index.ts';
@@ -98,17 +97,20 @@ export class CategoryClient {
      * @returns A CategoryResult with a CategoryClient for the specified path
      */
     static init(path: string, adapter: ScopedStorageAdapter): CategoryResult<CategoryClient> {
-        const pathResult = CategoryPath.fromString(path);
+        const normalizedPath = CategoryClient.normalizePath(path);
+        const pathPayload = normalizedPath === '/' ? '' : normalizedPath.slice(1);
+
+        const pathResult = CategoryPath.fromString(pathPayload);
         if (!pathResult.ok()) {
             return err({
                 code: 'INVALID_PATH',
                 message: `Invalid category path: ${pathResult.error.message}`,
-                path,
+                path: normalizedPath,
                 cause: pathResult.error,
             });
         }
 
-        return ok(new CategoryClient(path, adapter));
+        return ok(new CategoryClient(normalizedPath, adapter));
     }
 
     /**
@@ -284,23 +286,18 @@ export class CategoryClient {
      * });
      * ```
      */
-    getMemory(slug: string): MemoryResult<MemoryClient> {
-        // Construct full path: category rawPath + / + slug
-        const slugResult = Slug.from(slug);
-        if (!slugResult.ok()) {
-            return err({
-                code: 'INVALID_SLUG',
-                message: `Invalid memory slug: ${slugResult.error.message}`,
-                slug,
-                cause: slugResult.error,
-            });
-        }
-
+    getMemory(slug: string): MemoryClient {
         const memoryPath = this.rawPath === '/'
             ? '/' + slug
             : this.rawPath + '/' + slug;
 
-        return ok(MemoryClient.create(memoryPath, slug, this.adapter));
+        const client = MemoryClient.create(
+            memoryPath, 
+            slug,
+            this.adapter);
+
+
+        return client;
     }
 
     /**

@@ -8,7 +8,7 @@ import { ok, err, type Result } from '../../result.ts';
 import { CategoryPath } from '../category-path.ts';
 import type { CategoryStorage, CategoryError, SetDescriptionResult, CategoryModeContext } from '../types.ts';
 import { MAX_DESCRIPTION_LENGTH } from '../types.ts';
-import { isConfigDefined } from '../../config.ts';
+import { isConfigDefined } from '../../config/config.ts';
 
 /**
  * Sets or clears a category's description.

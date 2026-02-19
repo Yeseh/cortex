@@ -7,7 +7,7 @@
 import { ok, err, type Result } from '../../result.ts';
 import { CategoryPath } from '../category-path.ts';
 import type { CategoryStorage, CategoryError, DeleteCategoryResult, CategoryModeContext } from '../types.ts';
-import { isConfigDefined, flattenCategoryPaths } from '../../config.ts';
+import { isConfigDefined, flattenCategoryPaths } from '../../config/config.ts';
 
 /**
  * Deletes a category and all its contents recursively.

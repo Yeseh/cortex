@@ -7,7 +7,7 @@
 import { ok, err, type Result } from '../../result.ts';
 import { CategoryPath } from '../category-path.ts';
 import type { CategoryStorage, CategoryError, CreateCategoryResult, CategoryModeContext } from '../types.ts';
-import { isConfigDefined } from '../../config.ts';
+import { isConfigDefined } from '../../config/config.ts';
 
 /**
  * Creates a category and its parent hierarchy, excluding root categories.
@@ -76,12 +76,14 @@ export const createCategory = async (
     }
 
     // Mode enforcement checks (when context provided)
+    const categoryPath = pathResult.value;
     if (modeContext) {
         const { mode, configCategories } = modeContext;
+        const stringPath = categoryPath.toString();
 
         // In subcategories mode, reject new root categories not in config
         if (mode === 'subcategories' && configCategories) {
-            const segments = path.split('/');
+            const segments = stringPath.split('/');
             const rootCategory = segments[0];
             if (rootCategory && !isConfigDefined(rootCategory, configCategories)) {
                 const allowedRoots = Object.keys(configCategories);

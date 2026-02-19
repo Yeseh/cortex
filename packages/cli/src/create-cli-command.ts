@@ -82,7 +82,6 @@ export const createCliCommandContext = async (
 
         const config = parseResult.value;
         const cortex = Cortex.init({
-            rootDirectory: absoluteDir,
             settings: config.settings,
             registry: config.stores,
         });

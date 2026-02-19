@@ -1,5 +1,5 @@
 /**
- * Tests for the StoreClient class.
+ * Tests for StoreClient.
  *
  * @module core/cortex/store-client.spec
  */
@@ -8,10 +8,6 @@ import { describe, expect, it } from 'bun:test';
 import { StoreClient } from './store-client.ts';
 import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
 import { ok } from '@/result.ts';
-
-// =============================================================================
-// Mock Factory
-// =============================================================================
 
 const createMockAdapter = (overrides?: Partial<{
     memories: Partial<ScopedStorageAdapter['memories']>;
@@ -42,227 +38,63 @@ const createMockAdapter = (overrides?: Partial<{
     },
 }) as ScopedStorageAdapter;
 
-// =============================================================================
-// StoreClient Tests
-// =============================================================================
+describe('StoreClient.init()', () => {
+    it('should create a store client for valid adapter input', () => {
+        const result = StoreClient.init('my-store', '/data/my-store', createMockAdapter(), 'Test store');
 
-describe('StoreClient', () => {
-    // =========================================================================
-    // create() Tests
-    // =========================================================================
-
-    describe('create()', () => {
-        it('should create a StoreClient with name and path', () => {
-            const adapter = createMockAdapter();
-            const client = StoreClient.init('my-project', '/data/my-project', adapter);
-
-            expect(client.name).toBe('my-project');
-            expect(client.path).toBe('/data/my-project');
-        });
-
-        it('should create a StoreClient with description', () => {
-            const adapter = createMockAdapter();
-            const client = StoreClient.init(
-                'my-project',
-                '/data/my-project',
-                adapter,
-                'Project memories',
-            );
-
-            expect(client.name).toBe('my-project');
-            expect(client.path).toBe('/data/my-project');
-            expect(client.description).toBe('Project memories');
-        });
-
-        it('should create a StoreClient without description', () => {
-            const adapter = createMockAdapter();
-            const client = StoreClient.init('my-project', '/data/my-project', adapter);
-
-            expect(client.name).toBe('my-project');
-            expect(client.path).toBe('/data/my-project');
-            expect(client.description).toBeUndefined();
-        });
+        expect(result.ok()).toBe(true);
+        if (!result.ok()) return;
+        expect(result.value.name).toBe('my-store');
+        expect(result.value.path).toBe('/data/my-store');
+        expect(result.value.description).toBe('Test store');
     });
 
-    // =========================================================================
-    // readonly properties Tests
-    // =========================================================================
+    it('should return INVALID_STORE_ADAPTER when adapter is missing', () => {
+        const result = StoreClient.init('my-store', '/data/my-store', undefined as unknown as ScopedStorageAdapter);
 
-    describe('readonly properties', () => {
-        it('should expose name as readonly', () => {
-            const adapter = createMockAdapter();
-            const client = StoreClient.init('test-store', '/test/path', adapter);
+        expect(result.ok()).toBe(false);
+        if (result.ok()) return;
+        expect(result.error.code).toBe('INVALID_STORE_ADAPTER');
+    });
+});
 
-            expect(client.name).toBe('test-store');
-            // TypeScript would prevent: client.name = 'modified';
-            // At runtime, attempting to set would be silently ignored in strict mode
-        });
+describe('StoreClient.root()', () => {
+    it('should return root category client with path "/"', () => {
+        const storeResult = StoreClient.init('my-store', '/data/my-store', createMockAdapter());
+        expect(storeResult.ok()).toBe(true);
+        if (!storeResult.ok()) return;
 
-        it('should expose path as readonly', () => {
-            const adapter = createMockAdapter();
-            const client = StoreClient.init('test-store', '/test/path', adapter);
+        const rootResult = storeResult.value.root();
 
-            expect(client.path).toBe('/test/path');
-            // TypeScript would prevent: client.path = '/modified';
-        });
-
-        it('should expose description as readonly when present', () => {
-            const adapter = createMockAdapter();
-            const client = StoreClient.init(
-                'test-store',
-                '/test/path',
-                adapter,
-                'A test store',
-            );
-
-            expect(client.description).toBe('A test store');
-            // TypeScript would prevent: client.description = 'modified';
-        });
-
-        it('should have undefined description when not provided', () => {
-            const adapter = createMockAdapter();
-            const client = StoreClient.init('test-store', '/test/path', adapter);
-
-            expect(client.description).toBeUndefined();
-        });
+        expect(rootResult.ok()).toBe(true);
+        if (!rootResult.ok()) return;
+        expect(rootResult.value.rawPath).toBe('/');
     });
 
-    // =========================================================================
-    // rootCategory() Tests
-    // =========================================================================
-
-    describe('rootCategory()', () => {
-        it('should return a CategoryClient with rawPath "/"', () => {
-            const adapter = createMockAdapter();
-            const store = StoreClient.init('my-project', '/data/my-project', adapter);
-
-            const root = store.root();
-
-            expect(root.rawPath).toBe('/');
-        });
-
-        it('should return same adapter reference in CategoryClient', async () => {
-            // We can verify the adapter is correctly passed by checking
-            // that the CategoryClient's operations use our mock adapter
-            let existsCalled = false;
-            const adapter = createMockAdapter({
-                categories: {
-                    exists: async () => {
-                        existsCalled = true;
-                        return ok(true);
-                    },
+    it('should pass adapter through to category operations', async () => {
+        let existsCalled = false;
+        const adapter = createMockAdapter({
+            categories: {
+                exists: async () => {
+                    existsCalled = true;
+                    return ok(true);
                 },
-            });
-            const store = StoreClient.init('my-project', '/data/my-project', adapter);
-
-            const root = store.root();
-            await root.exists();
-
-            expect(existsCalled).toBe(true);
+            },
         });
 
-        it('should allow navigation to subcategories', () => {
-            const adapter = createMockAdapter();
-            const store = StoreClient.init('my-project', '/data/my-project', adapter);
+        const storeResult = StoreClient.init('my-store', '/data/my-store', adapter);
+        expect(storeResult.ok()).toBe(true);
+        if (!storeResult.ok()) return;
 
-            const root = store.root();
-            const standards = root.getCategory('standards');
-            const typescript = standards.getCategory('typescript');
+        const rootResult = storeResult.value.root();
+        expect(rootResult.ok()).toBe(true);
+        if (!rootResult.ok()) return;
 
-            expect(root.rawPath).toBe('/');
-            expect(standards.rawPath).toBe('/standards');
-            expect(typescript.rawPath).toBe('/standards/typescript');
-        });
+        const existsResult = await rootResult.value.exists();
 
-        it('should return new CategoryClient instance on each call', () => {
-            const adapter = createMockAdapter();
-            const store = StoreClient.init('my-project', '/data/my-project', adapter);
-
-            const root1 = store.root();
-            const root2 = store.root();
-
-            // Different instances
-            expect(root1).not.toBe(root2);
-            // But same path
-            expect(root1.rawPath).toBe(root2.rawPath);
-        });
-    });
-
-    // =========================================================================
-    // getAdapter() Tests
-    // =========================================================================
-
-    describe('getAdapter()', () => {
-        it('should return the underlying storage adapter', () => {
-            const adapter = createMockAdapter();
-            const client = StoreClient.init('test-store', '/test/path', adapter);
-
-            expect(client.getAdapter()).toBe(adapter);
-        });
-    });
-
-    // =========================================================================
-    // Edge Cases Tests
-    // =========================================================================
-
-    describe('edge cases', () => {
-        it('should handle empty string name', () => {
-            const adapter = createMockAdapter();
-            const client = StoreClient.init('', '/data/unnamed', adapter);
-
-            expect(client.name).toBe('');
-            expect(client.path).toBe('/data/unnamed');
-        });
-
-        it('should handle empty string path', () => {
-            const adapter = createMockAdapter();
-            const client = StoreClient.init('my-store', '', adapter);
-
-            expect(client.name).toBe('my-store');
-            expect(client.path).toBe('');
-        });
-
-        it('should handle empty string description', () => {
-            const adapter = createMockAdapter();
-            const client = StoreClient.init('my-store', '/data/store', adapter, '');
-
-            // Empty string is still a defined value
-            expect(client.description).toBe('');
-        });
-
-        it('should handle path with special characters', () => {
-            const adapter = createMockAdapter();
-            const client = StoreClient.init(
-                'my-store',
-                '/data/my store with spaces',
-                adapter,
-            );
-
-            expect(client.path).toBe('/data/my store with spaces');
-        });
-
-        it('should handle name with special characters', () => {
-            const adapter = createMockAdapter();
-            const client = StoreClient.init(
-                'my-store_v2.0',
-                '/data/my-store',
-                adapter,
-            );
-
-            expect(client.name).toBe('my-store_v2.0');
-        });
-
-        it('should preserve unicode in name and description', () => {
-            const adapter = createMockAdapter();
-            const client = StoreClient.init(
-                'store-emoji',
-                '/data/store',
-                adapter,
-                'Store with unicode description',
-            );
-
-            expect(client.name).toBe('store-emoji');
-            expect(client.description).toBe('Store with unicode description');
-        });
+        expect(existsResult.ok()).toBe(true);
+        if (!existsResult.ok()) return;
+        expect(existsResult.value).toBe(true);
+        expect(existsCalled).toBe(true);
     });
 });

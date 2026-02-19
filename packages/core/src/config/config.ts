@@ -32,13 +32,15 @@ export type OutputFormat = z.infer<typeof outputFormat>;
 const settingsSchema = z
     .strictObject({
         outputFormat: outputFormat.optional(),
+        defaultStore: z.string().optional(),
     })
     .optional();
 /**
  * Settings as represented in the config  
  */
 export const getDefaultSettings = (): CortexSettings => ({
-    outputFormat: 'yaml'
+    outputFormat: 'yaml',
+    defaultStore: 'default',
 });
 
 const categoriesSchema = z.record(z.string(), z.unknown()).optional();
@@ -51,7 +53,7 @@ const storeDefinitionSchema = z.object({
     path: z.string().min(1, 'Store path must be a non-empty string'),
     description: z.string().optional(),
     categoryMode: categoryMode.optional(),
-    categories: z.record(z.string(), z.unknown()).optional(),
+    categories: z.record(z.string(), z.unknown()).default({}),
 });
 
 /**
@@ -62,7 +64,6 @@ const storesSchema = z
         z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Store name must be a lowercase slug'),
         storeDefinitionSchema,
     )
-    .optional();
 
 /**
  * Schema for the entire config.yaml file.

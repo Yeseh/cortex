@@ -11,6 +11,9 @@
 import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
 import { CategoryClient } from './category-client.ts';
 import { err, ok, type ErrorDetails, type Result } from '@/result.ts';
+import { MemoryClient } from './memory-client.ts';
+import type { MemoryResult } from '@/memory/result.ts';
+import type { CategoryResult } from '@/category/types.ts';
 
 export type StoreErrorCode = 'STORE_NOT_FOUND' | 'INVALID_STORE_ADAPTER';
 export type StoreClientError = ErrorDetails<StoreErrorCode>;
@@ -129,5 +132,23 @@ export class StoreClient {
         };
 
         return ok(category.value);
+    }
+
+    getCategory(categoryPath: string): CategoryResult<CategoryClient> {
+        const category = CategoryClient.init(categoryPath, this.adapter);
+        if (!category.ok()) {
+            return category;
+        }
+
+        return ok(category.value);
+    }
+
+    getMemory(memoryPath: string): MemoryClient {
+        const memoryClient = MemoryClient.create(
+            memoryPath, 
+            memoryPath.split('/').slice(-1)[0]!, 
+            this.adapter);   
+
+        return memoryClient;
     }
 }

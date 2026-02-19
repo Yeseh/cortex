@@ -12,6 +12,7 @@ import type { ErrorDetails, Result } from '../result.ts';
 import type { CategoryPath } from './category-path.ts';
 import type { MemoryPath } from '@/memory/memory-path.ts';
 import type { CategoryMode, ConfiguredCategories, } from '../config/config.ts';
+import type { ConfigCategories } from '@/config/types.ts';
 
 /**
  * Context for category mode enforcement.
@@ -38,7 +39,7 @@ export interface CategoryModeContext {
     /** Category creation/deletion mode */
     mode: CategoryMode;
     /** Config-defined category hierarchy (for protection checks) */
-    configCategories?: ConfiguredCategories;
+    configCategories?: ConfigCategories;
 }
 
 /**

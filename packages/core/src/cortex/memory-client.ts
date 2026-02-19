@@ -12,7 +12,7 @@ import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
 import { MemoryPath } from '@/memory/memory-path.ts';
 import { Slug } from '@/slug.ts';
 import type { Memory } from '@/memory/memory.ts';
-import type { MemoryError } from '@/memory/result.ts';
+import type { MemoryError, MemoryResult } from '@/memory/result.ts';
 import { memoryError } from '@/memory/result.ts';
 import { createMemory, type CreateMemoryInput } from '@/memory/operations/create.ts';
 import { getMemory, type GetMemoryOptions } from '@/memory/operations/get.ts';
@@ -68,24 +68,8 @@ import { moveMemory } from '@/memory/operations/move.ts';
  * ```
  */
 export class MemoryClient {
-    /**
-     * Full path including category with leading slash.
-     *
-     * @example "/standards/javascript/style"
-     */
-    readonly rawPath: string;
-
-    /**
-     * Memory name only (slug) as originally provided.
-     *
-     * Note: This is the raw input value. The actual slug used in storage
-     * may be normalized (lowercase, hyphens for spaces). Use `parseSlug()`
-     * to get the normalized slug.
-     *
-     * @example "style"
-     * @example "MyStyle" // Raw input - parses to "mystyle"
-     */
-    readonly rawSlug: string;
+    #rawPath: string;
+    #rawSlug: string;
 
     /** Storage adapter for this memory's store */
     private readonly adapter: ScopedStorageAdapter;
@@ -98,9 +82,34 @@ export class MemoryClient {
      * @param adapter - The storage adapter for performing operations
      */
     private constructor(rawPath: string, rawSlug: string, adapter: ScopedStorageAdapter) {
-        this.rawPath = MemoryClient.normalizePath(rawPath);
-        this.rawSlug = rawSlug;
+        this.#rawPath = MemoryClient.normalizePath(rawPath);
+        this.#rawSlug = rawSlug;
         this.adapter = adapter;
+    }
+
+    /**
+     * Full path including category with leading slash.
+     *
+     * @example "/standards/javascript/style"
+     */
+    get path(): MemoryPath {
+        // Safe to unwrap - factory validates 
+        return MemoryPath.fromString(this.#rawPath).unwrap(); 
+    }
+
+    /**
+     * Memory name only (slug) as originally provided.
+     *
+     * Note: This is the raw input value. The actual slug used in storage
+     * may be normalized (lowercase, hyphens for spaces). Use `parseSlug()`
+     * to get the normalized slug.
+     *
+     * @example "style"
+     * @example "MyStyle" // Raw input - parses to "mystyle"
+     */
+    get slug(): Slug {
+        // Safe to unwrap - factory validates
+        return Slug.from(this.#rawSlug).unwrap();
     }
 
     /**
@@ -174,7 +183,7 @@ export class MemoryClient {
      * @returns Path without leading slash
      */
     private getPathWithoutLeadingSlash(): string {
-        return this.rawPath.startsWith('/') ? this.rawPath.slice(1) : this.rawPath;
+        return this.#rawPath.startsWith('/') ? this.#rawPath.slice(1) : this.#rawPath;
     }
 
     // =========================================================================
@@ -215,8 +224,8 @@ export class MemoryClient {
         if (!parseResult.ok()) {
             return err({
                 code: 'INVALID_PATH',
-                message: `Invalid memory path: ${this.rawPath}`,
-                path: this.rawPath,
+                message: `Invalid memory path: ${this.#rawPath}`,
+                path: this.#rawPath,
                 cause: parseResult.error,
             });
         }
@@ -252,13 +261,13 @@ export class MemoryClient {
      * ```
      */
     parseSlug(): Result<Slug, MemoryError> {
-        const slugResult = Slug.from(this.rawSlug);
+        const slugResult = Slug.from(this.#rawSlug);
 
         if (!slugResult.ok()) {
             return err({
                 code: 'INVALID_PATH',
-                message: `Invalid memory slug: ${this.rawSlug}`,
-                path: this.rawPath,
+                message: `Invalid memory slug: ${this.#rawSlug}`,
+                path: this.#rawPath,
                 cause: slugResult.error,
             });
         }
@@ -462,8 +471,8 @@ export class MemoryClient {
 
         const readResult = await this.adapter.memories.read(pathResult.value);
         if (!readResult.ok()) {
-            return memoryError('STORAGE_ERROR', `Failed to check memory existence: ${this.rawPath}`, {
-                path: this.rawPath,
+            return memoryError('STORAGE_ERROR', `Failed to check memory existence: ${this.#rawPath}`, {
+                path: this.#rawPath,
                 cause: readResult.error,
             });
         }
@@ -512,7 +521,7 @@ export class MemoryClient {
      * - Same-path move is a no-op (returns success)
      * - Current client is stale after successful move
      */
-    async move(destination: MemoryClient | MemoryPath): Promise<Result<MemoryClient, MemoryError>> {
+    async move(destination: MemoryClient | MemoryPath): Promise<MemoryResult<MemoryClient>> {
         // Validate source path first
         const sourcePathResult = this.parsePath();
         if (!sourcePathResult.ok()) {
@@ -530,7 +539,7 @@ export class MemoryClient {
                 return destPathResult;
             }
             destPathString = destination.getPathWithoutLeadingSlash();
-            destSlug = destination.rawSlug;
+            destSlug = destination.#rawSlug;
         }
         else {
             // MemoryPath - use toString()
@@ -549,7 +558,7 @@ export class MemoryClient {
             return moveResult;
         }
 
-        // Return a new client pointing to the destination
-        return ok(MemoryClient.create('/' + destPathString, destSlug, this.adapter));
+        const destinationClient = MemoryClient.create('/' + destPathString, destSlug, this.adapter);
+        return ok(destinationClient);
     }
 }

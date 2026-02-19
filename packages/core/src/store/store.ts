@@ -60,15 +60,6 @@ export const resolveStore = async (
         return ok({ root: localPath, scope: 'local' });
     }
 
-    const strictLocal = options.config?.strictLocal ?? false;
-    if (strictLocal) {
-        return storeError(
-            'LOCAL_STORE_MISSING',
-            'Local store not found and strictLocal is enabled.',
-            { path: localPath },
-        );
-    }
-
     return resolveGlobalStore(cwd, options.globalStorePath);
 };
 

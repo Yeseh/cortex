@@ -76,7 +76,7 @@ export type CategoryDefinition = {
 
 export type CortexSettings = {
     defaultStore?: string;
-    outputFormat?: 'json' | 'yaml' | 'text';
+    outputFormat?: 'json' | 'yaml' | 'toon';
 }
 
 export type ConfigCategory = CategoryDefinition;
