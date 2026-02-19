@@ -61,7 +61,7 @@ export const createMockStorage = (
         ...overrides.indexes,
     } as IndexStorage,
     categories: {
-        exists: async () => ok(false),
+        exists: async () => ok(true),
         ensure: async () => ok(undefined),
         delete: async () => ok(undefined),
         updateSubcategoryDescription: async () => ok(undefined),

@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { MEMORY_SUBDIR } from '../../config.ts';
-import { createMemoryFile, createTestContext, createTestDir } from './test-utils.ts';
+import { createMemoryFile, createTestCategory, createTestContext, createTestDir } from './test-utils.ts';
 import type { ToolContext } from './shared.ts';
 import { addMemoryHandler, type AddMemoryInput } from './add-memory.ts';
 import { getMemoryHandler } from './get-memory.ts';
@@ -26,6 +26,9 @@ describe('memory citations', () => {
     });
 
     it('should create memory with citations', async () => {
+        const storeRoot = join(testDir, MEMORY_SUBDIR);
+        await createTestCategory(storeRoot, 'project');
+
         const input: AddMemoryInput = {
             store: 'default',
             path: 'project/with-citations',

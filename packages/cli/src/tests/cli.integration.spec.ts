@@ -14,6 +14,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 import { Memory, MemoryPath } from '@yeseh/cortex-core/memory';
+import { CategoryPath } from '@yeseh/cortex-core/category';
 
 /**
  * CLI runner that spawns cortex as a subprocess.
@@ -163,6 +164,22 @@ const createMemoryFile = async (
 };
 
 /**
+ * Creates a category using the storage adapter.
+ * The adapter's categories.ensure creates parent categories automatically.
+ */
+const createCategory = async (categoryPath: string, storeRoot: string): Promise<void> => {
+    const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
+    const pathResult = CategoryPath.fromString(categoryPath);
+    if (!pathResult.ok()) {
+        throw new Error(`Invalid category path: ${categoryPath}`);
+    }
+    const result = await adapter.categories.ensure(pathResult.value);
+    if (!result.ok()) {
+        throw new Error(`Failed to create category '${categoryPath}': ${result.error.message}`);
+    }
+};
+
+/**
  * Creates a category index file.
  * Note: Indexes are stored as `<categoryPath>/index.yaml` files inside the store root.
  * The format is strict: list markers on their own line, fields indented with 4 spaces.
@@ -254,6 +271,7 @@ describe('Cortex CLI Integration Tests', () => {
 
     describe('memory add command', () => {
         it('should add a new memory with inline content', async () => {
+            await createCategory('project', storeDir);
             const result = await runCortexCli(
                 [
                     'memory',
@@ -281,6 +299,7 @@ describe('Cortex CLI Integration Tests', () => {
         });
 
         it('should add a memory with tags', async () => {
+            await createCategory('project', storeDir);
             const result = await runCortexCli(
                 [
                     'memory',
@@ -304,6 +323,7 @@ describe('Cortex CLI Integration Tests', () => {
         });
 
         it('should add a memory with multiple -t flags', async () => {
+            await createCategory('project', storeDir);
             const result = await runCortexCli(
                 [
                     'memory',
@@ -331,6 +351,7 @@ describe('Cortex CLI Integration Tests', () => {
         });
 
         it('should add a memory with mixed tag formats (comma-separated and multiple flags)', async () => {
+            await createCategory('project', storeDir);
             const result = await runCortexCli(
                 [
                     'memory',
@@ -356,6 +377,7 @@ describe('Cortex CLI Integration Tests', () => {
         });
 
         it('should add a memory with expiry date', async () => {
+            await createCategory('project', storeDir);
             const expiryDate = '2025-12-31T23:59:59.000Z';
             const result = await runCortexCli(
                 [
@@ -427,6 +449,7 @@ describe('Cortex CLI Integration Tests', () => {
         });
 
         it('should add memory from file', async () => {
+            await createCategory('project', storeDir);
             // Create a content file
             const contentFile = join(testProject, 'content.txt');
             await fs.writeFile(contentFile, 'Content from file.', 'utf8');
@@ -451,6 +474,7 @@ describe('Cortex CLI Integration Tests', () => {
         });
 
         it('should add memory in deeply nested category', async () => {
+            await createCategory('domain/subdomain/feature', storeDir);
             const result = await runCortexCli(
                 [
                     'memory',
@@ -469,6 +493,7 @@ describe('Cortex CLI Integration Tests', () => {
         });
 
         it('should add memory with special characters in content', async () => {
+            await createCategory('project', storeDir);
             const specialContent = 'Special chars: $HOME, `backticks`, "quotes", \'single\'';
             const result = await runCortexCli(
                 [

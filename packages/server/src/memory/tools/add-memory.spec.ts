@@ -4,7 +4,9 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { rm } from 'node:fs/promises';
-import { createTestContext, createTestDir } from './test-utils.ts';
+import { join } from 'node:path';
+import { MEMORY_SUBDIR } from '../../config.ts';
+import { createTestCategory, createTestContext, createTestDir } from './test-utils.ts';
 import type { ToolContext } from './shared.ts';
 import { addMemoryHandler, type AddMemoryInput } from './add-memory.ts';
 import { getMemoryHandler } from './get-memory.ts';
@@ -23,6 +25,9 @@ describe('cortex_add_memory tool', () => {
     });
 
     it('should create a new memory', async () => {
+        const storeRoot = join(testDir, MEMORY_SUBDIR);
+        await createTestCategory(storeRoot, 'project');
+
         const input: AddMemoryInput = {
             store: 'default',
             path: 'project/test-memory',
@@ -37,6 +42,9 @@ describe('cortex_add_memory tool', () => {
     });
 
     it('should create a memory with tags', async () => {
+        const storeRoot = join(testDir, MEMORY_SUBDIR);
+        await createTestCategory(storeRoot, 'project');
+
         const input: AddMemoryInput = {
             store: 'default',
             path: 'project/tagged-memory',
@@ -64,6 +72,9 @@ describe('cortex_add_memory tool', () => {
     });
 
     it('should create a memory with expiration', async () => {
+        const storeRoot = join(testDir, MEMORY_SUBDIR);
+        await createTestCategory(storeRoot, 'project');
+
         const futureDate = new Date(Date.now() + 86400000).toISOString();
         const input: AddMemoryInput = {
             store: 'default',

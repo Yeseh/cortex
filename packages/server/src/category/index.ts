@@ -10,6 +10,7 @@ export {
     type CreateCategoryInput,
     type SetCategoryDescriptionInput,
     type DeleteCategoryInput,
+    type CategoryToolsOptions,
     createCategoryHandler,
     setCategoryDescriptionHandler,
     deleteCategoryHandler,
