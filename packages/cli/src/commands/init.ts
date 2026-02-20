@@ -23,7 +23,9 @@ import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../errors.ts';
 import { serializeOutput, type OutputFormat, type OutputInit, type OutputPayload } from '../output.ts';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
-import { initializeStore } from '@yeseh/cortex-core/store';
+import { initializeStore, type Store } from '@yeseh/cortex-core/store';
+import { defaultGlobalStoreCategories } from '@yeseh/cortex-core/category'; 
+import { getDefaultSettings, type ConfigStore, type CortexConfig, type CortexContext } from '@yeseh/cortex-core';
 
 /**
  * Options for the init command.
@@ -34,36 +36,6 @@ export interface InitCommandOptions {
     /** Output format (yaml, json, toon) */
     format?: string;
 }
-
-/**
- * Dependencies for the init command handler.
- * Allows injection for testing.
- */
-export interface InitHandlerDeps {
-    /** Output stream for writing results (defaults to process.stdout) */
-    stdout?: NodeJS.WritableStream;
-}
-
-/**
- * Default category directories created in the global store.
- * - 'persona': For persona-related memories
- * - 'human': For human-related memories
- */
-const DEFAULT_CATEGORIES = [
-    'persona', 'human',
-] as const;
-
-/**
- * Default configuration content written to config.yaml.
- * Contains all supported configuration options with their default values.
- */
-const DEFAULT_CONFIG_CONTENT = `# Cortex global configuration
-# See 'cortex --help' for available options
-
-outputFormat: yaml
-autoSummaryThreshold: 10
-strictLocal: false
-`;
 
 const formatInit = (path: string, categories: readonly string[]): OutputInit => ({
     path,
@@ -89,13 +61,11 @@ const pathExists = async (path: string): Promise<boolean> => {
  * 3. Outputs the result
  *
  * @param options - Command options (force, format)
- * @param deps - Optional dependencies for testing
  * @throws {InvalidArgumentError} When arguments are invalid
  * @throws {CommanderError} When initialization fails
  */
 export async function handleInit(
     options: InitCommandOptions = {},
-    deps: InitHandlerDeps = {},
 ): Promise<void> {
     const cortexConfigDir = resolve(homedir(), '.config', 'cortex');
     const globalStorePath = resolve(cortexConfigDir, 'memory');
@@ -116,8 +86,31 @@ export async function handleInit(
         // Create config directory first
         await mkdir(cortexConfigDir, { recursive: true });
 
+        const settings = getDefaultSettings();
+        const globalStore: ConfigStore = {
+            kind: 'filesystem',
+            categoryMode: 'free',
+            description: 'Global memory store for Cortex',
+            categories: defaultGlobalStoreCategories,
+            properties: {
+                path: globalStorePath,
+            },
+        };
+
+        const config: CortexConfig = {
+            settings,
+            stores: {
+                global: globalStore,
+            },
+        };
+
         // Write config.yaml (CLI-specific, not part of domain operation)
-        await writeFile(configPath, DEFAULT_CONFIG_CONTENT, 'utf8');
+        const yamlConfig = serializeOutput(config, 'yaml');
+        if (!yamlConfig.ok()) {
+            throwCoreError({ code: 'SERIALIZE_FAILED', message: yamlConfig.error.message });
+        }
+
+        await writeFile(configPath, yamlConfig.value, 'utf8');
 
         // Use initializeStore for the actual store setup
         const registry = new FilesystemRegistry(storesPath);
@@ -125,10 +118,9 @@ export async function handleInit(
         await registry.initialize();
 
         const result = await initializeStore(
-            registry,
             'default',
             globalStorePath,
-            { categories: [...DEFAULT_CATEGORIES] },
+            { categories: { ...defaultGlobalStoreCategories } },
         );
 
         if (!result.ok()) {
@@ -157,7 +149,7 @@ export async function handleInit(
     // Build output
     const output: OutputPayload = {
         kind: 'init',
-        value: formatInit(globalStorePath, DEFAULT_CATEGORIES),
+        value: formatInit(globalStorePath, Object.keys(defaultGlobalStoreCategories)),
     };
 
     // Output result

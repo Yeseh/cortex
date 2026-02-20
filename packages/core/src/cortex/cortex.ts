@@ -164,12 +164,12 @@ export class Cortex {
         }
 
         // Create new adapter
-        const adapter = this.adapterFactory(definition.path);
-        const storeClient = StoreClient.init(name, definition.path, adapter, definition.description);
+        const adapter = this.adapterFactory(definition.properties["path"] as string);
+        const storeClient = StoreClient.init(name, definition.properties["path"] as string, adapter, definition.description);
         if (!storeClient.ok()) {
              return err({
                 code: 'INVALID_STORE_ADAPTER',
-                message: `Adapter was null or undefined for store '${name}' at path '${definition.path}'`,
+                message: `Adapter was null or undefined for store '${name}' at path '${definition.properties["path"]}'`,
                 store: name,
              });
         }

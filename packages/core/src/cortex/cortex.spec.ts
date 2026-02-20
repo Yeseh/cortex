@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'bun:test';
-import { Cortex } from './cortex.ts';
+import { Cortex, createDefaultAdapterFactory } from './cortex.ts';
 import type { AdapterFactory } from './types.ts';
 import type { StorageAdapter } from '@/storage/index.ts';
 import { createMockStorageAdapter } from '@/test/mock-storage-adapter.ts';
@@ -57,7 +57,8 @@ describe('Cortex.getStore()', () => {
         const cortex = Cortex.init({
             registry: {
                 project: {
-                    path: '/data/project',
+                    kind: 'filesystem',
+                    properties: { path: '/data/project' },
                     description: 'Project store',
                     categories: {},
                 },
@@ -80,7 +81,10 @@ describe('Cortex.getStore()', () => {
 
         const cortex = Cortex.init({
             registry: {
-                project: { path: '/data/project', categories: {} },
+                project: { 
+                    kind: 'filesystem',
+                    properties: { path: '/data/project' },
+                    categories: {} },
             },
             adapterFactory: badFactory,
         });
@@ -95,8 +99,12 @@ describe('Cortex.getStore()', () => {
     it('should throw when using default adapter factory', () => {
         const cortex = Cortex.init({
             registry: {
-                project: { path: '/data/project', categories: {} },
+                project: { 
+                    kind: 'filesystem',
+                    properties: { path: '/data/project' },
+                    categories: {} },
             },
+            adapterFactory: createDefaultAdapterFactory(),
         });
 
         expect(() => cortex.getStore('project')).toThrow('No adapter factory provided');

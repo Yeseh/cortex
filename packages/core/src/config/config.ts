@@ -43,17 +43,17 @@ export const getDefaultSettings = (): CortexSettings => ({
     defaultStore: 'default',
 });
 
-const categoriesSchema = z.record(z.string(), z.unknown()).optional();
-export type ConfiguredCategories = z.infer<typeof categoriesSchema>;
+const categoriesSchema = z.record(z.string(), z.unknown());
 
 /**
  * Schema for a single store definition.
  */
 const storeDefinitionSchema = z.object({
-    path: z.string().min(1, 'Store path must be a non-empty string'),
+    kind: z.string(),
     description: z.string().optional(),
     categoryMode: categoryMode.optional(),
     categories: z.record(z.string(), z.unknown()).default({}),
+    properties: z.record(z.string(), z.unknown()).default({}),
 });
 
 /**
@@ -395,7 +395,7 @@ export const parseConfig = (raw: string): Result<CortexConfig, ConfigValidationE
             const def = config.stores[key]!;
 
             // Skip if path is missing
-            if (!def.path) {
+            if (!def.properties.path) {
                 return err({
                     code: 'INVALID_STORE_PATH',
                     message: `Store '${key}' must have a path.`,

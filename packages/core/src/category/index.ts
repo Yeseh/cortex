@@ -24,6 +24,8 @@ export type {
 
 export { MAX_DESCRIPTION_LENGTH } from './types.ts';
 
+export * from './category-templates.ts'
+
 export {
     createCategory,
     setDescription,

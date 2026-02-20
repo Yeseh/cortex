@@ -1,5 +1,5 @@
 import type { ErrorDetails } from "@/result";
-import type { CategoryMode, ConfiguredCategories } from "./config";
+import type { CategoryMode } from "./config";
 
 /**
  * Error codes for Cortex configuration operations.
@@ -51,12 +51,12 @@ export type ConfigErrorCode =
  */
 export type ConfigError = ErrorDetails<ConfigErrorCode> ;
 
-
 export type ConfigStore = {
-    path: string;
+    kind: string;
     description?: string | undefined;
     categoryMode?: CategoryMode;
-    categories: ConfiguredCategories
+    categories: ConfigCategories;
+    properties: Record<string, unknown>;
 } 
 
 export type ConfigCategory = {
