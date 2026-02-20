@@ -7,7 +7,7 @@
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import type { Result, Cortex } from '@yeseh/cortex-core';
-import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
+import type { StorageAdapter } from '@yeseh/cortex-core/storage';
 import { err, ok, type MemoryError } from '@yeseh/cortex-core';
 import type { ServerConfig } from '../../config.ts';
 
@@ -55,7 +55,7 @@ export interface McpToolResponse {
 export const resolveStoreAdapter = (
     ctx: ToolContext,
     storeName: string,
-): Result<ScopedStorageAdapter, McpError> => {
+): Result<StorageAdapter, McpError> => {
     const store = ctx.cortex.getStore(storeName);
     if (!store.exists()) {
         const error = store.getError();

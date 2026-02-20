@@ -15,48 +15,51 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
-import { resolveStoreAdapter } from '../../context.ts';
-import { removeMemory, MemoryPath } from '@yeseh/cortex-core/memory';
-import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
-
-/** Dependencies injected into the handler for testability */
-export interface RemoveHandlerDeps {
-    stdout?: NodeJS.WritableStream;
-    /** Pre-resolved adapter for testing */
-    adapter?: ScopedStorageAdapter;
-}
+import { MemoryPath, type CortexContext } from '@yeseh/cortex-core';
+import { createCliCommandContext } from '../../create-cli-command.ts';
 
 /**
  * Handler for the memory remove command.
  * Exported for direct testing without Commander parsing.
  *
- * @param path - Memory path to remove (e.g., "project/tech-stack")
+ * @param ctx - CLI context containing Cortex client and streams
  * @param storeName - Optional store name from parent command
- * @param deps - Injectable dependencies for testing
+ * @param path - Memory path to remove (e.g., "project/tech-stack")
  */
 export async function handleRemove(
-    path: string,
+    ctx: CortexContext,
     storeName: string | undefined,
-    deps: RemoveHandlerDeps = {},
+    path: string
 ): Promise<void> {
-    // 1. Resolve store context
-    const storeResult = await resolveStoreAdapter(storeName);
+    const pathResult = MemoryPath.fromString(path);
+    if (!pathResult.ok()) {
+        throwCoreError(pathResult.error);
+    }
+
+    const storeResult = ctx.cortex.getStore(storeName ?? 'default');
     if (!storeResult.ok()) {
         throwCoreError(storeResult.error);
     }
 
-    // 2. Remove the memory file
-    const adapter = deps.adapter ?? storeResult.value.adapter;
-    const removeResult = await removeMemory(adapter, path);
+    const store = storeResult.value;
+    const rootResult = store.root();
+    if (!rootResult.ok()) {
+        throwCoreError(rootResult.error);
+    }
+
+    const categoryResult = rootResult.value.getCategory(pathResult.value.category.toString());
+    if (!categoryResult.ok()) {
+        throwCoreError(categoryResult.error);
+    }
+
+    const memoryClient = categoryResult.value.getMemory(pathResult.value.slug.toString());
+    const removeResult = await memoryClient.delete();
     if (!removeResult.ok()) {
         throwCoreError(removeResult.error);
     }
 
-    // 3. Output success message with normalized path
-    const out = deps.stdout ?? process.stdout;
-    const normalizedPath = MemoryPath.fromString(path);
-    const pathDisplay = normalizedPath.ok() ? normalizedPath.value.toString() : path;
-    out.write(`Removed memory at ${pathDisplay}.\n`);
+    const out = ctx.stdout ?? process.stdout;
+    out.write(`Removed memory ${pathResult.value.toString()}.\n`);
 }
 
 /**
@@ -71,5 +74,10 @@ export const removeCommand = new Command('remove')
     .argument('<path>', 'Memory path to remove')
     .action(async (path, _options, command) => {
         const parentOpts = command.parent?.opts() as { store?: string } | undefined;
-        await handleRemove(path, parentOpts?.store);
+        const context = await createCliCommandContext();
+        if (!context.ok()) {
+            throwCoreError(context.error);
+        }
+
+        await handleRemove(context.value, parentOpts?.store, path);
     });

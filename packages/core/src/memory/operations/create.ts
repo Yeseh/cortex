@@ -4,7 +4,7 @@
  * @module core/memory/operations/create
  */
 
-import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
+import type { StorageAdapter } from '@/storage/index.ts';
 import { CategoryPath } from '@/category/category-path.ts';
 import { Memory } from '@/memory';
 import { ok } from '@/result.ts';
@@ -67,7 +67,7 @@ export interface CreateMemoryInput {
  * ```
  */
 export const createMemory = async (
-    storage: ScopedStorageAdapter,
+    storage: StorageAdapter,
     path: string,
     input: CreateMemoryInput,
     now?: Date,
@@ -124,7 +124,7 @@ export const createMemory = async (
 
     const memory = memoryResult.value;
 
-    const writeResult = await storage.memories.write(memory);
+    const writeResult = await storage.memories.save(memory);
     if (!writeResult.ok()) {
         return memoryError('STORAGE_ERROR', `Failed to write memory: ${path}`, {
             path,

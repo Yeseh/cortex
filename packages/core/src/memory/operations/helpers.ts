@@ -10,7 +10,7 @@
  */
 
 import type { Result } from '@/result.ts';
-import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
+import type { StorageAdapter } from '@/storage/index.ts';
 import type { Category } from '@/category/types.ts';
 import { memoryError, type MemoryError, type MemoryResult } from '@/memory/result.ts';
 import { ok } from '@/result.ts';
@@ -33,10 +33,10 @@ import { CategoryPath } from '@/category/category-path.ts';
  * ```
  */
 export const readCategoryIndex = async (
-    storage: ScopedStorageAdapter,
+    storage: StorageAdapter,
     categoryPath: CategoryPath,
 ): Promise<Result<Category | null, MemoryError>> => {
-    const result = await storage.indexes.read(categoryPath);
+    const result = await storage.indexes.load(categoryPath);
     if (!result.ok()) {
         return memoryError('STORAGE_ERROR', `Failed to read index: ${categoryPath}`, {
             cause: result.error,
@@ -65,9 +65,9 @@ export const readCategoryIndex = async (
  * ```
  */
 export const discoverRootCategories = async (
-    storage: ScopedStorageAdapter,
+    storage: StorageAdapter,
 ): Promise<Result<CategoryPath[], MemoryError>> => {
-    const indexResult = await storage.indexes.read(CategoryPath.root());
+    const indexResult = await storage.indexes.load(CategoryPath.root());
     if (!indexResult.ok()) {
         return memoryError('STORAGE_ERROR', 'Failed to read index: root', {
             cause: indexResult.error,
@@ -108,7 +108,7 @@ export const discoverRootCategories = async (
  * ```
  */
 export const collectMemoriesFromCategory = async (
-    storage: ScopedStorageAdapter,
+    storage: StorageAdapter,
     categoryPath: CategoryPath,
     includeExpired: boolean,
     now: Date,
@@ -119,7 +119,7 @@ export const collectMemoriesFromCategory = async (
     visited.add(categoryPath.toString());
 
     // Read index
-    const indexResult = await storage.indexes.read(categoryPath);
+    const indexResult = await storage.indexes.load(categoryPath);
     if (!indexResult.ok()) {
         return memoryError('STORAGE_ERROR', `Failed to read index: ${categoryPath}`, {
             cause: indexResult.error,
@@ -139,7 +139,7 @@ export const collectMemoriesFromCategory = async (
             continue;
         }
 
-        const readResult = await storage.memories.read(entry.path);
+        const readResult = await storage.memories.load(entry.path);
         if (!readResult.ok()) {
             // Skip memories that can't be read
             continue;
@@ -202,10 +202,10 @@ export const collectMemoriesFromCategory = async (
  * ```
  */
 export const collectDirectSubcategories = async (
-    storage: ScopedStorageAdapter,
+    storage: StorageAdapter,
     categoryPath: CategoryPath,
 ): Promise<Result<ListedSubcategory[], MemoryError>> => {
-    const indexResult = await storage.indexes.read(categoryPath);
+    const indexResult = await storage.indexes.load(categoryPath);
     if (!indexResult.ok()) {
         return memoryError('STORAGE_ERROR', `Failed to read index: ${categoryPath}`, {
             cause: indexResult.error,

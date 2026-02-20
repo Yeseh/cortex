@@ -18,7 +18,7 @@ import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
 import { resolveStoreAdapter } from '../../context.ts';
 import { CategoryPath } from '@yeseh/cortex-core';
-import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
+import type { StorageAdapter } from '@yeseh/cortex-core/storage';
 
 /**
  * Dependencies for the reindex command handler.
@@ -28,7 +28,7 @@ export interface ReindexHandlerDeps {
     /** Output stream for writing results (defaults to process.stdout) */
     stdout?: NodeJS.WritableStream;
     /** Pre-resolved adapter for testing */
-    adapter?: ScopedStorageAdapter;
+    adapter?: StorageAdapter;
 }
 
 /**

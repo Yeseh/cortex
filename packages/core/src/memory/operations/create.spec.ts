@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'bun:test';
-import type { StorageAdapterError } from '@/storage/adapter.ts';
+import type { StorageAdapterError } from '@/storage/index.ts';
 import type { Memory } from '@/memory';
 import { createMemory } from './create.ts';
 import {  createMockStorage } from './test-helpers.spec.ts';

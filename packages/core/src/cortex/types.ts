@@ -4,9 +4,9 @@
  * @module core/cortex/types
  */
 
-import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
+import type { StorageAdapter } from '@/storage/index.ts';
 import type { Cortex } from './cortex.ts';
-import type { CortexSettings, Registry } from '@/config/types.ts';
+import type { CortexSettings, ConfigStores } from '@/config/types.ts';
 
 /**
  * Factory function for creating scoped storage adapters.
@@ -28,7 +28,7 @@ import type { CortexSettings, Registry } from '@/config/types.ts';
  * });
  * ```
  */
-export type AdapterFactory = (storePath: string) => ScopedStorageAdapter;
+export type AdapterFactory = (storePath: string) => StorageAdapter;
 
 /**
  * Options for programmatic Cortex creation via `Cortex.init()`.
@@ -58,13 +58,13 @@ export interface CortexOptions {
      * Override default settings.
      * Unspecified fields use defaults from `DEFAULT_SETTINGS`.
      */
-    settings?: Partial<CortexSettings>;
+    settings?: Partial<CortexSettings> | undefined;
 
     /**
      * Store definitions mapping store names to their configuration.
      * Default: empty registry `{}`
      */
-    registry?: Registry;
+    registry: ConfigStores;
 
     /**
      * Custom adapter factory for creating storage adapters.
@@ -72,7 +72,7 @@ export interface CortexOptions {
      *
      * Override this for testing with mock adapters.
      */
-    adapterFactory?: AdapterFactory;
+    adapterFactory: AdapterFactory;
 }
 
 

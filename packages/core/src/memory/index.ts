@@ -20,7 +20,6 @@
  * ```
  */
 export * from '../slug.ts';
-export * from '../result.ts';
 export * from './memory.ts';
 export * from './result.ts';
 export * from './memory-path.ts';

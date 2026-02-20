@@ -9,14 +9,13 @@
  */
 
 import { ok, err, type Result } from '@/result.ts';
-import type { ScopedStorageAdapter, ReindexResult } from '@/storage/adapter.ts';
+import type { StorageAdapter, ReindexResult } from '@/storage';
 import { CategoryPath } from '@/category/category-path.ts';
 import type {
     CategoryError,
     CreateCategoryResult,
     DeleteCategoryResult,
     SetDescriptionResult,
-    CategoryMemoryEntry,
     SubcategoryEntry,
     CategoryResult,
 } from '@/category/types.ts';
@@ -24,8 +23,6 @@ import { createCategory, deleteCategory, setDescription } from '@/category/opera
 import type { PruneOptions, PruneResult } from '@/memory/operations/prune.ts';
 import { pruneExpiredMemories } from '@/memory/operations/prune.ts';
 import { MemoryClient } from './memory-client.ts';
-import { Slug } from '@/slug.ts';
-import type { MemoryResult } from '@/memory/result.ts';
 
 /**
  * Client for category navigation and operations.
@@ -71,7 +68,7 @@ export class CategoryClient {
     readonly rawPath: string;
 
     /** Storage adapter for this category's store */
-    private readonly adapter: ScopedStorageAdapter;
+    private readonly adapter: StorageAdapter;
 
     /**
      * Private constructor - use StoreClient.rootCategory() or navigation methods.
@@ -79,7 +76,7 @@ export class CategoryClient {
      * @param rawPath - The category path (normalized to canonical format)
      * @param adapter - The storage adapter for performing operations
      */
-    private constructor(rawPath: string, adapter: ScopedStorageAdapter) {
+    private constructor(rawPath: string, adapter: StorageAdapter) {
         this.rawPath = CategoryClient.normalizePath(rawPath);
         this.adapter = adapter;
     }
@@ -96,7 +93,7 @@ export class CategoryClient {
      * @param adapter - The storage adapter for the store
      * @returns A CategoryResult with a CategoryClient for the specified path
      */
-    static init(path: string, adapter: ScopedStorageAdapter): CategoryResult<CategoryClient> {
+    static init(path: string, adapter: StorageAdapter): CategoryResult<CategoryClient> {
         const normalizedPath = CategoryClient.normalizePath(path);
         const pathPayload = normalizedPath === '/' ? '' : normalizedPath.slice(1);
 
@@ -295,7 +292,6 @@ export class CategoryClient {
             memoryPath, 
             slug,
             this.adapter);
-
 
         return client;
     }
@@ -532,7 +528,7 @@ export class CategoryClient {
             return pathResult;
         }
 
-        const indexResult = await this.adapter.indexes.read(pathResult.value);
+        const indexResult = await this.adapter.indexes.load(pathResult.value);
         if (!indexResult.ok()) {
             return err({
                 code: 'STORAGE_ERROR',
@@ -582,7 +578,7 @@ export class CategoryClient {
             return pathResult;
         }
 
-        const indexResult = await this.adapter.indexes.read(pathResult.value);
+        const indexResult = await this.adapter.indexes.load(pathResult.value);
         if (!indexResult.ok()) {
             return err({
                 code: 'STORAGE_ERROR',

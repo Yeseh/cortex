@@ -1,84 +1,27 @@
-/**
- * Store resolution for local and global stores.
- */
+import type { CategoryPath } from "@/category";
+import type { CategoryMode } from "@/config/config";
+import type { Slug } from "@/slug";
 
-import { access } from 'node:fs/promises';
-import { resolve, isAbsolute } from 'node:path';
-import { ok } from '@/result.ts';
-import type { CortexConfig } from '../config/config.ts';
-import { storeError, type StoreResult, type StoreResolutionError } from './result.ts';
+export type StoreName = Slug;
 
-export interface StoreResolution {
-    root: string;
-    scope: 'local' | 'global';
+export type StoreCategory = {
+    path: CategoryPath;
+    description?: string;
+    subcategories?: Record<string, StoreCategory>;
+};
+
+export type StoreCategories = Record<string, StoreCategory>;
+
+export type Store = {
+    name: StoreName;
+    kind: string;
+    categoryMode?: CategoryMode;
+    description?: string | undefined;
+    categories?: StoreCategories;
+    properties?: Record<string, unknown>;
 }
 
-export type { StoreResolutionErrorCode, StoreResolutionError } from './result.ts';
-
-export interface StoreResolutionOptions {
-    cwd?: string;
-    globalStorePath: string;
-    config?: CortexConfig;
+export type StoreData = Omit<Store, 'name'>;
+export type Registry = {
+    [storeName: string]: Store
 }
-
-type ResolveStoreResult = StoreResult<StoreResolution, StoreResolutionError>;
-export type { ResolveStoreResult };
-
-const resolveCortexDir = (cwd: string): string => resolve(cwd, '.cortex', 'memory');
-
-const isMissingPath = (error: unknown): boolean =>
-    !!error && typeof error === 'object' && 'code' in error
-        ? (error as { code?: string }).code === 'ENOENT'
-        : false;
-
-const canAccess = async (path: string): Promise<StoreResult<boolean, StoreResolutionError>> => {
-    try {
-        await access(path);
-        return ok(true);
-    }
-    catch (error) {
-        if (isMissingPath(error)) {
-            return ok(false);
-        }
-        return storeError('STORE_ACCESS_FAILED', `Failed to access store path: ${path}.`, {
-            path,
-            cause: error,
-        });
-    }
-};
-
-export const resolveStore = async (
-    options: StoreResolutionOptions,
-): Promise<ResolveStoreResult> => {
-    const cwd = options.cwd ?? process.cwd();
-    const localPath = resolveCortexDir(cwd);
-    const localCheck = await canAccess(localPath);
-    if (!localCheck.ok()) {
-        return localCheck;
-    }
-    if (localCheck.value) {
-        return ok({ root: localPath, scope: 'local' });
-    }
-
-    return resolveGlobalStore(cwd, options.globalStorePath);
-};
-
-const resolveGlobalStore = async (
-    cwd: string,
-    globalStorePath: string,
-): Promise<StoreResult<StoreResolution, StoreResolutionError>> => {
-    const globalPath = isAbsolute(globalStorePath)
-        ? globalStorePath
-        : resolve(cwd, globalStorePath);
-    const globalCheck = await canAccess(globalPath);
-    if (!globalCheck.ok()) {
-        return globalCheck;
-    }
-    if (!globalCheck.value) {
-        return storeError('GLOBAL_STORE_MISSING', 'Global store not found.', {
-            path: globalPath,
-        });
-    }
-
-    return ok({ root: globalPath, scope: 'global' });
-};

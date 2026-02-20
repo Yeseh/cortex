@@ -4,7 +4,7 @@
  * @module core/memory/operations/remove
  */
 
-import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
+import type { StorageAdapter } from '@/storage/index.ts';
 import { ok, type Result } from '@/result.ts';
 import { MemoryPath } from '../memory-path.ts';
 import { CategoryPath } from '@/category/category-path.ts';
@@ -26,7 +26,7 @@ import { memoryError, type MemoryError } from '../result.ts';
  * ```
  */
 export const removeMemory = async (
-    storage: ScopedStorageAdapter,
+    storage: StorageAdapter,
     slugPath: string,
 ): Promise<Result<void, MemoryError>> => {
     // 1. Validate path
@@ -39,7 +39,7 @@ export const removeMemory = async (
 
     // 2. Check memory exists
     const path = pathResult.value;
-    const checkResult = await storage.memories.read(path);
+    const checkResult = await storage.memories.load(path);
     if (!checkResult.ok()) {
         return memoryError('STORAGE_ERROR', `Failed to read memory: ${slugPath}`, {
             path: slugPath,

@@ -22,7 +22,7 @@ import {
     type StoreResolutionError,
 } from '@yeseh/cortex-core/store';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
-import type { ScopedStorageAdapter, StoreNotFoundError } from '@yeseh/cortex-core/storage';
+import type { StorageAdapter, StoreNotFoundError } from '@yeseh/cortex-core/storage';
 import { throwCoreError } from './errors';
 import type { StoreResolveError } from '../../core/src/store/result';
 
@@ -33,7 +33,7 @@ export interface ResolvedStore {
     /** The resolved store context with path information */
     context: StoreContext;
     /** Scoped storage adapter for store operations */
-    adapter: ScopedStorageAdapter;
+    adapter: StorageAdapter;
 }
 
 /**

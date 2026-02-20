@@ -1,4 +1,5 @@
-import type { CategoryMode, ConfiguredCategories, outputFormat } from "./config";
+import type { ErrorDetails } from "@/result";
+import type { CategoryMode, ConfiguredCategories } from "./config";
 
 /**
  * Error codes for Cortex configuration operations.
@@ -48,30 +49,19 @@ export type ConfigErrorCode =
  * };
  * ```
  */
-export interface ConfigError {
-    /** Machine-readable error code */
-    code: ConfigErrorCode;
-    /** Human-readable error message */
-    message: string;
-    /** Path to the config file (when applicable) */
-    path?: string;
-    /** Line number in config file (for parse errors) */
-    line?: number;
-    /** Underlying error cause (for debugging) */
-    cause?: unknown;
-}
+export type ConfigError = ErrorDetails<ConfigErrorCode> ;
 
 
-export type StoreDefinition = {
+export type ConfigStore = {
     path: string;
     description?: string | undefined;
     categoryMode?: CategoryMode;
     categories: ConfiguredCategories
 } 
 
-export type CategoryDefinition = {
+export type ConfigCategory = {
     description?: string;
-    subcategories?: Record<string, CategoryDefinition>;
+    subcategories?: Record<string, ConfigCategory>;
 };
 
 export type CortexSettings = {
@@ -79,6 +69,5 @@ export type CortexSettings = {
     outputFormat?: 'json' | 'yaml' | 'toon';
 }
 
-export type ConfigCategory = CategoryDefinition;
-export type ConfigCategories = Record<string, CategoryDefinition>;
-export type Registry = Record<string, StoreDefinition>; 
+export type ConfigCategories = Record<string, ConfigCategory>;
+export type ConfigStores = Record<string, ConfigStore>; 

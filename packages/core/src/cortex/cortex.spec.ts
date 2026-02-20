@@ -7,51 +7,29 @@
 import { describe, expect, it } from 'bun:test';
 import { Cortex } from './cortex.ts';
 import type { AdapterFactory } from './types.ts';
-import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
-import { ok } from '@/result.ts';
-
-const createMockAdapter = (): ScopedStorageAdapter => ({
-    memories: {
-        read: async () => ok(null),
-        write: async () => ok(undefined),
-        remove: async () => ok(undefined),
-        move: async () => ok(undefined),
-    },
-    indexes: {
-        read: async () => ok(null),
-        write: async () => ok(undefined),
-        reindex: async () => ok({ warnings: [] }),
-        updateAfterMemoryWrite: async () => ok(undefined),
-    },
-    categories: {
-        exists: async () => ok(false),
-        ensure: async () => ok(undefined),
-        delete: async () => ok(undefined),
-        updateSubcategoryDescription: async () => ok(undefined),
-        removeSubcategoryEntry: async () => ok(undefined),
-    },
-}) as ScopedStorageAdapter;
+import type { StorageAdapter } from '@/storage/index.ts';
+import { createMockStorageAdapter } from '@/test/mock-storage-adapter.ts';
 
 describe('Cortex.init()', () => {
     it('should apply default settings when none are provided', () => {
         const cortex = Cortex.init({
             registry: {},
-            adapterFactory: () => createMockAdapter(),
+            adapterFactory: () => createMockStorageAdapter(),
         });
 
         expect(cortex.settings.outputFormat).toBe('yaml');
-        expect(cortex.settings.defaultStore).toBeUndefined();
+        expect(cortex.settings.defaultStore).toBe('default');
     });
 
     it('should merge custom settings with defaults', () => {
         const cortex = Cortex.init({
             settings: { outputFormat: 'json' },
             registry: {},
-            adapterFactory: () => createMockAdapter(),
+            adapterFactory: () => createMockStorageAdapter(),
         });
 
         expect(cortex.settings.outputFormat).toBe('json');
-        expect(cortex.settings.defaultStore).toBeUndefined();
+        expect(cortex.settings.defaultStore).toBe('default');
     });
 });
 
@@ -59,7 +37,7 @@ describe('Cortex.getStore()', () => {
     it('should return STORE_NOT_FOUND for missing store name', () => {
         const cortex = Cortex.init({
             registry: {},
-            adapterFactory: () => createMockAdapter(),
+            adapterFactory: () => createMockStorageAdapter(),
         });
 
         const result = cortex.getStore('missing');
@@ -73,7 +51,7 @@ describe('Cortex.getStore()', () => {
         let receivedPath = '';
         const factory: AdapterFactory = (storePath) => {
             receivedPath = storePath;
-            return createMockAdapter();
+            return createMockStorageAdapter();
         };
 
         const cortex = Cortex.init({
@@ -98,7 +76,7 @@ describe('Cortex.getStore()', () => {
     });
 
     it('should return INVALID_STORE_ADAPTER when factory returns undefined', () => {
-        const badFactory: AdapterFactory = () => undefined as unknown as ScopedStorageAdapter;
+        const badFactory: AdapterFactory = () => undefined as unknown as StorageAdapter;
 
         const cortex = Cortex.init({
             registry: {

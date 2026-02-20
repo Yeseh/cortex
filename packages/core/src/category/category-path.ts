@@ -14,8 +14,8 @@ export class CategoryPath {
     }
 
     static fromString(path: string): Result<CategoryPath, MemoryError> {
-        // Empty string represents the root category
-        if (path.trim() === '') {
+        // Empty string or '/' represents the root category
+        if (path.trim() === '' || path.trim() === '/') {
             return ok(CategoryPath.root());
         }
 
@@ -33,7 +33,7 @@ export class CategoryPath {
         if (slugSegments.length === 0) {
             return memoryError(
                 'INVALID_PATH',
-                'Memory slug path must include at least one segment with valid slugs',
+                'Category path must include at least one segment with valid slugs',
             );
         }
 
@@ -110,7 +110,7 @@ export class CategoryPath {
      * - Self-comparison returns true
      * - Ancestor paths return false (standards is NOT under standards/typescript)
      */
-    isUnder(scope: CategoryPath): boolean {
+    isChildOf(scope: CategoryPath): boolean {
         // Root scope matches everything
         if (scope.isRoot) {
             return true;

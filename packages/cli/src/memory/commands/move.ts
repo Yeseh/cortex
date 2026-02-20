@@ -10,60 +10,62 @@
  *
  * # Move with explicit store
  * cortex memory --store my-store move project/old project/new
- * ```
- */
+ * ```\n */
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
-import { resolveStoreAdapter } from '../../context.ts';
-import { moveMemory, MemoryPath } from '@yeseh/cortex-core/memory';
-import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
-
-/** Dependencies injected into the handler for testability */
-export interface MoveHandlerDeps {
-    stdout?: NodeJS.WritableStream;
-    /** Pre-resolved adapter for testing */
-    adapter?: ScopedStorageAdapter;
-}
+import { MemoryPath, type CortexContext } from '@yeseh/cortex-core';
+import { createCliCommandContext } from '../../create-cli-command.ts';
 
 /**
  * Handler for the memory move command.
  * Exported for direct testing without Commander parsing.
  *
+ * @param ctx - CLI context containing Cortex client and streams
+ * @param storeName - Optional store name from parent command
  * @param from - Source memory path
  * @param to - Destination memory path
- * @param storeName - Optional store name from parent command
- * @param deps - Injectable dependencies for testing
  */
 export async function handleMove(
-    from: string,
-    to: string,
+    ctx: CortexContext,
     storeName: string | undefined,
-    deps: MoveHandlerDeps = {},
+    from: string,
+    to: string
 ): Promise<void> {
-    // 1. Resolve store context
-    const storeResult = await resolveStoreAdapter(storeName);
+    const fromResult = MemoryPath.fromString(from);
+    if (!fromResult.ok()) {
+        throwCoreError(fromResult.error);
+    }
+
+    const toResult = MemoryPath.fromString(to);
+    if (!toResult.ok()) {
+        throwCoreError(toResult.error);
+    }
+
+    const storeResult = ctx.cortex.getStore(storeName ?? 'default');
     if (!storeResult.ok()) {
         throwCoreError(storeResult.error);
     }
 
-    // 2. Move the memory file
-    const adapter = deps.adapter ?? storeResult.value.adapter;
-    const moveResult = await moveMemory(adapter, from, to);
+    const store = storeResult.value;
+    const rootResult = store.root();
+    if (!rootResult.ok()) {
+        throwCoreError(rootResult.error);
+    }
+
+    const sourceCategoryResult = rootResult.value.getCategory(fromResult.value.category.toString());
+    if (!sourceCategoryResult.ok()) {
+        throwCoreError(sourceCategoryResult.error);
+    }
+
+    const sourceMemory = sourceCategoryResult.value.getMemory(fromResult.value.slug.toString());
+    const moveResult = await sourceMemory.move(toResult.value);
     if (!moveResult.ok()) {
         throwCoreError(moveResult.error);
     }
 
-    // 3. Output success message with normalized paths
-    // The paths were already validated by moveMemory, so these will succeed
-    const normalizedFrom = MemoryPath.fromString(from);
-    const normalizedTo = MemoryPath.fromString(to);
-    const out = deps.stdout ?? process.stdout;
-    
-    // Use normalized paths if parsing succeeded, fall back to original
-    const fromDisplay = normalizedFrom.ok() ? normalizedFrom.value.toString() : from;
-    const toDisplay = normalizedTo.ok() ? normalizedTo.value.toString() : to;
-    out.write(`Moved memory from ${fromDisplay} to ${toDisplay}.\n`);
+    const out = ctx.stdout ?? process.stdout;
+    out.write(`Moved memory ${fromResult.value.toString()} to ${toResult.value.toString()}.\n`);
 }
 
 /**
@@ -80,5 +82,10 @@ export const moveCommand = new Command('move')
     .argument('<to>', 'Destination memory path')
     .action(async (from, to, _options, command) => {
         const parentOpts = command.parent?.opts() as { store?: string } | undefined;
-        await handleMove(from, to, parentOpts?.store);
+        const context = await createCliCommandContext();
+        if (!context.ok()) {
+            throwCoreError(context.error);
+        }
+
+        await handleMove(context.value, parentOpts?.store, from, to);
     });

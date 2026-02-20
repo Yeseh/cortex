@@ -23,7 +23,7 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
-import { createMemory, MemoryPath, type CortexConfig, type CortexContext, type ScopedStorageAdapter } from '@yeseh/cortex-core';
+import { MemoryPath, type CortexContext } from '@yeseh/cortex-core';
 import { resolveInput as resolveCliContent } from '../../input.ts';
 import { parseExpiresAt, parseTags } from '../parsing.ts';
 import { createCliCommandContext } from '../../create-cli-command.ts';
@@ -49,9 +49,9 @@ export async function handleAdd(
     ctx: CortexContext,
     storeName: string | undefined,
     path: string,
-    options: AddCommandOptions,
+    options: AddCommandOptions
 ): Promise<void> {
-    const pathResult = MemoryPath.fromString(path);   
+    const pathResult = MemoryPath.fromString(path);
     if (!pathResult.ok()) {
         throwCoreError(pathResult.error);
     }
@@ -60,7 +60,7 @@ export async function handleAdd(
     const content = await resolveCliContent({
         content: options.content,
         filePath: options.file,
-        stream: ctx.stdin 
+        stream: ctx.stdin,
     });
 
     if (!content.ok()) {
@@ -74,24 +74,34 @@ export async function handleAdd(
         });
     }
 
-    const {content: memoryContent, source} = content.value;
+    const { content: memoryContent, source } = content.value;
     const tags = parseTags(options.tags);
     const expiresAt = parseExpiresAt(options.expiresAt);
     const citations = options.citations ?? [];
 
-    const storeResult = ctx.cortex.getStore(storeName ?? 'default')
+    const storeResult = ctx.cortex.getStore(storeName ?? 'default');
     if (!storeResult.ok()) {
         throwCoreError(storeResult.error);
     }
 
     const store = storeResult.value;
-    const memoryClient = store.getMemory(memoryPath.toString()); 
+    const rootResult = store.root();
+    if (!rootResult.ok()) {
+        throwCoreError(rootResult.error);
+    }
+
+    const categoryResult = rootResult.value.getCategory(memoryPath.category.toString());
+    if (!categoryResult.ok()) {
+        throwCoreError(categoryResult.error);
+    }
+
+    const memoryClient = categoryResult.value.getMemory(memoryPath.slug.toString());
     const memoryResult = await memoryClient.create({
-        content: memoryContent!, 
-        tags, 
-        source, 
-        expiresAt, 
-        citations
+        content: memoryContent!,
+        tags,
+        source,
+        expiresAt,
+        citations,
     });
 
     if (!memoryResult.ok()) {
@@ -131,4 +141,3 @@ export const addCommand = new Command('add')
 
         await handleAdd(context.value, parentOpts?.store, path, options);
     });
-

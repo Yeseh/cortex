@@ -14,9 +14,9 @@
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
 import { getDefaultRegistryPath } from '../../context.ts';
-import { isValidStoreName } from '@yeseh/cortex-core/store';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { serializeOutput, type OutputStore, type OutputFormat } from '../../output.ts';
+import { Slug } from '@yeseh/cortex-core';
 
 /**
  * Options for the remove command.
@@ -43,14 +43,12 @@ export interface RemoveHandlerDeps {
  * @throws {InvalidArgumentError} When the store name is empty or invalid
  */
 function validateStoreName(name: string): string {
-    const trimmed = name.trim();
-    if (!trimmed) {
-        throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name is required.' });
+    const slugResult = Slug.from(name);
+    if (!slugResult.ok()) {
+        throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug (letters, numbers, hyphens).' });
     }
-    if (!isValidStoreName(trimmed)) {
-        throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug.' });
-    }
-    return trimmed;
+
+    return slugResult.value.toString();
 }
 
 /**

@@ -23,12 +23,15 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
-import { resolveStoreAdapter } from '../../context.ts';
 
-import { getMemory } from '@yeseh/cortex-core/memory';
-import { defaultTokenizer } from '@yeseh/cortex-core';
-import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
+import {
+    defaultTokenizer,
+    MemoryPath,
+    type CortexContext,
+    type StoreClient,
+} from '@yeseh/cortex-core';
 import { serializeOutput, type OutputMemory, type OutputFormat } from '../../output.ts';
+import { createCliCommandContext } from '../../create-cli-command.ts';
 
 /**
  * Options for the show command.
@@ -47,8 +50,8 @@ export interface ShowCommandOptions {
 export interface ShowHandlerDeps {
     /** Output stream for writing results (defaults to process.stdout) */
     stdout?: NodeJS.WritableStream;
-    /** Pre-resolved adapter for testing */
-    adapter?: ScopedStorageAdapter;
+    /** Pre-resolved store client for testing */
+    store?: StoreClient;
 }
 
 /**
@@ -70,28 +73,43 @@ export interface ShowHandlerDeps {
  * @throws {CommanderError} When the memory is not found or read fails
  */
 export async function handleShow(
+    ctx: CortexContext,
+    storeName: string | undefined,
     path: string,
     options: ShowCommandOptions,
-    storeName: string | undefined,
-    deps: ShowHandlerDeps = {},
+    deps: ShowHandlerDeps = {}
 ): Promise<void> {
-    // 1. Resolve store context
-    const storeResult = await resolveStoreAdapter(storeName);
+    const pathResult = MemoryPath.fromString(path);
+    if (!pathResult.ok()) {
+        throwCoreError(pathResult.error);
+    }
+
+    const storeResult = ctx.cortex.getStore(storeName ?? 'default');
     if (!storeResult.ok()) {
         throwCoreError(storeResult.error);
     }
 
-    // 2. Read the memory
-    const adapter = deps.adapter ?? storeResult.value.adapter;
-    const readResult = await getMemory(adapter, path, {
+    const store = deps.store ?? storeResult.value;
+
+    const rootResult = store.root();
+    if (!rootResult.ok()) {
+        throwCoreError(rootResult.error);
+    }
+
+    const categoryResult = rootResult.value.getCategory(pathResult.value.category.toString());
+    if (!categoryResult.ok()) {
+        throwCoreError(categoryResult.error);
+    }
+
+    const memoryClient = categoryResult.value.getMemory(pathResult.value.slug.toString());
+    const readResult = await memoryClient.get({
         includeExpired: options.includeExpired ?? false,
-        now: new Date(),
+        now: ctx.now(),
     });
     if (!readResult.ok()) {
         throwCoreError(readResult.error);
     }
 
-    // 3. Build output
     const memory = readResult.value;
     const tokenEstimateResult = defaultTokenizer.estimateTokens(memory.content);
     const tokenEstimate = tokenEstimateResult.ok() ? tokenEstimateResult.value : undefined;
@@ -109,14 +127,7 @@ export async function handleShow(
         content: memory.content,
     };
 
-    // 4. Serialize and output
-    const VALID_FORMATS: OutputFormat[] = [
-        'yaml',
-        'json',
-        'toon',
-    ];
-    const requestedFormat = options.format as OutputFormat;
-    const format: OutputFormat = VALID_FORMATS.includes(requestedFormat) ? requestedFormat : 'yaml';
+    const format = (options.format as OutputFormat) ?? 'yaml';
     const serialized = serializeOutput({ kind: 'memory', value: outputMemory }, format);
     if (!serialized.ok()) {
         throwCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
@@ -146,5 +157,10 @@ export const showCommand = new Command('show')
     .option('-o, --format <format>', 'Output format (yaml, json, toon)', 'yaml')
     .action(async (path, options, command) => {
         const parentOpts = command.parent?.opts() as { store?: string } | undefined;
-        await handleShow(path, options, parentOpts?.store);
+        const context = await createCliCommandContext();
+        if (!context.ok()) {
+            throwCoreError(context.error);
+        }
+
+        await handleShow(context.value, parentOpts?.store, path, options);
     });

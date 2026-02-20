@@ -5,7 +5,7 @@
  */
 
 import type { Result } from '@/result.ts';
-import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
+import type { StorageAdapter } from '@/storage/index.ts';
 import type { MemoryError } from '@/memory/result.ts';
 import { ok } from '@/result.ts';
 import {
@@ -91,7 +91,7 @@ export interface ListMemoriesResult {
  * ```
  */
 export const listMemories = async (
-    storage: ScopedStorageAdapter,
+    storage: StorageAdapter,
     options?: ListMemoriesOptions,
 ): Promise<Result<ListMemoriesResult, MemoryError>> => {
     const includeExpired = options?.includeExpired ?? false;
@@ -123,7 +123,7 @@ export const listMemories = async (
             }
 
             // Add root category itself as a discoverable subcategory
-            const indexResult = await storage.indexes.read(rootCat);
+            const indexResult = await storage.indexes.load(rootCat);
             if (indexResult.ok() && indexResult.value) {
                 subcategories.push({
                     path: rootCat,

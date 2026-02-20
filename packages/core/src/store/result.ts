@@ -1,4 +1,4 @@
-import { err, type Result } from '@/result.ts';
+import { err, type ErrorDetails, type Result } from '@/result.ts';
 
 /**
  * Store module result helpers.
@@ -29,24 +29,10 @@ export type StoreErrorCode =
     | 'STORE_INDEX_FAILED'
     | 'REGISTRY_UPDATE_FAILED';
 
-export type StoreError = {
-    /** Machine-readable error code for programmatic handling */
-    code: StoreErrorCode;
-    /** Human-readable error message */
-    message: string;
-    /** Filesystem or registry path involved in the error (when applicable) */
-    path?: string;
-    /** Store name involved in the error (when applicable) */
+export type StoreError = ErrorDetails<StoreErrorCode> & {
     store?: string;
-    /** Line number for parse errors (when applicable) */
-    line?: number;
-    /** Underlying error that caused this failure (for debugging) */
-    cause?: unknown;
 };
-
-export type StoreErrorForCode<Code extends StoreErrorCode> = StoreError & { code: Code };
-
-export type StoreResult<T, E extends StoreError = StoreError> = Result<T, E>;
+export type StoreResult<T> = Result<T, StoreError>;
 
 /**
  * Creates a StoreError result with the given code and message.
@@ -66,62 +52,13 @@ export type StoreResult<T, E extends StoreError = StoreError> = Result<T, E>;
  * @edgeCases
  * - When `extras` is undefined, only the code and message are set.
  */
-export const storeError = <Code extends StoreErrorCode>(
-    code: Code,
+export const storeError = (
+    code: StoreErrorCode,
     message: string,
     extras?: Partial<StoreError>,
-): StoreResult<never, StoreErrorForCode<Code>> =>
+): Result<never, StoreError> =>
     err({
         code,
         message,
         ...extras,
-    } as StoreErrorForCode<Code>);
-
-export type StoreRegistryParseErrorCode =
-    | 'MISSING_STORES_SECTION'
-    | 'INVALID_STORES_SECTION'
-    | 'INVALID_STORE_NAME'
-    | 'DUPLICATE_STORE_NAME'
-    | 'MISSING_STORE_PATH'
-    | 'INVALID_STORE_PATH'
-    | 'UNEXPECTED_ENTRY';
-
-export type StoreRegistryParseError = StoreErrorForCode<StoreRegistryParseErrorCode>;
-
-export type StoreRegistryLoadErrorCode =
-    | 'REGISTRY_READ_FAILED'
-    | 'REGISTRY_PARSE_FAILED'
-    | 'REGISTRY_MISSING';
-
-export type StoreRegistryLoadError = StoreErrorForCode<StoreRegistryLoadErrorCode>;
-
-export type StoreRegistrySaveErrorCode = 'REGISTRY_WRITE_FAILED' | 'REGISTRY_SERIALIZE_FAILED';
-
-export type StoreRegistrySaveError = StoreErrorForCode<StoreRegistrySaveErrorCode>;
-
-export type StoreRegistrySerializeErrorCode =
-    | 'INVALID_STORE_NAME'
-    | 'INVALID_STORE_PATH'
-    | 'EMPTY_REGISTRY';
-
-export type StoreRegistrySerializeError = StoreErrorForCode<StoreRegistrySerializeErrorCode>;
-
-export type StoreResolveErrorCode = 'STORE_NOT_FOUND';
-
-export type StoreResolveError = StoreErrorForCode<StoreResolveErrorCode> & { store: string };
-
-export type StoreResolutionErrorCode =
-    | 'LOCAL_STORE_MISSING'
-    | 'GLOBAL_STORE_MISSING'
-    | 'STORE_ACCESS_FAILED';
-
-export type StoreResolutionError = StoreErrorForCode<StoreResolutionErrorCode>;
-
-export type InitStoreErrorCode =
-    | 'STORE_ALREADY_EXISTS'
-    | 'STORE_CREATE_FAILED'
-    | 'STORE_INDEX_FAILED'
-    | 'REGISTRY_UPDATE_FAILED'
-    | 'INVALID_STORE_NAME';
-
-export type InitStoreError = StoreErrorForCode<InitStoreErrorCode>;
+    } as StoreError);

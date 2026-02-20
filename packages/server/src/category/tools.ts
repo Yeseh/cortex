@@ -16,7 +16,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
+import type { StorageAdapter } from '@yeseh/cortex-core/storage';
 import type { CategoryStorage, CategoryModeContext } from '@yeseh/cortex-core/category';
 import type { CategoryMode, CategoryDefinition } from '@yeseh/cortex-core';
 import {
@@ -193,7 +193,7 @@ interface McpToolResponse {
  * @param adapter - Scoped storage adapter from registry.getStore()
  * @returns CategoryStorage implementation
  */
-const createCategoryStoragePort = (adapter: ScopedStorageAdapter): CategoryStorage => {
+const createCategoryStoragePort = (adapter: StorageAdapter): CategoryStorage => {
     return adapter.categories;
 };
 

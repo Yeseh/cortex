@@ -11,8 +11,8 @@ import type {
     ComposedStorageAdapter,
     MemoryStorage,
     IndexStorage,
-    StoreStorage,
-} from '@/storage/adapter.ts';
+    StoreAdapter,
+} from '@/storage';
 import { err, ok } from '@/result.ts';
 import { Memory, type MemoryMetadata } from '@/memory/memory.ts';
 import type { Category } from '@/category/types.ts';
@@ -43,7 +43,7 @@ export const createMockStorage = (
         memories: Partial<MemoryStorage>;
         indexes: Partial<IndexStorage>;
         categories: Partial<CategoryStorage>;
-        stores: Partial<StoreStorage>;
+        stores: Partial<StoreAdapter>;
     }> = {},
 ): ComposedStorageAdapter => ({
     memories: {
@@ -73,7 +73,7 @@ export const createMockStorage = (
         save: async () => ok(undefined),
         remove: async () => ok(undefined),
         ...overrides.stores,
-    } as StoreStorage,
+    } as StoreAdapter,
 });
 
 // ============================================================================

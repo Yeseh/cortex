@@ -6,7 +6,8 @@
 
 import { ok, err, type Result } from '../../result.ts';
 import { CategoryPath } from '../category-path.ts';
-import type { CategoryStorage, CategoryError, DeleteCategoryResult, CategoryModeContext } from '../types.ts';
+import type { CategoryError, DeleteCategoryResult, CategoryModeContext } from '../types.ts';
+import { type CategoryAdapter } from '@/storage';
 import { isConfigDefined, flattenCategoryPaths } from '../../config/config.ts';
 
 /**
@@ -40,7 +41,7 @@ import { isConfigDefined, flattenCategoryPaths } from '../../config/config.ts';
  * ```
  */
 export const deleteCategory = async (
-    storage: CategoryStorage,
+    storage: CategoryAdapter,
     path: string,
     modeContext?: CategoryModeContext,
 ): Promise<Result<DeleteCategoryResult, CategoryError>> => {
@@ -69,7 +70,7 @@ export const deleteCategory = async (
             return err({
                 code: 'CATEGORY_PROTECTED',
                 message: `Cannot delete config-defined category '${path}'. ` +
-                    'Remove it from config.yaml first.',
+                    'User must remove it from config first.',
                 path,
             });
         }
@@ -82,7 +83,7 @@ export const deleteCategory = async (
             return err({
                 code: 'CATEGORY_PROTECTED',
                 message: `Cannot delete '${path}' because it contains config-defined subcategories. ` +
-                    'Remove subcategories from config.yaml first.',
+                    'User must remove subcategories from config first.',
                 path,
             });
         }
@@ -105,12 +106,6 @@ export const deleteCategory = async (
     const deleteResult = await storage.delete(pathResult.value);
     if (!deleteResult.ok()) {
         return deleteResult;
-    }
-
-    // Remove from parent's subcategories list
-    const removeResult = await storage.removeSubcategoryEntry(pathResult.value);
-    if (!removeResult.ok()) {
-        return removeResult;
     }
 
     return ok({ path, deleted: true });

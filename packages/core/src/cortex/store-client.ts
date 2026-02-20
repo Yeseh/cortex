@@ -8,12 +8,13 @@
  * @module core/cortex/store-client
  */
 
-import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
+import type { StorageAdapter } from '@/storage/index.ts';
 import { CategoryClient } from './category-client.ts';
 import { err, ok, type ErrorDetails, type Result } from '@/result.ts';
 import { MemoryClient } from './memory-client.ts';
 import type { MemoryResult } from '@/memory/result.ts';
 import type { CategoryResult } from '@/category/types.ts';
+import { initializeStore } from '@/store/index.ts';
 
 export type StoreErrorCode = 'STORE_NOT_FOUND' | 'INVALID_STORE_ADAPTER';
 export type StoreClientError = ErrorDetails<StoreErrorCode>;
@@ -52,7 +53,7 @@ export class StoreClient {
     readonly description?: string;
 
     /** Storage adapter for this store (null if store not found) */
-    private readonly adapter: ScopedStorageAdapter;
+    private readonly adapter: StorageAdapter;
 
     /**
      * Private constructor - use Cortex.getStore() to create instances.
@@ -66,7 +67,7 @@ export class StoreClient {
     private constructor(
         name: string,
         path: string,
-        adapter: ScopedStorageAdapter,
+        adapter: StorageAdapter,
         description?: string,
     ) {
         this.name = name;
@@ -88,7 +89,7 @@ export class StoreClient {
     static init(
         name: string,
         path: string,
-        adapter: ScopedStorageAdapter,
+        adapter: StorageAdapter,
         description?: string,
     ): StoreClientResult<StoreClient> {
         if (!adapter) {

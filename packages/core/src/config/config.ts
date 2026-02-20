@@ -4,7 +4,7 @@
 
 import { type Result, ok, err } from '../result.ts';
 import z from 'zod';
-import type { CategoryDefinition, ConfigCategories, CortexSettings } from './types.ts';
+import type { ConfigCategory, ConfigCategories, CortexSettings } from './types.ts';
 
 /**
  * Category creation/deletion mode for a store.
@@ -122,7 +122,7 @@ export const flattenCategoryPaths = (
     }
 
     const paths: string[] = [];
-    const entries = Object.entries(categories) as [string, CategoryDefinition][];
+    const entries = Object.entries(categories) as [string, ConfigCategory][];
 
     for (const [name, def] of entries) {
         const path = prefix ? `${prefix}/${name}` : name;
@@ -191,7 +191,7 @@ export const isConfigDefined = (
             return false;
         }
 
-        const category: CategoryDefinition | undefined = current[segment];
+        const category: ConfigCategory | undefined = current[segment];
         if (!category) {
             return false;
         }
@@ -245,7 +245,7 @@ const validateCategoryDefinition = (
     def: unknown,
     categoryPath: string,
     storeName: string,
-): Result<CategoryDefinition, ConfigValidationError> => {
+): Result<ConfigCategory, ConfigValidationError> => {
     // Empty object or null/undefined is valid (no description, no subcategories)
     if (def === null || def === undefined || (typeof def === 'object' && Object.keys(def as object).length === 0)) {
         return ok({});
@@ -261,7 +261,7 @@ const validateCategoryDefinition = (
     }
 
     const defObj = def as Record<string, unknown>;
-    const result: CategoryDefinition = {};
+    const result: ConfigCategory = {};
 
     // Validate description
     if ('description' in defObj) {
@@ -295,7 +295,7 @@ const validateCategoryDefinition = (
             });
         }
 
-        const subcategories: Record<string, CategoryDefinition> = {};
+        const subcategories: Record<string, ConfigCategory> = {};
         for (const [
             name, subDef,
         ] of Object.entries(defObj.subcategories as Record<string, unknown>)) {
@@ -322,7 +322,7 @@ const validateCategoryDefinition = (
 const validateCategoryHierarchy = (
     categories: unknown,
     storeName: string,
-): Result<Record<string, CategoryDefinition>, ConfigValidationError> => {
+): Result<Record<string, ConfigCategory>, ConfigValidationError> => {
     if (categories === null || categories === undefined) {
         return ok({});
     }
@@ -336,7 +336,7 @@ const validateCategoryHierarchy = (
         });
     }
 
-    const result: Record<string, CategoryDefinition> = {};
+    const result: Record<string, ConfigCategory> = {};
     for (const [
         name, def,
     ] of Object.entries(categories as Record<string, unknown>)) {

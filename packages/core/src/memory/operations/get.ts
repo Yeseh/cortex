@@ -4,7 +4,7 @@
  * @module core/memory/operations/get
  */
 
-import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
+import type { StorageAdapter } from '@/storage/index.ts';
 
 import { MemoryPath } from '../memory-path.ts';
 import { memoryError, type MemoryResult } from '../result.ts';
@@ -37,7 +37,7 @@ export interface GetMemoryOptions {
  * ```
  */
 export const getMemory = async (
-    storage: ScopedStorageAdapter,
+    storage: StorageAdapter,
     path: string,
     options?: GetMemoryOptions,
 ): Promise<MemoryResult<Memory>> => {
@@ -49,7 +49,7 @@ export const getMemory = async (
     }
 
     const memoryPath = pathResult.value;
-    const readResult = await storage.memories.read(memoryPath);
+    const readResult = await storage.memories.load(memoryPath);
     if (!readResult.ok()) {
         return memoryError('STORAGE_ERROR', `Failed to read memory: ${path}`, {
             path: path,

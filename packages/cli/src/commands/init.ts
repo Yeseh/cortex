@@ -20,8 +20,8 @@ import { mkdir, writeFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import { Command } from '@commander-js/extra-typings';
-import { throwCoreError } from '../../errors.ts';
-import { serializeOutput, type OutputFormat, type OutputInit, type OutputPayload } from '../../output.ts';
+import { throwCoreError } from '../errors.ts';
+import { serializeOutput, type OutputFormat, type OutputInit, type OutputPayload } from '../output.ts';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { initializeStore } from '@yeseh/cortex-core/store';
 

@@ -31,8 +31,10 @@
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
 
-import { CategoryPath, listMemories, type ScopedStorageAdapter } from '@yeseh/cortex-core';
+import { CategoryPath, type CategoryClient, type CortexContext } from '@yeseh/cortex-core';
+import type { CategoryMemoryEntry, SubcategoryEntry } from '@yeseh/cortex-core/category';
 import { serializeOutput, type OutputFormat } from '../../output.ts';
+import { createCliCommandContext } from '../../create-cli-command.ts';
 
 /**
  * Options for the list command.
@@ -55,8 +57,6 @@ export interface ListHandlerDeps {
     stdout?: NodeJS.WritableStream;
     /** Current time for expiration checks */
     now?: Date;
-    /** Pre-resolved adapter for testing */
-    adapter?: ScopedStorageAdapter;
 }
 
 /**
@@ -87,7 +87,6 @@ export interface ListResult {
     subcategories: ListSubcategoryEntry[];
 }
 
-
 /**
  * Formats the output based on the specified format.
  */
@@ -109,15 +108,12 @@ const formatOutput = (result: ListResult, format: OutputFormat): string => {
     const data = {
         memories: outputMemories,
         subcategories: outputSubcategories,
-    }
+    };
 
-    const serialized = serializeOutput(
-        {kind: 'memory', value: data},
-        format,
-    )
+    const serialized = serializeOutput({ kind: 'memory', value: data }, format);
 
     if (!serialized.ok()) {
-        throwCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message }); 
+        throwCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
     }
 
     return serialized.value;
@@ -140,44 +136,109 @@ const formatOutput = (result: ListResult, format: OutputFormat): string => {
  * @throws {CommanderError} When read or parse fails
  */
 export async function handleList(
+    ctx: CortexContext,
+    storeName: string | undefined,
     category: string | undefined,
     options: ListCommandOptions,
-    storeName: string | undefined,
-    deps: ListHandlerDeps = {},
+    deps: ListHandlerDeps = {}
 ): Promise<void> {
-    // 1. Resolve store context
-    const storeResult = await resolveStoreAdapter(storeName);
-    if (!storeResult.ok()) {
-        throwCoreError(storeResult.error);
-    }
-
-    const now = deps.now ?? new Date();
-    const adapter = deps.adapter ?? storeResult.value.adapter;
-
     const categoryResult = CategoryPath.fromString(category ?? '');
     if (!categoryResult.ok()) {
         throwCoreError(categoryResult.error);
     }
 
-    // 2. Collect memories and subcategories
-    const listResult = await listMemories(adapter, {
-        category: categoryResult.value,
-        includeExpired: options.includeExpired ?? false,
-        now,
-    });
-    if (!listResult.ok()) {
-        throwCoreError(listResult.error);
+    const storeResult = ctx.cortex.getStore(storeName ?? 'default');
+    if (!storeResult.ok()) {
+        throwCoreError(storeResult.error);
     }
 
+    const rootResult = storeResult.value.root();
+    if (!rootResult.ok()) {
+        throwCoreError(rootResult.error);
+    }
+
+    const root = rootResult.value;
+    const categoryClientResult = categoryResult.value.isRoot
+        ? root.getCategory('/')
+        : root.getCategory(categoryResult.value.toString());
+    if (!categoryClientResult.ok()) {
+        throwCoreError(categoryClientResult.error);
+    }
+
+    const categoryClient = categoryClientResult.value;
+    const now = deps.now ?? ctx.now();
+    const includeExpired = options.includeExpired ?? false;
+    const visited = new Set<string>();
+
+    const collectMemories = async (client: CategoryClient): Promise<ListMemoryEntry[]> => {
+        const categoryKey = client.rawPath;
+        if (visited.has(categoryKey)) {
+            return [];
+        }
+        visited.add(categoryKey);
+
+        const memoriesResult = await client.listMemories({ includeExpired });
+        if (!memoriesResult.ok()) {
+            throwCoreError(memoriesResult.error);
+        }
+
+        const memories: ListMemoryEntry[] = [];
+        for (const entry of memoriesResult.value) {
+            const memoryClient = client.getMemory(entry.path.slug.toString());
+            const memoryResult = await memoryClient.get({ includeExpired: true, now });
+            if (!memoryResult.ok()) {
+                if (memoryResult.error.code === 'MEMORY_NOT_FOUND') {
+                    continue;
+                }
+                if (!includeExpired && memoryResult.error.code === 'MEMORY_EXPIRED') {
+                    continue;
+                }
+                throwCoreError(memoryResult.error);
+            }
+
+            const memory = memoryResult.value;
+            const isExpired = memory.isExpired(now);
+            if (!includeExpired && isExpired) {
+                continue;
+            }
+
+            const summary = (entry as CategoryMemoryEntry & { summary?: string }).summary;
+
+            memories.push({
+                path: entry.path.toString(),
+                tokenEstimate: entry.tokenEstimate,
+                summary,
+                expiresAt: memory.metadata.expiresAt,
+                isExpired,
+            });
+        }
+
+        const subcategoriesResult = await client.listSubcategories();
+        if (!subcategoriesResult.ok()) {
+            throwCoreError(subcategoriesResult.error);
+        }
+
+        for (const subcategory of subcategoriesResult.value) {
+            const subcategoryClientResult = root.getCategory(subcategory.path.toString());
+            if (!subcategoryClientResult.ok()) {
+                throwCoreError(subcategoryClientResult.error);
+            }
+            const subMemories = await collectMemories(subcategoryClientResult.value);
+            memories.push(...subMemories);
+        }
+
+        return memories;
+    };
+
+    const subcategoriesResult = await categoryClient.listSubcategories();
+    if (!subcategoriesResult.ok()) {
+        throwCoreError(subcategoriesResult.error);
+    }
+
+    const memories = await collectMemories(categoryClient);
     const result: ListResult = {
-        memories: listResult.value.memories.map((memory) => ({
-            path: memory.path.toString(),
-            tokenEstimate: memory.tokenEstimate,
-            summary: memory.summary,
-            expiresAt: memory.expiresAt,
-            isExpired: memory.isExpired,
-        })),
-        subcategories: listResult.value.subcategories.map((subcategory) => ({
+        memories,
+        subcategories: subcategoriesResult.value.map((subcategory: SubcategoryEntry) => ({
             path: subcategory.path.toString(),
             memoryCount: subcategory.memoryCount,
             description: subcategory.description,
@@ -185,13 +246,7 @@ export async function handleList(
     };
 
     // 3. Format and output
-    const VALID_FORMATS: OutputFormat[] = [
-        'yaml',
-        'json',
-        'toon',
-    ];
-    const requestedFormat = options.format as OutputFormat;
-    const format: OutputFormat = VALID_FORMATS.includes(requestedFormat) ? requestedFormat : 'yaml';
+    const format = (options.format as OutputFormat) ?? 'yaml';
     const output = formatOutput(result, format);
 
     const out = deps.stdout ?? process.stdout;
@@ -227,5 +282,10 @@ export const listCommand = new Command('list')
         const parentOpts = command.parent?.opts() as { store?: string } | undefined;
         // Allow store to be specified on either the subcommand or parent command
         const storeName = options.store ?? parentOpts?.store;
-        await handleList(category, options, storeName);
+        const context = await createCliCommandContext();
+        if (!context.ok()) {
+            throwCoreError(context.error);
+        }
+
+        await handleList(context.value, storeName, category, options);
     });

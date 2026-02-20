@@ -21,10 +21,10 @@
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
 import { getDefaultRegistryPath } from '../../context.ts';
-import { isValidStoreName } from '@yeseh/cortex-core/store';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { serializeOutput, type OutputStore, type OutputFormat } from '../../output.ts';
 import { resolveUserPath } from '../../paths.ts';
+import { Slug } from '@yeseh/cortex-core';
 
 /**
  * Options for the add command.
@@ -53,14 +53,12 @@ export interface AddHandlerDeps {
  * @throws {InvalidArgumentError} When the store name is empty or invalid
  */
 function validateStoreName(name: string): string {
-    const trimmed = name.trim();
-    if (!trimmed) {
-        throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name is required.' });
+    const slugResult = Slug.from(name);
+    if (!slugResult.ok()) {
+        throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug (letters, numbers, hyphens).' });
     }
-    if (!isValidStoreName(trimmed)) {
-        throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug.' });
-    }
-    return trimmed;
+
+    return slugResult.value.toString();
 }
 
 /**
@@ -132,25 +130,19 @@ export async function handleAdd(
     // 2. Load existing registry
     const registry = new FilesystemRegistry(registryPath);
     const registryResult = await registry.load();
-    // Handle REGISTRY_MISSING as empty registry (like allowMissing: true did)
-    let currentRegistry: Record<string, { path: string }>;
-    if (registryResult.ok()) {
-        currentRegistry = registryResult.value;
-    }
-    else if (registryResult.error.code === 'REGISTRY_MISSING') {
-        currentRegistry = {};
-    }
-    else {
+
+    if (!registryResult.ok()) {
         throwCoreError({ code: 'STORE_REGISTRY_FAILED', message: registryResult.error.message });
     }
 
     // 3. Check for existing store
-    if (currentRegistry[trimmedName]) {
+    const currentRegistry = registryResult.value;
+    const currentStore = currentRegistry.getStore(trimmedName);
+    if (currentStore.ok()) {
         throwCoreError({ code: 'STORE_ALREADY_EXISTS', message: `Store '${trimmedName}' is already registered.` });
     }
 
     // 4. Add to registry and save
-    currentRegistry[trimmedName] = { path: resolvedPath };
     const saved = await registry.save(currentRegistry);
     if (!saved.ok()) {
         throwCoreError({ code: 'STORE_REGISTRY_FAILED', message: saved.error.message });

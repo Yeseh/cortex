@@ -6,41 +6,12 @@
 
 import { describe, expect, it } from 'bun:test';
 import { CategoryClient } from './category-client.ts';
-import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
 import { ok } from '@/result.ts';
-
-const createMockAdapter = (overrides?: Partial<{
-    memories: Partial<ScopedStorageAdapter['memories']>;
-    indexes: Partial<ScopedStorageAdapter['indexes']>;
-    categories: Partial<ScopedStorageAdapter['categories']>;
-}>): ScopedStorageAdapter => ({
-    memories: {
-        read: async () => ok(null),
-        write: async () => ok(undefined),
-        remove: async () => ok(undefined),
-        move: async () => ok(undefined),
-        ...overrides?.memories,
-    },
-    indexes: {
-        read: async () => ok(null),
-        write: async () => ok(undefined),
-        reindex: async () => ok({ warnings: [] }),
-        updateAfterMemoryWrite: async () => ok(undefined),
-        ...overrides?.indexes,
-    },
-    categories: {
-        exists: async () => ok(false),
-        ensure: async () => ok(undefined),
-        delete: async () => ok(undefined),
-        updateSubcategoryDescription: async () => ok(undefined),
-        removeSubcategoryEntry: async () => ok(undefined),
-        ...overrides?.categories,
-    },
-}) as ScopedStorageAdapter;
+import { createMockStorageAdapter } from '@/test/mock-storage-adapter.ts';
 
 describe('CategoryClient.init()', () => {
     it('should create a client for root path', () => {
-        const client = CategoryClient.init('/', createMockAdapter());
+        const client = CategoryClient.init('/', createMockStorageAdapter());
 
         expect(client.ok()).toBe(true);
         if (!client.ok()) return;
@@ -48,7 +19,7 @@ describe('CategoryClient.init()', () => {
     });
 
     it('should normalize nested paths', () => {
-        const client = CategoryClient.init('standards//typescript/', createMockAdapter());
+        const client = CategoryClient.init('standards//typescript/', createMockStorageAdapter());
 
         expect(client.ok()).toBe(true);
         if (!client.ok()) return;
@@ -56,7 +27,7 @@ describe('CategoryClient.init()', () => {
     });
 
     it('should preserve normalized special-character paths', () => {
-        const client = CategoryClient.init('!!!', createMockAdapter());
+        const client = CategoryClient.init('!!!', createMockStorageAdapter());
 
         expect(client.ok()).toBe(true);
         if (!client.ok()) return;
@@ -66,7 +37,7 @@ describe('CategoryClient.init()', () => {
 
 describe('CategoryClient.parsePath()', () => {
     it('should parse root as CategoryPath.root()', () => {
-        const initResult = CategoryClient.init('/', createMockAdapter());
+        const initResult = CategoryClient.init('/', createMockStorageAdapter());
         expect(initResult.ok()).toBe(true);
         if (!initResult.ok()) return;
 
@@ -79,7 +50,7 @@ describe('CategoryClient.parsePath()', () => {
     });
 
     it('should parse non-root path segments', () => {
-        const initResult = CategoryClient.init('/standards/typescript', createMockAdapter());
+        const initResult = CategoryClient.init('/standards/typescript', createMockStorageAdapter());
         expect(initResult.ok()).toBe(true);
         if (!initResult.ok()) return;
 
@@ -93,7 +64,7 @@ describe('CategoryClient.parsePath()', () => {
 
 describe('CategoryClient.getCategory()', () => {
     it('should return child category from root', () => {
-        const rootResult = CategoryClient.init('/', createMockAdapter());
+        const rootResult = CategoryClient.init('/', createMockStorageAdapter());
         expect(rootResult.ok()).toBe(true);
         if (!rootResult.ok()) return;
 
@@ -105,7 +76,7 @@ describe('CategoryClient.getCategory()', () => {
     });
 
     it('should return self for empty relative path', () => {
-        const categoryResult = CategoryClient.init('/standards', createMockAdapter());
+        const categoryResult = CategoryClient.init('/standards', createMockStorageAdapter());
         expect(categoryResult.ok()).toBe(true);
         if (!categoryResult.ok()) return;
 
@@ -119,7 +90,7 @@ describe('CategoryClient.getCategory()', () => {
 
 describe('CategoryClient.parent()', () => {
     it('should return null for root category', () => {
-        const rootResult = CategoryClient.init('/', createMockAdapter());
+        const rootResult = CategoryClient.init('/', createMockStorageAdapter());
         expect(rootResult.ok()).toBe(true);
         if (!rootResult.ok()) return;
 
@@ -131,7 +102,7 @@ describe('CategoryClient.parent()', () => {
     });
 
     it('should return immediate parent for nested category', () => {
-        const categoryResult = CategoryClient.init('/standards/typescript', createMockAdapter());
+        const categoryResult = CategoryClient.init('/standards/typescript', createMockStorageAdapter());
         expect(categoryResult.ok()).toBe(true);
         if (!categoryResult.ok()) return;
 
@@ -146,7 +117,7 @@ describe('CategoryClient.parent()', () => {
 describe('CategoryClient.exists()', () => {
     it('should return true when storage reports category exists', async () => {
         let calledPath = '';
-        const adapter = createMockAdapter({
+        const adapter = createMockStorageAdapter({
             categories: {
                 exists: async (path) => {
                     calledPath = path.toString();

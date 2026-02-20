@@ -8,7 +8,7 @@
  */
 
 import { ok, err, type Result } from '@/result.ts';
-import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
+import type { StorageAdapter } from '@/storage';
 import { MemoryPath } from '@/memory/memory-path.ts';
 import { Slug } from '@/slug.ts';
 import type { Memory } from '@/memory/memory.ts';
@@ -72,7 +72,7 @@ export class MemoryClient {
     #rawSlug: string;
 
     /** Storage adapter for this memory's store */
-    private readonly adapter: ScopedStorageAdapter;
+    private readonly adapter: StorageAdapter;
 
     /**
      * Private constructor - use CategoryClient.getMemory() or factory method.
@@ -81,7 +81,7 @@ export class MemoryClient {
      * @param rawSlug - The memory slug
      * @param adapter - The storage adapter for performing operations
      */
-    private constructor(rawPath: string, rawSlug: string, adapter: ScopedStorageAdapter) {
+    private constructor(rawPath: string, rawSlug: string, adapter: StorageAdapter) {
         this.#rawPath = MemoryClient.normalizePath(rawPath);
         this.#rawSlug = rawSlug;
         this.adapter = adapter;
@@ -131,7 +131,7 @@ export class MemoryClient {
      * const client = MemoryClient.create('/standards/typescript/style', 'style', adapter);
      * ```
      */
-    static create(path: string, slug: string, adapter: ScopedStorageAdapter): MemoryClient {
+    static create(path: string, slug: string, adapter: StorageAdapter): MemoryClient {
         return new MemoryClient(path, slug, adapter);
     }
 
@@ -469,7 +469,7 @@ export class MemoryClient {
             return pathResult;
         }
 
-        const readResult = await this.adapter.memories.read(pathResult.value);
+        const readResult = await this.adapter.memories.load(pathResult.value);
         if (!readResult.ok()) {
             return memoryError('STORAGE_ERROR', `Failed to check memory existence: ${this.#rawPath}`, {
                 path: this.#rawPath,

@@ -5,7 +5,7 @@
  */
 
 import type { Result } from '@/result.ts';
-import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
+import type { StorageAdapter } from '@/storage';
 import { Memory } from '@/memory/memory.ts';
 import type { MemoryError } from '@/memory/result.ts';
 import { memoryError } from '@/memory/result.ts';
@@ -74,7 +74,7 @@ export interface UpdateMemoryInput {
  * ```
  */
 export const updateMemory = async (
-    storage: ScopedStorageAdapter,
+    storage: StorageAdapter,
     slugPath: string,
     updates: UpdateMemoryInput,
     now?: Date,
@@ -100,7 +100,7 @@ export const updateMemory = async (
     }
 
     // 3. Read existing memory
-    const readResult = await storage.memories.read(pathResult.value);
+    const readResult = await storage.memories.load(pathResult.value);
     if (!readResult.ok()) {
         return memoryError('STORAGE_ERROR', `Failed to read memory: ${slugPath}`, {
             path: slugPath,
@@ -141,7 +141,7 @@ export const updateMemory = async (
     const updatedMemory = updatedResult.value;
 
     // 5. Write updated memory
-    const writeResult = await storage.memories.write(updatedMemory);
+    const writeResult = await storage.memories.save(updatedMemory);
     if (!writeResult.ok()) {
         return memoryError('STORAGE_ERROR', `Failed to write memory: ${slugPath}`, {
             path: slugPath,

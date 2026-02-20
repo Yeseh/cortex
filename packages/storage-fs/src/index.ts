@@ -37,7 +37,7 @@ import {
     type MemoryStorage,
     type IndexStorage,
 
-    type ScopedStorageAdapter,
+    type StorageAdapter,
 } from '@yeseh/cortex-core';
 import type { CategoryStorage } from '@yeseh/cortex-core/category';
 import type {
@@ -77,7 +77,7 @@ export { FilesystemRegistry } from './filesystem-registry.ts';
  * await adapter.reindexCategoryIndexes();
  * ```
  */
-export class FilesystemStorageAdapter implements ScopedStorageAdapter{
+export class FilesystemStorageAdapter implements StorageAdapter{
     private readonly ctx: FilesystemContext;
 
     // ========================================================================

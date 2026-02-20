@@ -18,7 +18,7 @@ import type { ReadResourceResult, Resource } from '@modelcontextprotocol/sdk/typ
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 import { CategoryPath, err, ok, type Result } from '@yeseh/cortex-core';
 import { getMemory } from '@yeseh/cortex-core/memory';
-import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
+import type { StorageAdapter } from '@yeseh/cortex-core/storage';
 import type { ToolContext } from './tools/shared.ts';
 import type { ServerConfig } from '../config.ts';
 
@@ -68,7 +68,7 @@ const MEMORY_URI_SCHEME = 'cortex://memory';
 const resolveAdapter = (
     ctx: ToolContext,
     storeName: string | undefined,
-): Result<ScopedStorageAdapter, McpError> => {
+): Result<StorageAdapter, McpError> => {
     const name = storeName ?? ctx.config.defaultStore;
     const store = ctx.cortex.getStore(name);
 
@@ -269,7 +269,7 @@ interface CategoryListing {
  * ```
  */
 const readMemoryContent = async (
-    adapter: ScopedStorageAdapter,
+    adapter: StorageAdapter,
     store: string,
     memoryPath: string,
 ): Promise<Result<ReadResourceResult, McpError>> => {
@@ -340,7 +340,7 @@ const readMemoryContent = async (
  * ```
  */
 const readCategoryListing = async (
-    adapter: ScopedStorageAdapter,
+    adapter: StorageAdapter,
     store: string,
     categoryPath: string,
 ): Promise<Result<ReadResourceResult, McpError>> => {
@@ -413,7 +413,7 @@ const readCategoryListing = async (
  * @returns Result containing ReadResourceResult with root category listing
  */
 const readRootCategoryListing = async (
-    adapter: ScopedStorageAdapter,
+    adapter: StorageAdapter,
     store: string,
 ): Promise<Result<ReadResourceResult, McpError>> => {
     const subcategories: CategoryListing['subcategories'] = [];

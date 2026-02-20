@@ -6,41 +6,13 @@
 
 import { describe, expect, it } from 'bun:test';
 import { StoreClient } from './store-client.ts';
-import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
+import type { StorageAdapter } from '@/storage/index.ts';
 import { ok } from '@/result.ts';
-
-const createMockAdapter = (overrides?: Partial<{
-    memories: Partial<ScopedStorageAdapter['memories']>;
-    indexes: Partial<ScopedStorageAdapter['indexes']>;
-    categories: Partial<ScopedStorageAdapter['categories']>;
-}>): ScopedStorageAdapter => ({
-    memories: {
-        read: async () => ok(null),
-        write: async () => ok(undefined),
-        remove: async () => ok(undefined),
-        move: async () => ok(undefined),
-        ...overrides?.memories,
-    },
-    indexes: {
-        read: async () => ok(null),
-        write: async () => ok(undefined),
-        reindex: async () => ok({ warnings: [] }),
-        updateAfterMemoryWrite: async () => ok(undefined),
-        ...overrides?.indexes,
-    },
-    categories: {
-        exists: async () => ok(false),
-        ensure: async () => ok(undefined),
-        delete: async () => ok(undefined),
-        updateSubcategoryDescription: async () => ok(undefined),
-        removeSubcategoryEntry: async () => ok(undefined),
-        ...overrides?.categories,
-    },
-}) as ScopedStorageAdapter;
+import { createMockStorageAdapter } from '@/test/mock-storage-adapter.ts';
 
 describe('StoreClient.init()', () => {
     it('should create a store client for valid adapter input', () => {
-        const result = StoreClient.init('my-store', '/data/my-store', createMockAdapter(), 'Test store');
+        const result = StoreClient.init('my-store', '/data/my-store', createMockStorageAdapter(), 'Test store');
 
         expect(result.ok()).toBe(true);
         if (!result.ok()) return;
@@ -50,7 +22,7 @@ describe('StoreClient.init()', () => {
     });
 
     it('should return INVALID_STORE_ADAPTER when adapter is missing', () => {
-        const result = StoreClient.init('my-store', '/data/my-store', undefined as unknown as ScopedStorageAdapter);
+        const result = StoreClient.init('my-store', '/data/my-store', undefined as unknown as StorageAdapter);
 
         expect(result.ok()).toBe(false);
         if (result.ok()) return;
@@ -60,7 +32,7 @@ describe('StoreClient.init()', () => {
 
 describe('StoreClient.root()', () => {
     it('should return root category client with path "/"', () => {
-        const storeResult = StoreClient.init('my-store', '/data/my-store', createMockAdapter());
+        const storeResult = StoreClient.init('my-store', '/data/my-store', createMockStorageAdapter());
         expect(storeResult.ok()).toBe(true);
         if (!storeResult.ok()) return;
 
@@ -73,7 +45,7 @@ describe('StoreClient.root()', () => {
 
     it('should pass adapter through to category operations', async () => {
         let existsCalled = false;
-        const adapter = createMockAdapter({
+        const adapter = createMockStorageAdapter({
             categories: {
                 exists: async () => {
                     existsCalled = true;

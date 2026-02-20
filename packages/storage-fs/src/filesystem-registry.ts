@@ -14,25 +14,21 @@
  *
  * @module core/storage/filesystem/filesystem-registry
  * @see {@link Registry} - The interface this class implements
- * @see {@link ScopedStorageAdapter} - The adapter type returned by getStore
+ * @see {@link StorageAdapter} - The adapter type returned by getStore
  */
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import {
     err,
-    getConfigPath,
     getDefaultSettings,
     ok,
     parseConfig,
-    serializeMergedConfig,
-    type CortexSettings,
-    type MergedConfig,
     type Result,
 } from '@yeseh/cortex-core';
-import type { Registry, RegistryError, ScopedStorageAdapter, StoreNotFoundError } from '@yeseh/cortex-core/storage';
-import type { StoreRegistry } from '@yeseh/cortex-core/store';
+import type { Registry, RegistryError, StorageAdapter, StoreNotFoundError } from '@yeseh/cortex-core/storage';
 import { FilesystemStorageAdapter } from './index.ts';
+import type { CortexSettings } from '../../core/src/config/types.ts';
 
 /**
  * Checks if an error is a "file not found" error (ENOENT).
@@ -90,7 +86,7 @@ const isNotFoundError = (error: unknown): boolean => {
  */
 export class FilesystemRegistry implements Registry {
     /** Cached registry data, populated by load() */
-    private cache: StoreRegistry | null = null;
+    private cache: Registry | null = null;
 
     /** Cached settings data, populated by load() */
     private settingsCache: CortexSettings | null = null;
@@ -108,7 +104,7 @@ export class FilesystemRegistry implements Registry {
      * const registry = new FilesystemRegistry('/home/user/.config/cortex/config.yaml');
      * ```
      */
-    constructor(private readonly configPath: string = getConfigPath()) {}
+    constructor(private readonly configPath: string) {}
 
     /**
      * Get the loaded settings.
@@ -205,7 +201,7 @@ export class FilesystemRegistry implements Registry {
      * }
      * ```
      */
-    async load(): Promise<Result<StoreRegistry, RegistryError>> {
+    async load(): Promise<Result<Registry, RegistryError>> {
         let contents: string;
         try {
             contents = await readFile(this.configPath, 'utf8');
@@ -261,7 +257,7 @@ export class FilesystemRegistry implements Registry {
      * }
      * ```
      */
-    async save(registry: StoreRegistry): Promise<Result<void, RegistryError>> {
+    async save(registry: Registry): Promise<Result<void, RegistryError>> {
         // Read existing config to preserve settings
         let existingSettings = getDefaultSettings();
         try {
@@ -337,7 +333,7 @@ export class FilesystemRegistry implements Registry {
      * }
      * ```
      */
-    getStore(name: string): Result<ScopedStorageAdapter, StoreNotFoundError> {
+    getStore(name: string): Result<StorageAdapter, StoreNotFoundError> {
         if (!this.cache) {
             throw new Error('Registry not loaded. Call load() first.');
         }

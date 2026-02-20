@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'bun:test';
-import type { StorageAdapterError } from '@/storage/adapter.ts';
+import type { StorageAdapterError } from '@/storage/index.ts';
 import type { MemoryPath } from '@/memory/memory-path.ts';
 import { CategoryPath } from '@/category/category-path.ts';
 import { pruneExpiredMemories } from './prune.ts';

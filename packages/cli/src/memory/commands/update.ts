@@ -28,10 +28,10 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
-import { resolveStoreAdapter } from '../../context.ts';
-import { updateMemory, type UpdateMemoryInput } from '@yeseh/cortex-core/memory';
-import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
-import { resolveInput } from '../../input.ts';
+import { MemoryPath, type CortexContext, type UpdateMemoryInput } from '@yeseh/cortex-core';
+import { resolveInput as resolveCliContent } from '../../input.ts';
+import { parseExpiresAt, parseTags } from '../parsing.ts';
+import { createCliCommandContext } from '../../create-cli-command.ts';
 
 /** Options parsed by Commander for the update command */
 export interface UpdateCommandOptions {
@@ -48,99 +48,7 @@ export interface UpdateCommandOptions {
     citation?: string[];
 }
 
-/** Dependencies injected into the handler for testability */
-export interface UpdateHandlerDeps {
-    stdin?: NodeJS.ReadableStream;
-    stdout?: NodeJS.WritableStream;
-    now?: Date;
-    /** Pre-resolved adapter for testing */
-    adapter?: ScopedStorageAdapter;
-}
-
-const resolveAdapter = async (
-    storeName: string | undefined,
-    deps: UpdateHandlerDeps,
-): Promise<ScopedStorageAdapter> => {
-    if (deps.adapter) {
-        return deps.adapter;
-    }
-
-    const storeResult = await resolveStoreAdapter(storeName);
-    if (!storeResult.ok()) {
-        throwCoreError(
-            storeResult.error ?? {
-                code: 'STORE_RESOLUTION_FAILED',
-                message: 'Failed to resolve store adapter.',
-            },
-        );
-    }
-
-    if (!storeResult.value) {
-        throwCoreError({
-            code: 'STORE_RESOLUTION_FAILED',
-            message: 'Failed to resolve store adapter.',
-        });
-    }
-
-    return storeResult.value.adapter;
-};
-
-const resolveContent = async (
-    options: UpdateCommandOptions,
-    deps: UpdateHandlerDeps,
-): Promise<{ content: string | null }> => {
-    // Don't read from stdin for update command - only use explicit --content or --file flags
-    // If neither is provided, return null to preserve existing content
-    if (options.content === undefined && options.file === undefined) {
-        return { content: null };
-    }
-
-    const contentResult = await resolveInput({
-        content: options.content,
-        filePath: options.file,
-        stdin: deps.stdin ?? process.stdin,
-        requireStdinFlag: true, // Changed from false - require explicit stdin flag
-        requireContent: false,
-    });
-
-    if (!contentResult.ok()) {
-        throwCoreError(
-            contentResult.error ?? {
-                code: 'CONTENT_INPUT_FAILED',
-                message: 'Failed to resolve memory content input.',
-            },
-        );
-    }
-
-    if (!contentResult.value) {
-        return { content: null };
-    }
-
-    const finalContent = contentResult.value.content ?? null;
-    return { content: finalContent };
-};
-
-const parseTags = (raw?: string[]): string[] | undefined => {
-    if (raw === undefined) {
-        return undefined;
-    }
-
-    const tags = raw
-        .flatMap((tag) => tag.split(','))
-        .map((tag) => tag.trim())
-        .filter(Boolean);
-
-    if (tags.length === 0) {
-        throwCoreError({
-            code: 'INVALID_ARGUMENTS',
-            message: 'Tags must be non-empty strings.',
-        });
-    }
-
-    return tags;
-};
-
-const parseExpiresAt = (raw?: string | false): Date | null | undefined => {
+const parseUpdateExpiresAt = (raw?: string | false): Date | null | undefined => {
     if (raw === false) {
         return null;
     }
@@ -149,22 +57,42 @@ const parseExpiresAt = (raw?: string | false): Date | null | undefined => {
         return undefined;
     }
 
-    const parsed = new Date(raw);
-    if (Number.isNaN(parsed.getTime())) {
+    return parseExpiresAt(raw);
+};
+
+const resolveUpdateContent = async (
+    ctx: CortexContext,
+    options: UpdateCommandOptions
+): Promise<string | null> => {
+    if (options.content === undefined && options.file === undefined) {
+        return null;
+    }
+
+    const content = await resolveCliContent({
+        content: options.content,
+        filePath: options.file,
+        stream: ctx.stdin,
+    });
+
+    if (!content.ok()) {
+        throwCoreError(content.error);
+    }
+
+    if (!content.value.content) {
         throwCoreError({
-            code: 'INVALID_ARGUMENTS',
-            message: 'Expiry must be a valid ISO timestamp.',
+            code: 'MISSING_CONTENT',
+            message: 'Memory content is required via --content or --file.',
         });
     }
 
-    return parsed;
+    return content.value.content;
 };
 
 const buildUpdates = (
     content: string | null,
     tags: string[] | undefined,
     expiresAt: Date | null | undefined,
-    citations: string[] | undefined,
+    citations: string[] | undefined
 ): UpdateMemoryInput => {
     const updates: UpdateMemoryInput = {};
     if (content !== null) {
@@ -195,34 +123,52 @@ const buildUpdates = (
  * Handler for the memory update command.
  * Exported for direct testing without Commander parsing.
  *
+ * @param ctx - CLI context containing Cortex client and streams
+ * @param storeName - Optional store name from parent command
  * @param path - Memory path to update (e.g., "project/tech-stack")
  * @param options - Command options from Commander
- * @param storeName - Optional store name from parent command
- * @param deps - Injectable dependencies for testing
  */
 export async function handleUpdate(
-    path: string,
-    options: UpdateCommandOptions,
+    ctx: CortexContext,
     storeName: string | undefined,
-    deps: UpdateHandlerDeps = {},
+    path: string,
+    options: UpdateCommandOptions
 ): Promise<void> {
-    const adapter = await resolveAdapter(storeName, deps);
-    const contentInput = await resolveContent(options, deps);
-    const tags = parseTags(options.tags);
-    const expiresAt = parseExpiresAt(options.expiresAt);
-    const updates = buildUpdates(contentInput.content, tags, expiresAt, options.citation);
+    const pathResult = MemoryPath.fromString(path);
+    if (!pathResult.ok()) {
+        throwCoreError(pathResult.error);
+    }
 
-    // 1. Update memory
-    const now = deps.now ?? new Date();
-    const updateResult = await updateMemory(adapter, path, updates, now);
+    const content = await resolveUpdateContent(ctx, options);
+    const tags = options.tags === undefined ? undefined : parseTags(options.tags);
+    const expiresAt = parseUpdateExpiresAt(options.expiresAt);
+    const updates = buildUpdates(content, tags, expiresAt, options.citation);
+
+    const storeResult = ctx.cortex.getStore(storeName ?? 'default');
+    if (!storeResult.ok()) {
+        throwCoreError(storeResult.error);
+    }
+
+    const store = storeResult.value;
+    const rootResult = store.root();
+    if (!rootResult.ok()) {
+        throwCoreError(rootResult.error);
+    }
+
+    const categoryResult = rootResult.value.getCategory(pathResult.value.category.toString());
+    if (!categoryResult.ok()) {
+        throwCoreError(categoryResult.error);
+    }
+
+    const memoryClient = categoryResult.value.getMemory(pathResult.value.slug.toString());
+    const updateResult = await memoryClient.update(updates);
     if (!updateResult.ok()) {
         throwCoreError(updateResult.error);
     }
 
-    // 2. Output success message with normalized path
     const memory = updateResult.value;
-    const stdout = deps.stdout ?? process.stdout;
-    stdout.write(`Updated memory at ${memory.path.toString()}.\n`);
+    const stdout = ctx.stdout ?? process.stdout;
+    stdout.write(`Updated memory ${memory.path.toString()}.\n`);
 }
 
 /**
@@ -246,5 +192,10 @@ export const updateCommand = new Command('update')
     .option('--citation <value...>', 'Citation references (replaces existing)')
     .action(async (path, options, command) => {
         const parentOpts = command.parent?.opts() as { store?: string } | undefined;
-        await handleUpdate(path, options, parentOpts?.store);
+        const context = await createCliCommandContext();
+        if (!context.ok()) {
+            throwCoreError(context.error);
+        }
+
+        await handleUpdate(context.value, parentOpts?.store, path, options);
     });

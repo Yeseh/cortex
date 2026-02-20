@@ -34,14 +34,14 @@
  * ```
  */
 
-import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
+import type { StorageAdapter } from '@/storage/index.ts';
 import {
     type CortexOptions,
     type AdapterFactory,
 } from './types.ts';
 import { StoreClient, type StoreClientResult } from './store-client.ts';
 import { getDefaultSettings } from '@/config/config.ts';
-import type {  CortexSettings, Registry } from '@/config/types.ts';
+import type {  CortexSettings, ConfigStores } from '@/config/types.ts';
 import { err, ok, type ErrorDetails, type Result } from '@/result.ts';
 
 
@@ -72,7 +72,7 @@ export class Cortex {
     public readonly settings: CortexSettings;
 
     /** Store definitions mapping store names to their configuration */
-    private readonly registry: Registry 
+    private readonly registry: ConfigStores 
 
     /** Factory for creating scoped storage adapters */
     private readonly adapterFactory: AdapterFactory;
@@ -80,7 +80,7 @@ export class Cortex {
     /**
      * Private constructor - use `Cortex.init()` or `Cortex.fromConfig()`.
      */
-    private constructor(options: CortexOptions & { adapterFactory: AdapterFactory }) {
+    private constructor(options: CortexOptions) {
         this.settings = { ...getDefaultSettings(), ...options.settings };
         this.registry = options.registry ?? {};
         this.adapterFactory = options.adapterFactory;
@@ -192,8 +192,8 @@ export class Cortex {
  * 1. Provide their own adapterFactory in options
  * 2. Use the pre-configured factory from storage-fs
  */
-const createDefaultAdapterFactory = (): AdapterFactory => {
-    return (_storePath: string): ScopedStorageAdapter => {
+export const createDefaultAdapterFactory = (): AdapterFactory => {
+    return (_storePath: string): StorageAdapter => {
         throw new Error(
             'No adapter factory provided. Either provide an adapterFactory in CortexOptions, ' +
                 'or use createFilesystemCortex() from @yeseh/cortex-storage-fs.',

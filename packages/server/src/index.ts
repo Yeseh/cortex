@@ -35,7 +35,7 @@ import { registerMemoryTools } from './memory/index.ts';
 import { registerStoreTools } from './store/index.ts';
 import { registerCategoryTools, type CategoryToolsOptions } from './category/index.ts';
 import { err, ok, type Result, Cortex } from '@yeseh/cortex-core';
-import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
+import type { StorageAdapter } from '@yeseh/cortex-core/storage';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 import type { ToolContext } from './memory/tools/shared.ts';
 
@@ -158,7 +158,7 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
 
     // Create adapter factory for Cortex
     const createAdapterFactory = () => {
-        return (storePath: string): ScopedStorageAdapter => {
+        return (storePath: string): StorageAdapter => {
             const adapter = new FilesystemStorageAdapter({ rootDirectory: storePath });
             return {
                 memories: adapter.memories,

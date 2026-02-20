@@ -27,10 +27,11 @@ import { spawn } from 'node:child_process';
 import { basename, resolve } from 'node:path';
 import { throwCoreError } from '../../errors.ts';
 import { getDefaultRegistryPath } from '../../context.ts';
-import { isValidStoreName, initializeStore } from '@yeseh/cortex-core/store';
+import { initializeStore } from '@yeseh/cortex-core/store';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { serializeOutput, type OutputStoreInit, type OutputFormat } from '../../output.ts';
 import { resolveUserPath } from '../../paths.ts';
+import { Slug } from '@yeseh/cortex-core';
 
 /**
  * Options for the init command.
@@ -122,17 +123,12 @@ const detectGitRepoName = async (cwd: string): Promise<string | null> => {
 async function resolveStoreName(cwd: string, explicitName?: string): Promise<string> {
     // 1. Use explicit name if provided
     if (explicitName) {
-        const trimmed = explicitName.trim();
-        if (!trimmed) {
-            throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name is required.' });
+        const slugResult = Slug.from(explicitName);
+        if (!slugResult.ok()) {
+            throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug (letters, numbers, hyphens).' });
         }
-        if (!isValidStoreName(trimmed)) {
-            throwCoreError({
-                code: 'INVALID_STORE_NAME',
-                message: 'Store name must be a lowercase slug.',
-            });
-        }
-        return trimmed;
+
+        return slugResult.value.toString();
     }
 
     // 2. Try git detection
@@ -143,13 +139,14 @@ async function resolveStoreName(cwd: string, explicitName?: string): Promise<str
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/^-|-$/g, '');
-        if (!isValidStoreName(normalized)) {
+        const slugResult = Slug.from(normalized);
+        if (!slugResult.ok()) {
             throwCoreError({
                 code: 'INVALID_STORE_NAME',
                 message: 'Could not derive valid store name from git repo.',
             });
         }
-        return normalized;
+        return slugResult.value.toString();
     }
 
     // 3. Error: require --name

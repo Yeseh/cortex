@@ -26,7 +26,7 @@ import {
     pruneExpiredMemories,
 } from '@yeseh/cortex-core/memory';
 import { CategoryPath } from '@yeseh/cortex-core';
-import type { ScopedStorageAdapter } from '@yeseh/cortex-core/storage';
+import type { StorageAdapter } from '@yeseh/cortex-core/storage';
 
 /**
  * Options for the prune command.
@@ -46,7 +46,7 @@ export interface PruneHandlerDeps {
     /** Current time for expiry checks (defaults to new Date()) */
     now?: Date;
     /** Pre-resolved adapter for testing */
-    adapter?: ScopedStorageAdapter;
+    adapter?: StorageAdapter;
 }
 
 /**
@@ -92,7 +92,7 @@ export async function handlePrune(
 ): Promise<void> {
     // 1. Resolve store adapter
     const now = deps.now ?? new Date();
-    let adapter: ScopedStorageAdapter;
+    let adapter: StorageAdapter;
 
     if (deps.adapter) {
         adapter = deps.adapter;
