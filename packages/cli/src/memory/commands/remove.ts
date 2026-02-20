@@ -29,7 +29,7 @@ import { createCliCommandContext } from '../../create-cli-command.ts';
 export async function handleRemove(
     ctx: CortexContext,
     storeName: string | undefined,
-    path: string
+    path: string,
 ): Promise<void> {
     const pathResult = MemoryPath.fromString(path);
     if (!pathResult.ok()) {
@@ -47,7 +47,9 @@ export async function handleRemove(
         throwCoreError(rootResult.error);
     }
 
-    const categoryResult = rootResult.value.getCategory(pathResult.value.category.toString());
+    const categoryResult = pathResult.value.category.isRoot
+        ? rootResult
+        : rootResult.value.getCategory(pathResult.value.category.toString());
     if (!categoryResult.ok()) {
         throwCoreError(categoryResult.error);
     }

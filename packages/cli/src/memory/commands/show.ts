@@ -77,7 +77,7 @@ export async function handleShow(
     storeName: string | undefined,
     path: string,
     options: ShowCommandOptions,
-    deps: ShowHandlerDeps = {}
+    deps: ShowHandlerDeps = {},
 ): Promise<void> {
     const pathResult = MemoryPath.fromString(path);
     if (!pathResult.ok()) {
@@ -96,7 +96,9 @@ export async function handleShow(
         throwCoreError(rootResult.error);
     }
 
-    const categoryResult = rootResult.value.getCategory(pathResult.value.category.toString());
+    const categoryResult = pathResult.value.category.isRoot
+        ? rootResult
+        : rootResult.value.getCategory(pathResult.value.category.toString());
     if (!categoryResult.ok()) {
         throwCoreError(categoryResult.error);
     }

@@ -49,7 +49,7 @@ export async function handleAdd(
     ctx: CortexContext,
     storeName: string | undefined,
     path: string,
-    options: AddCommandOptions
+    options: AddCommandOptions,
 ): Promise<void> {
     const pathResult = MemoryPath.fromString(path);
     if (!pathResult.ok()) {
@@ -90,7 +90,9 @@ export async function handleAdd(
         throwCoreError(rootResult.error);
     }
 
-    const categoryResult = rootResult.value.getCategory(memoryPath.category.toString());
+    const categoryResult = memoryPath.category.isRoot
+        ? rootResult
+        : rootResult.value.getCategory(memoryPath.category.toString());
     if (!categoryResult.ok()) {
         throwCoreError(categoryResult.error);
     }

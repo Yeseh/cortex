@@ -30,7 +30,7 @@ export async function handleMove(
     ctx: CortexContext,
     storeName: string | undefined,
     from: string,
-    to: string
+    to: string,
 ): Promise<void> {
     const fromResult = MemoryPath.fromString(from);
     if (!fromResult.ok()) {
@@ -53,7 +53,9 @@ export async function handleMove(
         throwCoreError(rootResult.error);
     }
 
-    const sourceCategoryResult = rootResult.value.getCategory(fromResult.value.category.toString());
+    const sourceCategoryResult = fromResult.value.category.isRoot
+        ? rootResult
+        : rootResult.value.getCategory(fromResult.value.category.toString());
     if (!sourceCategoryResult.ok()) {
         throwCoreError(sourceCategoryResult.error);
     }

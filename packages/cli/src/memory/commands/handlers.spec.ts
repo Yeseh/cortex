@@ -9,7 +9,6 @@ import {
     Cortex,
     Memory,
     MemoryPath,
-    err,
     ok,
     type Category,
     type CortexContext,
@@ -45,7 +44,7 @@ type AdapterOverrides = Partial<{
         delete: (path: CategoryPath) => Promise<unknown>;
         updateSubcategoryDescription: (
             path: CategoryPath,
-            description: string | null
+            description: string | null,
         ) => Promise<unknown>;
         removeSubcategoryEntry: (path: CategoryPath) => Promise<unknown>;
     }>;
@@ -81,7 +80,7 @@ const createMockAdapter = (overrides: AdapterOverrides = {}): StorageAdapter =>
 const createMemoryFixture = (
     path: string,
     overrides: Partial<MemoryMetadata> = {},
-    content = 'Memory content'
+    content = 'Memory content',
 ): Memory => {
     const timestamp = new Date('2025-01-01T00:00:00.000Z');
     const metadata: MemoryMetadata = {
@@ -124,7 +123,8 @@ const createContext = (options: {
     const registry = options.registry ?? { default: { path: options.storePath } };
     const cortex = Cortex.init({
         settings: {},
-        registry: registry as any,
+        registry: registry as Record<string, { path: string; categories: Record<string, never> }>,
+
         adapterFactory: () => options.adapter,
     });
 
@@ -152,7 +152,7 @@ describe('memory command handlers', () => {
             const ctx = createContext({ adapter: createMockAdapter(), storePath: tempDir });
 
             await expect(handleList(ctx, undefined, '/ /', { format: 'yaml' })).rejects.toThrow(
-                InvalidArgumentError
+                InvalidArgumentError,
             );
         });
 
@@ -175,22 +175,18 @@ describe('memory command handlers', () => {
 
             const rootCategory: Category = {
                 memories: [],
-                subcategories: [
-                    {
-                        path: CategoryPath.fromString('project').unwrap(),
-                        memoryCount: 1,
-                        description: 'Project memories',
-                    },
-                ],
+                subcategories: [{
+                    path: CategoryPath.fromString('project').unwrap(),
+                    memoryCount: 1,
+                    description: 'Project memories',
+                }],
             };
 
             const projectCategory: Category = {
-                memories: [
-                    {
-                        path: memoryPath.value,
-                        tokenEstimate: 42,
-                    },
-                ],
+                memories: [{
+                    path: memoryPath.value,
+                    tokenEstimate: 42,
+                }],
                 subcategories: [],
             };
 
@@ -232,7 +228,7 @@ describe('memory command handlers', () => {
             const ctx = createContext({ adapter: createMockAdapter(), storePath: tempDir });
 
             await expect(handleShow(ctx, undefined, 'invalid', { format: 'yaml' })).rejects.toThrow(
-                InvalidArgumentError
+                InvalidArgumentError,
             );
         });
 
@@ -244,7 +240,7 @@ describe('memory command handlers', () => {
             });
 
             await expect(
-                handleShow(ctx, undefined, 'project/one', { format: 'yaml' })
+                handleShow(ctx, undefined, 'project/one', { format: 'yaml' }),
             ).rejects.toThrow(CommanderError);
         });
 
@@ -276,7 +272,7 @@ describe('memory command handlers', () => {
             const ctx = createContext({ adapter: createMockAdapter(), storePath: tempDir });
 
             await expect(handleMove(ctx, undefined, 'invalid', 'project/two')).rejects.toThrow(
-                InvalidArgumentError
+                InvalidArgumentError,
             );
         });
 
@@ -288,13 +284,13 @@ describe('memory command handlers', () => {
             });
 
             await expect(handleMove(ctx, undefined, 'project/one', 'project/two')).rejects.toThrow(
-                CommanderError
+                CommanderError,
             );
         });
 
         it('should move memory and report output', async () => {
             const memory = createMemoryFixture('project/from');
-            const moveCalls: Array<{ from: MemoryPath; to: MemoryPath }> = [];
+            const moveCalls: { from: MemoryPath; to: MemoryPath }[] = [];
 
             const adapter = createMockAdapter({
                 memories: {
@@ -334,7 +330,7 @@ describe('memory command handlers', () => {
             const ctx = createContext({ adapter: createMockAdapter(), storePath: tempDir });
 
             await expect(handleRemove(ctx, undefined, 'invalid')).rejects.toThrow(
-                InvalidArgumentError
+                InvalidArgumentError,
             );
         });
 
@@ -346,7 +342,7 @@ describe('memory command handlers', () => {
             });
 
             await expect(handleRemove(ctx, undefined, 'project/one')).rejects.toThrow(
-                CommanderError
+                CommanderError,
             );
         });
 
@@ -386,7 +382,7 @@ describe('memory command handlers', () => {
             const ctx = createContext({ adapter: createMockAdapter(), storePath: tempDir });
 
             await expect(
-                handleUpdate(ctx, undefined, 'invalid', { content: 'Next' })
+                handleUpdate(ctx, undefined, 'invalid', { content: 'Next' }),
             ).rejects.toThrow(InvalidArgumentError);
         });
 
@@ -398,7 +394,7 @@ describe('memory command handlers', () => {
             });
 
             await expect(
-                handleUpdate(ctx, undefined, 'project/one', { content: 'Next' })
+                handleUpdate(ctx, undefined, 'project/one', { content: 'Next' }),
             ).rejects.toThrow(CommanderError);
         });
 

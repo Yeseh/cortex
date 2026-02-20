@@ -32,7 +32,7 @@ import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
 
 import { CategoryPath, type CategoryClient, type CortexContext } from '@yeseh/cortex-core';
-import type { CategoryMemoryEntry, SubcategoryEntry } from '@yeseh/cortex-core/category';
+import type { SubcategoryEntry } from '@yeseh/cortex-core/category';
 import { serializeOutput, type OutputFormat } from '../../output.ts';
 import { createCliCommandContext } from '../../create-cli-command.ts';
 
@@ -140,7 +140,7 @@ export async function handleList(
     storeName: string | undefined,
     category: string | undefined,
     options: ListCommandOptions,
-    deps: ListHandlerDeps = {}
+    deps: ListHandlerDeps = {},
 ): Promise<void> {
     const categoryResult = CategoryPath.fromString(category ?? '');
     if (!categoryResult.ok()) {
@@ -158,14 +158,19 @@ export async function handleList(
     }
 
     const root = rootResult.value;
-    const categoryClientResult = categoryResult.value.isRoot
-        ? root.getCategory('/')
-        : root.getCategory(categoryResult.value.toString());
-    if (!categoryClientResult.ok()) {
-        throwCoreError(categoryClientResult.error);
-    }
+    let categoryClient: CategoryClient;
 
-    const categoryClient = categoryClientResult.value;
+    if (categoryResult.value.isRoot) {
+        categoryClient = root;
+    }
+    else {
+        const categoryClientResult = root.getCategory(categoryResult.value.toString());
+        if (!categoryClientResult.ok()) {
+            throwCoreError(categoryClientResult.error);
+        }
+
+        categoryClient = categoryClientResult.value;
+    }
     const now = deps.now ?? ctx.now();
     const includeExpired = options.includeExpired ?? false;
     const visited = new Set<string>();
@@ -202,12 +207,10 @@ export async function handleList(
                 continue;
             }
 
-            const summary = (entry as CategoryMemoryEntry & { summary?: string }).summary;
-
             memories.push({
                 path: entry.path.toString(),
                 tokenEstimate: entry.tokenEstimate,
-                summary,
+                summary: undefined,
                 expiresAt: memory.metadata.expiresAt,
                 isExpired,
             });

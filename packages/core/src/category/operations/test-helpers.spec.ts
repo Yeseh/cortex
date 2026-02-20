@@ -8,7 +8,7 @@
  */
 
 import { mock } from 'bun:test';
-import type { CategoryStorage } from '../types.ts';
+import type { CategoryAdapter } from '@/storage/category-adapter.ts';
 import { ok, err } from '../../result.ts';
 
 // ============================================================================
@@ -31,12 +31,21 @@ import { ok, err } from '../../result.ts';
  * });
  * ```
  */
-export const createMockStorage = (overrides: Partial<CategoryStorage> = {}): CategoryStorage => ({
+export const createMockStorage = (
+    overrides: Partial<CategoryAdapter> & Partial<{
+        updateSubcategoryDescription: CategoryAdapter['setDescription'];
+        removeSubcategoryEntry: CategoryAdapter['setDescription'];
+    }> = {},
+): CategoryAdapter => ({
     exists: mock(async () => ok(false)),
     ensure: mock(async () => ok(undefined)),
     delete: mock(async () => ok(undefined)),
-    updateSubcategoryDescription: mock(async () => ok(undefined)),
-    removeSubcategoryEntry: mock(async () => ok(undefined)),
+    setDescription: (
+        overrides.setDescription
+        ?? overrides.updateSubcategoryDescription
+        ?? overrides.removeSubcategoryEntry
+        ?? mock(async () => ok(undefined))
+    ),
     ...overrides,
 });
 

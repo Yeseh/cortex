@@ -62,7 +62,7 @@ const parseUpdateExpiresAt = (raw?: string | false): Date | null | undefined => 
 
 const resolveUpdateContent = async (
     ctx: CortexContext,
-    options: UpdateCommandOptions
+    options: UpdateCommandOptions,
 ): Promise<string | null> => {
     if (options.content === undefined && options.file === undefined) {
         return null;
@@ -92,7 +92,7 @@ const buildUpdates = (
     content: string | null,
     tags: string[] | undefined,
     expiresAt: Date | null | undefined,
-    citations: string[] | undefined
+    citations: string[] | undefined,
 ): UpdateMemoryInput => {
     const updates: UpdateMemoryInput = {};
     if (content !== null) {
@@ -132,7 +132,7 @@ export async function handleUpdate(
     ctx: CortexContext,
     storeName: string | undefined,
     path: string,
-    options: UpdateCommandOptions
+    options: UpdateCommandOptions,
 ): Promise<void> {
     const pathResult = MemoryPath.fromString(path);
     if (!pathResult.ok()) {
@@ -155,7 +155,9 @@ export async function handleUpdate(
         throwCoreError(rootResult.error);
     }
 
-    const categoryResult = rootResult.value.getCategory(pathResult.value.category.toString());
+    const categoryResult = pathResult.value.category.isRoot
+        ? rootResult
+        : rootResult.value.getCategory(pathResult.value.category.toString());
     if (!categoryResult.ok()) {
         throwCoreError(categoryResult.error);
     }
