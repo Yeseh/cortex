@@ -7,10 +7,8 @@
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { storeNameSchema } from '../../store/tools.ts';
-import {
-    type ToolContext,
-    type McpToolResponse,
-} from './shared.ts';
+import { type CortexContext } from '@yeseh/cortex-core';
+import { type McpToolResponse, textResponse } from '../../response.ts';
 
 /** Schema for reindex_store tool input */
 export const reindexStoreInputSchema = z.object({
@@ -41,7 +39,7 @@ export interface ReindexStoreInput {
  *                    reindex operation errors (InternalError)
  */
 export const reindexStoreHandler = async (
-    ctx: ToolContext,
+    ctx: CortexContext,
     input: ReindexStoreInput,
 ): Promise<McpToolResponse> => {
     const storeResult = ctx.cortex.getStore(input.store);
@@ -65,7 +63,5 @@ export const reindexStoreHandler = async (
         warnings: result.value.warnings,
     };
 
-    return {
-        content: [{ type: 'text', text: JSON.stringify(output, null, 2) }],
-    };
+    return textResponse(JSON.stringify(output, null, 2));
 };

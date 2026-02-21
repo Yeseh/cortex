@@ -48,7 +48,7 @@ export class StoreClient {
     readonly name: string;
 
     /** Storage adapter for this store (null if store not found) */
-    private readonly adapter: StorageAdapter;
+    readonly adapter: StorageAdapter;
 
     /** Store data, lazily loaded */
     data: StoreData | null = null;
@@ -82,6 +82,7 @@ export class StoreClient {
         name: string,
         adapter: StorageAdapter,
     ): StoreResult<StoreClient> {
+        // TODO: This should not be necessary, remove Result<> wrapper and lazily load adapter in operations instead. 
         if (!adapter) {
             return err({
                code: 'STORE_CREATE_FAILED',

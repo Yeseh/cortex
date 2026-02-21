@@ -115,7 +115,7 @@ export const serializeIndex = (index: Category): Result<string, IndexSerializati
     };
 
     try {
-        return ok(Bun.YAML.stringify(yamlData));
+        return ok(Bun.YAML.stringify(yamlData, null, 2));
     }
     catch (cause) {
         return err({

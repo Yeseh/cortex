@@ -8,10 +8,11 @@ import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import type { CategoryError } from '@yeseh/cortex-core';
 import { storeNameSchema } from '../../store/tools.ts';
+import { type CortexContext } from '@yeseh/cortex-core';
 import {
-    type ToolContext,
+    textResponse,
     type McpToolResponse,
-} from './shared.ts';
+} from '../../response.ts';
 
 /** Schema for list_memories tool input */
 export const listMemoriesInputSchema = z.object({
@@ -27,7 +28,7 @@ export const listMemoriesInputSchema = z.object({
 export interface ListMemoriesInput {
     store: string;
     category?: string;
-    include_expired?: boolean;
+    includeExpired?: boolean;
 }
 
 /**
@@ -56,17 +57,15 @@ const translateCategoryError = (error: CategoryError): McpError => {
  * Lists memories in a category.
  */
 export const listMemoriesHandler = async (
-    ctx: ToolContext,
+    ctx: CortexContext,
     input: ListMemoriesInput,
 ): Promise<McpToolResponse> => {
-    // Get store using fluent API
     const storeResult = ctx.cortex.getStore(input.store);
     if (!storeResult.ok()) {
         throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
     }
-    const store = storeResult.value;
 
-    // Get category client (root or specific category)
+    const store = storeResult.value;
     const categoryResult = input.category 
         ? store.getCategory(input.category)
         : store.root();
@@ -74,18 +73,16 @@ export const listMemoriesHandler = async (
     if (!categoryResult.ok()) {
         throw new McpError(ErrorCode.InvalidParams, categoryResult.error.message);
     }
-    const category = categoryResult.value;
 
-    // List memories in the category
+    const category = categoryResult.value;
     const memoriesResult = await category.listMemories({
-        includeExpired: input.include_expired ?? false,
+        includeExpired: input.includeExpired ?? false,
     });
 
     if (!memoriesResult.ok()) {
         throw translateCategoryError(memoriesResult.error);
     }
 
-    // List subcategories in the category
     const subcategoriesResult = await category.listSubcategories();
     if (!subcategoriesResult.ok()) {
         throw translateCategoryError(subcategoriesResult.error);
@@ -99,20 +96,15 @@ export const listMemoriesHandler = async (
         count: memories.length,
         memories: memories.map((m) => ({
             path: m.path.toString(),
-            token_estimate: m.tokenEstimate,
-            summary: undefined, // CategoryMemoryEntry doesn't have summary
-            expires_at: undefined, // CategoryMemoryEntry doesn't track expiration
-            is_expired: undefined, // CategoryMemoryEntry doesn't track expiration
-            updated_at: m.updatedAt?.toISOString(),
+            tokenEstimate: m.tokenEstimate,
+            updatedAt: m.updatedAt?.toISOString(),
         })),
         subcategories: subcategories.map((s) => ({
             path: s.path.toString(),
-            memory_count: s.memoryCount,
+            memoryCount: s.memoryCount,
             description: s.description,
         })),
     };
 
-    return {
-        content: [{ type: 'text', text: JSON.stringify(output, null, 2) }],
-    };
+    return textResponse(JSON.stringify(output, null, 2));
 };

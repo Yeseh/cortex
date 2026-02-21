@@ -1,5 +1,6 @@
 /**
  * Core module exports
+ * TODO: Clean this up
  */
 
 export * from './tokens.ts';
@@ -11,7 +12,7 @@ export * from './category';
 export * from './store';
 export * from './storage';
 export * from './types';
-export * from './testing/mock-storage-adapter.ts';
+export * from './testing';
 export * from './cortex';
 
 export {

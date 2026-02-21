@@ -39,17 +39,19 @@ export type AdapterFactory = (storeName: string) => StorageAdapter;
  * ```typescript
  * // Minimal options (uses defaults)
  * const options: CortexOptions = {
- *     rootDirectory: '/path/to/cortex/config',
+ *     adapterFactory: createDefaultAdapterFactory(),
  * };
  *
- * // Full options with custom adapter factory for testing
+ * // Full options  
  * const testOptions: CortexOptions = {
- *     rootDirectory: '/tmp/test-cortex',
  *     settings: { outputFormat: 'json' },
- *     registry: {
- *         'test-store': { path: '/tmp/test-store' }
+ *     stores: {
+ *         'test-store': { 
+ *             kind: 'filesystem',
+ *             categories: {},
+ *             properties: { path: '/data/test-store' },
  *     },
- *     adapterFactory: createMockAdapter,
+ *     adapterFactory: createAdapterFactory(),
  * };
  * ```
  */
@@ -82,40 +84,19 @@ export interface CortexOptions {
  * Provides access to the Cortex client for store operations.
  * Handlers receive this as their first parameter for consistent
  * dependency injection across CLI and MCP server.
- *
- * @module core/cortex/types
- *
- * @example
- * ```typescript
- * // CLI handler
- * async function handleAdd(
- *     ctx: CortexContext,
- *     path: string,
- *     options: AddOptions
- * ): Promise<void> {
- *     const store = ctx.cortex.getStore('my-store');
- *     // ...
- * }
- *
- * // MCP tool handler
- * async function addMemoryHandler(
- *     ctx: CortexContext,
- *     input: AddMemoryInput
- * ): Promise<McpToolResponse> {
- *     const store = ctx.cortex.getStore(input.store);
- *     // ...
- * }
- * ```
+ * 
  */
 export interface CortexContext {
     /** The root Cortex client instance */
     cortex: Cortex;
     settings: CortexSettings;
     stores: ConfigStores;
+
     now: () => Date;
     stdin: NodeJS.ReadStream;
     stdout: NodeJS.WriteStream;
     cwd?: string;
+    globalDataPath?: string;
 }
 
 

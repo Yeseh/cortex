@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { MEMORY_SUBDIR } from '../../config.ts';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 import { createMemoryFile, createTestContext, createTestDir } from './test-utils.ts';
-import type { ToolContext } from './shared.ts';
+import type { CortexContext } from '@yeseh/cortex-core';
 import { listMemoriesHandler, type ListMemoriesInput } from './list-memories.ts';
 import { CategoryPath } from '@yeseh/cortex-core';
 
@@ -16,7 +16,7 @@ const categoryPath = (path: string): CategoryPath => CategoryPath.fromString(pat
 
 describe('cortex_list_memories tool', () => {
     let testDir: string;
-    let ctx: ToolContext;
+    let ctx: CortexContext;
 
     beforeEach(async () => {
         testDir = await createTestDir();
@@ -130,7 +130,7 @@ describe('cortex_list_memories tool', () => {
         const input: ListMemoriesInput = {
             store: 'default',
             category: 'project',
-            include_expired: true,
+            includeExpired: true,
         };
 
         const result = await listMemoriesHandler(ctx, input);

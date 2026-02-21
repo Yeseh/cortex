@@ -165,7 +165,7 @@ export class FilesystemConfigAdapter implements ConfigAdapter {
 
         // Write default config
         try {
-            const content = Bun.YAML.stringify(DEFAULT_CONFIG);
+            const content = Bun.YAML.stringify(DEFAULT_CONFIG, null, 2);
             await writeFile(this.configPath, content, 'utf-8');
             return ok(undefined);
         }

@@ -93,7 +93,6 @@ export class Cortex {
      *
      * // With custom settings and registry
      * const cortex = Cortex.init({
-     *     rootDirectory: '/path/to/config',
      *     settings: { outputFormat: 'json' },
      *     stores: {
      *         'my-store': { path: '/data/my-store' },

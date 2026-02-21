@@ -5,7 +5,7 @@
  */
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { parseInput, type ToolContext } from './shared.ts';
+import { parseInput, type CortexContext } from './shared.ts';
 import {
     addMemoryHandler,
     addMemoryInputSchema,
@@ -85,7 +85,7 @@ export {
 /**
  * Registers all memory tools with the MCP server.
  */
-export const registerMemoryTools = (server: McpServer, ctx: ToolContext): void => {
+export const registerMemoryTools = (server: McpServer, ctx: CortexContext): void => {
     server.registerTool(
         'cortex_add_memory',
         {

@@ -7,11 +7,11 @@
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { storeNameSchema } from '../../store/tools.ts';
+import { type CortexContext } from '@yeseh/cortex-core';
 import {
     isoDateSchema,
     memoryPathSchema,
     tagsSchema,
-    type ToolContext,
     type McpToolResponse,
     translateMemoryError,
 } from './shared.ts';
@@ -84,7 +84,7 @@ export interface UpdateMemoryInput {
  * Updates memory content or metadata.
  */
 export const updateMemoryHandler = async (
-    ctx: ToolContext,
+    ctx: CortexContext,
     input: UpdateMemoryInput,
 ): Promise<McpToolResponse> => {
     // Validate that at least one update field is provided

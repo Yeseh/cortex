@@ -7,12 +7,9 @@
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { storeNameSchema } from '../../store/tools.ts';
-import {
-    memoryPathSchema,
-    type ToolContext,
-    type McpToolResponse,
-    translateMemoryError,
-} from './shared.ts';
+import { type CortexContext } from '@yeseh/cortex-core';
+import { memoryPathSchema, translateMemoryError } from './shared.ts';
+import { type McpToolResponse, textResponse, errorResponse } from '../../response.ts';
 
 /** Schema for get_memory tool input */
 export const getMemoryInputSchema = z.object({
@@ -32,7 +29,7 @@ export interface GetMemoryInput {
  * Retrieves memory content and metadata.
  */
 export const getMemoryHandler = async (
-    ctx: ToolContext,
+    ctx: CortexContext,
     input: GetMemoryInput,
 ): Promise<McpToolResponse> => {
     const storeResult = ctx.cortex.getStore(input.store);
@@ -64,7 +61,5 @@ export const getMemoryHandler = async (
         },
     };
 
-    return {
-        content: [{ type: 'text', text: JSON.stringify(output, null, 2) }],
-    };
+    return textResponse(JSON.stringify(output, null, 2));
 };

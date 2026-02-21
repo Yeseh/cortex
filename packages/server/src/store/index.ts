@@ -23,9 +23,8 @@
  */
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { ToolContext } from '../memory/tools/shared.ts';
+import type { CortexContext } from '@yeseh/cortex-core';
 import { listStoresHandler, createStoreHandler, storeNameSchema } from './tools.ts';
-import { registerStoreResources } from './resources.ts';
 
 /**
  * Registers store management tools with the MCP server.
@@ -44,13 +43,11 @@ import { registerStoreResources } from './resources.ts';
  * @example
  * ```ts
  * const server = createMcpServer();
- * const ctx: ToolContext = { config, cortex };
+ * const ctx: CortexContext = { config, cortex };
  * registerStoreTools(server, ctx);
  * ```
  */
-export const registerStoreTools = (server: McpServer, ctx: ToolContext): void => {
-    const { config } = ctx;
-
+export const registerStoreTools = (server: McpServer, ctx: CortexContext): void => {
     // Register cortex_list_stores tool
     server.registerTool(
         'cortex_list_stores',
@@ -73,19 +70,12 @@ export const registerStoreTools = (server: McpServer, ctx: ToolContext): void =>
         },
         async ({ name }) => createStoreHandler(ctx, { name: name as string }),
     );
-
-    // Register store resources
-    registerStoreResources(server, config);
 };
 
 // Re-export tools for direct usage
-export { listStores, listStoresFromRegistry, storeNameSchema, createStoreInputSchema } from './tools.ts';
+export { listStores, storeNameSchema, createStoreInputSchema } from './tools.ts';
 export type { StoreToolError, StoreToolErrorCode, CreateStoreInput, StoreInfo, ListStoresResult } from './tools.ts';
 
 // Re-export shared utilities
 export { convertToCategories } from './shared.ts';
 export type { CategoryInfo } from './shared.ts';
-
-// Re-export resources
-export { registerStoreResources } from './resources.ts';
-export type { StoreResourceError, StoreResourceErrorCode } from './resources.ts';

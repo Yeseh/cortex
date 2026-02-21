@@ -11,9 +11,9 @@
  * ```ts
  * import { registerMemoryTools, registerMemoryResources } from './memory';
  * import { createMcpServer } from './mcp';
- * import type { ToolContext } from './memory/tools/shared';
+ * import type { CortexContext } from './memory/tools/shared';
  *
- * const ctx: ToolContext = { config, cortex };
+ * const ctx: CortexContext = { config, cortex };
  * const server = createMcpServer();
  * registerMemoryTools(server, ctx);
  * registerMemoryResources(server, ctx);
@@ -51,4 +51,3 @@ export {
     getRecentMemoriesHandler,
 } from './tools/index.ts';
 
-export { registerMemoryResources } from './resources.ts';

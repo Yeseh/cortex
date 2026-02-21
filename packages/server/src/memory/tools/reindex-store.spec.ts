@@ -7,12 +7,12 @@ import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { MEMORY_SUBDIR } from '../../config.ts';
 import { createMemoryFile, createTestContext, createTestDir } from './test-utils.ts';
-import type { ToolContext } from './shared.ts';
+import type { CortexContext } from '@yeseh/cortex-core';
 import { reindexStoreHandler, type ReindexStoreInput } from './reindex-store.ts';
 
 describe('cortex_reindex_store tool', () => {
     let testDir: string;
-    let ctx: ToolContext;
+    let ctx: CortexContext;
 
     beforeEach(async () => {
         testDir = await createTestDir();

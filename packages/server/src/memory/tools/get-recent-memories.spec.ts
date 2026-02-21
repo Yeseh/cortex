@@ -7,7 +7,7 @@ import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { MEMORY_SUBDIR } from '../../config.ts';
 import { createMemoryFile, createTestContext, createTestDir } from './test-utils.ts';
-import type { ToolContext } from './shared.ts';
+import type { CortexContext } from '@yeseh/cortex-core';
 import {
     getRecentMemoriesHandler,
     getRecentMemoriesInputSchema,
@@ -16,7 +16,7 @@ import {
 
 describe('cortex_get_recent_memories tool', () => {
     let testDir: string;
-    let ctx: ToolContext;
+    let ctx: CortexContext;
     let memoryDir: string;
 
     beforeEach(async () => {

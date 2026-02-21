@@ -3,14 +3,14 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 import { MEMORY_SUBDIR } from '../config.ts';
-import { serializeStoreRegistry, Cortex } from '@yeseh/cortex-core';
+import { Cortex } from '@yeseh/cortex-core';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
-import type { ToolContext } from '../memory/tools/shared.ts';
+import type { CortexContext } from '../memory/tools/shared.ts';
 import {
     createCategoryHandler,
     setCategoryDescriptionHandler,
@@ -22,27 +22,17 @@ import {
 
 const createTestDir = async (): Promise<string> => {
     const testDir = await mkdtemp(join(tmpdir(), 'cortex-cat-tools-'));
-
-    // Create stores.yaml registry pointing default store to memory subdirectory
     const memoryDir = join(testDir, MEMORY_SUBDIR);
     await mkdir(memoryDir, { recursive: true });
-    const registry = { default: { path: memoryDir } };
-    const serialized = serializeStoreRegistry(registry);
-    if (!serialized.ok()) {
-        throw new Error(`Failed to serialize registry: ${serialized.error.message}`);
-    }
-    await writeFile(join(testDir, 'stores.yaml'), serialized.value);
-
     return testDir;
 };
 
-const createTestContext = (testDir: string): ToolContext => {
+const createTestContext = (testDir: string): CortexContext => {
     const memoryDir = join(testDir, MEMORY_SUBDIR);
-    
+
     const cortex = Cortex.init({
-        rootDirectory: testDir,
-        stores: { default: { path: memoryDir } },
-        adapterFactory: (storePath: string) => new FilesystemStorageAdapter({ rootDirectory: storePath }),
+        adapterFactory: (storePath: string) =>
+            new FilesystemStorageAdapter({ rootDirectory: storePath }),
     });
 
     return {
@@ -61,7 +51,7 @@ const createTestContext = (testDir: string): ToolContext => {
 
 describe('cortex_create_category tool', () => {
     let testDir: string;
-    let ctx: ToolContext;
+    let ctx: CortexContext;
 
     beforeEach(async () => {
         testDir = await createTestDir();
@@ -101,15 +91,13 @@ describe('cortex_create_category tool', () => {
     it('should reject empty path', async () => {
         const input = { store: 'default', path: '' };
 
-        await expect(
-            createCategoryHandler(ctx, input as CreateCategoryInput),
-        ).rejects.toThrow();
+        await expect(createCategoryHandler(ctx, input as CreateCategoryInput)).rejects.toThrow();
     });
 });
 
 describe('cortex_set_category_description tool', () => {
     let testDir: string;
-    let ctx: ToolContext;
+    let ctx: CortexContext;
 
     beforeEach(async () => {
         testDir = await createTestDir();
@@ -148,24 +136,18 @@ describe('cortex_set_category_description tool', () => {
 
     it('should clear description with empty string', async () => {
         // First set a description
-        await setCategoryDescriptionHandler(
-            ctx,
-            {
-                store: 'default',
-                path: 'project/cortex',
-                description: 'Initial',
-            },
-        );
+        await setCategoryDescriptionHandler(ctx, {
+            store: 'default',
+            path: 'project/cortex',
+            description: 'Initial',
+        });
 
         // Then clear it
-        const result = await setCategoryDescriptionHandler(
-            ctx,
-            {
-                store: 'default',
-                path: 'project/cortex',
-                description: '',
-            },
-        );
+        const result = await setCategoryDescriptionHandler(ctx, {
+            store: 'default',
+            path: 'project/cortex',
+            description: '',
+        });
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.description).toBeNull();
@@ -198,7 +180,7 @@ describe('cortex_set_category_description tool', () => {
 
 describe('cortex_delete_category tool', () => {
     let testDir: string;
-    let ctx: ToolContext;
+    let ctx: CortexContext;
 
     beforeEach(async () => {
         testDir = await createTestDir();

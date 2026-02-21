@@ -381,7 +381,7 @@ describe('memory command handlers', () => {
             const adapter = createMockAdapter({
                 memories: {
                     load: async () => ok(memory),
-                    save: async (next: Memory) => {
+                    save: async (_: MemoryPath, next: Memory) => {
                         writeCalls.push(next);
                         return ok(undefined);
                     },

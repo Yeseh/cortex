@@ -7,10 +7,8 @@
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { storeNameSchema } from '../../store/tools.ts';
-import {
-    type ToolContext,
-    type McpToolResponse,
-} from './shared.ts';
+import { type CortexContext } from '@yeseh/cortex-core';
+import { type McpToolResponse, textResponse } from '../../response.ts';
 
 /** Schema for prune_memories tool input */
 export const pruneMemoriesInputSchema = z.object({
@@ -24,7 +22,7 @@ export const pruneMemoriesInputSchema = z.object({
 /** Input type for prune_memories tool */
 export interface PruneMemoriesInput {
     store: string;
-    dry_run?: boolean;
+    dryRun?: boolean;
 }
 
 /**
@@ -32,17 +30,16 @@ export interface PruneMemoriesInput {
  * Uses the fluent API via store.root().prune().
  */
 export const pruneMemoriesHandler = async (
-    ctx: ToolContext,
+    ctx: CortexContext,
     input: PruneMemoriesInput,
 ): Promise<McpToolResponse> => {
     const storeResult = ctx.cortex.getStore(input.store);
     if (!storeResult.ok()) {
         throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
     }
+
     const store = storeResult.value;
-
-    const dryRun = input.dry_run ?? false;
-
+    const dryRun = input.dryRun ?? false;
     const rootClient = store.root();
     if (!rootClient.ok()) {
         throw new McpError(ErrorCode.InternalError, rootClient.error.message);
@@ -58,33 +55,23 @@ export const pruneMemoriesHandler = async (
     // Format output for MCP response
     const prunedEntries = result.value.pruned.map((m) => ({
         path: m.path.toString(),
-        expires_at: m.expiresAt.toISOString(),
+        expiresAt: m.expiresAt.toISOString(),
     }));
 
     if (dryRun) {
         const output = {
-            dry_run: true,
-            would_prune_count: prunedEntries.length,
-            would_prune: prunedEntries,
+            dryRun: true,
+            wouldPruneCount: prunedEntries.length,
+            wouldPrune: prunedEntries,
         };
 
-        return {
-            content: [{
-                type: 'text',
-                text: JSON.stringify(output, null, 2),
-            }],
-        };
+        return textResponse(JSON.stringify(output, null, 2));
     }
 
     const output = {
-        pruned_count: prunedEntries.length,
+        prunedCount: prunedEntries.length,
         pruned: prunedEntries,
     };
 
-    return {
-        content: [{
-            type: 'text',
-            text: JSON.stringify(output, null, 2),
-        }],
-    };
+    return textResponse(JSON.stringify(output, null, 2)); 
 };

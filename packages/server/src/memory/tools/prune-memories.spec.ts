@@ -7,13 +7,13 @@ import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { MEMORY_SUBDIR } from '../../config.ts';
 import { createMemoryFile, createTestContext, createTestContextWithStores, createTestDir } from './test-utils.ts';
-import type { ToolContext } from './shared.ts';
+import type { CortexContext } from '@yeseh/cortex-core';
 import { getMemoryHandler } from './get-memory.ts';
 import { pruneMemoriesHandler, type PruneMemoriesInput } from './prune-memories.ts';
 
 describe('cortex_prune_memories tool', () => {
     let testDir: string;
-    let ctx: ToolContext;
+    let ctx: CortexContext;
 
     beforeEach(async () => {
         testDir = await createTestDir();
@@ -113,7 +113,7 @@ describe('cortex_prune_memories tool', () => {
     it('should return what would be pruned in dry_run mode without deleting', async () => {
         const input: PruneMemoriesInput = {
             store: 'default',
-            dry_run: true,
+            dryRun: true,
         };
 
         const result = await pruneMemoriesHandler(ctx, input);
@@ -154,7 +154,7 @@ describe('cortex_prune_memories tool', () => {
 
         const input: PruneMemoriesInput = {
             store: 'dry-clean-store',
-            dry_run: true,
+            dryRun: true,
         };
 
         const result = await pruneMemoriesHandler(ctxWithStores, input);

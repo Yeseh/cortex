@@ -6,8 +6,7 @@
 
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import type { Cortex, MemoryError } from '@yeseh/cortex-core';
-import type { ServerConfig } from '../../config.ts';
+import type { MemoryError } from '@yeseh/cortex-core';
 
 // ---------------------------------------------------------------------------
 // Schema helpers
@@ -24,20 +23,6 @@ export const memoryPathSchema = z.string().min(1, 'Memory path is required');
 /** Schema for tags array */
 export const tagsSchema = z.array(z.string()).optional();
 
-// ---------------------------------------------------------------------------
-// Shared types
-// ---------------------------------------------------------------------------
-
-export interface ToolContext {
-    config: ServerConfig;
-    cortex: Cortex;
-}
-
-/** Standard MCP tool response with text content */
-export interface McpToolResponse {
-    [key: string]: unknown;
-    content: { type: 'text'; text: string }[];
-}
 
 // ---------------------------------------------------------------------------
 // Helper functions

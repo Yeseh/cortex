@@ -5,10 +5,12 @@ import * as path from 'node:path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Cortex } from '@yeseh/cortex-core';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
+import type { ConfigStores } from '@yeseh/cortex-core';
+import { testContext } from '../../../core/src/testing/createContext.ts';
 import { registerStoreTools } from './index.ts';
 import { listStoresHandler, createStoreHandler } from './tools.ts';
 import type { ServerConfig } from '../config.ts';
-import type { ToolContext } from '../memory/tools/shared.ts';
+import type { CortexContext } from '@yeseh/cortex-core'
 
 describe('store tool registration', () => {
     let server: McpServer;
@@ -25,7 +27,7 @@ describe('store tool registration', () => {
             defaultStore: 'default',
             logLevel: 'info',
             outputFormat: 'yaml',
-            autoSummaryThreshold: 500,
+            categoryMode: 'free',
         };
     });
 
@@ -33,21 +35,18 @@ describe('store tool registration', () => {
         await fs.rm(testDir, { recursive: true, force: true });
     });
 
-    // Helper to create a ToolContext with actual Cortex instance
-    const createTestToolContext = (
-        registry: Record<string, { path: string; description?: string }> = {},
-    ): ToolContext => {
-        const cortex = Cortex.init({
-            rootDirectory: testDir,
-            stores: registry,
-            adapterFactory: (storePath: string) => new FilesystemStorageAdapter({ rootDirectory: storePath }),
-        });
-        return { config, cortex };
+    // Helper to create a CortexContext with actual Cortex instance
+    const createTestCortexContext = (
+        registry: ConfigStores = {},
+    ): CortexContext => {
+        const adapter = new FilesystemStorageAdapter({ rootDirectory: testDir });
+        const ctx = testContext({ adapter, storePath: testDir, stores: registry, settings: {} });
+        return { ...ctx, config } as unknown as CortexContext;
     };
 
     describe('registerStoreTools function', () => {
         it('should register both tools without throwing', () => {
-            expect(() => registerStoreTools(server, createTestToolContext())).not.toThrow();
+            expect(() => registerStoreTools(server, createTestCortexContext())).not.toThrow();
         });
 
         it('should call registerTool with cortex_list_stores', () => {
@@ -65,7 +64,7 @@ describe('store tool registration', () => {
                 },
             );
 
-            registerStoreTools(server, createTestToolContext());
+            registerStoreTools(server, createTestCortexContext());
 
             expect(registerToolCalls).toContain('cortex_list_stores');
         });
@@ -85,7 +84,7 @@ describe('store tool registration', () => {
                 },
             );
 
-            registerStoreTools(server, createTestToolContext());
+            registerStoreTools(server, createTestCortexContext());
 
             expect(registerToolCalls).toContain('cortex_create_store');
         });
@@ -105,7 +104,7 @@ describe('store tool registration', () => {
                 },
             );
 
-            registerStoreTools(server, createTestToolContext());
+            registerStoreTools(server, createTestCortexContext());
 
             expect(registerToolCalls).toHaveLength(2);
         });
@@ -128,7 +127,7 @@ describe('store tool registration', () => {
                 },
             );
 
-            registerStoreTools(server, createTestToolContext());
+            registerStoreTools(server, createTestCortexContext());
 
             const listStoresTool = registeredDescriptions.find(
                 (t) => t.name === 'cortex_list_stores',
@@ -158,7 +157,7 @@ describe('store tool registration', () => {
                 },
             );
 
-            registerStoreTools(server, createTestToolContext());
+            registerStoreTools(server, createTestCortexContext());
 
             expect(createStoreConfig?.inputSchema).toBeDefined();
             expect(createStoreConfig?.inputSchema?.name).toBeDefined();
@@ -167,7 +166,7 @@ describe('store tool registration', () => {
 
     describe('listStoresHandler', () => {
         it('should return valid response when no stores exist', async () => {
-            const ctx = createTestToolContext();
+            const ctx = createTestCortexContext();
 
             const result = await listStoresHandler(ctx);
 
@@ -182,9 +181,9 @@ describe('store tool registration', () => {
 
         it('should return stores when stores exist', async () => {
             // Create a context with stores in the registry
-            const ctx = createTestToolContext({
-                'store-a': { path: '/data/store-a' },
-                'store-b': { path: '/data/store-b' },
+            const ctx = createTestCortexContext({
+                'store-a': { kind: 'filesystem', categories: {}, properties: { path: '/data/store-a' } },
+                'store-b': { kind: 'filesystem', categories: {}, properties: { path: '/data/store-b' } },
             });
 
             const result = await listStoresHandler(ctx);
@@ -196,7 +195,7 @@ describe('store tool registration', () => {
         });
 
         it('should return JSON formatted response', async () => {
-            const ctx = createTestToolContext();
+            const ctx = createTestCortexContext();
 
             const result = await listStoresHandler(ctx);
 
@@ -207,7 +206,7 @@ describe('store tool registration', () => {
 
     describe('createStoreHandler', () => {
         it('should create store with valid name', async () => {
-            const ctx = createTestToolContext();
+            const ctx = createTestCortexContext();
 
             const result = await createStoreHandler(ctx, { name: 'my-new-store' });
 
@@ -223,7 +222,7 @@ describe('store tool registration', () => {
         });
 
         it('should return error with invalid name (starts with hyphen)', async () => {
-            const ctx = createTestToolContext();
+            const ctx = createTestCortexContext();
 
             const result = await createStoreHandler(ctx, { name: '-invalid-name' });
 
@@ -234,7 +233,7 @@ describe('store tool registration', () => {
         });
 
         it('should return error with empty name', async () => {
-            const ctx = createTestToolContext();
+            const ctx = createTestCortexContext();
 
             const result = await createStoreHandler(ctx, { name: '' });
 
@@ -249,11 +248,13 @@ describe('store tool registration', () => {
             const registryContent = [
                 'stores:',
                 '  existing-store:',
-                `    path: "${path.join(testDir, 'existing-store').replace(/\\/g, '/')}"`,
+                `    kind: "filesystem"`,
+                `    categories: {}`,
+                `    properties: { path: "${path.join(testDir, 'existing-store').replace(/\\/g, '/')}" }`,
             ].join('\n');
             await fs.writeFile(path.join(testDir, 'stores.yaml'), registryContent);
 
-            const ctx = createTestToolContext();
+            const ctx = createTestCortexContext();
 
             const result = await createStoreHandler(ctx, { name: 'existing-store' });
 
@@ -264,7 +265,7 @@ describe('store tool registration', () => {
         });
 
         it('should return JSON formatted response', async () => {
-            const ctx = createTestToolContext();
+            const ctx = createTestCortexContext();
 
             const result = await createStoreHandler(ctx, { name: 'test-store' });
 
@@ -273,7 +274,7 @@ describe('store tool registration', () => {
         });
 
         it('should create store with kebab-case name', async () => {
-            const ctx = createTestToolContext();
+            const ctx = createTestCortexContext();
 
             const result = await createStoreHandler(ctx, { name: 'my-store-v2' });
 
@@ -288,7 +289,7 @@ describe('store tool registration', () => {
         });
 
         it('should return error with special invalid characters', async () => {
-            const ctx = createTestToolContext();
+            const ctx = createTestCortexContext();
 
             const result = await createStoreHandler(ctx, { name: 'store@name' });
 

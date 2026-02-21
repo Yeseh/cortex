@@ -17,10 +17,10 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import type { CategoryModeContext } from '@yeseh/cortex-core/category';
-import type { CategoryMode, ConfigCategory } from '@yeseh/cortex-core';
+import type { CategoryMode, ConfigCategories, ConfigCategory } from '@yeseh/cortex-core';
 import { MAX_DESCRIPTION_LENGTH } from '@yeseh/cortex-core/category';
 import { storeNameSchema } from '../store/tools.ts';
-import { type ToolContext } from '../memory/tools/shared.ts';
+import { type CortexContext } from '@yeseh/cortex-core';
 
 /**
  * Options for category tool registration.
@@ -75,7 +75,7 @@ export interface CategoryToolsOptions {
      * In `subcategories` or `strict` mode, this hierarchy determines which
      * categories are protected and which root categories are allowed.
      */
-    configCategories?: Record<string, ConfigCategory>;
+    configCategories?: ConfigCategories;
 }
 
 // ---------------------------------------------------------------------------
@@ -224,7 +224,7 @@ const parseInput = <T>(schema: z.ZodSchema<T>, input: unknown): T => {
  * ```
  */
 export const createCategoryHandler = async (
-    ctx: ToolContext,
+    ctx: CortexContext,
     input: CreateCategoryInput,
     modeContext?: CategoryModeContext,
 ): Promise<McpToolResponse> => {
@@ -293,7 +293,7 @@ export const createCategoryHandler = async (
  * ```
  */
 export const setCategoryDescriptionHandler = async (
-    ctx: ToolContext,
+    ctx: CortexContext,
     input: SetCategoryDescriptionInput,
     modeContext?: CategoryModeContext,
 ): Promise<McpToolResponse> => {
@@ -372,7 +372,7 @@ export const setCategoryDescriptionHandler = async (
  * ```
  */
 export const deleteCategoryHandler = async (
-    ctx: ToolContext,
+    ctx: CortexContext,
     input: DeleteCategoryInput,
     modeContext?: CategoryModeContext,
 ): Promise<McpToolResponse> => {
@@ -433,7 +433,7 @@ export const deleteCategoryHandler = async (
  *
  * @param server - MCP server instance to register tools with
  * @param ctx - Tool context with config and cortex instance
- * @param options - Optional configuration for mode enforcement
+ * @param categoryConfig - Optional configuration for mode enforcement
  *
  * @example
  * ```typescript
@@ -441,7 +441,7 @@ export const deleteCategoryHandler = async (
  * import { registerCategoryTools } from './tools.ts';
  *
  * const server = new McpServer({ name: 'cortex', version: '1.0.0' });
- * const ctx: ToolContext = { config, cortex };
+ * const ctx: CortexContext = { config, cortex };
  *
  * // Free mode (default)
  * registerCategoryTools(server, ctx);
@@ -452,13 +452,13 @@ export const deleteCategoryHandler = async (
  */
 export const registerCategoryTools = (
     server: McpServer,
-    ctx: ToolContext,
-    options?: CategoryToolsOptions,
+    ctx: CortexContext,
+    categoryConfig?: CategoryToolsOptions,
 ): void => {
-    const mode = options?.mode ?? 'free';
-    const modeContext: CategoryModeContext | undefined = options ? {
+    const mode = categoryConfig?.mode ?? 'free';
+    const modeContext: CategoryModeContext | undefined = categoryConfig ? {
         mode,
-        configCategories: options.configCategories,
+        configCategories: categoryConfig.configCategories,
     } : undefined;
 
     // In strict mode, don't register create/delete tools

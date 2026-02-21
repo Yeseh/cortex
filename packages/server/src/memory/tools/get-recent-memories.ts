@@ -9,9 +9,10 @@ import { getRecentMemories } from '@yeseh/cortex-core';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { storeNameSchema } from '../../store/tools.ts';
 import {
-    type ToolContext,
+    textResponse,
     type McpToolResponse,
-} from './shared.ts';
+} from '../../response.ts';
+import { type CortexContext } from '@yeseh/cortex-core';
 
 /** Schema for get_recent_memories tool input */
 export const getRecentMemoriesInputSchema = z.object({
@@ -56,7 +57,7 @@ export interface GetRecentMemoriesInput {
  *                    retrieval operation errors (InternalError)
  */
 export const getRecentMemoriesHandler = async (
-    ctx: ToolContext,
+    ctx: CortexContext,
     input: GetRecentMemoriesInput,
 ): Promise<McpToolResponse> => {
     // Get store using fluent API
@@ -74,14 +75,8 @@ export const getRecentMemoriesHandler = async (
         }
     }
 
-    // Load store to get adapter
-    const loadResult = await store.load();
-    if (!loadResult.ok()) {
-        throw new McpError(ErrorCode.InvalidParams, loadResult.error.message);
-    }
-
     // Call getRecentMemories operation directly with the adapter
-    const result = await getRecentMemories(store['adapter'], {
+    const result = await getRecentMemories(store.adapter, {
         category: input.category,
         limit: input.limit ?? 5,
         includeExpired: input.include_expired ?? false,
@@ -104,7 +99,5 @@ export const getRecentMemoriesHandler = async (
         })),
     };
 
-    return {
-        content: [{ type: 'text', text: JSON.stringify(output, null, 2) }],
-    };
+    return textResponse(JSON.stringify(output, null, 2));
 };

@@ -23,7 +23,7 @@ import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 import { Cortex, type Memory } from '@yeseh/cortex-core';
 import { createMemory } from '@yeseh/cortex-core/memory';
 import { createCategory } from '@yeseh/cortex-core/category';
-import type { ToolContext } from './tools/shared.ts';
+import type { CortexContext } from './tools/shared.ts';
 
 // Test configuration
 const createTestConfig = (dataPath: string): ServerConfig => ({
@@ -91,8 +91,8 @@ const getTextContent = (
     throw new Error('Content does not have text property');
 };
 
-// Helper to create a ToolContext for testing
-const createTestContext = (dataPath: string, storeRoot: string): ToolContext => {
+// Helper to create a CortexContext for testing
+const createTestContext = (dataPath: string, storeRoot: string): CortexContext => {
     const config = createTestConfig(dataPath);
     const cortex = Cortex.init({
         rootDirectory: dataPath,
@@ -604,7 +604,7 @@ describe('readCategoryListing', () => {
 
 describe('listResources', () => {
     let testDir: string;
-    let ctx: ToolContext;
+    let ctx: CortexContext;
     let storeRoot: string;
 
     beforeEach(async () => {
@@ -900,7 +900,7 @@ describe('error handling', () => {
 
 describe('resource workflow', () => {
     let testDir: string;
-    let ctx: ToolContext;
+    let ctx: CortexContext;
     let storeRoot: string;
 
     beforeEach(async () => {

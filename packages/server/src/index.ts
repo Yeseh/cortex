@@ -34,10 +34,10 @@ import { createHealthResponse } from './health.ts';
 import { registerMemoryTools } from './memory/index.ts';
 import { registerStoreTools } from './store/index.ts';
 import { registerCategoryTools, type CategoryToolsOptions } from './category/index.ts';
-import { err, ok, type Result, Cortex } from '@yeseh/cortex-core';
+import { err, ok, type Result, Cortex, type CortexContext, storeCategoriesToConfigCategories } from '@yeseh/cortex-core';
 import type { StorageAdapter } from '@yeseh/cortex-core/storage';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
-import type { ToolContext } from './memory/tools/shared.ts';
+import { createCortexContext } from './context.ts';
 
 /**
  * Complete Cortex server instance with all components.
@@ -156,51 +156,56 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
     }
     const config = configResult.value;
 
-    // Create adapter factory for Cortex
-    const createAdapterFactory = () => {
-        return (storePath: string): StorageAdapter => {
-            const adapter = new FilesystemStorageAdapter({ rootDirectory: storePath });
-            return {
-                memories: adapter.memories,
-                indexes: adapter.indexes,
-                categories: adapter.categories,
-            };
-        };
-    };
-
-    // Load Cortex from config
-    const cortexResult = await Cortex.fromConfig(config.dataPath);
-    let cortex: Cortex;
-    if (cortexResult.ok()) {
-        cortex = cortexResult.value;
-    }
-    else {
-        // Fall back to minimal init if no config exists
-        cortex = Cortex.init({
-            rootDirectory: config.dataPath,
-            adapterFactory: createAdapterFactory(),
+    const context = await createCortexContext(config);
+    const cortexContext = context.ok() ? context.value : null;
+    if (!cortexContext) {
+        return err({
+            code: 'SERVER_START_FAILED',
+            message: 'Failed to create server context.',
+            cause: new Error('Context creation failed'),
         });
     }
 
-    // Create tool context with Cortex
-    const toolContext: ToolContext = { config, cortex };
+    const cortex = cortexContext.cortex;
 
     // Create MCP context
-    const mcpContext = createMcpContext();
-    const { server: mcpServer, transport } = mcpContext;
+    const mcp = createMcpContext();
+    const { server: mcpServer, transport } = mcp;
 
     // Get category mode options from default store config
-    const registry = cortex.getRegistry();
-    const defaultStoreConfig = registry[config.defaultStore];
+    const storeResult = cortex.getStore(config.defaultStore);
+    if (!storeResult.ok()) {
+        return err({
+            code: 'SERVER_START_FAILED',
+            message: `Failed to create store client for default store '${config.defaultStore}'.`,
+            cause: new Error(`Adapter null or undefined`),
+        });
+    }
+
+    const defaultStoreClient = storeResult.value;
+    const store = await defaultStoreClient.load();
+    if (!store.ok()) {
+        return err({
+            code: 'SERVER_START_FAILED',
+            message: `Failed to load default store '${config.defaultStore}'.`,
+            cause: new Error(`Store load failed`),
+        });
+    }
+
     const categoryToolsOptions: CategoryToolsOptions = {
-        mode: defaultStoreConfig?.categoryMode ?? 'free',
-        configCategories: defaultStoreConfig?.categories,
+        mode: store?.value.categoryMode ?? 'free',
+        configCategories: storeCategoriesToConfigCategories(store?.value.categories),
     };
 
     // Register MCP tools
-    registerMemoryTools(mcpServer, toolContext);
-    registerStoreTools(mcpServer, toolContext);
-    registerCategoryTools(mcpServer, toolContext, categoryToolsOptions);
+    registerMemoryTools(mcpServer, cortexContext);
+    registerStoreTools(mcpServer, cortexContext);
+
+    // TODO: This is kinda meh, need to reconsider the category tools disabling.
+    // Currently the default server config is authoritative for category mode, so if the default store is configured with 'free' mode then the category tools will be registered in free mode, even if the user wanted to run the server in 'strict' mode. We should either:
+    // 1. Make category mode a top-level server config option that is independent of store configs, and pass it to the category tools registration.
+    // 2. Or make category mode a required property of each store, and require the default store to be configured with the desired category mode for the server. 
+    registerCategoryTools(mcpServer, cortexContext, categoryToolsOptions);
 
     // Connect MCP server to transport
     await mcpServer.connect(transport);
@@ -249,7 +254,7 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
         server.stop();
     };
 
-    return ok({ server, mcpContext, config, close });
+    return ok({ server, mcpContext: mcp, config, close });
 };
 
 // Start server if this is the main module

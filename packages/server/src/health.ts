@@ -66,9 +66,6 @@ export interface HealthResponse {
 
     /** Configured data directory path for memory stores */
     dataPath: string;
-
-    /** Number of memory stores currently registered (0 if registry unavailable) */
-    storeCount: number;
 }
 
 /**
@@ -106,15 +103,10 @@ export interface HealthResponse {
  * ```
  */
 export const createHealthResponse = async (ctx: HealthContext): Promise<Response> => {
-    // Get store count from Cortex registry
-    const registry = ctx.cortex.getRegistry();
-    const storeCount = Object.keys(registry).length;
-
     const response: HealthResponse = {
         status: 'healthy',
         version: SERVER_VERSION,
         dataPath: ctx.config.dataPath,
-        storeCount,
     };
 
     return Response.json(response);

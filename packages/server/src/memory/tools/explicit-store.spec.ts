@@ -6,13 +6,13 @@ import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { MEMORY_SUBDIR } from '../../config.ts';
 import { createTestCategory, createTestContextWithStores, createTestDir } from './test-utils.ts';
-import type { ToolContext } from './shared.ts';
+import type { CortexContext } from '@yeseh/cortex-core';
 import { addMemoryHandler, type AddMemoryInput } from './add-memory.ts';
 import { getMemoryHandler, type GetMemoryInput } from './get-memory.ts';
 
 describe('explicit store parameter', () => {
     let testDir: string;
-    let ctx: ToolContext;
+    let ctx: CortexContext;
 
     beforeEach(async () => {
         testDir = await createTestDir();

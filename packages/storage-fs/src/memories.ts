@@ -280,7 +280,7 @@ export const serializeMemory = (memory: MemoryFile): SerializeMemoryResult => {
             : {}),
     };
 
-    const frontmatterBody = Bun.YAML.stringify(frontmatterData).trimEnd();
+    const frontmatterBody = Bun.YAML.stringify(frontmatterData, null, 2).trimEnd();
     const frontmatter = `---\n${frontmatterBody}\n---`;
     const content = memory.content ?? '';
     const separator = content.length > 0 && !content.startsWith('\n') ? '\n' : '';

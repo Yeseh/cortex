@@ -23,7 +23,7 @@
 import { z } from 'zod';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { err, ok, type Result } from '@yeseh/cortex-core';
+import { categoryMode, err, ok, type Result } from '@yeseh/cortex-core';
 /**
  * Default cortex config directory path.
  *
@@ -111,8 +111,7 @@ export const createServerConfigSchema = () =>
         logLevel: logLevelSchema.default('info'),
         /** Output format for responses */
         outputFormat: outputFormatSchema.default('yaml'),
-        /** Token count threshold that triggers automatic summarization */
-        autoSummaryThreshold: z.coerce.number().int().nonnegative().default(500),
+        categoryMode: z.enum(['free', 'subcategories', 'strict']).default('free'),
     });
 
 /**
@@ -205,6 +204,7 @@ export const loadServerConfig = (): Result<ServerConfig, ConfigLoadError> => {
         defaultStore: process.env.CORTEX_DEFAULT_STORE,
         logLevel: process.env.CORTEX_LOG_LEVEL,
         outputFormat: process.env.CORTEX_OUTPUT_FORMAT,
+        categoryMode: process.env.CORTEX_CATEGORY_MODE,
         autoSummaryThreshold: process.env.CORTEX_AUTO_SUMMARY_THRESHOLD,
     };
 

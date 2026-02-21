@@ -55,7 +55,7 @@ Result<string, SerializationError> => {
             case 'json':
                 return ok(JSON.stringify(obj, null, 2));
             case 'yaml':
-                return ok(Bun.YAML.stringify(obj));
+                return ok(Bun.YAML.stringify(obj, null, 2));
             case 'toon':
                 return ok(TOON.encode(obj, toonOptions));
             default:

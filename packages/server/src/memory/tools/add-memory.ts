@@ -7,12 +7,12 @@
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { storeNameSchema } from '../../store/tools.ts';
+import { type CortexContext } from '@yeseh/cortex-core';
+import { textResponse, type McpToolResponse } from '../../response.ts';
 import {
     isoDateSchema,
     memoryPathSchema,
     tagsSchema,
-    type ToolContext,
-    type McpToolResponse,
     translateMemoryError,
 } from './shared.ts';
 
@@ -69,7 +69,7 @@ export interface AddMemoryInput {
  * Creates a new memory with auto-creation of stores and categories.
  */
 export const addMemoryHandler = async (
-    ctx: ToolContext,
+    ctx: CortexContext,
     input: AddMemoryInput,
 ): Promise<McpToolResponse> => {
     const storeResult = ctx.cortex.getStore(input.store);
@@ -80,6 +80,7 @@ export const addMemoryHandler = async (
     const store = storeResult.value;
     const memoryClient = store.getMemory(input.path);
     const timestamp = new Date();
+
     const result = await memoryClient.create({
         content: input.content,
         metadata: {
@@ -97,7 +98,6 @@ export const addMemoryHandler = async (
     }
 
     const memory = result.value;
-    return {
-        content: [{ type: 'text', text: `Memory created at ${memory.path}` }],
-    };
+
+    return textResponse(`Memory created at ${memory.path}`);
 };

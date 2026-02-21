@@ -7,10 +7,10 @@
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { storeNameSchema } from '../../store/tools.ts';
+import { type CortexContext } from '@yeseh/cortex-core';
+import { type McpToolResponse, textResponse } from '../../response.ts';
 import {
     memoryPathSchema,
-    type ToolContext,
-    type McpToolResponse,
     translateMemoryError,
 } from './shared.ts';
 
@@ -24,15 +24,15 @@ export const moveMemoryInputSchema = z.object({
 /** Input type for move_memory tool */
 export interface MoveMemoryInput {
     store: string;
-    from_path: string;
-    to_path: string;
+    fromPath: string;
+    toPath: string;
 }
 
 /**
  * Moves or renames a memory.
  */
 export const moveMemoryHandler = async (
-    ctx: ToolContext,
+    ctx: CortexContext,
     input: MoveMemoryInput,
 ): Promise<McpToolResponse> => {
     const storeResult = ctx.cortex.getStore(input.store);
@@ -41,18 +41,13 @@ export const moveMemoryHandler = async (
     }
     const store = storeResult.value;
 
-    const sourceMemory = store.getMemory(input.from_path);
-    const destMemory = store.getMemory(input.to_path);
+    const sourceMemory = store.getMemory(input.fromPath);
+    const destMemory = store.getMemory(input.toPath);
     const result = await sourceMemory.move(destMemory);
 
     if (!result.ok()) {
         throw translateMemoryError(result.error);
     }
 
-    return {
-        content: [{
-            type: 'text',
-            text: `Memory moved from ${input.from_path} to ${input.to_path}`,
-        }],
-    };
+    return textResponse(`Memory moved from ${input.fromPath} to ${input.toPath}`);
 };

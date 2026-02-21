@@ -13,44 +13,44 @@ import { type Memory, Cortex } from '@yeseh/cortex-core';
 import { createMemory } from '@yeseh/cortex-core/memory';
 import { createCategory } from '@yeseh/cortex-core/category';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
-import type { ToolContext } from './shared.ts';
+import type { ConfigStores, CortexConfig, CortexContext } from '@yeseh/cortex-core';
+import { testContext } from '@yeseh/cortex-core/testing';
 
-// Type for test store configuration
-type TestStoreConfig = Record<string, {
-    kind: string;
-    properties: { path: string };
-    categories: Record<string, unknown>;
-}>;
+export const TestDate = new Date('2024-01-01T00:00:00Z'); // Fixed date for test determinism
 
 // Test configuration
-export const createTestConfig = (dataPath: string): ServerConfig => ({
-    dataPath,
-    port: 3000,
-    host: '127.0.0.1',
-    defaultStore: 'default',
-    logLevel: 'info',
-    outputFormat: 'yaml',
-    autoSummaryThreshold: 500,
+export const createTestConfig = (dataPath: string): CortexConfig => ({
+    settings: {
+        defaultStore: 'default',
+        outputFormat: 'yaml',
+    },
+    stores: {},
 });
 
 /**
- * Creates a ToolContext for testing with both config and cortex instance.
+ * Creates a CortexContext for testing with both config and cortex instance.
  *
  * @param testDir - The test directory (from createTestDir)
- * @returns A ToolContext ready for use in test handlers
+ * @returns A CortexContext ready for use in test handlers
  */
-export const createTestContext = (testDir: string): ToolContext => {
+export const createTestContext = (testDir: string): CortexContext => {
+    const context = testContext
+    const adapter = new FilesystemStorageAdapter({ rootDirectory: testDir });
+
     const config = createTestConfig(testDir);
     const memoryDir = join(testDir, MEMORY_SUBDIR);
 
     // Create store configuration mapping
-    const storeConfig: TestStoreConfig = {
+    const storeConfig: ConfigStores = {
         default: {
             kind: 'filesystem',
+            categoryMode: 'free',
             properties: { path: memoryDir },
             categories: {},
         },
     };
+
+    config.stores = storeConfig;
 
     const cortex = Cortex.init({
         // Type compatibility - will be fixed in core migration
@@ -58,31 +58,38 @@ export const createTestContext = (testDir: string): ToolContext => {
         adapterFactory: (storeName: string) => {
             // Lookup the store path from config
             const store = storeConfig[storeName];
-            const storePath = store ? store.properties.path : memoryDir;
+            const storePath = store ? store.properties.path as string : memoryDir;
             return new FilesystemStorageAdapter({ rootDirectory: storePath });
         },
     });
 
-    return { config, cortex };
+    return { 
+        settings: config.settings!, 
+        stores: config.stores, 
+        cortex,
+        now: () => TestDate, // Override now for test determinism
+        stdin: new ReadableStream(), // Default stdin (can be overridden in tests)
+    };
 };
 
 /**
- * Creates a ToolContext with multiple stores registered.
+ * Creates a CortexContext with multiple stores registered.
  *
  * @param testDir - The test directory (from createTestDir)
  * @param additionalStores - Additional stores to register (name -> path mapping)
- * @returns A ToolContext with multiple stores configured
+ * @returns A CortexContext with multiple stores configured
  */
 export const createTestContextWithStores = (
     testDir: string,
     additionalStores: Record<string, string>,
-): ToolContext => {
+): CortexContext => {
     const config = createTestConfig(testDir);
     const memoryDir = join(testDir, MEMORY_SUBDIR);
 
-    const storeConfig: TestStoreConfig = {
+    const storeConfig: ConfigStores = {
         default: {
             kind: 'filesystem',
+            categoryMode: 'free',
             properties: { path: memoryDir },
             categories: {},
         },
@@ -104,12 +111,12 @@ export const createTestContextWithStores = (
         adapterFactory: (storeName: string) => {
             // Lookup the store path from config
             const store = storeConfig[storeName];
-            const storePath = store ? store.properties.path : memoryDir;
+            const storePath = store ? store.properties.path as string : memoryDir;
             return new FilesystemStorageAdapter({ rootDirectory: storePath });
         },
     });
 
-    return { config, cortex };
+    return { config, cortex, now: () => TestDate, stdin: '' };
 };
 
 /**

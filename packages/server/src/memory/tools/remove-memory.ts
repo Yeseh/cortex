@@ -7,12 +7,9 @@
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { storeNameSchema } from '../../store/tools.ts';
-import {
-    memoryPathSchema,
-    type ToolContext,
-    type McpToolResponse,
-    translateMemoryError,
-} from './shared.ts';
+import { type CortexContext } from '@yeseh/cortex-core';
+import { type McpToolResponse, textResponse } from '../../response.ts';
+import { memoryPathSchema } from './shared.ts';
 
 /** Schema for remove_memory tool input */
 export const removeMemoryInputSchema = z.object({
@@ -30,7 +27,7 @@ export interface RemoveMemoryInput {
  * Deletes a memory.
  */
 export const removeMemoryHandler = async (
-    ctx: ToolContext,
+    ctx: CortexContext,
     input: RemoveMemoryInput,
 ): Promise<McpToolResponse> => {
     const storeResult = ctx.cortex.getStore(input.store);
@@ -43,10 +40,8 @@ export const removeMemoryHandler = async (
     const result = await memoryClient.delete();
 
     if (!result.ok()) {
-        throw translateMemoryError(result.error);
+        throw new McpError(ErrorCode.InternalError, result.error.message);
     }
 
-    return {
-        content: [{ type: 'text', text: `Memory removed at ${input.path}` }],
-    };
+    return textResponse(`Memory removed at ${input.path}`);
 };

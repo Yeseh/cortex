@@ -10,22 +10,15 @@ import { Cortex } from '@yeseh/cortex-core';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 
 /**
- * Creates a HealthContext for testing with an in-memory registry.
+ * Creates a HealthContext for testing.
  */
-const createTestContext = async (
-    tempDir: string,
-    config: ServerConfig,
-    storeRegistry?: Record<string, { path: string }>,
-): Promise<HealthContext> => {
+const createTestContext = async (tempDir: string, config: ServerConfig): Promise<HealthContext> => {
     const memoryDir = join(tempDir, MEMORY_SUBDIR);
     await mkdir(memoryDir, { recursive: true });
 
-    const registry = storeRegistry ?? {};
-
     const cortex = Cortex.init({
-        rootDirectory: tempDir,
-        stores: registry,
-        adapterFactory: (storePath: string) => new FilesystemStorageAdapter({ rootDirectory: storePath }),
+        adapterFactory: (storePath: string) =>
+            new FilesystemStorageAdapter({ rootDirectory: storePath }),
     });
 
     return { config, cortex };
@@ -34,7 +27,9 @@ const createTestContext = async (
 /**
  * Helper to start a Bun server on a random port and return the base URL.
  */
-const startServer = (ctx: HealthContext): { server: ReturnType<typeof Bun.serve>; baseUrl: string } => {
+const startServer = (
+    ctx: HealthContext
+): { server: ReturnType<typeof Bun.serve>; baseUrl: string } => {
     const server = Bun.serve({
         port: 0, // Random available port
         hostname: '127.0.0.1',
@@ -130,11 +125,9 @@ describe('health endpoint', () => {
             expect(json).toHaveProperty('status');
             expect(json).toHaveProperty('version');
             expect(json).toHaveProperty('dataPath');
-            expect(json).toHaveProperty('storeCount');
             expect(typeof json.status).toBe('string');
             expect(typeof json.version).toBe('string');
             expect(typeof json.dataPath).toBe('string');
-            expect(typeof json.storeCount).toBe('number');
         });
     });
 
@@ -178,8 +171,7 @@ describe('health endpoint', () => {
 
                 expect(json1.dataPath).toBe(dataPath1);
                 expect(json2.dataPath).toBe(dataPath2);
-            }
-            finally {
+            } finally {
                 s1.stop();
                 s2.stop();
             }
@@ -187,85 +179,7 @@ describe('health endpoint', () => {
         });
     });
 
-    describe('store counting', () => {
-        it('should return storeCount 0 when no stores registered', async () => {
-            const ctx = await createTestContext(tempDir, config, {});
-            const { server: s, baseUrl } = startServer(ctx);
-            server = s;
-
-            const response = await fetch(`${baseUrl}/health`);
-            const json = (await response.json()) as HealthResponse;
-
-            expect(json.storeCount).toBe(0);
-        });
-
-        it('should count stores correctly when registry has one store', async () => {
-            const storePath = join(tempDir, 'stores', 'test');
-            await mkdir(storePath, { recursive: true });
-
-            const ctx = await createTestContext(tempDir, config, {
-                'test-store': { path: storePath },
-            });
-            const { server: s, baseUrl } = startServer(ctx);
-            server = s;
-
-            const response = await fetch(`${baseUrl}/health`);
-            const json = (await response.json()) as HealthResponse;
-
-            expect(json.storeCount).toBe(1);
-        });
-
-        it('should count stores correctly when registry has multiple stores', async () => {
-            const storePath1 = join(tempDir, 'stores', 'test');
-            const storePath2 = join(tempDir, 'stores', 'another');
-            const storePath3 = join(tempDir, 'stores', 'third');
-            await mkdir(storePath1, { recursive: true });
-            await mkdir(storePath2, { recursive: true });
-            await mkdir(storePath3, { recursive: true });
-
-            const ctx = await createTestContext(tempDir, config, {
-                'test-store': { path: storePath1 },
-                'another-store': { path: storePath2 },
-                'third-store': { path: storePath3 },
-            });
-            const { server: s, baseUrl } = startServer(ctx);
-            server = s;
-
-            const response = await fetch(`${baseUrl}/health`);
-            const json = (await response.json()) as HealthResponse;
-
-            expect(json.storeCount).toBe(3);
-        });
-
-        it('should count stores correctly with two stores', async () => {
-            const ctx = await createTestContext(tempDir, config, {
-                primary: { path: '/var/lib/cortex' },
-                secondary: { path: '/var/lib/cortex-secondary' },
-            });
-            const { server: s, baseUrl } = startServer(ctx);
-            server = s;
-
-            const response = await fetch(`${baseUrl}/health`);
-            const json = (await response.json()) as HealthResponse;
-
-            expect(json.storeCount).toBe(2);
-        });
-    });
-
     describe('error resilience', () => {
-        it('should return healthy with storeCount 0 when registry is empty', async () => {
-            const ctx = await createTestContext(tempDir, config, {});
-            const { server: s, baseUrl } = startServer(ctx);
-            server = s;
-
-            const response = await fetch(`${baseUrl}/health`);
-            const json = (await response.json()) as HealthResponse;
-
-            expect(response.status).toBe(200);
-            expect(json.status).toBe('healthy');
-            expect(json.storeCount).toBe(0);
-        });
-
         it('should return healthy when dataPath directory does not exist', async () => {
             const nonExistentPath = join(tempDir, 'non-existent-dir', 'deep', 'path');
             const configWithBadPath: ServerConfig = {
@@ -275,9 +189,8 @@ describe('health endpoint', () => {
 
             // Create context with non-existent path - cortex should still work
             const cortex = Cortex.init({
-                rootDirectory: nonExistentPath,
-                stores: {},
-                adapterFactory: (storePath: string) => new FilesystemStorageAdapter({ rootDirectory: storePath }),
+                adapterFactory: (storePath: string) =>
+                    new FilesystemStorageAdapter({ rootDirectory: storePath }),
             });
             const ctx: HealthContext = { config: configWithBadPath, cortex };
 
@@ -290,7 +203,6 @@ describe('health endpoint', () => {
             expect(response.status).toBe(200);
             expect(json.status).toBe('healthy');
             expect(json.dataPath).toBe(nonExistentPath);
-            expect(json.storeCount).toBe(0);
         });
     });
 });
