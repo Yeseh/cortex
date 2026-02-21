@@ -83,7 +83,7 @@ export const createCliCommandContext = async (
         const cortex = Cortex.init({
             settings: config.settings,
             stores: config.stores,
-            adapterFactory: adapterFactory 
+            adapterFactory: adapterFactory
         });
 
         const now = () => new Date();

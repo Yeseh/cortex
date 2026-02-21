@@ -5,13 +5,12 @@
  */
 
 import { z } from 'zod';
-import { getMemory } from '@yeseh/cortex-core';
+import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { storeNameSchema } from '../../store/tools.ts';
 import {
     memoryPathSchema,
     type ToolContext,
     type McpToolResponse,
-    resolveStoreAdapter,
     translateMemoryError,
 } from './shared.ts';
 
@@ -36,13 +35,15 @@ export const getMemoryHandler = async (
     ctx: ToolContext,
     input: GetMemoryInput,
 ): Promise<McpToolResponse> => {
-    const adapterResult = resolveStoreAdapter(ctx, input.store);
-    if (!adapterResult.ok()) {
-        throw adapterResult.error;
+    const storeResult = ctx.cortex.getStore(input.store);
+    if (!storeResult.ok()) {
+        throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
     }
+    const store = storeResult.value;
 
-    const result = await getMemory(adapterResult.value, input.path, {
-        includeExpired: input.include_expired,
+    const memoryClient = store.getMemory(input.path);
+    const result = await memoryClient.get({
+        includeExpired: input.include_expired ?? false,
     });
 
     if (!result.ok()) {

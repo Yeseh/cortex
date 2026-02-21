@@ -6,12 +6,11 @@
 
 import { z } from 'zod';
 import { getRecentMemories } from '@yeseh/cortex-core';
+import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { storeNameSchema } from '../../store/tools.ts';
 import {
     type ToolContext,
     type McpToolResponse,
-    resolveStoreAdapter,
-    translateMemoryError,
 } from './shared.ts';
 
 /** Schema for get_recent_memories tool input */
@@ -60,19 +59,36 @@ export const getRecentMemoriesHandler = async (
     ctx: ToolContext,
     input: GetRecentMemoriesInput,
 ): Promise<McpToolResponse> => {
-    const adapterResult = resolveStoreAdapter(ctx, input.store);
-    if (!adapterResult.ok()) {
-        throw adapterResult.error;
+    // Get store using fluent API
+    const storeResult = ctx.cortex.getStore(input.store);
+    if (!storeResult.ok()) {
+        throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
+    }
+    const store = storeResult.value;
+
+    // Validate category path if provided
+    if (input.category) {
+        const categoryResult = store.getCategory(input.category);
+        if (!categoryResult.ok()) {
+            throw new McpError(ErrorCode.InvalidParams, categoryResult.error.message);
+        }
     }
 
-    const result = await getRecentMemories(adapterResult.value, {
+    // Load store to get adapter
+    const loadResult = await store.load();
+    if (!loadResult.ok()) {
+        throw new McpError(ErrorCode.InvalidParams, loadResult.error.message);
+    }
+
+    // Call getRecentMemories operation directly with the adapter
+    const result = await getRecentMemories(store['adapter'], {
         category: input.category,
-        limit: input.limit,
-        includeExpired: input.include_expired,
+        limit: input.limit ?? 5,
+        includeExpired: input.include_expired ?? false,
     });
 
     if (!result.ok()) {
-        throw translateMemoryError(result.error);
+        throw new McpError(ErrorCode.InternalError, result.error.message);
     }
 
     const recentResult = result.value;

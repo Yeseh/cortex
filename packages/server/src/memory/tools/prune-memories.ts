@@ -6,12 +6,10 @@
 
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import { pruneExpiredMemories, CategoryPath } from '@yeseh/cortex-core';
 import { storeNameSchema } from '../../store/tools.ts';
 import {
     type ToolContext,
     type McpToolResponse,
-    resolveStoreAdapter,
 } from './shared.ts';
 
 /** Schema for prune_memories tool input */
@@ -31,27 +29,35 @@ export interface PruneMemoriesInput {
 
 /**
  * Deletes all expired memories.
- * Delegates to core pruneExpiredMemories operation.
+ * Uses the fluent API via store.root().prune().
  */
 export const pruneMemoriesHandler = async (
     ctx: ToolContext,
     input: PruneMemoriesInput,
 ): Promise<McpToolResponse> => {
-    const adapterResult = resolveStoreAdapter(ctx, input.store);
-    if (!adapterResult.ok()) {
-        throw adapterResult.error;
+    const storeResult = ctx.cortex.getStore(input.store);
+    if (!storeResult.ok()) {
+        throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
     }
+    const store = storeResult.value;
 
     const dryRun = input.dry_run ?? false;
 
-    const result = await pruneExpiredMemories(adapterResult.value, CategoryPath.root(), { dryRun });
+    const rootClient = store.root();
+    if (!rootClient.ok()) {
+        throw new McpError(ErrorCode.InternalError, rootClient.error.message);
+    }
+
+    const result = await rootClient.value.prune({
+        dryRun,
+    });
     if (!result.ok()) {
         throw new McpError(ErrorCode.InternalError, result.error.message);
     }
 
     // Format output for MCP response
     const prunedEntries = result.value.pruned.map((m) => ({
-        path: m.path,
+        path: m.path.toString(),
         expires_at: m.expiresAt.toISOString(),
     }));
 

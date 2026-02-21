@@ -23,6 +23,7 @@ import type {
 import { createCategory, deleteCategory, setDescription } from '@/category/operations/index.ts';
 import type { PruneOptions, PruneResult } from '@/memory/operations/prune.ts';
 import { pruneExpiredMemories } from '@/memory/operations/prune.ts';
+import { getRecentMemories, type GetRecentMemoriesOptions, type GetRecentMemoriesResult } from '@/memory/operations/recent.ts';
 import { MemoryClient } from '../memory/memory-client.ts';
 
 /**
@@ -699,5 +700,59 @@ export class CategoryClient {
         }
 
         return ok(pruneResult.value);
+    }
+
+    /**
+     * Get recent memories from this category subtree.
+     *
+     * Retrieves the most recently updated memories within this category
+     * and its subcategories. Call from root category for store-wide retrieval.
+     *
+     * @param options - Retrieval options
+     * @param options.limit - Maximum number of memories to return (default: 5, max: 100)
+     * @param options.includeExpired - Include expired memories (default: false)
+     * @param options.now - Current time for expiration check (default: new Date())
+     * @returns Result with GetRecentMemoriesResult or CategoryError
+     *
+     * @example
+     * ```typescript
+     * // Get 5 most recent from the 'standards' subtree
+     * const standards = root.getCategory('standards');
+     * const result = await standards.getRecent();
+     *
+     * // Get 10 most recent from entire store
+     * const root = store.rootCategory();
+     * const result = await root.getRecent({ limit: 10 });
+     * ```
+     *
+     * @edgeCases
+     * - Returns empty memories array if no memories exist in the subtree
+     * - Expired memories are excluded unless includeExpired is true
+     */
+    async getRecent(options?: Omit<GetRecentMemoriesOptions, 'category'>): Promise<Result<GetRecentMemoriesResult, CategoryError>> {
+        const pathResult = this.parsePath();
+        if (!pathResult.ok()) {
+            return pathResult;
+        }
+
+        // Convert category path for the operation
+        // Root path means all categories (no category filter)
+        const categoryPath = this.rawPath === '/' ? undefined : pathResult.value.toString();
+
+        const recentResult = await getRecentMemories(this.adapter, {
+            ...options,
+            category: categoryPath,
+        });
+
+        if (!recentResult.ok()) {
+            return err({
+                code: 'STORAGE_ERROR',
+                message: `Failed to get recent memories: ${recentResult.error.message ?? 'unknown error'}`,
+                path: this.rawPath,
+                cause: recentResult.error,
+            });
+        }
+
+        return ok(recentResult.value);
     }
 }

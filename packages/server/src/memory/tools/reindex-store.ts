@@ -6,12 +6,10 @@
 
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import { CategoryPath } from '@yeseh/cortex-core';
 import { storeNameSchema } from '../../store/tools.ts';
 import {
     type ToolContext,
     type McpToolResponse,
-    resolveStoreAdapter,
 } from './shared.ts';
 
 /** Schema for reindex_store tool input */
@@ -46,12 +44,18 @@ export const reindexStoreHandler = async (
     ctx: ToolContext,
     input: ReindexStoreInput,
 ): Promise<McpToolResponse> => {
-    const adapterResult = resolveStoreAdapter(ctx, input.store);
-    if (!adapterResult.ok()) {
-        throw adapterResult.error;
+    const storeResult = ctx.cortex.getStore(input.store);
+    if (!storeResult.ok()) {
+        throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
+    }
+    const store = storeResult.value;
+
+    const rootClientResult = store.root();
+    if (!rootClientResult.ok()) {
+        throw new McpError(ErrorCode.InternalError, rootClientResult.error.message);
     }
 
-    const result = await adapterResult.value.indexes.reindex(CategoryPath.root());
+    const result = await rootClientResult.value.reindex();
     if (!result.ok()) {
         throw new McpError(ErrorCode.InternalError, result.error.message);
     }

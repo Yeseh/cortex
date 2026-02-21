@@ -39,7 +39,7 @@ export interface InitCommandOptions {
     /** Explicit store name (otherwise auto-detected from git) */
     name?: string;
     /** Category mode for the store */
-    categoryMode?: string;
+    categoryMode?: CategoryMode;
     /** Output format (yaml, json, toon) */
     format?: string;
     /** Optional description for the store */
@@ -100,7 +100,7 @@ export async function handleInit(
 
     const storeData: StoreData = {
         kind: 'filesystem',
-        categoryMode: options.categoryMode as CategoryMode ?? 'free',
+        categoryMode: (options.categoryMode as CategoryMode) ?? 'free',
         categories: [],
         properties: {
             path: storePath,
@@ -147,5 +147,10 @@ export const initCommand = new Command('init')
             throwCliError(context.error);
         }
 
-        await handleInit(context.value, path, options);
+        await handleInit(context.value, path, {
+            name: options.name,
+            description: options.description,
+            categoryMode: options.categoryMode as CategoryMode,
+            format: options.format,
+        });
     });

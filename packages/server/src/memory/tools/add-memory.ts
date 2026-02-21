@@ -5,7 +5,7 @@
  */
 
 import { z } from 'zod';
-import { createMemory } from '@yeseh/cortex-core';
+import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { storeNameSchema } from '../../store/tools.ts';
 import {
     isoDateSchema,
@@ -13,7 +13,6 @@ import {
     tagsSchema,
     type ToolContext,
     type McpToolResponse,
-    resolveStoreAdapter,
     translateMemoryError,
 } from './shared.ts';
 
@@ -73,24 +72,32 @@ export const addMemoryHandler = async (
     ctx: ToolContext,
     input: AddMemoryInput,
 ): Promise<McpToolResponse> => {
-    const adapterResult = resolveStoreAdapter(ctx, input.store);
-    if (!adapterResult.ok()) {
-        throw adapterResult.error;
+    const storeResult = ctx.cortex.getStore(input.store);
+    if (!storeResult.ok()) {
+        throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
     }
 
-    const result = await createMemory(adapterResult.value, input.path, {
+    const store = storeResult.value;
+    const memoryClient = store.getMemory(input.path);
+    const timestamp = new Date();
+    const result = await memoryClient.create({
         content: input.content,
-        tags: input.tags,
-        source: 'mcp',
-        expiresAt: input.expires_at ? new Date(input.expires_at) : undefined,
-        citations: input.citations,
+        metadata: {
+            tags: input.tags ?? [],
+            source: 'mcp',
+            createdAt: timestamp,
+            updatedAt: timestamp,
+            expiresAt: input.expires_at ? new Date(input.expires_at) : undefined,
+            citations: input.citations ?? [],
+        },
     });
 
     if (!result.ok()) {
         throw translateMemoryError(result.error);
     }
 
+    const memory = result.value;
     return {
-        content: [{ type: 'text', text: `Memory created at ${input.path}` }],
+        content: [{ type: 'text', text: `Memory created at ${memory.path}` }],
     };
 };
