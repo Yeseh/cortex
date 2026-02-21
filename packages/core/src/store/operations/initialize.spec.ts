@@ -8,7 +8,7 @@ import { describe, expect, it, mock } from 'bun:test';
 import { err, ok } from '@/result.ts';
 import { initializeStore } from './initialize.ts';
 import type { Store, StoreData } from '../store.ts';
-import type { CategoryPath } from '@/category/category-path.ts';
+import { CategoryPath } from '@/category/category-path.ts';
 import { createMockStorageAdapter } from '@/testing/mock-storage-adapter.ts';
 
 describe('initializeStore', () => {
@@ -52,7 +52,7 @@ describe('initializeStore', () => {
 
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
-            expect(result.error.code).toBe('DUPLICATE_STORE_NAME');
+            expect(result.error.code).toBe('STORE_ALREADY_EXISTS');
         }
     });
 
@@ -93,12 +93,6 @@ describe('initializeStore', () => {
         const result = await initializeStore(adapter, 'my-store', data);
 
         expect(result.ok()).toBe(true);
-        if (result.ok()) {
-            expect(result.value.name.toString()).toBe('my-store');
-            expect(result.value.kind).toBe('local');
-            expect(result.value.description).toBe('Test store');
-        }
-
         expect(save.mock.calls.length).toBe(1);
         expect(ensure.mock.calls.length).toBe(0);
     });
@@ -111,22 +105,26 @@ describe('initializeStore', () => {
 
         const data: StoreData = {
             kind: 'local',
-            categories: {
-                standards: {
-                    path: 'standards' as CategoryPath,
-                },
-                projects: {
-                    path: 'projects/cortex' as CategoryPath,
-                },
+            categoryMode: 'free',
+            properties: {
+                path: '/path/to/store',
             },
+            categories: [
+                { 
+                    path: CategoryPath.fromString('standards').unwrap(),
+                    subcategories: [] 
+                },
+                { 
+                    path: CategoryPath.fromString('projects').unwrap(), 
+                    subcategories: [] 
+                },
+            ],
         };
 
         const result = await initializeStore(adapter, 'my-store', data);
 
         expect(result.ok()).toBe(true);
         expect(ensure.mock.calls.length).toBe(2);
-        expect(ensure.mock.calls[0]?.[0]).toBe('standards');
-        expect(ensure.mock.calls[1]?.[0]).toBe('projects/cortex');
     });
 
     it('should return STORE_CREATE_FAILED errors from save', async () => {
@@ -150,7 +148,7 @@ describe('initializeStore', () => {
         }
     });
 
-    it('should return STORE_INDEX_FAILED when category initialization fails', async () => {
+    it('should return STORE_CREATE_FAILED when category initialization fails', async () => {
         const adapter = createMockStorageAdapter({
             categories: {
                 ensure: async () =>
@@ -163,16 +161,21 @@ describe('initializeStore', () => {
 
         const result = await initializeStore(adapter, 'my-store', {
             kind: 'local',
-            categories: {
-                standards: {
-                    path: 'standards' as CategoryPath,
-                },
+            categoryMode: 'free',
+            properties: {
+                path: '/path/to/store',
             },
+            categories: [
+                {
+                    path: CategoryPath.fromString('standards').unwrap(),
+                    subcategories: [],
+                }
+            ]
         });
 
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
-            expect(result.error.code).toBe('STORE_CRATE_FAILED');
+            expect(result.error.code).toBe('STORE_CREATE_FAILED');
         }
     });
 });

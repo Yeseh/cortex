@@ -36,7 +36,6 @@ describe('server config loading', () => {
                 expect(result.value.defaultStore).toBe('default');
                 expect(result.value.logLevel).toBe('info');
                 expect(result.value.outputFormat).toBe('yaml');
-                expect(result.value.autoSummaryThreshold).toBe(500);
             }
         });
 
@@ -47,7 +46,6 @@ describe('server config loading', () => {
             if (result.ok()) {
                 const keys = Object.keys(result.value).sort();
                 expect(keys).toEqual([
-                    'autoSummaryThreshold',
                     'dataPath',
                     'defaultStore',
                     'host',
@@ -120,15 +118,7 @@ describe('server config loading', () => {
             }
         });
 
-        it('should read CORTEX_AUTO_SUMMARY_THRESHOLD', () => {
-            process.env.CORTEX_AUTO_SUMMARY_THRESHOLD = '1000';
-            const result = loadServerConfig();
-
-            expect(result.ok()).toBe(true);
-            if (result.ok()) {
-                expect(result.value.autoSummaryThreshold).toBe(1000);
-            }
-        });
+        
 
         it('should coerce string port value to number', () => {
             process.env.CORTEX_PORT = '9000';
@@ -141,16 +131,7 @@ describe('server config loading', () => {
             }
         });
 
-        it('should coerce string threshold value to number', () => {
-            process.env.CORTEX_AUTO_SUMMARY_THRESHOLD = '250';
-            const result = loadServerConfig();
-
-            expect(result.ok()).toBe(true);
-            if (result.ok()) {
-                expect(typeof result.value.autoSummaryThreshold).toBe('number');
-                expect(result.value.autoSummaryThreshold).toBe(250);
-            }
-        });
+        
 
         it('should parse multiple env vars together', () => {
             process.env.CORTEX_DATA_PATH = '/data';
@@ -159,7 +140,6 @@ describe('server config loading', () => {
             process.env.CORTEX_DEFAULT_STORE = 'test-store';
             process.env.CORTEX_LOG_LEVEL = 'warn';
             process.env.CORTEX_OUTPUT_FORMAT = 'json';
-            process.env.CORTEX_AUTO_SUMMARY_THRESHOLD = '100';
 
             const result = loadServerConfig();
 
@@ -172,20 +152,10 @@ describe('server config loading', () => {
                     defaultStore: 'test-store',
                     logLevel: 'warn',
                     outputFormat: 'json',
-                    autoSummaryThreshold: 100,
                 });
             }
         });
 
-        it('should accept zero for autoSummaryThreshold', () => {
-            process.env.CORTEX_AUTO_SUMMARY_THRESHOLD = '0';
-            const result = loadServerConfig();
-
-            expect(result.ok()).toBe(true);
-            if (result.ok()) {
-                expect(result.value.autoSummaryThreshold).toBe(0);
-            }
-        });
     });
 
     describe('log level validation', () => {
@@ -328,35 +298,7 @@ describe('server config loading', () => {
             }
         });
 
-        it('should reject negative autoSummaryThreshold', () => {
-            process.env.CORTEX_AUTO_SUMMARY_THRESHOLD = '-1';
-            const result = loadServerConfig();
-
-            expect(result.ok()).toBe(false);
-            if (!result.ok()) {
-                expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
-            }
-        });
-
-        it('should reject non-integer autoSummaryThreshold', () => {
-            process.env.CORTEX_AUTO_SUMMARY_THRESHOLD = '100.5';
-            const result = loadServerConfig();
-
-            expect(result.ok()).toBe(false);
-            if (!result.ok()) {
-                expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
-            }
-        });
-
-        it('should reject non-numeric autoSummaryThreshold', () => {
-            process.env.CORTEX_AUTO_SUMMARY_THRESHOLD = 'many';
-            const result = loadServerConfig();
-
-            expect(result.ok()).toBe(false);
-            if (!result.ok()) {
-                expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
-            }
-        });
+        
 
         it('should include issues array in validation error', () => {
             process.env.CORTEX_PORT = '-1';
@@ -424,7 +366,6 @@ describe('serverConfigSchema', () => {
             defaultStore: 'store',
             logLevel: 'debug' as const,
             outputFormat: 'json' as const,
-            autoSummaryThreshold: 100,
         };
 
         const result = serverConfigSchema.safeParse(config);
@@ -446,7 +387,6 @@ describe('serverConfigSchema', () => {
             expect(result.data.defaultStore).toBe('default');
             expect(result.data.logLevel).toBe('info');
             expect(result.data.outputFormat).toBe('yaml');
-            expect(result.data.autoSummaryThreshold).toBe(500);
         }
     });
 });

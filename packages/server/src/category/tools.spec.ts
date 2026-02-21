@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { MEMORY_SUBDIR } from '../config.ts';
 import { Cortex } from '@yeseh/cortex-core';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
-import type { CortexContext } from '../memory/tools/shared.ts';
+import type { CortexContext } from '@yeseh/cortex-core';
 import {
     createCategoryHandler,
     setCategoryDescriptionHandler,
@@ -31,8 +31,10 @@ const createTestContext = (testDir: string): CortexContext => {
     const memoryDir = join(testDir, MEMORY_SUBDIR);
 
     const cortex = Cortex.init({
-        adapterFactory: (storePath: string) =>
-            new FilesystemStorageAdapter({ rootDirectory: storePath }),
+        // Adapter factory for tests: use the test memory directory as the
+        // adapter root so files are created under `${testDir}/memory/...`.
+        adapterFactory: (_storePath: string) =>
+            new FilesystemStorageAdapter({ rootDirectory: memoryDir }),
     });
 
     return {
@@ -43,7 +45,6 @@ const createTestContext = (testDir: string): CortexContext => {
             defaultStore: 'default',
             logLevel: 'info',
             outputFormat: 'yaml',
-            autoSummaryThreshold: 500,
         },
         cortex,
     };

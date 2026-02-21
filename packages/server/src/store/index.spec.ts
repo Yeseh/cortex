@@ -27,7 +27,6 @@ describe('store tool registration', () => {
             defaultStore: 'default',
             logLevel: 'info',
             outputFormat: 'yaml',
-            categoryMode: 'free',
         };
     });
 

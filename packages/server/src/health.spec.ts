@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import type { ServerConfig } from './config.ts';
-import { MEMORY_SUBDIR } from './config.ts';
+import { MEMORY_SUBDIR, SERVER_VERSION } from './config.ts';
 import { createHealthResponse, type HealthContext, type HealthResponse } from './health.ts';
 import { Cortex } from '@yeseh/cortex-core';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
@@ -57,7 +57,6 @@ describe('health endpoint', () => {
             defaultStore: 'default',
             logLevel: 'info',
             outputFormat: 'yaml',
-            autoSummaryThreshold: 500,
         };
     });
 
@@ -103,7 +102,7 @@ describe('health endpoint', () => {
             expect(json.status).toBe('healthy');
         });
 
-        it('should return version "1.0.0"', async () => {
+        it('should return version', async () => {
             const ctx = await createTestContext(tempDir, config);
             const { server: s, baseUrl } = startServer(ctx);
             server = s;
@@ -111,7 +110,7 @@ describe('health endpoint', () => {
             const response = await fetch(`${baseUrl}/health`);
             const json = (await response.json()) as HealthResponse;
 
-            expect(json.version).toBe('1.0.0');
+            expect(json.version).toBe(SERVER_VERSION);
         });
 
         it('should return response with correct shape', async () => {

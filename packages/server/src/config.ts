@@ -23,7 +23,7 @@
 import { z } from 'zod';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { categoryMode, err, ok, type Result } from '@yeseh/cortex-core';
+import { err, ok, type Result } from '@yeseh/cortex-core';
 /**
  * Default cortex config directory path.
  *
@@ -32,8 +32,7 @@ import { categoryMode, err, ok, type Result } from '@yeseh/cortex-core';
  *
  * This aligns with the global config directory layout defined in the specs:
  * - `~/.config/cortex/config.yaml` - global configuration
- * - `~/.config/cortex/stores.yaml` - store registry
- * - `~/.config/cortex/memory/` - default global store root (where stores are subdirectories)
+ * - `~/.config/cortex/stores/` - default global store root (where stores are subdirectories)
  */
 export const getDefaultDataPath = (): string => join(homedir(), '.config', 'cortex');
 
@@ -90,7 +89,7 @@ export type OutputFormat = z.infer<typeof outputFormatSchema>;
  * - `defaultStore` ← `CORTEX_DEFAULT_STORE` - Default memory store name (default: "default")
  * - `logLevel` ← `CORTEX_LOG_LEVEL` - Logging verbosity (default: "info")
  * - `outputFormat` ← `CORTEX_OUTPUT_FORMAT` - Response format (default: "yaml")
- * - `autoSummaryThreshold` ← `CORTEX_AUTO_SUMMARY_THRESHOLD` - Token count triggering auto-summary (default: 500)
+ *
  *
  * Note: The dataPath default is computed at runtime to resolve the user's home directory.
  * Memory stores are located at `${dataPath}/memory/` by default.
@@ -111,7 +110,6 @@ export const createServerConfigSchema = () =>
         logLevel: logLevelSchema.default('info'),
         /** Output format for responses */
         outputFormat: outputFormatSchema.default('yaml'),
-        categoryMode: z.enum(['free', 'subcategories', 'strict']).default('free'),
     });
 
 /**
@@ -175,7 +173,7 @@ export interface ConfigLoadError {
  * | `CORTEX_DEFAULT_STORE` | `defaultStore` | "default" |
  * | `CORTEX_LOG_LEVEL` | `logLevel` | "info" |
  * | `CORTEX_OUTPUT_FORMAT` | `outputFormat` | "yaml" |
- * | `CORTEX_AUTO_SUMMARY_THRESHOLD` | `autoSummaryThreshold` | 500 |
+ *
  *
  * Note: Memory stores are located at `${dataPath}/memory/`. Use `getMemoryPath(config)`
  * to get the full memory storage path.
@@ -205,7 +203,6 @@ export const loadServerConfig = (): Result<ServerConfig, ConfigLoadError> => {
         logLevel: process.env.CORTEX_LOG_LEVEL,
         outputFormat: process.env.CORTEX_OUTPUT_FORMAT,
         categoryMode: process.env.CORTEX_CATEGORY_MODE,
-        autoSummaryThreshold: process.env.CORTEX_AUTO_SUMMARY_THRESHOLD,
     };
 
     // Create schema at runtime to get correct homedir() default

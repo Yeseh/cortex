@@ -228,6 +228,10 @@ export const createCategoryHandler = async (
     input: CreateCategoryInput,
     modeContext?: CategoryModeContext,
 ): Promise<McpToolResponse> => {
+    // Validate input path: empty string should be considered invalid
+    if (typeof input.path !== 'string' || input.path.trim() === '') {
+        throw new McpError(ErrorCode.InvalidParams, 'Category path is required');
+    }
     const storeResult = ctx.cortex.getStore(input.store);
     if (!storeResult.ok()) {
         throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
