@@ -14,7 +14,8 @@ import { createMemory } from '@yeseh/cortex-core/memory';
 import { createCategory } from '@yeseh/cortex-core/category';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 import type { ConfigStores, CortexConfig, CortexContext } from '@yeseh/cortex-core';
-import { testContext } from '@yeseh/cortex-core/testing';
+import { testContext } from '@yeseh/cortex-core';
+import { PassThrough } from 'node:stream';
 
 export const TestDate = new Date('2024-01-01T00:00:00Z'); // Fixed date for test determinism
 
@@ -68,7 +69,8 @@ export const createTestContext = (testDir: string): CortexContext => {
         stores: config.stores, 
         cortex,
         now: () => TestDate, // Override now for test determinism
-        stdin: new ReadableStream(), // Default stdin (can be overridden in tests)
+        stdin: new PassThrough() as unknown as NodeJS.ReadStream,  // Default stdin (can be overridden in tests)
+        stdout: new PassThrough() as unknown as NodeJS.WriteStream,  // Default stdout (can be overridden in tests)
     };
 };
 
@@ -116,7 +118,14 @@ export const createTestContextWithStores = (
         },
     });
 
-    return { config, cortex, now: () => TestDate, stdin: '' };
+    return { 
+        settings: config.settings!, 
+        stores: config.stores,
+        cortex, 
+        now: () => TestDate, 
+        stdin: new PassThrough() as unknown as NodeJS.ReadStream, 
+        stdout: new PassThrough() as unknown as NodeJS.WriteStream 
+    };
 };
 
 /**
