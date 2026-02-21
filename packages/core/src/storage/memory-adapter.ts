@@ -1,6 +1,6 @@
-import type { Memory, MemoryData, MemoryPath } from "@/memory";
-import type { Result } from "@/result";
-import type { StorageAdapterError } from ".";
+import type { Memory, MemoryData, MemoryPath } from '@/memory';
+import type { Result } from '@/result';
+import type { StorageAdapterError } from '.';
 
 /**
  * Storage interface for memory file operations.
