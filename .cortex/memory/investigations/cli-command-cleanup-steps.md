@@ -1,0 +1,4 @@
+---
+{created_at: 2026-02-20T21:04:29.444Z,updated_at: 2026-02-20T21:04:29.444Z,tags: [cli,commands,cleanup,standards],source: mcp,expires_at: 2026-02-21T00:00:00.000Z}
+---
+General steps to update CLI commands to recent standards: use createCliCommandContext to resolve CortexContext, validate input paths with MemoryPath/CategoryPath before operations, resolve store via ctx.cortex.getStore and handle errors, use store clients (store.getMemory(...)) instead of resolveStoreAdapter, keep parsing helpers for tags/expires/citations consistent with add.ts, and standardize output/format handling (default yaml, serializeOutput).

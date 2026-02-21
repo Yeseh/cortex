@@ -4,20 +4,44 @@
  */
 
 import { describe, it, expect } from 'bun:test';
-import type { StorageAdapterError } from '@/storage/adapter.ts';
-import type { Memory } from '@/memory';
+import type { StorageAdapterError } from '@/storage/index.ts';
+import type { MemoryData, Memory } from '@/memory';
 import { createMemory } from './create.ts';
-import {  createMockStorage } from './test-helpers.spec.ts';
+import { createMockStorage } from './test-helpers.spec.ts';
 import { err, ok } from '@/result.ts';
+
+/** Helper to create a minimal MemoryData with metadata */
+const createMemoryData = (
+    content: string,
+    source: string,
+    overrides: {
+        tags?: string[];
+        expiresAt?: Date;
+        citations?: string[];
+    } = {},
+): MemoryData => {
+    const now = new Date();
+    return {
+        content,
+        metadata: {
+            createdAt: now,
+            updatedAt: now,
+            tags: overrides.tags ?? [],
+            source,
+            expiresAt: overrides.expiresAt,
+            citations: overrides.citations ?? [],
+        },
+    };
+};
 
 describe('createMemory', () => {
     it('should create a memory with all fields', async () => {
-        let writtenMemory: Memory | undefined;
+        let writtenMemory: MemoryData | undefined;
         let indexedMemory: Memory | undefined;
 
         const storage = createMockStorage({
             memories: {
-                write: async (memory) => {
+                save: async (_path, memory) => {
                     writtenMemory = memory;
                     return ok(undefined);
                 },
@@ -32,49 +56,52 @@ describe('createMemory', () => {
 
         const now = new Date('2024-06-15T10:30:00.000Z');
         const expiresAt = new Date('2030-06-01T00:00:00Z');
-        const result = await createMemory(storage, 'project/test/memory', {
-            content: 'Test content',
-            tags: [
-                'tag1', 'tag2',
-            ],
-            source: 'test',
-            expiresAt,
-            citations: ['docs/spec.md'],
-        }, now);
+        const result = await createMemory(
+            storage,
+            'project/test/memory',
+            createMemoryData('Test content', 'test', {
+                tags: [
+                    'tag1', 'tag2',
+                ],
+                expiresAt,
+                citations: ['docs/spec.md'],
+            }),
+            now,
+        );
 
         expect(result.ok()).toBe(true);
         expect(writtenMemory).toBeDefined();
         expect(indexedMemory).toBeDefined();
-        if (writtenMemory && indexedMemory) {
-            expect(writtenMemory).toBe(indexedMemory);
-            expect(writtenMemory.path.category.toString()).toBe('project/test');
-            expect(writtenMemory.path.slug.toString()).toBe('memory');
-            expect(writtenMemory.content).toBe('Test content');
-            expect(writtenMemory.metadata.tags).toEqual([
+        if (indexedMemory) {
+            expect(indexedMemory.path.category.toString()).toBe('project/test');
+            expect(indexedMemory.path.slug.toString()).toBe('memory');
+            expect(indexedMemory.content).toBe('Test content');
+            expect(indexedMemory.metadata.tags).toEqual([
                 'tag1', 'tag2',
             ]);
-            expect(writtenMemory.metadata.source).toBe('test');
-            expect(writtenMemory.metadata.expiresAt).toEqual(expiresAt);
-            expect(writtenMemory.metadata.citations).toEqual(['docs/spec.md']);
-            expect(writtenMemory.metadata.createdAt).toEqual(now);
-            expect(writtenMemory.metadata.updatedAt).toEqual(now);
+            expect(indexedMemory.metadata.source).toBe('test');
+            expect(indexedMemory.metadata.expiresAt).toEqual(expiresAt);
+            expect(indexedMemory.metadata.citations).toEqual(['docs/spec.md']);
+            expect(indexedMemory.metadata.createdAt).toEqual(now);
+            expect(indexedMemory.metadata.updatedAt).toEqual(now);
         }
     });
 
     it('should create a memory with minimal fields', async () => {
-        let writtenMemory: Memory | undefined;
+        let writtenMemory: MemoryData | undefined;
         const storage = createMockStorage({
             memories: {
-                write: async (memory) => {
+                save: async (_path, memory) => {
                     writtenMemory = memory;
                     return ok(undefined);
                 },
             },
         });
-        const result = await createMemory(storage, 'project/test/memory', {
-            content: 'Test content',
-            source: 'test',
-        });
+        const result = await createMemory(
+            storage,
+            'project/test/memory',
+            createMemoryData('Test content', 'test'),
+        );
         expect(result.ok()).toBe(true);
         expect(writtenMemory).toBeDefined();
         if (writtenMemory) {
@@ -84,10 +111,10 @@ describe('createMemory', () => {
     });
 
     it('should create a memory with expiration', async () => {
-        let writtenMemory: Memory | undefined;
+        let writtenMemory: MemoryData | undefined;
         const storage = createMockStorage({
             memories: {
-                write: async (memory) => {
+                save: async (_path, memory) => {
                     writtenMemory = memory;
                     return ok(undefined);
                 },
@@ -95,11 +122,11 @@ describe('createMemory', () => {
         });
 
         const expiresAt = new Date('2030-06-01T00:00:00Z');
-        const result = await createMemory(storage, 'project/test/memory', {
-            content: 'Expiring content',
-            source: 'test',
-            expiresAt,
-        });
+        const result = await createMemory(
+            storage,
+            'project/test/memory',
+            createMemoryData('Expiring content', 'test', { expiresAt }),
+        );
 
         expect(result.ok()).toBe(true);
         expect(writtenMemory?.metadata.expiresAt).toEqual(expiresAt);
@@ -107,10 +134,11 @@ describe('createMemory', () => {
 
     it('should return INVALID_PATH for malformed path', async () => {
         const storage = createMockStorage();
-        const result = await createMemory(storage, 'invalid', {
-            content: 'Test content',
-            source: 'test',
-        });
+        const result = await createMemory(
+            storage,
+            'invalid',
+            createMemoryData('Test content', 'test'),
+        );
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_PATH');
@@ -119,10 +147,7 @@ describe('createMemory', () => {
 
     it('should return INVALID_PATH for empty path', async () => {
         const storage = createMockStorage();
-        const result = await createMemory(storage, '', {
-            content: 'Test content',
-            source: 'test',
-        });
+        const result = await createMemory(storage, '', createMemoryData('Test content', 'test'));
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_PATH');
@@ -132,14 +157,15 @@ describe('createMemory', () => {
     it('should return STORAGE_ERROR when write fails', async () => {
         const storage = createMockStorage({
             memories: {
-                write: async () =>
+                save: async () =>
                     err({ code: 'IO_WRITE_ERROR', message: 'Disk full' } as StorageAdapterError),
             },
         });
-        const result = await createMemory(storage, 'project/test/memory', {
-            content: 'Test content',
-            source: 'test',
-        });
+        const result = await createMemory(
+            storage,
+            'project/test/memory',
+            createMemoryData('Test content', 'test'),
+        );
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
             expect(result.error.code).toBe('STORAGE_ERROR');
@@ -156,10 +182,11 @@ describe('createMemory', () => {
                     } as StorageAdapterError),
             },
         });
-        const result = await createMemory(storage, 'project/test/memory', {
-            content: 'Test content',
-            source: 'test',
-        });
+        const result = await createMemory(
+            storage,
+            'project/test/memory',
+            createMemoryData('Test content', 'test'),
+        );
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
             expect(result.error.code).toBe('STORAGE_ERROR');
@@ -171,10 +198,10 @@ describe('createMemory', () => {
     });
 
     it('should use provided timestamp when now parameter is given', async () => {
-        let writtenMemory: Memory | undefined;
+        let writtenMemory: MemoryData | undefined;
         const storage = createMockStorage({
             memories: {
-                write: async (memory) => {
+                save: async (_path, memory) => {
                     writtenMemory = memory;
                     return ok(undefined);
                 },
@@ -185,7 +212,7 @@ describe('createMemory', () => {
         const result = await createMemory(
             storage,
             'project/test/memory',
-            { content: 'Test', source: 'test' },
+            createMemoryData('Test', 'test'),
             customTime,
         );
 
@@ -196,10 +223,11 @@ describe('createMemory', () => {
 
     it('should return the created Memory object', async () => {
         const storage = createMockStorage();
-        const result = await createMemory(storage, 'project/test/memory', {
-            content: 'Test content',
-            source: 'test',
-        });
+        const result = await createMemory(
+            storage,
+            'project/test/memory',
+            createMemoryData('Test content', 'test'),
+        );
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -211,10 +239,11 @@ describe('createMemory', () => {
 
     it('should return Memory with normalized path when input has double slashes', async () => {
         const storage = createMockStorage();
-        const result = await createMemory(storage, 'project//test//memory', {
-            content: 'Test content',
-            source: 'test',
-        });
+        const result = await createMemory(
+            storage,
+            'project//test//memory',
+            createMemoryData('Test content', 'test'),
+        );
 
         expect(result.ok()).toBe(true);
         if (result.ok()) {
@@ -228,10 +257,11 @@ describe('createMemory', () => {
             categories: { exists: async () => ok(false) },
         });
 
-        const result = await createMemory(adapter, 'missing-category/memory', {
-            content: 'Test content',
-            source: 'test',
-        });
+        const result = await createMemory(
+            adapter,
+            'missing-category/memory',
+            createMemoryData('Test content', 'test'),
+        );
 
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
@@ -246,10 +276,11 @@ describe('createMemory', () => {
             categories: { exists: async () => ok(false) },
         });
 
-        const result = await createMemory(adapter, 'existing/missing/memory', {
-            content: 'Test content',
-            source: 'test',
-        });
+        const result = await createMemory(
+            adapter,
+            'existing/missing/memory',
+            createMemoryData('Test content', 'test'),
+        );
 
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
@@ -261,10 +292,11 @@ describe('createMemory', () => {
     it('should return INVALID_PATH for memory without category', async () => {
         const adapter = createMockStorage();
 
-        const result = await createMemory(adapter, 'just-a-memory', {
-            content: 'Test content',
-            source: 'test',
-        });
+        const result = await createMemory(
+            adapter,
+            'just-a-memory',
+            createMemoryData('Test content', 'test'),
+        );
 
         expect(result.ok()).toBe(false);
         if (!result.ok()) {

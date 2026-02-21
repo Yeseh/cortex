@@ -19,7 +19,7 @@ describe('serialize()', () => {
 
             expect(result.ok()).toBe(true);
             if (result.ok()) {
-                expect(result.value).toBe('{"name":"test","value":42}');
+                expect(result.value).toBe(JSON.stringify(obj, null, 2));
             }
         });
 
@@ -30,7 +30,7 @@ describe('serialize()', () => {
 
             expect(result.ok()).toBe(true);
             if (result.ok()) {
-                expect(result.value).toBe('{"outer":{"inner":{"deep":"value"}}}');
+                expect(result.value).toBe(JSON.stringify(obj, null, 2));
             }
         });
 
@@ -45,7 +45,7 @@ describe('serialize()', () => {
 
             expect(result.ok()).toBe(true);
             if (result.ok()) {
-                expect(result.value).toBe('{"items":[1,2,3]}');
+                expect(result.value).toBe(JSON.stringify(obj, null, 2));
             }
         });
 
@@ -56,7 +56,7 @@ describe('serialize()', () => {
 
             expect(result.ok()).toBe(true);
             if (result.ok()) {
-                expect(result.value).toBe('{"nullable":null}');
+                expect(result.value).toBe(JSON.stringify(obj, null, 2));
             }
         });
 

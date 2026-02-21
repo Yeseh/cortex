@@ -106,16 +106,16 @@ describe('CategoryPath', () => {
             const standards = CategoryPath.fromString('standards');
             const nested = CategoryPath.fromString('standards/typescript/rules');
 
-            expect(root.isUnder(root)).toBe(true);
-            expect(standards.ok() && standards.value.isUnder(root)).toBe(true);
-            expect(nested.ok() && nested.value.isUnder(root)).toBe(true);
+            expect(root.isChildOf(root)).toBe(true);
+            expect(standards.ok() && standards.value.isChildOf(root)).toBe(true);
+            expect(nested.ok() && nested.value.isChildOf(root)).toBe(true);
         });
 
         it('should match itself for non-root scope', () => {
             const standardsResult = CategoryPath.fromString('standards');
             expect(standardsResult.ok()).toBe(true);
             if (standardsResult.ok()) {
-                expect(standardsResult.value.isUnder(standardsResult.value)).toBe(true);
+                expect(standardsResult.value.isChildOf(standardsResult.value)).toBe(true);
             }
         });
 
@@ -129,8 +129,8 @@ describe('CategoryPath', () => {
             expect(rulesResult.ok()).toBe(true);
 
             if (standardsResult.ok() && typescriptResult.ok() && rulesResult.ok()) {
-                expect(typescriptResult.value.isUnder(standardsResult.value)).toBe(true);
-                expect(rulesResult.value.isUnder(standardsResult.value)).toBe(true);
+                expect(typescriptResult.value.isChildOf(standardsResult.value)).toBe(true);
+                expect(rulesResult.value.isChildOf(standardsResult.value)).toBe(true);
             }
         });
 
@@ -144,8 +144,8 @@ describe('CategoryPath', () => {
             expect(humanProfileResult.ok()).toBe(true);
 
             if (standardsResult.ok() && humanResult.ok() && humanProfileResult.ok()) {
-                expect(humanResult.value.isUnder(standardsResult.value)).toBe(false);
-                expect(humanProfileResult.value.isUnder(standardsResult.value)).toBe(false);
+                expect(humanResult.value.isChildOf(standardsResult.value)).toBe(false);
+                expect(humanProfileResult.value.isChildOf(standardsResult.value)).toBe(false);
             }
         });
 
@@ -158,7 +158,7 @@ describe('CategoryPath', () => {
 
             if (standardsResult.ok() && typescriptResult.ok()) {
                 // standards is an ancestor of standards/typescript, not under it
-                expect(standardsResult.value.isUnder(typescriptResult.value)).toBe(false);
+                expect(standardsResult.value.isChildOf(typescriptResult.value)).toBe(false);
             }
         });
 
@@ -168,7 +168,7 @@ describe('CategoryPath', () => {
             
             expect(standardsResult.ok()).toBe(true);
             if (standardsResult.ok()) {
-                expect(root.isUnder(standardsResult.value)).toBe(false);
+                expect(root.isChildOf(standardsResult.value)).toBe(false);
             }
         });
     });

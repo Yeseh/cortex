@@ -76,9 +76,6 @@ export interface OutputSerializeError {
     message: string;
 }
 
-/** Re-export toonOptions for backwards compatibility */
-export { toonOptions } from '@yeseh/cortex-core';
-
 /**
  * Serialize an output payload to the specified format.
  *
@@ -90,10 +87,10 @@ export { toonOptions } from '@yeseh/cortex-core';
  * @returns Result with serialized string or error
  */
 export const serializeOutput = (
-    payload: OutputPayload,
+    payload: unknown,
     format: OutputFormat,
 ): Result<string, OutputSerializeError> => {
-    const result = serialize(payload.value, format);
+    const result = serialize(payload, format);
 
     if (result.ok()) {
         return ok(result.value);

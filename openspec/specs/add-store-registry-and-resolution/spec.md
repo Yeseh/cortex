@@ -312,7 +312,7 @@ The system SHALL provide a `CategoryClient` class that enables fluent navigation
 
 **Parsing:** 2. `parsePath(): Result<CategoryPath, PathError>` - Parse raw path to value object
 
-**Navigation (synchronous, lazy validation):** 3. `getCategory(path: string): CategoryClient` - Get subcategory by relative path 4. `getMemory(slug: string): MemoryClient` - Get memory client for slug 5. `parent(): CategoryClient | null` - Parent category, null if root
+**Navigation (synchronous, lazy validation):** 3. `getCategory(path: string): CategoryClient` - Get subcategory by relative path 4. `getMemory(slug: string): Result<MemoryClient, MemoryError>` - Get memory client for slug 5. `parent(): CategoryClient | null` - Parent category, null if root
 
 **Lifecycle:** 6. `create(): Promise<Result<Category, CategoryError>>` - Create category on disk 7. `delete(): Promise<Result<void, CategoryError>>` - Delete category (always recursive) 8. `exists(): Promise<Result<boolean, CategoryError>>` - Check if category exists
 
@@ -426,45 +426,47 @@ The system SHALL provide a `MemoryClient` class that enables fluent operations o
 
 **Properties:**
 
-1. `readonly rawPath: string` - Full path including category (e.g., `/standards/javascript/style`)
-2. `readonly rawSlug: string` - Memory name only (e.g., `style`)
+1. `path: MemoryPath` - Full path including category (e.g., `standards/javascript/style`)
+2. `slug: Slug` - Memory name value object (e.g., `style`)
 
-**Parsing:** 3. `parsePath(): Result<MemoryPath, PathError>` - Parse raw path to value object 4. `parseSlug(): Result<Slug, PathError>` - Parse raw slug to value object
+**Factory:** 3. `create(path: string, slug: string, adapter: ScopedStorageAdapter): MemoryResult<MemoryClient>` - Create validated client
 
-**Lifecycle (lazy validation):** 5. `create(input: CreateMemoryInput): Promise<Result<Memory, MemoryError>>` - Create memory 6. `get(options?: GetMemoryOptions): Promise<Result<Memory, MemoryError>>` - Retrieve memory 7. `update(input: UpdateMemoryInput): Promise<Result<Memory, MemoryError>>` - Update memory 8. `delete(): Promise<Result<void, MemoryError>>` - Remove memory 9. `exists(): Promise<Result<boolean, MemoryError>>` - Check if memory exists
+**Parsing:** 4. `parsePath(): Result<MemoryPath, MemoryError>` - Parse path to value object 5. `parseSlug(): Result<Slug, MemoryError>` - Parse raw slug to value object
 
-**Movement:** 10. `move(destination: MemoryClient | MemoryPath): Promise<Result<MemoryClient, MemoryError>>` - Move memory
+**Lifecycle (lazy validation):** 6. `create(input: CreateMemoryInput): Promise<Result<Memory, MemoryError>>` - Create memory 7. `get(options?: GetMemoryOptions): Promise<Result<Memory, MemoryError>>` - Retrieve memory 8. `update(input: UpdateMemoryInput): Promise<Result<Memory, MemoryError>>` - Update memory 9. `delete(): Promise<Result<void, MemoryError>>` - Remove memory 10. `exists(): Promise<Result<boolean, MemoryError>>` - Check if memory exists
+
+**Movement:** 11. `move(destination: MemoryClient | MemoryPath): Promise<MemoryResult<MemoryClient>>` - Move memory
 
 #### Scenario: MemoryClient path and slug
 
 - **GIVEN** a category client for "/standards/javascript"
 - **WHEN** `getMemory('style')` is called
-- **THEN** the returned `MemoryClient` has `rawPath` "/standards/javascript/style"
-- **AND** `rawSlug` equals "style"
+- **THEN** it returns `Result.ok(MemoryClient)`
+- **AND** the client `path` equals `standards/javascript/style`
+- **AND** the client `slug` equals `style`
 
 #### Scenario: Parse path
 
-- **GIVEN** a `MemoryClient` with `rawPath` "/standards/javascript/style"
+- **GIVEN** a `MemoryClient` with `path` `standards/javascript/style`
 - **WHEN** `parsePath()` is called
 - **THEN** it returns `Result.ok(MemoryPath)` with correct segments
 
 #### Scenario: Parse slug
 
-- **GIVEN** a `MemoryClient` with `rawSlug` "style"
+- **GIVEN** a `MemoryClient` with `slug` "style"
 - **WHEN** `parseSlug()` is called
 - **THEN** it returns `Result.ok(Slug)` with value "style"
 
-#### Scenario: Lazy validation - valid slug
+#### Scenario: Factory rejects invalid path
 
-- **GIVEN** a `MemoryClient` created with valid slug "style-guide"
-- **WHEN** `get()` is called
-- **THEN** the slug is validated successfully
-- **AND** the operation proceeds
+- **GIVEN** an invalid memory path like "/invalid"
+- **WHEN** `MemoryClient.create(path, slug, adapter)` is called
+- **THEN** it returns error with code `INVALID_PATH`
 
-#### Scenario: Lazy validation - invalid slug
+#### Scenario: Parse slug invalid input
 
 - **GIVEN** a `MemoryClient` created with invalid slug "INVALID SLUG!!!"
-- **WHEN** `get()` is called
+- **WHEN** `parseSlug()` is called
 - **THEN** it returns error with code `INVALID_PATH`
 
 #### Scenario: Create memory
@@ -527,10 +529,10 @@ The system SHALL provide a `MemoryClient` class that enables fluent operations o
 - **THEN** the memory is moved on disk
 - **AND** it returns a new `MemoryClient` for "/archive/2024/old-style"
 
-#### Scenario: Move preserves source client rawPath
+#### Scenario: Move preserves source client path
 
 - **GIVEN** a `MemoryClient` source for "/standards/style"
 - **WHEN** `move(destination)` is called
-- **THEN** the source client's `rawPath` remains "/standards/style"
+- **THEN** the source client's `path` remains `standards/style`
 - **AND** a new client is returned for the destination
 

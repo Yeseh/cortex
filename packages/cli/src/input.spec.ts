@@ -4,7 +4,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
 
-import { resolveMemoryContentInput } from './input.ts';
+import { resolveInput } from './input.ts';
+
+const createMockStdin = (data: string, isTTY = false): NodeJS.ReadableStream => {
+    const stream = Readable.from([data]) as NodeJS.ReadableStream & { isTTY?: boolean };
+    stream.isTTY = isTTY;
+    return stream;
+};
 
 describe('resolveMemoryContentInput', () => {
     let tempDir: string;
@@ -21,7 +27,7 @@ describe('resolveMemoryContentInput', () => {
 
     describe('content flag', () => {
         it('should return content from --content flag', async () => {
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 content: 'Hello, world!',
             });
 
@@ -33,7 +39,7 @@ describe('resolveMemoryContentInput', () => {
         });
 
         it('should return empty string when content is empty', async () => {
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 content: '',
             });
 
@@ -50,7 +56,7 @@ describe('resolveMemoryContentInput', () => {
             const filePath = join(tempDir, 'input.txt');
             await fs.writeFile(filePath, 'File content here');
 
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 filePath,
             });
 
@@ -62,7 +68,7 @@ describe('resolveMemoryContentInput', () => {
         });
 
         it('should return error for non-existent file', async () => {
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 filePath: join(tempDir, 'nonexistent.txt'),
             });
 
@@ -74,7 +80,7 @@ describe('resolveMemoryContentInput', () => {
         });
 
         it('should return error for empty file path', async () => {
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 filePath: '   ',
             });
 
@@ -88,7 +94,7 @@ describe('resolveMemoryContentInput', () => {
             const filePath = join(tempDir, 'trimmed.txt');
             await fs.writeFile(filePath, 'Trimmed content');
 
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 filePath: `  ${filePath}  `,
             });
 
@@ -100,17 +106,13 @@ describe('resolveMemoryContentInput', () => {
     });
 
     describe('stdin input', () => {
-        const createMockStdin = (data: string, isTTY = false): NodeJS.ReadableStream => {
-            const stream = Readable.from([data]) as NodeJS.ReadableStream & { isTTY?: boolean };
-            stream.isTTY = isTTY;
-            return stream;
-        };
+
 
         it('should read content from stdin', async () => {
             const mockStdin = createMockStdin('Stdin content');
 
-            const result = await resolveMemoryContentInput({
-                stdin: mockStdin,
+            const result = await resolveInput({
+                stream: mockStdin,
             });
 
             expect(result.ok()).toBe(true);
@@ -123,8 +125,8 @@ describe('resolveMemoryContentInput', () => {
         it('should return null for TTY stdin', async () => {
             const mockStdin = createMockStdin('', true);
 
-            const result = await resolveMemoryContentInput({
-                stdin: mockStdin,
+            const result = await resolveInput({
+                stream: mockStdin,
             });
 
             expect(result.ok()).toBe(true);
@@ -137,9 +139,8 @@ describe('resolveMemoryContentInput', () => {
         it('should read stdin when stdinRequested is true', async () => {
             const mockStdin = createMockStdin('Requested stdin');
 
-            const result = await resolveMemoryContentInput({
-                stdin: mockStdin,
-                stdinRequested: true,
+            const result = await resolveInput({
+                stream: mockStdin,
             });
 
             expect(result.ok()).toBe(true);
@@ -148,43 +149,11 @@ describe('resolveMemoryContentInput', () => {
                 expect(result.value.source).toBe('stdin');
             }
         });
-
-        it('should skip stdin when requireStdinFlag is true but not requested', async () => {
-            const mockStdin = createMockStdin('Ignored stdin');
-
-            const result = await resolveMemoryContentInput({
-                stdin: mockStdin,
-                requireStdinFlag: true,
-                stdinRequested: false,
-            });
-
-            expect(result.ok()).toBe(true);
-            if (result.ok()) {
-                expect(result.value.content).toBeNull();
-                expect(result.value.source).toBe('none');
-            }
-        });
-
-        it('should read stdin when requireStdinFlag and stdinRequested are both true', async () => {
-            const mockStdin = createMockStdin('Required stdin');
-
-            const result = await resolveMemoryContentInput({
-                stdin: mockStdin,
-                requireStdinFlag: true,
-                stdinRequested: true,
-            });
-
-            expect(result.ok()).toBe(true);
-            if (result.ok()) {
-                expect(result.value.content).toBe('Required stdin');
-                expect(result.value.source).toBe('stdin');
-            }
-        });
     });
 
     describe('multiple sources error', () => {
         it('should error when content and file are both provided', async () => {
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 content: 'Content',
                 filePath: '/some/file.txt',
             });
@@ -196,9 +165,9 @@ describe('resolveMemoryContentInput', () => {
         });
 
         it('should error when content and stdin are both requested', async () => {
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 content: 'Content',
-                stdinRequested: true,
+                stream: createMockStdin('Stdin content'),
             });
 
             expect(result.ok()).toBe(false);
@@ -208,9 +177,9 @@ describe('resolveMemoryContentInput', () => {
         });
 
         it('should error when file and stdin are both requested', async () => {
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 filePath: '/some/file.txt',
-                stdinRequested: true,
+                stream: createMockStdin('Stdin content'),
             });
 
             expect(result.ok()).toBe(false);
@@ -220,10 +189,10 @@ describe('resolveMemoryContentInput', () => {
         });
 
         it('should error when all three sources are provided', async () => {
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 content: 'Content',
                 filePath: '/some/file.txt',
-                stdinRequested: true,
+                stream: createMockStdin('Stdin content'),
             });
 
             expect(result.ok()).toBe(false);
@@ -234,28 +203,11 @@ describe('resolveMemoryContentInput', () => {
     });
 
     describe('missing content error', () => {
-        it('should error when requireContent is true but no content provided', async () => {
-            const mockStdin = Readable.from([]) as NodeJS.ReadableStream & { isTTY?: boolean };
-            mockStdin.isTTY = true;
-
-            const result = await resolveMemoryContentInput({
-                stdin: mockStdin,
-                requireContent: true,
-            });
-
-            expect(result.ok()).toBe(false);
-            if (!result.ok()) {
-                expect(result.error.code).toBe('MISSING_CONTENT');
-            }
-        });
-
-        it('should return null content when requireContent is false', async () => {
-            const mockStdin = Readable.from([]) as NodeJS.ReadableStream & { isTTY?: boolean };
-            mockStdin.isTTY = true;
-
-            const result = await resolveMemoryContentInput({
-                stdin: mockStdin,
-                requireContent: false,
+        it('should error when no source was provided', async () => {
+            const result = await resolveInput({
+                content: undefined,
+                filePath: undefined,
+                stream: undefined,
             });
 
             expect(result.ok()).toBe(true);
@@ -269,7 +221,7 @@ describe('resolveMemoryContentInput', () => {
     describe('priority order', () => {
         it('should prefer content flag over file', async () => {
             // This should error because both are provided
-            const result = await resolveMemoryContentInput({
+            const result = await resolveInput({
                 content: 'Flag content',
                 filePath: join(tempDir, 'file.txt'),
             });
@@ -290,8 +242,8 @@ describe('resolveMemoryContentInput', () => {
             ]) as NodeJS.ReadableStream & { isTTY?: boolean };
             mockStdin.isTTY = false;
 
-            const result = await resolveMemoryContentInput({
-                stdin: mockStdin,
+            const result = await resolveInput({
+                stream: mockStdin,
             });
 
             expect(result.ok()).toBe(true);
@@ -309,8 +261,8 @@ describe('resolveMemoryContentInput', () => {
                 },
             } as unknown as NodeJS.ReadableStream;
 
-            const result = await resolveMemoryContentInput({
-                stdin: mockStdin,
+            const result = await resolveInput({
+                stream: mockStdin,
             });
 
             expect(result.ok()).toBe(true);
@@ -323,8 +275,8 @@ describe('resolveMemoryContentInput', () => {
             const mockStdin = Readable.from([]) as NodeJS.ReadableStream & { isTTY?: boolean };
             mockStdin.isTTY = true;
 
-            const result = await resolveMemoryContentInput({
-                stdin: mockStdin,
+            const result = await resolveInput({
+                stream: mockStdin,
             });
 
             expect(result.ok()).toBe(true);

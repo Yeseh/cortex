@@ -4,7 +4,7 @@
  * @module core/memory/operations/recent
  */
 
-import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
+import type { StorageAdapter } from '@/storage/index.ts';
 import { ok, type Result } from '@/result.ts';
 import { discoverRootCategories } from './helpers.ts';
 import { type MemoryPath } from '../memory-path.ts';
@@ -72,7 +72,7 @@ export interface GetRecentMemoriesResult {
  * ```
  */
 export const getRecentMemories = async (
-    storage: ScopedStorageAdapter,
+    storage: StorageAdapter,
     options?: GetRecentMemoriesOptions,
 ): Promise<Result<GetRecentMemoriesResult, MemoryError>> => {
     const limit = options?.limit ?? 5;
@@ -91,7 +91,7 @@ export const getRecentMemories = async (
     const collectEntriesFromCategory = async (
         catPath: CategoryPath,
     ): Promise<Result<void, MemoryError>> => {
-        const indexResult = await storage.indexes.read(catPath);
+        const indexResult = await storage.indexes.load(catPath);
         if (!indexResult.ok()) {
             return memoryError('STORAGE_ERROR', `Failed to read index: ${catPath}`, {
                 cause: indexResult.error,
@@ -175,7 +175,7 @@ export const getRecentMemories = async (
         if (memories.length >= limit) break;
 
         // Read the memory to check expiration and get content
-        const readResult = await storage.memories.read(
+        const readResult = await storage.memories.load(
             entryWithCat.entry.path,
         );
 

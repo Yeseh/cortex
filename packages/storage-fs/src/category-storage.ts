@@ -13,16 +13,16 @@
  */
 
 import type { Result } from '@yeseh/cortex-core';
-import type { CategoryError, CategoryStorage } from '@yeseh/cortex-core/category';
+import type { CategoryError } from '@yeseh/cortex-core/category';
+import type { CategoryAdapter } from '@yeseh/cortex-core';
 import type { FilesystemContext } from './types.ts';
 import {
     exists as existsOp,
     ensure as ensureOp,
     deleteCategoryDirectory as deleteCategoryDirectoryOp,
-    updateSubcategoryDescription as updateSubcategoryDescriptionOp,
-    removeSubcategoryEntry as removeSubcategoryEntryOp,
+    updateSubcategoryDescription as setDescriptionOp,
 } from './categories.ts';
-import type { CategoryPath } from '../../core/src/category/category-path.ts';
+import type { CategoryPath } from '@yeseh/cortex-core';
 
 /**
  * Filesystem-based implementation of the CategoryStorage interface.
@@ -53,10 +53,9 @@ import type { CategoryPath } from '../../core/src/category/category-path.ts';
  *     console.log('Category exists');
  * }
  *
- * // Update subcategory description in parent's index
- * await storage.updateSubcategoryDescription(
- *     'project/cortex',           // parent path
- *     'project/cortex/docs',      // subcategory path
+ * // Set category description
+ * await storage.setDescription(
+ *     'project/cortex/docs',      // category path
  *     'Project documentation'     // description
  * );
  *
@@ -67,7 +66,7 @@ import type { CategoryPath } from '../../core/src/category/category-path.ts';
  * @see {@link CategoryStorage} - The interface this class implements
  * @see {@link FilesystemMemoryStorage} - For memory file operations
  */
-export class FilesystemCategoryStorage implements CategoryStorage {
+export class FilesystemCategoryStorage implements CategoryAdapter {
     /**
      * Creates a new FilesystemCategoryStorage instance.
      *
@@ -151,69 +150,39 @@ export class FilesystemCategoryStorage implements CategoryStorage {
     }
 
     /**
-     * Updates the description of a subcategory in its parent's index.
+     * Sets or clears the description of a category in its parent's index.
      *
      * Creates the parent's index file and subcategory entry if they don't exist.
      * Use this to add human-readable descriptions to category listings.
      *
-     * @param categoryPath - Full path to the subcategory being described
+     * @param categoryPath - Full path to the category being described
      * @param description - New description, or null to clear the description
      * @returns Result indicating success or failure
      *
      * @example
      * ```typescript
-     * // Add description to subcategory
-     * await storage.updateSubcategoryDescription(
-     *     'project/cortex',       // parent
-     *     'project/cortex/docs',  // subcategory
+     * // Set description for a category
+     * await storage.setDescription(
+     *     'project/cortex/docs',
      *     'Project documentation and guides'
      * );
      *
      * // Clear description
-     * await storage.updateSubcategoryDescription(
-     *     'project/cortex',
+     * await storage.setDescription(
      *     'project/cortex/docs',
      *     null
      * );
      * ```
      *
      * @edgeCases
-     * - Passing `''` as `parentPath` updates the root index.
      * - Passing `null` clears the description field.
+     * - Creates parent index if it doesn't exist.
      */
-    async updateSubcategoryDescription(
+    async setDescription(
         categoryPath: CategoryPath,
         description: string | null,
     ): Promise<Result<void, CategoryError>> {
-        return updateSubcategoryDescriptionOp(this.ctx, categoryPath, description);
-    }
-
-    /**
-     * Removes a subcategory entry from its parent's index.
-     *
-     * Only removes the index entry, not the actual category directory.
-     * Returns success if the parent index doesn't exist (idempotent).
-     *
-     * @param path - Path to the parent category (empty string for root)
-     * @param subcategoryPath - Full path to the subcategory to remove from index
-     * @returns Result indicating success or failure
-     *
-     * @example
-     * ```typescript
-     * // Remove subcategory from parent's index
-     * await storage.removeSubcategoryEntry(
-     *     'project/cortex',
-     *     'project/cortex/old-docs'
-     * );
-     * ```
-     *
-     * @edgeCases
-     * - If the parent index is missing, this is treated as a no-op success.
-     * - Only the index entry is removed; the directory remains.
-     */
-    async removeSubcategoryEntry(path: CategoryPath,
-    ): Promise<Result<void, CategoryError>> {
-        return removeSubcategoryEntryOp(this.ctx, path);
+        return setDescriptionOp(this.ctx, categoryPath, description);
     }
 }
 

@@ -12,11 +12,10 @@ export type {
     CreateCategoryResult,
     SetDescriptionResult,
     DeleteCategoryResult,
-    CategoryStorage,
     CategoryModeContext,
+    CategoryMemoryEntry,
     // New types from index module
     Category,
-    CategoryMemoryEntry,
     SubcategoryEntry,
     IndexParseErrorCode,
     IndexParseError,
@@ -24,7 +23,10 @@ export type {
     IndexSerializeError,
 } from './types.ts';
 
-export { MAX_DESCRIPTION_LENGTH, ROOT_CATEGORIES, type RootCategory } from './types.ts';
+export { MAX_DESCRIPTION_LENGTH } from './types.ts';
+
+export * from './category-templates.ts';
+export * from './category-client.ts';
 
 export {
     createCategory,

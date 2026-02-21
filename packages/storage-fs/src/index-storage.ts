@@ -12,8 +12,8 @@
  */
 
 import type { CategoryPath, Result } from '@yeseh/cortex-core';
-import { err, ok, type Memory } from '@yeseh/cortex-core/memory';
-import type { IndexStorage, ReindexResult, StorageAdapterError } from '@yeseh/cortex-core/storage';
+import { err, ok, type Memory } from '@yeseh/cortex-core';
+import type { IndexAdapter, ReindexResult, StorageAdapterError } from '@yeseh/cortex-core';
 import type { Category } from '@yeseh/cortex-core/category';
 import type { FilesystemContext } from './types.ts';
 import {
@@ -45,9 +45,9 @@ import { parseIndex, serializeIndex } from './index-serialization.ts';
  *
  * const indexStorage = new FilesystemIndexStorage(ctx);
  *
- * // Read a category index
- * const result = await indexStorage.read('project/cortex');
- * if (result.ok() && result.value !== null) {
+ * // Load a category index
+ * const result = await indexStorage.load('project/cortex');
+ * if (result.ok && result.value !== null) {
  *     console.log('Index contents:', result.value);
  * }
  *
@@ -61,7 +61,7 @@ import { parseIndex, serializeIndex } from './index-serialization.ts';
  * @see {@link IndexStorage} - The interface this class implements
  * @see {@link FilesystemMemoryStorage} - Related memory storage implementation
  */
-export class FilesystemIndexStorage implements IndexStorage {
+export class FilesystemIndexStorage implements IndexAdapter {
     /**
      * Creates a new FilesystemIndexStorage instance.
      *
@@ -70,7 +70,7 @@ export class FilesystemIndexStorage implements IndexStorage {
     constructor(private readonly ctx: FilesystemContext) {}
 
     /**
-     * Reads the contents of a category index file.
+     * Loads the contents of a category index file.
      *
      * Index files contain YAML-formatted category metadata including
      * memory entries and subcategory references.
@@ -80,18 +80,18 @@ export class FilesystemIndexStorage implements IndexStorage {
      *
      * @example
      * ```typescript
-     * // Read root index
-     * const rootResult = await storage.read('');
+     * // Load root index
+     * const rootResult = await storage.load('');
      *
-     * // Read category index
-     * const categoryResult = await storage.read('project/cortex');
+     * // Load category index
+     * const categoryResult = await storage.load('project/cortex');
      * ```
      *
      * @edgeCases
-     * - Passing an empty string reads the root index file.
+     * - Passing an empty string loads the root index file.
      * - Missing index files return `ok(null)` rather than an error.
      */
-    async read(name: CategoryPath): Promise<Result<Category | null, StorageAdapterError>> {
+    async load(name: CategoryPath): Promise<Result<Category | null, StorageAdapterError>> {
         const contents = await readIndexFile(this.ctx, name);
         if (!contents.ok()) {
             return contents;
@@ -110,20 +110,6 @@ export class FilesystemIndexStorage implements IndexStorage {
             });
         }
         return ok(parsed.value);
-    }
-
-    /**
-     * Reads the deprecated index file API.
-     *
-     * This method returns the structured {@link Category} (or null when
-     * missing), not raw YAML contents. It is retained for compatibility only.
-     *
-     * @deprecated Prefer {@link read} which returns structured data.
-     */
-    async readIndexFile(
-        name: CategoryPath,
-    ): Promise<Result<Category | null, StorageAdapterError>> {
-        return this.read(name);
     }
 
     /**
@@ -163,21 +149,6 @@ export class FilesystemIndexStorage implements IndexStorage {
             });
         }
         return writeIndexFile(this.ctx, name, serialized.value);
-    }
-
-    /**
-     * Writes the deprecated index file API.
-     *
-     * This method accepts a structured {@link Category}, not raw YAML
-     * contents. It is retained for compatibility only.
-     *
-     * @deprecated Prefer {@link write} which accepts structured data.
-     */
-    async writeIndexFile(
-        name: CategoryPath,
-        contents: Category,
-    ): Promise<Result<void, StorageAdapterError>> {
-        return this.write(name, contents);
     }
 
     /**

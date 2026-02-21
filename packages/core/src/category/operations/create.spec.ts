@@ -34,17 +34,18 @@ describe('createCategory', () => {
         }
     });
 
-    it('should reject empty path', async () => {
+    it('should treat empty path as root and skip creation', async () => {
         const storage = createMockStorage();
         const result = await createCategory(storage, '');
 
-        expect(result.ok()).toBe(false);
-        if (!result.ok()) {
-            expect(result.error.code).toBe('INVALID_PATH');
+        expect(result.ok()).toBe(true);
+        if (result.ok()) {
+            expect(result.value.path).toBe('');
+            expect(result.value.created).toBe(false);
         }
     });
 
-    it('should not create root categories in ancestors', async () => {
+    it('should create only the requested category path', async () => {
         const ensureCalls: string[] = [];
         const storage = createMockStorage({
             ensure: mock(async (path: CategoryPath) => {
@@ -55,9 +56,7 @@ describe('createCategory', () => {
 
         await createCategory(storage, 'project/cortex/arch');
 
-        // Should create project/cortex but not project (root)
-        expect(ensureCalls).toContain('project/cortex');
-        expect(ensureCalls).not.toContain('project');
+        expect(ensureCalls).toEqual(['project/cortex/arch']);
     });
 });
 

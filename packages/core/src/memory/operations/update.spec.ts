@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'bun:test';
-import type { StorageAdapterError } from '@/storage/adapter.ts';
+import type { StorageAdapterError } from '@/storage/index.ts';
 import { updateMemory } from './update.ts';
 import { ok, err, createMockStorage, sampleMemory, expiredMemory } from './test-helpers.spec.ts';
 
@@ -12,8 +12,8 @@ describe('updateMemory', () => {
     it('should update content only', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async () => ok(sampleMemory),
-                write: async (_memory) => {
+                load: async () => ok(sampleMemory),
+                save: async (_memory) => {
                     return ok(undefined);
                 },
             },
@@ -34,7 +34,7 @@ describe('updateMemory', () => {
     it('should update tags only', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async () => ok(sampleMemory),
+                load: async () => ok(sampleMemory),
             },
         });
         const result = await updateMemory(storage, 'project/test/memory', {
@@ -55,7 +55,7 @@ describe('updateMemory', () => {
     it('should update expiration date', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async () => ok(sampleMemory),
+                load: async () => ok(sampleMemory),
             },
         });
         const newExpiry = new Date('2030-12-31T00:00:00Z');
@@ -71,7 +71,7 @@ describe('updateMemory', () => {
     it('should clear expiry with expiresAt=null', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async () => ok(expiredMemory),
+                load: async () => ok(expiredMemory),
             },
         });
         const result = await updateMemory(storage, 'project/test/memory', {
@@ -86,7 +86,7 @@ describe('updateMemory', () => {
     it('should preserve existing expiry when expiresAt is omitted', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async () => ok(expiredMemory),
+                load: async () => ok(expiredMemory),
             },
         });
         const result = await updateMemory(storage, 'project/test/memory', {
@@ -101,7 +101,7 @@ describe('updateMemory', () => {
     it('should update multiple fields at once', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async () => ok(sampleMemory),
+                load: async () => ok(sampleMemory),
             },
         });
         const result = await updateMemory(storage, 'project/test/memory', {
@@ -118,7 +118,7 @@ describe('updateMemory', () => {
     it('should preserve createdAt and update updatedAt', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async () => ok(sampleMemory),
+                load: async () => ok(sampleMemory),
             },
         });
         const updateTime = new Date('2025-06-20T10:00:00Z');
@@ -138,7 +138,7 @@ describe('updateMemory', () => {
     it('should return INVALID_INPUT when no updates provided', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async () => ok(sampleMemory),
+                load: async () => ok(sampleMemory),
             },
         });
         const result = await updateMemory(storage, 'project/test/memory', {});
@@ -171,7 +171,7 @@ describe('updateMemory', () => {
     it('should return STORAGE_ERROR when read fails', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async () =>
+                load: async () =>
                     err({ code: 'IO_READ_ERROR', message: 'IO error' } as StorageAdapterError),
             },
         });
@@ -187,8 +187,8 @@ describe('updateMemory', () => {
     it('should return STORAGE_ERROR when write fails', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async () => ok(sampleMemory),
-                write: async () =>
+                load: async () => ok(sampleMemory),
+                save: async () =>
                     err({ code: 'IO_WRITE_ERROR', message: 'Disk full' } as StorageAdapterError),
             },
         });
@@ -204,7 +204,7 @@ describe('updateMemory', () => {
     it('should return STORAGE_ERROR when index update fails', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async () => ok(sampleMemory),
+                load: async () => ok(sampleMemory),
             },
             indexes: {
                 updateAfterMemoryWrite: async () =>

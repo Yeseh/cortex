@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'bun:test';
-import type { StorageAdapterError } from '@/storage/adapter.ts';
+import type { StorageAdapterError } from '@/storage/index.ts';
 import type { MemoryPath } from '@/memory/memory-path.ts';
 import { CategoryPath } from '@/category/category-path.ts';
 import { pruneExpiredMemories } from './prune.ts';
@@ -28,7 +28,7 @@ describe('pruneExpiredMemories', () => {
     it('should return empty list when no expired memories', async () => {
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => {
+                load: async (path) => {
                     if (path.toString() === '') {
                         // Root index with no subcategories
                         return ok(buildIndex([], []));
@@ -46,13 +46,19 @@ describe('pruneExpiredMemories', () => {
 
     it('should return candidates without deleting in dry run mode', async () => {
         const rootIndex = buildIndex([], [{ path: categoryPath('project'), memoryCount: 1 }]);
-        const projectIndex = buildIndex([], [{ path: categoryPath('project/test'), memoryCount: 1 }]);
-        const testIndex = buildIndex([{ path: memoryPath('project/test/expired'), tokenEstimate: 100 }], []);
+        const projectIndex = buildIndex(
+            [],
+            [{ path: categoryPath('project/test'), memoryCount: 1 }],
+        );
+        const testIndex = buildIndex(
+            [{ path: memoryPath('project/test/expired'), tokenEstimate: 100 }],
+            [],
+        );
 
         let deleteCalled = false;
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => {
+                load: async (path) => {
                     const key = path.toString();
                     if (key === '') return ok(rootIndex);
                     if (key === 'project') return ok(projectIndex);
@@ -61,7 +67,7 @@ describe('pruneExpiredMemories', () => {
                 },
             },
             memories: {
-                read: async (path) =>
+                load: async (path) =>
                     ok(
                         buildMemoryFixture(
                             pathToString(path),
@@ -77,7 +83,10 @@ describe('pruneExpiredMemories', () => {
         });
 
         const now = new Date('2025-06-15T12:00:00Z');
-        const result = await pruneExpiredMemories(storage, CategoryPath.root(), { dryRun: true, now });
+        const result = await pruneExpiredMemories(storage, CategoryPath.root(), {
+            dryRun: true,
+            now,
+        });
         expect(result.ok()).toBe(true);
         expect(deleteCalled).toBe(false);
         if (result.ok() && result.value.pruned.length > 0) {
@@ -87,13 +96,19 @@ describe('pruneExpiredMemories', () => {
 
     it('should delete expired memories when not in dry run mode', async () => {
         const rootIndex = buildIndex([], [{ path: categoryPath('project'), memoryCount: 1 }]);
-        const projectIndex = buildIndex([], [{ path: categoryPath('project/test'), memoryCount: 1 }]);
-        const testIndex = buildIndex([{ path: memoryPath('project/test/expired'), tokenEstimate: 100 }], []);
+        const projectIndex = buildIndex(
+            [],
+            [{ path: categoryPath('project/test'), memoryCount: 1 }],
+        );
+        const testIndex = buildIndex(
+            [{ path: memoryPath('project/test/expired'), tokenEstimate: 100 }],
+            [],
+        );
 
         const deletedPaths: string[] = [];
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => {
+                load: async (path) => {
                     const key = path.toString();
                     if (key === '') return ok(rootIndex);
                     if (key === 'project') return ok(projectIndex);
@@ -102,7 +117,7 @@ describe('pruneExpiredMemories', () => {
                 },
             },
             memories: {
-                read: async (path) =>
+                load: async (path) =>
                     ok(
                         buildMemoryFixture(
                             pathToString(path),
@@ -128,13 +143,19 @@ describe('pruneExpiredMemories', () => {
 
     it('should reindex after pruning when memories were deleted', async () => {
         const rootIndex = buildIndex([], [{ path: categoryPath('project'), memoryCount: 1 }]);
-        const projectIndex = buildIndex([], [{ path: categoryPath('project/test'), memoryCount: 1 }]);
-        const testIndex = buildIndex([{ path: memoryPath('project/test/expired'), tokenEstimate: 100 }], []);
+        const projectIndex = buildIndex(
+            [],
+            [{ path: categoryPath('project/test'), memoryCount: 1 }],
+        );
+        const testIndex = buildIndex(
+            [{ path: memoryPath('project/test/expired'), tokenEstimate: 100 }],
+            [],
+        );
 
         let reindexCalled = false;
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => {
+                load: async (path) => {
                     const key = path.toString();
                     if (key === '') return ok(rootIndex);
                     if (key === 'project') return ok(projectIndex);
@@ -147,7 +168,7 @@ describe('pruneExpiredMemories', () => {
                 },
             },
             memories: {
-                read: async (path) =>
+                load: async (path) =>
                     ok(
                         buildMemoryFixture(
                             pathToString(path),
@@ -168,7 +189,7 @@ describe('pruneExpiredMemories', () => {
         let reindexCalled = false;
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => {
+                load: async (path) => {
                     if (path.toString() === '') {
                         // Root index with no subcategories
                         return ok(buildIndex([], []));
@@ -189,12 +210,18 @@ describe('pruneExpiredMemories', () => {
 
     it('should return STORAGE_ERROR when delete fails', async () => {
         const rootIndex = buildIndex([], [{ path: categoryPath('project'), memoryCount: 1 }]);
-        const projectIndex = buildIndex([], [{ path: categoryPath('project/test'), memoryCount: 1 }]);
-        const testIndex = buildIndex([{ path: memoryPath('project/test/expired'), tokenEstimate: 100 }], []);
+        const projectIndex = buildIndex(
+            [],
+            [{ path: categoryPath('project/test'), memoryCount: 1 }],
+        );
+        const testIndex = buildIndex(
+            [{ path: memoryPath('project/test/expired'), tokenEstimate: 100 }],
+            [],
+        );
 
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => {
+                load: async (path) => {
                     const key = path.toString();
                     if (key === '') return ok(rootIndex);
                     if (key === 'project') return ok(projectIndex);
@@ -203,7 +230,7 @@ describe('pruneExpiredMemories', () => {
                 },
             },
             memories: {
-                read: async (path) =>
+                load: async (path) =>
                     ok(
                         buildMemoryFixture(
                             pathToString(path),
@@ -229,12 +256,15 @@ describe('pruneExpiredMemories', () => {
 
     it('should skip non-expired memories', async () => {
         const rootIndex = buildIndex([], [{ path: categoryPath('project'), memoryCount: 1 }]);
-        const projectIndex = buildIndex([{ path: memoryPath('project/test/active'), tokenEstimate: 100 }], []);
+        const projectIndex = buildIndex(
+            [{ path: memoryPath('project/test/active'), tokenEstimate: 100 }],
+            [],
+        );
 
         const deletedPaths: string[] = [];
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => {
+                load: async (path) => {
                     const key = path.toString();
                     if (key === '') return ok(rootIndex);
                     if (key === 'project') return ok(projectIndex);
@@ -242,7 +272,7 @@ describe('pruneExpiredMemories', () => {
                 },
             },
             memories: {
-                read: async () => ok(memoryWithExpiry), // Not expired
+                load: async () => ok(memoryWithExpiry), // Not expired
                 remove: async (path) => {
                     deletedPaths.push(pathToString(path));
                     return ok(undefined);
@@ -271,22 +301,30 @@ describe('pruneExpiredMemories', () => {
         const deletedPaths: string[] = [];
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => {
+                load: async (path) => {
                     const key = path.toString();
                     if (key === '') return ok(rootIndex);
                     if (key === 'project') {
                         return ok(
-                            buildIndex([{ path: memoryPath('project/expired1'), tokenEstimate: 100 }], []),
+                            buildIndex(
+                                [{ path: memoryPath('project/expired1'), tokenEstimate: 100 }],
+                                [],
+                            ),
                         );
                     }
                     if (key === 'human') {
-                        return ok(buildIndex([{ path: memoryPath('human/expired2'), tokenEstimate: 50 }], []));
+                        return ok(
+                            buildIndex(
+                                [{ path: memoryPath('human/expired2'), tokenEstimate: 50 }],
+                                [],
+                            ),
+                        );
                     }
                     return ok(null);
                 },
             },
             memories: {
-                read: async (path) =>
+                load: async (path) =>
                     ok(
                         buildMemoryFixture(
                             pathToString(path),
@@ -324,24 +362,30 @@ describe('pruneExpiredMemories', () => {
         const deletedPaths: string[] = [];
         const storage = createMockStorage({
             indexes: {
-                read: async (path) => {
+                load: async (path) => {
                     const key = path.toString();
                     if (key === '') return ok(rootIndex);
                     if (key === 'todo') {
                         return ok(
-                            buildIndex([{ path: memoryPath('todo/expired-task'), tokenEstimate: 50 }], []),
+                            buildIndex(
+                                [{ path: memoryPath('todo/expired-task'), tokenEstimate: 50 }],
+                                [],
+                            ),
                         );
                     }
                     if (key === 'issues') {
                         return ok(
-                            buildIndex([{ path: memoryPath('issues/old-issue'), tokenEstimate: 75 }], []),
+                            buildIndex(
+                                [{ path: memoryPath('issues/old-issue'), tokenEstimate: 75 }],
+                                [],
+                            ),
                         );
                     }
                     return ok(null);
                 },
             },
             memories: {
-                read: async (path) =>
+                load: async (path) =>
                     ok(
                         buildMemoryFixture(
                             pathToString(path),
@@ -389,7 +433,7 @@ describe('pruneExpiredMemories', () => {
             const deletedPaths: string[] = [];
             const storage = createMockStorage({
                 indexes: {
-                    read: async (path) => {
+                    load: async (path) => {
                         const key = path.toString();
                         if (key === '') return ok(rootIndex);
                         if (key === 'project') return ok(projectIndex);
@@ -398,7 +442,7 @@ describe('pruneExpiredMemories', () => {
                     },
                 },
                 memories: {
-                    read: async (path) =>
+                    load: async (path) =>
                         ok(
                             buildMemoryFixture(
                                 pathToString(path),
@@ -427,15 +471,12 @@ describe('pruneExpiredMemories', () => {
         });
 
         it('should handle empty scoped subtree gracefully', async () => {
-            const rootIndex = buildIndex(
-                [],
-                [{ path: categoryPath('project'), memoryCount: 0 }],
-            );
+            const rootIndex = buildIndex([], [{ path: categoryPath('project'), memoryCount: 0 }]);
             const projectIndex = buildIndex([], []);
 
             const storage = createMockStorage({
                 indexes: {
-                    read: async (path) => {
+                    load: async (path) => {
                         const key = path.toString();
                         if (key === '') return ok(rootIndex);
                         if (key === 'project') return ok(projectIndex);
@@ -468,7 +509,7 @@ describe('pruneExpiredMemories', () => {
             const deletedPaths: string[] = [];
             const storage = createMockStorage({
                 indexes: {
-                    read: async (path) => {
+                    load: async (path) => {
                         const key = path.toString();
                         if (key === '') return ok(rootIndex);
                         if (key === 'project') return ok(projectIndex);
@@ -477,7 +518,7 @@ describe('pruneExpiredMemories', () => {
                     },
                 },
                 memories: {
-                    read: async (path) =>
+                    load: async (path) =>
                         ok(
                             buildMemoryFixture(
                                 pathToString(path),

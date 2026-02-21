@@ -6,9 +6,10 @@
 
 import { ok, err, type Result } from '../../result.ts';
 import { CategoryPath } from '../category-path.ts';
-import type { CategoryStorage, CategoryError, SetDescriptionResult, CategoryModeContext } from '../types.ts';
+import type { CategoryError, SetDescriptionResult, CategoryModeContext } from '../types.ts';
+import { type CategoryAdapter } from '@/storage';
 import { MAX_DESCRIPTION_LENGTH } from '../types.ts';
-import { isConfigDefined } from '../../config.ts';
+import { isConfigDefined } from '../../config/config.ts';
 
 /**
  * Sets or clears a category's description.
@@ -47,7 +48,7 @@ import { isConfigDefined } from '../../config.ts';
  * ```
  */
 export const setDescription = async (
-    storage: CategoryStorage,
+    storage: CategoryAdapter,
     path: string,
     description: string,
     modeContext?: CategoryModeContext,
@@ -96,8 +97,7 @@ export const setDescription = async (
 
     // Update description in parent index
     const finalDescription = trimmed.length > 0 ? trimmed : null;
-
-    const updateResult = await storage.updateSubcategoryDescription(
+    const updateResult = await storage.setDescription(
         pathResult.value,
         finalDescription,
     );

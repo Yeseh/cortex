@@ -8,10 +8,11 @@
  * @module core/category/types
  */
 
-import type { Result } from '../result.ts';
+import type { ErrorDetails, Result } from '../result.ts';
 import type { CategoryPath } from './category-path.ts';
+import type { CategoryMode } from '../config/config.ts';
+import type { ConfigCategories } from '@/config/types.ts';
 import type { MemoryPath } from '@/memory/memory-path.ts';
-import type { CategoryMode, CategoryDefinition } from '../config.ts';
 
 /**
  * Context for category mode enforcement.
@@ -38,7 +39,7 @@ export interface CategoryModeContext {
     /** Category creation/deletion mode */
     mode: CategoryMode;
     /** Config-defined category hierarchy (for protection checks) */
-    configCategories?: Record<string, CategoryDefinition>;
+    configCategories?: ConfigCategories;
 }
 
 /**
@@ -69,16 +70,8 @@ export type CategoryErrorCode =
  * programmatic handling, a human-readable message, and optional
  * context about the failing path or underlying cause.
  */
-export interface CategoryError {
-    /** Machine-readable error code for programmatic handling */
-    code: CategoryErrorCode;
-    /** Human-readable error message */
-    message: string;
-    /** Category path that caused the error (when applicable) */
-    path?: string;
-    /** Underlying error that caused this failure (for debugging) */
-    cause?: unknown;
-}
+export type CategoryError = ErrorDetails<CategoryErrorCode>;
+export type CategoryResult<T> = Result<T, CategoryError>;
 
 /**
  * Result of the createCategory operation.
@@ -122,126 +115,6 @@ export interface DeleteCategoryResult {
 }
 
 /**
- * Abstract storage port for category operations.
- *
- * This interface defines the contract between category business logic
- * and storage implementations. It follows the ports and adapters pattern
- * to decouple core logic from infrastructure concerns.
- *
- * Implementations:
- * - {@link FilesystemStorageAdapter} - File-based storage for production
- * - In-memory adapters for testing
- *
- * All methods return Result types for explicit error handling without exceptions.
- *
- * @example
- * ```typescript
- * // Creating a category using the port
- * const result = await port.exists('project/cortex');
- * if (result.ok && !result.value) {
- *   await port.ensure('project/cortex');
- * }
- * ```
- */
-export interface CategoryStorage {
-    /**
-     * Checks if a category exists at the given path.
-     *
-     * @param path - Category path (e.g., "project/cortex")
-     * @returns Result with true if category exists, false otherwise
-     */
-    exists(path: CategoryPath): Promise<Result<boolean, CategoryError>>;
-
-    /**
-     * Ensures a category directory exists, creating it if missing.
-     *
-     * This is a mkdir-like operation that creates the directory
-     * structure without initializing any index files.
-     *
-     * @param path - Category path (e.g., "project/cortex")
-     * @returns Result indicating success or failure
-     *
-     * @example
-     * ```typescript
-     * await storage.ensure('project/cortex/docs');
-     * ```
-     *
-     * @edgeCases
-     * - Calling with an existing path is a no-op and should succeed.
-     * - Returns `INVALID_PATH` when the path is empty or malformed.
-     */
-    ensure(path: CategoryPath): Promise<Result<void, CategoryError>>;
-
-    /**
-     * Deletes a category directory and all its contents recursively.
-     *
-     * This is a destructive operation that removes all memories
-     * and subcategories within the target path.
-     *
-     * @param path - Category path to delete (e.g., "project/cortex")
-     * @returns Result indicating success or failure
-     *
-     * @example
-     * ```typescript
-     * await storage.delete('project/cortex/old');
-     * ```
-     *
-     * @edgeCases
-     * - Some implementations treat missing directories as a no-op success.
-     * - Returns `INVALID_PATH` when the path is empty or malformed.
-     */
-    delete(path: CategoryPath): Promise<Result<void, CategoryError>>;
-
-    /**
-     * Updates the description of a subcategory in its parent's index.
-     *
-     * The description is stored in the parent category's index file
-     * to enable efficient listing without reading each subcategory.
-     *
-     * @param parentPath - Path to the parent category (empty string for root)
-     * @param subcategoryPath - Full path to the subcategory
-     * @param description - New description or null to clear
-     * @returns Result indicating success or failure
-     *
-     * @example
-     * ```typescript
-     * await storage.updateSubcategoryDescription(
-     *   'project/cortex',
-     *   'project/cortex/docs',
-     *   'Project documentation'
-     * );
-     * ```
-     *
-     * @edgeCases
-     * - Passing `''` as `parentPath` updates the root index.
-     * - Passing `null` clears the description field for the subcategory.
-     */
-    updateSubcategoryDescription(categoryPath: CategoryPath, description: string | null
-    ): Promise<Result<void, CategoryError>>;
-
-    /**
-     * Removes a subcategory entry from its parent's index.
-     *
-     * Called after deleting a category to clean up the parent's
-     * subcategories list.
-     *
-     * @param parentPath - Path to the parent category (empty string for root)
-     * @param subcategoryPath - Full path to the subcategory to remove
-     * @returns Result indicating success or failure
-     *
-     * @example
-     * ```typescript
-     * await storage.removeSubcategoryEntry('project/cortex', 'project/cortex/old-docs');
-     * ```
-     *
-     * @edgeCases
-     * - Passing `''` as `parentPath` removes a top-level entry from the root index.
-     * - If the parent index is missing, implementations may return success.
-     */
-    removeSubcategoryEntry(categoryPath: CategoryPath): Promise<Result<void, CategoryError>>;
-}
-
-/**
  * Maximum description length in characters.
  *
  * Set to 500 characters to balance between providing meaningful context
@@ -251,53 +124,6 @@ export interface CategoryStorage {
  * browse the category hierarchy.
  */
 export const MAX_DESCRIPTION_LENGTH = 500;
-
-/**
- * Protected root memory categories.
- *
- * These categories have special protection:
- * - Cannot be deleted via the category delete operation
- *
- * NOTE: This list is NOT used for traversal operations (list, prune).
- * Those operations discover root categories dynamically by reading the
- * store's root index, allowing stores to have any root-level categories.
- */
-export const ROOT_CATEGORIES = [
-    'human', 'persona',
-] as const;
-
-/** Type for root category names */
-export type RootCategory = (typeof ROOT_CATEGORIES)[number];
-
-/**
- * Entry for a memory within a category.
- *
- * Each memory file in a category is tracked with its path and
- * estimated token count. The token estimate helps AI agents
- * decide which memories to load based on context window limits.
- *
- * @example
- * ```typescript
- * const entry: CategoryMemoryEntry = {
- *   path: MemoryPath.fromString('project/cortex/tech-stack').unwrap(),
- *   tokenEstimate: 150,
- *   summary: 'TypeScript project using Bun runtime'
- * };
- * ```
- *
- * @edgeCases
- * - `updatedAt` may be undefined when the memory frontmatter is missing or invalid.
- */
-export interface CategoryMemoryEntry {
-    /** Full path to the memory (e.g., "project/cortex/conventions") */
-    path: MemoryPath;
-    /** Estimated token count for the memory content */
-    tokenEstimate: number;
-    /** Optional brief summary of memory contents (for listing displays) */
-    summary?: string;
-    /** Optional last updated timestamp for sorting by recency */
-    updatedAt?: Date;
-}
 
 /**
  * Entry for a subcategory within a category.
@@ -318,14 +144,23 @@ export interface CategoryMemoryEntry {
  * @edgeCases
  * - `memoryCount` reflects direct memories in the subcategory, not recursive totals.
  */
-export interface SubcategoryEntry {
+export type SubcategoryEntry = {
     /** Full path to the subcategory (e.g., "project/cortex") */
     path: CategoryPath;
     /** Total number of memories in this subcategory */
     memoryCount: number;
     /** Optional description (max 500 chars) for the subcategory */
     description?: string;
-}
+};
+
+export type CategoryMemoryEntry = {
+    /** Full path to the memory (e.g., "project/cortex/notes/memory1") */
+    path: MemoryPath;
+    /** Estimated token count for the memory content */
+    tokenEstimate: number;
+    /** When the memory was last updated (optional for backward compatibility) */
+    updatedAt?: Date;
+};
 
 /**
  * Complete structure for a category's contents.

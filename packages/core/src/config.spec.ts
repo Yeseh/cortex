@@ -1,67 +1,38 @@
-import { afterEach, describe, expect, it } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 
 import {
     flattenCategoryPaths,
-    getConfigDir,
-    getConfigPath,
     getDefaultSettings,
     isConfigDefined,
-    parseMergedConfig,
-    serializeMergedConfig,
-    validateStorePath,
-    type MergedConfig,
-} from './config.ts';
+    parseConfig,
+} from './config/config.ts';
 
 describe('ConfigSettings', () => {
     it('should provide default values', () => {
         const defaults = getDefaultSettings();
         expect(defaults.outputFormat).toBe('yaml');
-        expect(defaults.autoSummaryThreshold).toBe(0);
-        expect(defaults.strictLocal).toBe(false);
+        expect(defaults.defaultStore).toBe('default');
     });
 });
 
-describe('validateStorePath', () => {
-    it('should accept absolute paths', () => {
-        const result = validateStorePath('/home/user/.cortex', 'default');
-        expect(result.ok()).toBe(true);
-    });
-
-    it('should reject relative paths', () => {
-        const result = validateStorePath('./relative/path', 'invalid');
-        expect(result.ok()).toBe(false);
-        if (!result.ok()) {
-            expect(result.error.code).toBe('INVALID_STORE_PATH');
-            expect(result.error.store).toBe('invalid');
-        }
-    });
-
-    it('should reject paths without leading slash', () => {
-        const result = validateStorePath('path/without/slash', 'bad');
-        expect(result.ok()).toBe(false);
-        if (!result.ok()) {
-            expect(result.error.code).toBe('INVALID_STORE_PATH');
-        }
-    });
-});
-
-describe('parseMergedConfig', () => {
+describe('parseConfig', () => {
     it('should parse config with settings and stores sections', () => {
         const raw = `
 settings:
   outputFormat: json
-  autoSummaryThreshold: 10
 stores:
   default:
-    path: /home/user/.config/cortex/memory
+    kind: filesystem
+    properties:
+      path: /home/user/.config/cortex/memory
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            expect(result.value.settings.outputFormat).toBe('json');
-            expect(result.value.settings.autoSummaryThreshold).toBe(10);
-            expect(result.value.settings.strictLocal).toBe(false); // default
-            expect(result.value.stores.default?.path).toBe('/home/user/.config/cortex/memory');
+            expect(result.value.settings?.outputFormat).toBe('json');
+            expect(result.value.stores.default?.properties.path).toBe(
+                '/home/user/.config/cortex/memory'
+            );
         }
     });
 
@@ -69,23 +40,23 @@ stores:
         const raw = `
 stores:
   default:
-    path: /data/default
+    kind: filesystem
+    properties:
+      path: /data/default
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            expect(result.value.settings.outputFormat).toBe('yaml');
-            expect(result.value.settings.autoSummaryThreshold).toBe(0);
-            expect(result.value.settings.strictLocal).toBe(false);
+            // settings is optional, defaults applied at runtime
+            expect(result.value.stores.default?.properties.path).toBe('/data/default');
         }
     });
 
     it('should parse empty config', () => {
-        const result = parseMergedConfig('');
+        const result = parseConfig('');
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            expect(result.value.settings).toEqual(getDefaultSettings());
-            expect(Object.keys(result.value.stores)).toHaveLength(0);
+            expect(result.value.stores).toBeDefined();
         }
     });
 
@@ -94,21 +65,21 @@ stores:
 settings:
   outputFormat: invalid
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
             expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
-            expect(result.error.field).toBe('outputFormat');
         }
     });
 
-    it('should reject relative store paths', () => {
+    it('should require store path property', () => {
         const raw = `
 stores:
   invalid:
-    path: ./relative/path
+    kind: filesystem
+    properties: {}
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_STORE_PATH');
@@ -120,10 +91,12 @@ stores:
         const raw = `
 stores:
   default:
-    path: /data/default
+    kind: filesystem
     description: The default memory store
+    properties:
+      path: /data/default
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             expect(result.value.stores.default?.description).toBe('The default memory store');
@@ -131,123 +104,17 @@ stores:
     });
 });
 
-describe('serializeMergedConfig', () => {
-    it('should serialize merged config to YAML', () => {
-        const config: MergedConfig = {
-            settings: { outputFormat: 'json', autoSummaryThreshold: 0, strictLocal: true },
-            stores: { default: { path: '/data/default' } },
-        };
-        const result = serializeMergedConfig(config);
-        expect(result.ok()).toBe(true);
-        if (result.ok()) {
-            expect(result.value).toContain('outputFormat: json');
-            expect(result.value).toContain('strictLocal: true');
-            expect(result.value).toContain('path: /data/default');
-        }
-    });
-
-    it('should serialize config without stores', () => {
-        const config: MergedConfig = {
-            settings: getDefaultSettings(),
-            stores: {},
-        };
-        const result = serializeMergedConfig(config);
-        expect(result.ok()).toBe(true);
-        if (result.ok()) {
-            expect(result.value).toContain('settings:');
-            expect(result.value).not.toContain('stores:');
-        }
-    });
-
-    it('should round-trip config correctly', () => {
-        const original: MergedConfig = {
-            settings: { outputFormat: 'toon', autoSummaryThreshold: 10, strictLocal: false },
-            stores: {
-                default: { path: '/home/user/.cortex', description: 'Default store' },
-                project: { path: '/project/.cortex' },
-            },
-        };
-        const serialized = serializeMergedConfig(original);
-        expect(serialized.ok()).toBe(true);
-        if (!serialized.ok()) return;
-
-        const parsed = parseMergedConfig(serialized.value);
-        expect(parsed.ok()).toBe(true);
-        if (!parsed.ok()) return;
-
-        expect(parsed.value.settings).toEqual(original.settings);
-        expect(parsed.value.stores.default?.path).toBe(original.stores.default?.path);
-        expect(parsed.value.stores.default?.description).toBe(original.stores.default?.description);
-        expect(parsed.value.stores.project?.path).toBe(original.stores.project?.path);
-    });
-});
-
-describe('getConfigDir', () => {
-    const originalEnv = process.env.CORTEX_CONFIG_PATH;
-
-    afterEach(() => {
-        if (originalEnv !== undefined) {
-            process.env.CORTEX_CONFIG_PATH = originalEnv;
-        }
-        else {
-            delete process.env.CORTEX_CONFIG_PATH;
-        }
-    });
-
-    it('should use CORTEX_CONFIG_PATH when set', () => {
-        process.env.CORTEX_CONFIG_PATH = '/custom/config/path';
-        expect(getConfigDir()).toBe('/custom/config/path');
-    });
-
-    it('should expand tilde in CORTEX_CONFIG_PATH', () => {
-        process.env.CORTEX_CONFIG_PATH = '~/custom-cortex';
-        const result = getConfigDir();
-        expect(result).not.toContain('~');
-        expect(result).toContain('custom-cortex');
-    });
-
-    it('should use default when env var not set', () => {
-        delete process.env.CORTEX_CONFIG_PATH;
-        const result = getConfigDir();
-        expect(result).toContain('.config');
-        expect(result).toContain('cortex');
-    });
-});
-
-describe('getConfigPath', () => {
-    const originalEnv = process.env.CORTEX_CONFIG_PATH;
-
-    afterEach(() => {
-        if (originalEnv !== undefined) {
-            process.env.CORTEX_CONFIG_PATH = originalEnv;
-        }
-        else {
-            delete process.env.CORTEX_CONFIG_PATH;
-        }
-    });
-
-    it('should return config.yaml path with env var', () => {
-        process.env.CORTEX_CONFIG_PATH = '/custom/path';
-        expect(getConfigPath()).toBe('/custom/path/config.yaml');
-    });
-
-    it('should return default config.yaml path', () => {
-        delete process.env.CORTEX_CONFIG_PATH;
-        const result = getConfigPath();
-        expect(result).toContain('config.yaml');
-        expect(result).toContain('.config/cortex');
-    });
-});
-
-describe('parseMergedConfig category hierarchy', () => {
+describe('parseConfig category hierarchy', () => {
     it('should parse store with explicit categoryMode', () => {
         const raw = `
 stores:
   default:
-    path: /data/default
+    kind: filesystem
     categoryMode: strict
+    properties:
+      path: /data/default
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             expect(result.value.stores.default?.categoryMode).toBe('strict');
@@ -258,9 +125,11 @@ stores:
         const raw = `
 stores:
   default:
-    path: /data/default
+    kind: filesystem
+    properties:
+      path: /data/default
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             expect(result.value.stores.default?.categoryMode).toBeUndefined();
@@ -271,15 +140,15 @@ stores:
         const raw = `
 stores:
   default:
-    path: /data/default
+    kind: filesystem
     categoryMode: invalid
+    properties:
+      path: /data/default
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
             expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
-            expect(result.error.store).toBe('default');
-            expect(result.error.field).toBe('categoryMode');
         }
     });
 
@@ -287,7 +156,9 @@ stores:
         const raw = `
 stores:
   default:
-    path: /data/default
+    kind: filesystem
+    properties:
+      path: /data/default
     categories:
       standards:
         description: Coding standards
@@ -297,14 +168,18 @@ stores:
           testing:
             description: Testing guidelines
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             const categories = result.value.stores.default?.categories;
             expect(categories).toBeDefined();
             expect(categories?.standards?.description).toBe('Coding standards');
-            expect(categories?.standards?.subcategories?.architecture?.description).toBe('Architecture decisions');
-            expect(categories?.standards?.subcategories?.testing?.description).toBe('Testing guidelines');
+            expect(categories?.standards?.subcategories?.architecture?.description).toBe(
+                'Architecture decisions'
+            );
+            expect(categories?.standards?.subcategories?.testing?.description).toBe(
+                'Testing guidelines'
+            );
         }
     });
 
@@ -312,11 +187,13 @@ stores:
         const raw = `
 stores:
   default:
-    path: /data/default
+    kind: filesystem
+    properties:
+      path: /data/default
     categories:
       todos: {}
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             expect(result.value.stores.default?.categories?.todos).toEqual({});
@@ -327,7 +204,9 @@ stores:
         const raw = `
 stores:
   default:
-    path: /data/default
+    kind: filesystem
+    properties:
+      path: /data/default
     categories:
       level1:
         subcategories:
@@ -336,10 +215,12 @@ stores:
               level3:
                 description: Third level
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            const level3 = result.value.stores.default?.categories?.level1?.subcategories?.level2?.subcategories?.level3;
+            const level3 =
+                result.value.stores.default?.categories?.level1?.subcategories?.level2
+                    ?.subcategories?.level3;
             expect(level3?.description).toBe('Third level');
         }
     });
@@ -349,47 +230,19 @@ stores:
         const raw = `
 stores:
   default:
-    path: /data/default
+    kind: filesystem
+    properties:
+      path: /data/default
     categories:
       test:
         description: "${longDescription}"
 `;
-        const result = parseMergedConfig(raw);
+        const result = parseConfig(raw);
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
             expect(result.error.code).toBe('CONFIG_VALIDATION_FAILED');
             expect(result.error.message).toContain('exceeds 500 characters');
         }
-    });
-
-    it('should round-trip config with categories and categoryMode', () => {
-        const original: MergedConfig = {
-            settings: getDefaultSettings(),
-            stores: {
-                default: {
-                    path: '/data/default',
-                    categoryMode: 'subcategories',
-                    categories: {
-                        standards: {
-                            description: 'Coding standards',
-                            subcategories: {
-                                architecture: { description: 'Architecture' },
-                            },
-                        },
-                    },
-                },
-            },
-        };
-        const serialized = serializeMergedConfig(original);
-        expect(serialized.ok()).toBe(true);
-        if (!serialized.ok()) return;
-
-        const parsed = parseMergedConfig(serialized.value);
-        expect(parsed.ok()).toBe(true);
-        if (!parsed.ok()) return;
-
-        expect(parsed.value.stores.default?.categoryMode).toBe('subcategories');
-        expect(parsed.value.stores.default?.categories?.standards?.description).toBe('Coding standards');
     });
 });
 
@@ -404,9 +257,7 @@ describe('flattenCategoryPaths', () => {
 
     it('should flatten single level categories', () => {
         const cats = { alpha: {}, beta: {} };
-        expect(flattenCategoryPaths(cats)).toEqual([
-            'alpha', 'beta',
-        ]);
+        expect(flattenCategoryPaths(cats)).toEqual(['alpha', 'beta']);
     });
 
     it('should flatten nested categories', () => {
@@ -436,11 +287,7 @@ describe('flattenCategoryPaths', () => {
                 },
             },
         };
-        expect(flattenCategoryPaths(cats)).toEqual([
-            'a',
-            'a/b',
-            'a/b/c',
-        ]);
+        expect(flattenCategoryPaths(cats)).toEqual(['a', 'a/b', 'a/b/c']);
     });
 });
 

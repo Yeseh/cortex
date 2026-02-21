@@ -53,7 +53,7 @@ Result<string, SerializationError> => {
     try {
         switch (format) {
             case 'json':
-                return ok(JSON.stringify(obj));
+                return ok(JSON.stringify(obj, null, 2));
             case 'yaml':
                 return ok(Bun.YAML.stringify(obj));
             case 'toon':

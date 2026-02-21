@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { CommanderError, InvalidArgumentError } from '@commander-js/extra-typings';
 
-import { throwCoreError, type CoreError } from './errors.ts';
+import { throwCliError, type CoreError } from './errors.ts';
 
 describe('mapCoreError', () => {
     describe('argument error codes', () => {
@@ -26,7 +26,7 @@ describe('mapCoreError', () => {
                 message: `Test message for ${code}`,
             };
 
-            expect(() => throwCoreError(error)).toThrow(InvalidArgumentError);
+            expect(() => throwCliError(error)).toThrow(InvalidArgumentError);
         });
 
         it('should preserve error message in InvalidArgumentError', () => {
@@ -36,7 +36,7 @@ describe('mapCoreError', () => {
             };
 
             try {
-                throwCoreError(error);
+                throwCliError(error);
                 expect.unreachable('mapCoreError should have thrown');
             }
             catch (e) {
@@ -52,7 +52,7 @@ describe('mapCoreError', () => {
             };
 
             try {
-                throwCoreError(error);
+                throwCliError(error);
                 expect.unreachable('mapCoreError should have thrown');
             }
             catch (e) {
@@ -89,7 +89,7 @@ describe('mapCoreError', () => {
                 message: `Test message for ${code}`,
             };
 
-            expect(() => throwCoreError(error)).toThrow(CommanderError);
+            expect(() => throwCliError(error)).toThrow(CommanderError);
         });
 
         it('should set exitCode to 1 for CommanderError', () => {
@@ -99,7 +99,7 @@ describe('mapCoreError', () => {
             };
 
             try {
-                throwCoreError(error);
+                throwCliError(error);
                 expect.unreachable('mapCoreError should have thrown');
             }
             catch (e) {
@@ -115,7 +115,7 @@ describe('mapCoreError', () => {
             };
 
             try {
-                throwCoreError(error);
+                throwCliError(error);
                 expect.unreachable('mapCoreError should have thrown');
             }
             catch (e) {
@@ -131,7 +131,7 @@ describe('mapCoreError', () => {
             };
 
             try {
-                throwCoreError(error);
+                throwCliError(error);
                 expect.unreachable('mapCoreError should have thrown');
             }
             catch (e) {
@@ -149,7 +149,7 @@ describe('mapCoreError', () => {
             };
 
             try {
-                throwCoreError(error);
+                throwCliError(error);
                 expect.unreachable('mapCoreError should have thrown');
             }
             catch (e) {
@@ -167,7 +167,7 @@ describe('mapCoreError', () => {
             };
 
             try {
-                throwCoreError(error);
+                throwCliError(error);
                 expect.unreachable('mapCoreError should have thrown');
             }
             catch (e) {
@@ -183,7 +183,7 @@ describe('mapCoreError', () => {
             };
 
             try {
-                throwCoreError(error);
+                throwCliError(error);
                 expect.unreachable('mapCoreError should have thrown');
             }
             catch (e) {
@@ -198,7 +198,7 @@ describe('mapCoreError', () => {
             };
 
             try {
-                throwCoreError(error);
+                throwCliError(error);
                 expect.unreachable('mapCoreError should have thrown');
             }
             catch (e) {
@@ -213,7 +213,7 @@ describe('mapCoreError', () => {
             };
 
             try {
-                throwCoreError(error);
+                throwCliError(error);
                 expect.unreachable('mapCoreError should have thrown');
             }
             catch (e) {
@@ -232,7 +232,7 @@ describe('mapCoreError', () => {
             };
 
             try {
-                throwCoreError(error);
+                throwCliError(error);
                 expect.unreachable('mapCoreError should have thrown');
             }
             catch (e) {
@@ -251,7 +251,7 @@ describe('mapCoreError', () => {
 
             let didReturn = false;
             try {
-                throwCoreError(error);
+                throwCliError(error);
                 didReturn = true;
             }
             catch {

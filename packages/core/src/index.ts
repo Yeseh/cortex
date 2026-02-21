@@ -3,12 +3,15 @@
  */
 
 export * from './tokens.ts';
-export * from './config.ts';
+export * from './config/config.ts';
+export * from './config/types.ts';
 export * from './result.ts';
 export * from './memory';
 export * from './category';
 export * from './store';
-export * from './storage/adapter.ts';
+export * from './storage';
+export * from './types';
+export * from './testing/mock-storage-adapter.ts';
 export * from './cortex';
 
 export {

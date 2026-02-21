@@ -39,7 +39,7 @@ describe('store tool registration', () => {
     ): ToolContext => {
         const cortex = Cortex.init({
             rootDirectory: testDir,
-            registry,
+            stores: registry,
             adapterFactory: (storePath: string) => new FilesystemStorageAdapter({ rootDirectory: storePath }),
         });
         return { config, cortex };

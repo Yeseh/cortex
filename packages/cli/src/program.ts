@@ -9,9 +9,9 @@
 
 import { Command } from '@commander-js/extra-typings';
 
-import { memoryCommand } from './commands/memory/index.ts';
-import { storeCommand } from './commands/store/index.ts';
-import { initCommand } from './commands/init/command.ts';
+import { memoryCommand } from './memory/index.ts';
+import { storeCommand } from './store/index.ts';
+import { initCommand } from './commands/init.ts';
 
 /**
  * The main Commander program instance for Cortex CLI.

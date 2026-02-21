@@ -14,8 +14,8 @@ export class CategoryPath {
     }
 
     static fromString(path: string): Result<CategoryPath, MemoryError> {
-        // Empty string represents the root category
-        if (path.trim() === '') {
+        // Empty string or '/' represents the root category
+        if (path.trim() === '' || path.trim() === '/') {
             return ok(CategoryPath.root());
         }
 
@@ -33,7 +33,7 @@ export class CategoryPath {
         if (slugSegments.length === 0) {
             return memoryError(
                 'INVALID_PATH',
-                'Memory slug path must include at least one segment with valid slugs',
+                'Category path must include at least one segment with valid slugs',
             );
         }
 
@@ -99,18 +99,18 @@ export class CategoryPath {
      * const typescript = CategoryPath.fromString('standards/typescript').unwrap();
      * const human = CategoryPath.fromString('human').unwrap();
      *
-     * typescript.isUnder(standards); // true
-     * standards.isUnder(standards);  // true
-     * human.isUnder(standards);      // false
-     * standards.isUnder(CategoryPath.root()); // true
+     * typescript.isChildOf(standards); // true
+     * standards.isChildOf(standards);  // true
+     * human.isChildOf(standards);      // false
+     * standards.isChildOf(CategoryPath.root()); // true
      * ```
      *
      * @edgeCases
      * - Root scope always returns true
      * - Self-comparison returns true
-     * - Ancestor paths return false (standards is NOT under standards/typescript)
+     * - Ancestor paths return false (standards is NOT a child of standards/typescript)
      */
-    isUnder(scope: CategoryPath): boolean {
+    isChildOf(scope: CategoryPath): boolean {
         // Root scope matches everything
         if (scope.isRoot) {
             return true;

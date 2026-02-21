@@ -6,7 +6,7 @@
 
 import { ok, type Result } from '@/result.ts';
 import { memoryError } from '@/memory/result.ts';
-import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
+import type { StorageAdapter } from '@/storage/index.ts';
 import type { MemoryError } from '@/memory/result.ts';
 import { discoverRootCategories, collectMemoriesFromCategory } from './helpers.ts';
 import { type MemoryPath } from '@/memory/memory-path.ts';
@@ -63,7 +63,7 @@ export interface PruneResult {
  * - When dryRun is true, no memories are deleted and no reindex occurs
  */
 export const pruneExpiredMemories = async (
-    storage: ScopedStorageAdapter,
+    storage: StorageAdapter,
     scope: CategoryPath,
     options?: PruneOptions,
 ): Promise<Result<PruneResult, MemoryError>> => {

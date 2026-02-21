@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'bun:test';
-import type { StorageAdapterError } from '@/storage/adapter.ts';
+import type { StorageAdapterError } from '@/storage/index.ts';
 import { Memory } from '@/memory';
 import { getMemory } from './get.ts';
 import { createMockStorage } from './test-helpers.spec.ts';
@@ -35,7 +35,7 @@ describe('getMemory', () => {
         const memory = buildMemory('project/test/memory');
         const storage = createMockStorage({
             memories: {
-                read: async () => ok(memory),
+                load: async () => ok(memory),
             },
         });
         const result = await getMemory(storage, 'project/test/memory');
@@ -65,7 +65,7 @@ describe('getMemory', () => {
         });
         const storage = createMockStorage({
             memories: {
-                read: async () => ok(memory),
+                load: async () => ok(memory),
             },
         });
         const now = new Date('2025-06-15T12:00:00Z'); // After expiration (2025-01-10)
@@ -82,7 +82,7 @@ describe('getMemory', () => {
         });
         const storage = createMockStorage({
             memories: {
-                read: async () => ok(memory),
+                load: async () => ok(memory),
             },
         });
         const now = new Date('2025-06-15T12:00:00Z');
@@ -102,7 +102,7 @@ describe('getMemory', () => {
         });
         const storage = createMockStorage({
             memories: {
-                read: async () => ok(memory),
+                load: async () => ok(memory),
             },
         });
         const now = new Date('2025-06-15T12:00:00Z'); // Before expiration (2030-01-01)
@@ -122,7 +122,7 @@ describe('getMemory', () => {
     it('should return STORAGE_ERROR when read fails', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async () =>
+                load: async () =>
                     err({ code: 'IO_READ_ERROR', message: 'IO error' } as StorageAdapterError),
             },
         });
@@ -137,7 +137,7 @@ describe('getMemory', () => {
         const memory = buildMemory('project/test/memory');
         const storage = createMockStorage({
             memories: {
-                read: async () => ok(memory),
+                load: async () => ok(memory),
             },
         });
         const result = await getMemory(storage, 'project/test/memory');

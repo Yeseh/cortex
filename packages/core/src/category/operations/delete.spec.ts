@@ -47,19 +47,19 @@ describe('deleteCategory', () => {
         }
     });
 
-    it('should remove entry from parent index', async () => {
-        let removedPath: CategoryPath | null = null;
+    it('should call storage.delete for existing category', async () => {
+        let deletedPath: CategoryPath | null = null;
         const storage = createMockStorage({
             exists: mock(async () => ok(true)),
-            removeSubcategoryEntry: mock(async (path: CategoryPath) => {
-                removedPath = path;
+            delete: mock(async (path: CategoryPath) => {
+                deletedPath = path;
                 return ok(undefined);
             }),
         });
 
         await deleteCategory(storage, 'project/cortex');
 
-        expect(removedPath!.toString()).toBe('project/cortex');
+        expect(deletedPath!.toString()).toBe('project/cortex');
     });
 });
 

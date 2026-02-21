@@ -4,10 +4,11 @@
  * @module core/category/operations/create
  */
 
-import { ok, err, type Result } from '../../result.ts';
+import { ok, err } from '../../result.ts';
 import { CategoryPath } from '../category-path.ts';
-import type { CategoryStorage, CategoryError, CreateCategoryResult, CategoryModeContext } from '../types.ts';
-import { isConfigDefined } from '../../config.ts';
+import type { CreateCategoryResult as CreatedCatagory, CategoryModeContext, CategoryResult } from '../types.ts';
+import { type CategoryAdapter } from '@/storage/category-adapter.ts';
+import { isConfigDefined } from '../../config/config.ts';
 
 /**
  * Creates a category and its parent hierarchy, excluding root categories.
@@ -52,10 +53,10 @@ import { isConfigDefined } from '../../config.ts';
  * ```
  */
 export const createCategory = async (
-    storage: CategoryStorage,
+    storage: CategoryAdapter,
     path: string,
     modeContext?: CategoryModeContext,
-): Promise<Result<CreateCategoryResult, CategoryError>> => {
+): Promise<CategoryResult<CreatedCatagory>> => {
     // Validate path
     const pathResult = CategoryPath.fromString(path);
     if (!pathResult.ok()) {
@@ -66,23 +67,34 @@ export const createCategory = async (
         });
     }
 
-    // Cannot create root category (it always exists implicitly)
+    // Root implicitly exists - return early without creation 
     if (pathResult.value.isRoot) {
-        return err({
-            code: 'INVALID_PATH',
-            message: 'Cannot create root category',
-            path,
-        });
+        return ok({ path, created: false }); 
+    }
+
+    // Check if already exists
+    const existsResult = await storage.exists(pathResult.value);
+    if (!existsResult.ok()) {
+        return existsResult;
+    }
+    if (existsResult.value) {
+        return ok({ path, created: false });
     }
 
     // Mode enforcement checks (when context provided)
+    const categoryPath = pathResult.value;
     if (modeContext) {
         const { mode, configCategories } = modeContext;
+        const stringPath = categoryPath.toString();
+
+        const hasConfigCategories = !!configCategories 
+            && Object.keys(configCategories).length > 0;
 
         // In subcategories mode, reject new root categories not in config
-        if (mode === 'subcategories' && configCategories) {
-            const segments = path.split('/');
+        if (mode === 'subcategories' && hasConfigCategories) {
+            const segments = stringPath.split('/');
             const rootCategory = segments[0];
+
             if (rootCategory && !isConfigDefined(rootCategory, configCategories)) {
                 const allowedRoots = Object.keys(configCategories);
                 return err({
@@ -96,48 +108,22 @@ export const createCategory = async (
         }
 
         // In strict mode, reject any non-config-defined category
-        if (mode === 'strict' && configCategories) {
+        if (mode === 'strict' && hasConfigCategories) {
             if (!isConfigDefined(path, configCategories)) {
                 return err({
                     code: 'CATEGORY_PROTECTED',
                     message: `Cannot create category '${path}' in strict mode. ` +
-                        'Only config-defined categories are allowed. Update config.yaml to add new categories.',
+                        'Only config-defined categories are allowed. User must update configuration to allow this category.',
                     path,
                 });
             }
         }
     }
 
-    // Check if already exists
-    const existsResult = await storage.exists(pathResult.value);
-    if (!existsResult.ok()) {
-        return existsResult;
-    }
-    if (existsResult.value) {
-        return ok({ path, created: false });
-    }
-
-    // Create parent categories (excluding depth-1 root categories)
-    let currentPath = pathResult.value;
-    while (currentPath.parent && currentPath.parent.depth > 1) {
-        const parentPath = currentPath.parent;
-        const parentExists = await storage.exists(parentPath);
-        if (!parentExists.ok()) {
-            return parentExists;
-        }
-        if (!parentExists.value) {
-            const ensureParentResult = await storage.ensure(parentPath);
-            if (!ensureParentResult.ok()) {
-                return ensureParentResult;
-            }
-        }
-        currentPath = parentPath; // Move up to check next ancestor
-    }
-
-    // Create the target category
-    const ensureResult = await storage.ensure(pathResult.value);
-    if (!ensureResult.ok()) {
-        return ensureResult;
+    // Create category (and any missing ancestors)
+    const ensureExistsResult = await storage.ensure(pathResult.value);
+    if (!ensureExistsResult.ok()) {
+        return ensureExistsResult;
     }
 
     return ok({ path, created: true });

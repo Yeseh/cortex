@@ -29,7 +29,7 @@ describe('setDescription', () => {
         let capturedDesc: string | null = null;
         const storage = createMockStorage({
             exists: mock(async () => ok(true)),
-            updateSubcategoryDescription: mock(
+            setDescription: mock(
                 async (path: CategoryPath, desc: string | null) => {
                     capturedPath = path.toString();
                     capturedDesc = desc;
@@ -65,7 +65,7 @@ describe('setDescription', () => {
         let capturedDesc: string | null = null;
         const storage = createMockStorage({
             exists: mock(async () => ok(true)),
-            updateSubcategoryDescription: mock(
+            setDescription: mock(
                 async (_path: CategoryPath, desc: string | null) => {
                     capturedDesc = desc;
                     return ok(undefined);
@@ -82,7 +82,7 @@ describe('setDescription', () => {
         let capturedDesc: string | null = 'initial';
         const storage = createMockStorage({
             exists: mock(async () => ok(true)),
-            updateSubcategoryDescription: mock(
+            setDescription: mock(
                 async (_path: CategoryPath, desc: string | null) => {
                     capturedDesc = desc;
                     return ok(undefined);
@@ -112,7 +112,7 @@ describe('setDescription', () => {
         let capturedDesc: string | null = 'initial';
         const storage = createMockStorage({
             exists: mock(async () => ok(true)),
-            updateSubcategoryDescription: mock(
+            setDescription: mock(
                 async (_path: CategoryPath, desc: string | null) => {
                     capturedDesc = desc;
                     return ok(undefined);
@@ -129,7 +129,7 @@ describe('setDescription', () => {
         let capturedDesc: string | null = null;
         const storage = createMockStorage({
             exists: mock(async () => ok(true)),
-            updateSubcategoryDescription: mock(
+            setDescription: mock(
                 async (_path: CategoryPath, desc: string | null) => {
                     capturedDesc = desc;
                     return ok(undefined);
@@ -210,7 +210,7 @@ describe('setDescription config protection', () => {
         const updateDescriptionCalls: string[] = [];
         const storage = createMockStorage({
             exists: mock(async () => ok(true)),
-            updateSubcategoryDescription: mock(async (path: CategoryPath) => {
+            setDescription: mock(async (path: CategoryPath) => {
                 updateDescriptionCalls.push(path.toString());
                 return ok(undefined);
             }),
@@ -225,7 +225,7 @@ describe('setDescription config protection', () => {
         const updateDescriptionCalls: string[] = [];
         const storage = createMockStorage({
             exists: mock(async () => ok(true)),
-            updateSubcategoryDescription: mock(async (path: CategoryPath) => {
+            setDescription: mock(async (path: CategoryPath) => {
                 updateDescriptionCalls.push(path.toString());
                 return ok(undefined);
             }),

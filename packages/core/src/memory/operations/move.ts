@@ -6,7 +6,7 @@
 
 import { type Result, ok } from '@/result.ts';
 import { memoryError } from '../result.ts';
-import type { ScopedStorageAdapter } from '@/storage/adapter.ts';
+import type { StorageAdapter } from '@/storage/index.ts';
 import type { MemoryError } from '@/memory/result.ts';
 import { MemoryPath } from '@/memory/memory-path.ts';
 import { CategoryPath } from '@/category/category-path.ts';
@@ -33,7 +33,7 @@ import { getCategoryFromSlugPath } from './helpers.ts';
  * ```
  */
 export const moveMemory = async (
-    storage: ScopedStorageAdapter,
+    storage: StorageAdapter,
     fromPath: string,
     toPath: string,
 ): Promise<Result<void, MemoryError>> => {
@@ -58,7 +58,7 @@ export const moveMemory = async (
     }
 
     // 2. Check source exists
-    const sourceCheck = await storage.memories.read(fromResult.value);
+    const sourceCheck = await storage.memories.load(fromResult.value);
     if (!sourceCheck.ok()) {
         return  memoryError('STORAGE_ERROR', `Failed to read source memory: ${fromPath}`, {
             path: fromPath,
@@ -73,7 +73,7 @@ export const moveMemory = async (
     }
 
     // 3. Check destination doesn't exist
-    const destCheck = await storage.memories.read(toResult.value);
+    const destCheck = await storage.memories.load(toResult.value);
     if (!destCheck.ok()) {
         return memoryError('STORAGE_ERROR', `Failed to check destination: ${toPath}`, {
             path: toPath,

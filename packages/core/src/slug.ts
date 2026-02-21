@@ -27,6 +27,14 @@ export class Slug {
         return ok(new Slug(slug));
     }
 
+    static fromUnsafe(input: string): Slug {
+        const result = Slug.from(input);
+        if (!result.ok()) {
+            throw new Error(`Invalid slug input in unsafe conversion: ${input}. ${result.error.message}`);
+        }
+        return result.value;
+    }
+
     toString(): string {
         return this.#value;
     }

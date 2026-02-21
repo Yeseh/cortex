@@ -96,7 +96,7 @@ const createTestContext = (dataPath: string, storeRoot: string): ToolContext => 
     const config = createTestConfig(dataPath);
     const cortex = Cortex.init({
         rootDirectory: dataPath,
-        registry: { default: { path: storeRoot } },
+        stores: { default: { path: storeRoot } },
         adapterFactory: (storePath: string) => new FilesystemStorageAdapter({ rootDirectory: storePath }),
     });
     return { config, cortex };

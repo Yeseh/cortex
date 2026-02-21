@@ -9,7 +9,6 @@
 
 // Create operation
 export { createMemory } from './create.ts';
-export type { CreateMemoryInput } from './create.ts';
 
 // Get operation
 export { getMemory } from './get.ts';
