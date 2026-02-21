@@ -21,11 +21,11 @@ export const category: z.ZodType<ConfigCategory> = z.lazy(() =>
     z.object({
         description: z.string().optional(),
         subcategories: z.record(z.string(), category).optional(),
-    }),
+    })
 );
 
 /**
- * Output formats for handlers that support multiple formats. 
+ * Output formats for handlers that support multiple formats.
  */
 export const outputFormat = z.enum(['yaml', 'json', 'toon']);
 export type OutputFormat = z.infer<typeof outputFormat>;
@@ -40,7 +40,7 @@ const settingsSchema = z
     })
     .optional();
 /**
- * Settings as represented in the config  
+ * Settings as represented in the config
  */
 export const getDefaultSettings = (): CortexSettings => ({
     outputFormat: 'yaml',
@@ -63,18 +63,17 @@ const storeDefinitionSchema = z.object({
 /**
  * Schema for stores section of config.yaml.
  */
-const storesSchema = z
-    .record(
-        z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Store name must be a lowercase slug'),
-        storeDefinitionSchema,
-    )
+const storesSchema = z.record(
+    z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Store name must be a lowercase slug'),
+    storeDefinitionSchema
+);
 
 /**
  * Schema for the entire config.yaml file.
  */
 export const configFileSchema = z.object({
     settings: settingsSchema,
-    stores: storesSchema,
+    stores: storesSchema.default({}),
 });
 export type CortexConfig = z.infer<typeof configFileSchema>;
 
@@ -119,7 +118,7 @@ export type CortexConfig = z.infer<typeof configFileSchema>;
  */
 export const flattenCategoryPaths = (
     categories: ConfigCategories | undefined,
-    prefix = '',
+    prefix = ''
 ): string[] => {
     if (!categories) {
         return [];
@@ -177,7 +176,7 @@ export const flattenCategoryPaths = (
  */
 export const configCategoriesToStoreCategories = (
     categories: ConfigCategories | undefined,
-    prefix = '',
+    prefix = ''
 ): Result<StoreCategories, ConfigValidationError> => {
     if (!categories) {
         return ok([]);
@@ -208,7 +207,7 @@ export const configCategoriesToStoreCategories = (
 
         const subcategoriesResult = configCategoriesToStoreCategories(
             category.subcategories ?? {},
-            categoryPath,
+            categoryPath
         );
         if (!subcategoriesResult.ok()) {
             return subcategoriesResult;
@@ -251,16 +250,18 @@ export const configCategoriesToStoreCategories = (
  * - Preserves nested subcategory structure
  */
 export const storeCategoriesToConfigCategories = (
-    categories: StoreCategories | undefined,
+    categories: StoreCategories | undefined
 ): ConfigCategories => {
     if (!categories) {
         return {};
     }
 
     const output: ConfigCategories = {};
-    const entries = Object.entries(categories) as [string, StoreCategory][];
 
-    for (const [name, category] of entries) {
+    for (const category of categories) {
+        const pathStr = category.path.toString();
+        const segments = pathStr.split('/');
+        const name = segments[segments.length - 1]!;
         const configCategory: ConfigCategory = {};
 
         if (category.description !== undefined) {
@@ -319,7 +320,7 @@ export const storeCategoriesToConfigCategories = (
  */
 export const isConfigDefined = (
     path: string,
-    categories: ConfigCategories | undefined,
+    categories: ConfigCategories | undefined
 ): boolean => {
     if (!categories || !path) {
         return false;
@@ -374,7 +375,6 @@ export interface ConfigLoadError {
     cause?: unknown;
 }
 
-
 /**
  * Validates a category definition recursively.
  *
@@ -386,10 +386,14 @@ export interface ConfigLoadError {
 const validateCategoryDefinition = (
     def: unknown,
     categoryPath: string,
-    storeName: string,
+    storeName: string
 ): Result<ConfigCategory, ConfigValidationError> => {
     // Empty object or null/undefined is valid (no description, no subcategories)
-    if (def === null || def === undefined || (typeof def === 'object' && Object.keys(def as object).length === 0)) {
+    if (
+        def === null ||
+        def === undefined ||
+        (typeof def === 'object' && Object.keys(def as object).length === 0)
+    ) {
         return ok({});
     }
 
@@ -438,9 +442,9 @@ const validateCategoryDefinition = (
         }
 
         const subcategories: Record<string, ConfigCategory> = {};
-        for (const [
-            name, subDef,
-        ] of Object.entries(defObj.subcategories as Record<string, unknown>)) {
+        for (const [name, subDef] of Object.entries(
+            defObj.subcategories as Record<string, unknown>
+        )) {
             const subPath = categoryPath ? `${categoryPath}/${name}` : name;
             const subResult = validateCategoryDefinition(subDef, subPath, storeName);
             if (!subResult.ok()) {
@@ -463,7 +467,7 @@ const validateCategoryDefinition = (
  */
 const validateCategoryHierarchy = (
     categories: unknown,
-    storeName: string,
+    storeName: string
 ): Result<Record<string, ConfigCategory>, ConfigValidationError> => {
     if (categories === null || categories === undefined) {
         return ok({});
@@ -479,9 +483,7 @@ const validateCategoryHierarchy = (
     }
 
     const result: Record<string, ConfigCategory> = {};
-    for (const [
-        name, def,
-    ] of Object.entries(categories as Record<string, unknown>)) {
+    for (const [name, def] of Object.entries(categories as Record<string, unknown>)) {
         const defResult = validateCategoryDefinition(def, name, storeName);
         if (!defResult.ok()) {
             return defResult;
@@ -515,12 +517,13 @@ export const parseConfig = (raw: string): Result<CortexConfig, ConfigValidationE
     try {
         const yamlParse = Bun.YAML.parse(raw) ?? {};
         config = configFileSchema.parse(yamlParse) as CortexConfig;
-    }
-    catch (error) {
+    } catch (error) {
         if (error instanceof z.ZodError) {
             return err({
                 code: 'CONFIG_VALIDATION_FAILED',
-                message: 'Config validation failed: ' + error.issues.map(e => `${e.path.join('.')} - ${e.message}`).join('; '),
+                message:
+                    'Config validation failed: ' +
+                    error.issues.map((e) => `${e.path.join('.')} - ${e.message}`).join('; '),
                 cause: error.message,
             });
         }

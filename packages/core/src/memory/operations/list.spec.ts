@@ -7,10 +7,7 @@ import { describe, it, expect } from 'bun:test';
 import { Memory } from '@/memory';
 import { MemoryPath } from '@/memory/memory-path.ts';
 import { listMemories } from './list.ts';
-import {
-    buildIndex,
-    createMockStorage,
-} from './test-helpers.spec.ts';
+import { buildIndex, createMockStorage } from './test-helpers.spec.ts';
 import { ok } from '@/result.ts';
 import { CategoryPath } from '@/category/category-path.ts';
 
@@ -38,17 +35,22 @@ const buildMemory = (path: string, expiresAt?: Date): Memory => {
     return result.value;
 };
 
-const pathToString = (memoryPath: MemoryPath): string => (
-    `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`
-);
+const pathToString = (memoryPath: MemoryPath): string =>
+    `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`;
 
 describe('listMemories', () => {
     it('should list memories in a category', async () => {
         // Index for the main category with 2 memories and 1 subcategory
         const mainIndex = buildIndex(
             [
-                { path: MemoryPath.fromString('project/test/memory1').unwrap(), tokenEstimate: 100 },
-                { path: MemoryPath.fromString('project/test/memory2').unwrap(), tokenEstimate: 150 },
+                {
+                    path: MemoryPath.fromString('project/test/memory1').unwrap(),
+                    tokenEstimate: 100,
+                },
+                {
+                    path: MemoryPath.fromString('project/test/memory2').unwrap(),
+                    tokenEstimate: 150,
+                },
             ],
             [{ path: CategoryPath.fromString('project/test/sub').unwrap(), memoryCount: 2 }],
         );
@@ -57,29 +59,37 @@ describe('listMemories', () => {
 
         const storage = createMockStorage({
             indexes: {
-                read: async (path: CategoryPath) => {
+                load: async (path: CategoryPath) => {
                     if (path.toString() === 'project/test') return ok(mainIndex);
                     if (path.toString() === 'project/test/sub') return ok(subIndex);
                     return ok(null);
                 },
             },
             memories: {
-                read: async (memoryPath) => ok(buildMemory(pathToString(memoryPath))),
+                load: async (memoryPath) => ok(buildMemory(pathToString(memoryPath))),
             },
         });
-        const result = await listMemories(storage, { category: CategoryPath.fromString('project/test').unwrap() });
+        const result = await listMemories(storage, {
+            category: CategoryPath.fromString('project/test').unwrap(),
+        });
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            expect(result.value.category.toString()).toBe(CategoryPath.fromString('project/test').unwrap().toString());
+            expect(result.value.category.toString()).toBe(
+                CategoryPath.fromString('project/test').unwrap().toString(),
+            );
             expect(result.value.memories.length).toBe(2);
             expect(result.value.subcategories.length).toBe(1);
-            expect(result.value.subcategories[0]?.path.toString()).toBe(CategoryPath.fromString('project/test/sub').unwrap().toString());
+            expect(result.value.subcategories[0]?.path.toString()).toBe(
+                CategoryPath.fromString('project/test/sub').unwrap().toString(),
+            );
         }
     });
 
     it('should return empty results for empty category', async () => {
         const storage = createMockStorage();
-        const result = await listMemories(storage,  { category: CategoryPath.fromString('project/empty').unwrap() });
+        const result = await listMemories(storage, {
+            category: CategoryPath.fromString('project/empty').unwrap(),
+        });
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             expect(result.value.memories).toEqual([]);
@@ -90,14 +100,20 @@ describe('listMemories', () => {
     it('should filter expired memories by default', async () => {
         const storage = createMockStorage({
             indexes: {
-                read: async () =>
-                    ok(buildIndex([{ path: MemoryPath.fromString('project/test/expired').unwrap(), tokenEstimate: 100 }], [])),
+                load: async () =>
+                    ok(
+                        buildIndex(
+                            [{
+                                path: MemoryPath.fromString('project/test/expired').unwrap(),
+                                tokenEstimate: 100,
+                            }],
+                            [],
+                        ),
+                    ),
             },
             memories: {
-                read: async () => ok(buildMemory(
-                    'project/test/expired',
-                    new Date('2025-01-10T12:00:00.000Z'),
-                )),
+                load: async () =>
+                    ok(buildMemory('project/test/expired', new Date('2025-01-10T12:00:00.000Z'))),
             },
         });
         const now = new Date('2025-06-15T12:00:00Z');
@@ -114,14 +130,20 @@ describe('listMemories', () => {
     it('should include expired memories when includeExpired=true', async () => {
         const storage = createMockStorage({
             indexes: {
-                read: async () =>
-                    ok(buildIndex([{ path: MemoryPath.fromString('project/test/expired').unwrap(), tokenEstimate: 100 }], [])),
+                load: async () =>
+                    ok(
+                        buildIndex(
+                            [{
+                                path: MemoryPath.fromString('project/test/expired').unwrap(),
+                                tokenEstimate: 100,
+                            }],
+                            [],
+                        ),
+                    ),
             },
             memories: {
-                read: async () => ok(buildMemory(
-                    'project/test/expired',
-                    new Date('2025-01-10T12:00:00.000Z'),
-                )),
+                load: async () =>
+                    ok(buildMemory('project/test/expired', new Date('2025-01-10T12:00:00.000Z'))),
             },
         });
         const now = new Date('2025-06-15T12:00:00Z');
@@ -148,7 +170,7 @@ describe('listMemories', () => {
 
         const storage = createMockStorage({
             indexes: {
-                read: async (name: CategoryPath) => {
+                load: async (name: CategoryPath) => {
                     if (name.toString() === '') return ok(rootIndex);
                     if (name.toString() === 'project') {
                         return ok(buildIndex([], []));
@@ -174,22 +196,30 @@ describe('listMemories', () => {
     it('should skip entries with invalid memory paths', async () => {
         const storage = createMockStorage({
             indexes: {
-                read: async () =>
+                load: async () =>
                     ok(
                         buildIndex(
                             [
-                                { path: MemoryPath.fromString('project/test/valid').unwrap(), tokenEstimate: 100 },
-                                { path: MemoryPath.fromString('project/invalid path').unwrap(), tokenEstimate: 50 },
+                                {
+                                    path: MemoryPath.fromString('project/test/valid').unwrap(),
+                                    tokenEstimate: 100,
+                                },
+                                {
+                                    path: MemoryPath.fromString('project/invalid path').unwrap(),
+                                    tokenEstimate: 50,
+                                },
                             ],
                             [],
                         ),
                     ),
             },
             memories: {
-                read: async () => ok(buildMemory('project/test/valid')),
+                load: async () => ok(buildMemory('project/test/valid')),
             },
         });
-        const result = await listMemories(storage, { category: CategoryPath.fromString('project/test').unwrap() });
+        const result = await listMemories(storage, {
+            category: CategoryPath.fromString('project/test').unwrap(),
+        });
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             // Should only include the valid memory, skipping invalid paths
@@ -201,19 +231,25 @@ describe('listMemories', () => {
     it('should handle missing memory files gracefully', async () => {
         const storage = createMockStorage({
             indexes: {
-                read: async () =>
+                load: async () =>
                     ok(
                         buildIndex(
                             [
-                                { path: MemoryPath.fromString('project/test/exists').unwrap(), tokenEstimate: 100 },
-                                { path: MemoryPath.fromString('project/test/missing').unwrap(), tokenEstimate: 50 },
+                                {
+                                    path: MemoryPath.fromString('project/test/exists').unwrap(),
+                                    tokenEstimate: 100,
+                                },
+                                {
+                                    path: MemoryPath.fromString('project/test/missing').unwrap(),
+                                    tokenEstimate: 50,
+                                },
                             ],
                             [],
                         ),
                     ),
             },
             memories: {
-                read: async (memoryPath) => {
+                load: async (memoryPath: MemoryPath) => {
                     const path = pathToString(memoryPath);
                     if (path === 'project/test/exists') {
                         return ok(buildMemory('project/test/exists'));
@@ -222,7 +258,9 @@ describe('listMemories', () => {
                 },
             },
         });
-        const result = await listMemories(storage, { category: CategoryPath.fromString('project/test').unwrap() });
+        const result = await listMemories(storage, {
+            category: CategoryPath.fromString('project/test').unwrap(),
+        });
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             expect(result.value.memories.length).toBe(1);

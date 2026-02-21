@@ -65,7 +65,7 @@ export const createMockStorage = (
         save: async () => ok(undefined),
         remove: async () => ok(undefined),
         ...overrides.stores,
-    }
+    },
 });
 
 // ============================================================================

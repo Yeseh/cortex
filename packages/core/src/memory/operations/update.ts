@@ -77,7 +77,7 @@ export const updateMemory = async (
     storage: StorageAdapter,
     slugPath: string,
     updates: UpdateMemoryInput,
-    now?: Date,
+    now?: Date
 ): Promise<Result<Memory, MemoryError>> => {
     // 1. Validate path
     const pathResult = MemoryPath.fromString(slugPath);
@@ -132,7 +132,7 @@ export const updateMemory = async (
     const updatedResult = Memory.init(
         slugPath,
         updatedMetadata,
-        updates.content ?? existing.content,
+        updates.content ?? existing.content
     );
     if (!updatedResult.ok()) {
         return updatedResult;
@@ -141,7 +141,7 @@ export const updateMemory = async (
     const updatedMemory = updatedResult.value;
 
     // 5. Write updated memory
-    const writeResult = await storage.memories.save(updatedMemory);
+    const writeResult = await storage.memories.save(updatedMemory.path, updatedMemory);
     if (!writeResult.ok()) {
         return memoryError('STORAGE_ERROR', `Failed to write memory: ${slugPath}`, {
             path: slugPath,
@@ -153,13 +153,15 @@ export const updateMemory = async (
     const indexResult = await storage.indexes.updateAfterMemoryWrite(updatedMemory);
     if (!indexResult.ok()) {
         const reason = indexResult.error.message ?? 'Unknown error';
-        return memoryError('STORAGE_ERROR',
+        return memoryError(
+            'STORAGE_ERROR',
             `Memory updated but index update failed for "${slugPath}": ${reason}. ` +
-            'Run "cortex store reindex" to rebuild indexes.',
+                'Run "cortex store reindex" to rebuild indexes.',
             {
                 path: slugPath,
                 cause: indexResult.error,
-            });
+            }
+        );
     }
 
     // 7. Return updated memory

@@ -41,7 +41,7 @@ export interface InitCommandOptions {
     /** Explicit store name (otherwise auto-detected from git) */
     name?: string;
     /** Category mode for the store */
-    categoryMode?: string;
+    categoryMode?: CategoryMode;
     /** Output format (yaml, json, toon) */
     format?: string;
     /** Optional description for the store */

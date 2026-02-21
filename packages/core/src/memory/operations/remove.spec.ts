@@ -9,16 +9,15 @@ import type { MemoryPath } from '@/memory/memory-path.ts';
 import { removeMemory } from './remove.ts';
 import { ok, err, createMockStorage, sampleMemory } from './test-helpers.spec.ts';
 
-const pathToString = (memoryPath: MemoryPath): string => (
-    `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`
-);
+const pathToString = (memoryPath: MemoryPath): string =>
+    `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`;
 
 describe('removeMemory', () => {
     it('should remove existing memory', async () => {
         let removedPath: string | undefined;
         const storage = createMockStorage({
             memories: {
-                read: async () => ok(sampleMemory),
+                load: async () => ok(sampleMemory),
                 remove: async (path) => {
                     removedPath = pathToString(path);
                     return ok(undefined);
@@ -34,7 +33,7 @@ describe('removeMemory', () => {
         let reindexCalled = false;
         const storage = createMockStorage({
             memories: {
-                read: async () => ok(sampleMemory),
+                load: async () => ok(sampleMemory),
             },
             indexes: {
                 reindex: async () => {
@@ -69,7 +68,7 @@ describe('removeMemory', () => {
     it('should return STORAGE_ERROR when read fails', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async () =>
+                load: async () =>
                     err({ code: 'IO_READ_ERROR', message: 'IO error' } as StorageAdapterError),
             },
         });
@@ -83,7 +82,7 @@ describe('removeMemory', () => {
     it('should return STORAGE_ERROR when remove fails', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async () => ok(sampleMemory),
+                load: async () => ok(sampleMemory),
                 remove: async () =>
                     err({
                         code: 'IO_WRITE_ERROR',
@@ -101,7 +100,7 @@ describe('removeMemory', () => {
     it('should return STORAGE_ERROR when reindex fails', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async () => ok(sampleMemory),
+                load: async () => ok(sampleMemory),
             },
             indexes: {
                 reindex: async () =>
@@ -118,4 +117,3 @@ describe('removeMemory', () => {
         }
     });
 });
-

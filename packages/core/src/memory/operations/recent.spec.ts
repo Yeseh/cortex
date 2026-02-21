@@ -16,9 +16,8 @@ import {
     memoryPath,
 } from './test-helpers.spec.ts';
 
-const pathToString = (memoryPath: MemoryPath): string => (
-    `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`
-);
+const pathToString = (memoryPath: MemoryPath): string =>
+    `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`;
 
 const buildRecentMemory = (
     path: string,
@@ -26,16 +25,17 @@ const buildRecentMemory = (
     tags: string[],
     content: string,
     expiresAt?: Date,
-): Memory => buildMemoryFixture(
-    path,
-    {
-        createdAt: new Date('2025-01-01T10:00:00.000Z'),
-        updatedAt,
-        tags,
-        expiresAt,
-    },
-    content,
-);
+): Memory =>
+    buildMemoryFixture(
+        path,
+        {
+            createdAt: new Date('2025-01-01T10:00:00.000Z'),
+            updatedAt,
+            tags,
+            expiresAt,
+        },
+        content,
+    );
 
 describe('getRecentMemories', () => {
     it('should retrieve recent memories store-wide sorted by updatedAt', async () => {
@@ -62,10 +62,10 @@ describe('getRecentMemories', () => {
 
         const storage = createMockStorage({
             memories: {
-                read: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
+                load: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
             },
             indexes: {
-                read: async (path) => {
+                load: async (path) => {
                     const key = path.toString();
                     if (key === '') {
                         return ok(
@@ -148,10 +148,10 @@ describe('getRecentMemories', () => {
 
         const storage = createMockStorage({
             memories: {
-                read: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
+                load: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
             },
             indexes: {
-                read: async (path) => {
+                load: async (path) => {
                     if (path.toString() === 'project/cortex') {
                         return ok(
                             buildIndex(
@@ -213,13 +213,15 @@ describe('getRecentMemories', () => {
 
         const storage = createMockStorage({
             memories: {
-                read: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
+                load: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
             },
             indexes: {
-                read: async (path) => {
+                load: async (path) => {
                     const key = path.toString();
                     if (key === '') {
-                        return ok(buildIndex([], [{ path: categoryPath('notes'), memoryCount: 3 }]));
+                        return ok(
+                            buildIndex([], [{ path: categoryPath('notes'), memoryCount: 3 }]),
+                        );
                     }
                     if (key === 'notes') {
                         return ok(
@@ -273,13 +275,15 @@ describe('getRecentMemories', () => {
 
         const storage = createMockStorage({
             memories: {
-                read: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
+                load: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
             },
             indexes: {
-                read: async (path) => {
+                load: async (path) => {
                     const key = path.toString();
                     if (key === '') {
-                        return ok(buildIndex([], [{ path: categoryPath('notes'), memoryCount: 1 }]));
+                        return ok(
+                            buildIndex([], [{ path: categoryPath('notes'), memoryCount: 1 }]),
+                        );
                     }
                     if (key === 'notes') {
                         return ok(
@@ -310,7 +314,7 @@ describe('getRecentMemories', () => {
     it('should return empty result for empty store', async () => {
         const storage = createMockStorage({
             indexes: {
-                read: async () => ok(null),
+                load: async () => ok(null),
             },
         });
 
@@ -343,13 +347,15 @@ describe('getRecentMemories', () => {
 
         const storage = createMockStorage({
             memories: {
-                read: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
+                load: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
             },
             indexes: {
-                read: async (path) => {
+                load: async (path) => {
                     const key = path.toString();
                     if (key === '') {
-                        return ok(buildIndex([], [{ path: categoryPath('notes'), memoryCount: 2 }]));
+                        return ok(
+                            buildIndex([], [{ path: categoryPath('notes'), memoryCount: 2 }]),
+                        );
                     }
                     if (key === 'notes') {
                         return ok(
@@ -404,13 +410,15 @@ describe('getRecentMemories', () => {
 
         const storage = createMockStorage({
             memories: {
-                read: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
+                load: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
             },
             indexes: {
-                read: async (path) => {
+                load: async (path) => {
                     const key = path.toString();
                     if (key === '') {
-                        return ok(buildIndex([], [{ path: categoryPath('notes'), memoryCount: 2 }]));
+                        return ok(
+                            buildIndex([], [{ path: categoryPath('notes'), memoryCount: 2 }]),
+                        );
                     }
                     if (key === 'notes') {
                         return ok(
@@ -474,13 +482,15 @@ describe('getRecentMemories', () => {
 
         const storage = createMockStorage({
             memories: {
-                read: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
+                load: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
             },
             indexes: {
-                read: async (path) => {
+                load: async (path) => {
                     const key = path.toString();
                     if (key === '') {
-                        return ok(buildIndex([], [{ path: categoryPath('notes'), memoryCount: 3 }]));
+                        return ok(
+                            buildIndex([], [{ path: categoryPath('notes'), memoryCount: 3 }]),
+                        );
                     }
                     if (key === 'notes') {
                         // Note: 'stale' entry is missing updated_at
@@ -543,10 +553,10 @@ describe('getRecentMemories', () => {
 
         const storage = createMockStorage({
             memories: {
-                read: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
+                load: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
             },
             indexes: {
-                read: async (path) => {
+                load: async (path) => {
                     const key = path.toString();
                     if (key === 'project/cortex') {
                         return ok(
@@ -590,4 +600,3 @@ describe('getRecentMemories', () => {
         }
     });
 });
-

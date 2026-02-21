@@ -64,7 +64,7 @@ export const initializeStore = async (
     const storeResult = await stores.load(storeName); 
     if (storeResult.ok()) {
         return storeError(
-            'DUPLICATE_STORE_NAME',
+            'STORE_ALREADY_EXISTS',
             'Store name already exists in registry.',
             { store: name, cause: storeResult.error },
         );
@@ -73,76 +73,25 @@ export const initializeStore = async (
         return err(storeResult.error); 
     }
 
-    const normalizeCategories = (value: unknown): Store['categories'] => {
-        if (!value) {
-            return [];
-        }
-
-        if (Array.isArray(value)) {
-            return value as Store['categories'];
-        }
-
-        if (typeof value === 'object') {
-            const objectValues = Object.values(value as Record<string, unknown>);
-            return objectValues
-                .filter((item): item is { path: unknown; description?: unknown; subcategories?: unknown } => {
-                    return !!item && typeof item === 'object' && 'path' in item;
-                })
-                .map((item) => {
-                    const pathResult = CategoryPath.fromString(String(item.path));
-                    const safePath = pathResult.ok() ? pathResult.value : CategoryPath.root();
-
-                    return {
-                        path: safePath,
-                        description: typeof item.description === 'string' ? item.description : undefined,
-                        subcategories: normalizeCategories(item.subcategories),
-                    };
-                })
-                .filter((item) => item.path.toString() !== '');
-        }
-
-        return [];
-    };
-
-    const flattenCategories = (items: Store['categories']): Store['categories'] => {
-        const output: Store['categories'] = [];
-        for (const item of items) {
-            output.push(item);
-            if (item.subcategories && item.subcategories.length > 0) {
-                output.push(...flattenCategories(item.subcategories));
-            }
-        }
-        return output;
-    };
-
-    const normalizedStore: Store = {
-        name: storeName,
-        kind: data.kind,
-        categoryMode: data.categoryMode ?? 'free',
-        categories: normalizeCategories(data.categories),
-        properties: data.properties ?? {},
-        description: data.description,
-    };
-
-    const saveResult = await stores.save(storeName, normalizedStore); 
+    const saveResult = await stores.save(storeName, data); 
     if (!saveResult.ok()) {
         return err(saveResult.error)
     }
 
-    const initialCategories = flattenCategories(normalizedStore.categories);
+    const initialCategories = data.categories ?? [];
     for (const category of initialCategories) {
 
         // TODO: Create what we can, warn instead?
-        const categoryResult = await categories.ensure(category.path.toString() as unknown as CategoryPath);
+        const categoryResult = await categories.ensure(category.path);
         if (!categoryResult.ok()) {
             return storeError(
-                'STORE_CRATE_FAILED',
+                'STORE_CREATE_FAILED',
                 `Failed to initialie store category '${name}' in store '${storeName}'.`,
                 { store: name, cause: categoryResult.error },
             );
         }
     }
 
-    return ok(normalizedStore);
+    return ok(undefined);
 };
 

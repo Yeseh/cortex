@@ -114,7 +114,6 @@ export interface DeleteCategoryResult {
     deleted: boolean;
 }
 
-
 /**
  * Maximum description length in characters.
  *
@@ -152,15 +151,16 @@ export type SubcategoryEntry = {
     memoryCount: number;
     /** Optional description (max 500 chars) for the subcategory */
     description?: string;
-}
+};
 
 export type CategoryMemoryEntry = {
     /** Full path to the memory (e.g., "project/cortex/notes/memory1") */
     path: MemoryPath;
     /** Estimated token count for the memory content */
     tokenEstimate: number;
-}
-
+    /** When the memory was last updated (optional for backward compatibility) */
+    updatedAt?: Date;
+};
 
 /**
  * Complete structure for a category's contents.

@@ -29,9 +29,8 @@ const buildMemory = (path: string): Memory => {
     return result.value;
 };
 
-const pathToString = (memoryPath: MemoryPath): string => (
-    `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`
-);
+const pathToString = (memoryPath: MemoryPath): string =>
+    `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`;
 
 describe('moveMemory', () => {
     it('should move memory successfully', async () => {
@@ -40,7 +39,7 @@ describe('moveMemory', () => {
 
         const storage = createMockStorage({
             memories: {
-                read: async (path) =>
+                load: async (path) =>
                     pathToString(path) === 'project/src/memory'
                         ? ok(buildMemory('project/src/memory'))
                         : ok(null),
@@ -86,7 +85,7 @@ describe('moveMemory', () => {
     it('should return DESTINATION_EXISTS for existing destination', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async () => ok(buildMemory('project/src/memory')), // Both source and dest exist
+                load: async () => ok(buildMemory('project/src/memory')), // Both source and dest exist
             },
         });
         const result = await moveMemory(storage, 'project/src/memory', 'project/dest/memory');
@@ -119,7 +118,7 @@ describe('moveMemory', () => {
         let ensuredCategory: string | undefined;
         const storage = createMockStorage({
             memories: {
-                read: async (path) =>
+                load: async (path) =>
                     pathToString(path) === 'project/src/memory'
                         ? ok(buildMemory('project/src/memory'))
                         : ok(null),
@@ -141,7 +140,7 @@ describe('moveMemory', () => {
         let reindexCalled = false;
         const storage = createMockStorage({
             memories: {
-                read: async (path) =>
+                load: async (path) =>
                     pathToString(path) === 'project/src/memory'
                         ? ok(buildMemory('project/src/memory'))
                         : ok(null),
@@ -162,7 +161,7 @@ describe('moveMemory', () => {
     it('should return STORAGE_ERROR when move fails', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async (path) =>
+                load: async (path) =>
                     pathToString(path) === 'project/src/memory'
                         ? ok(buildMemory('project/src/memory'))
                         : ok(null),
@@ -180,7 +179,7 @@ describe('moveMemory', () => {
     it('should return STORAGE_ERROR with actionable message when reindex fails', async () => {
         const storage = createMockStorage({
             memories: {
-                read: async (path) =>
+                load: async (path) =>
                     pathToString(path) === 'project/src/memory'
                         ? ok(buildMemory('project/src/memory'))
                         : ok(null),

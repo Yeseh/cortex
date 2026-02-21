@@ -11,23 +11,23 @@ import type { StorageAdapter } from '@/storage/index.ts';
 import { createMockStorageAdapter } from '@/testing/mock-storage-adapter.ts';
 
 describe('Cortex.getStore()', () => {
-    it('should return STORE_NOT_FOUND for missing store name', () => {
+    it('should return a StoreClient for any name when adapter factory is valid', () => {
         const cortex = Cortex.init({
             stores: {},
             adapterFactory: () => createMockStorageAdapter(),
         });
 
-        const result = cortex.getStore('missing');
+        const result = cortex.getStore('any-store-name');
 
-        expect(result.ok()).toBe(false);
-        if (result.ok()) return;
-        expect(result.error.code).toBe('STORE_NOT_FOUND');
+        expect(result.ok()).toBe(true);
+        if (!result.ok()) return;
+        expect(result.value.name).toBe('any-store-name');
     });
 
     it('should return a StoreClient for configured store', () => {
-        let receivedPath = '';
-        const factory: AdapterFactory = (storePath) => {
-            receivedPath = storePath;
+        let receivedName = '';
+        const factory: AdapterFactory = (storeName) => {
+            receivedName = storeName;
             return createMockStorageAdapter();
         };
 
@@ -48,7 +48,7 @@ describe('Cortex.getStore()', () => {
         expect(result.ok()).toBe(true);
         if (!result.ok()) return;
 
-        expect(receivedPath).toBe('/data/project');
+        expect(receivedName).toBe('project');
         expect(result.value.name).toBe('project');
     });
 
@@ -57,10 +57,11 @@ describe('Cortex.getStore()', () => {
 
         const cortex = Cortex.init({
             stores: {
-                project: { 
+                project: {
                     kind: 'filesystem',
                     properties: { path: '/data/project' },
-                    categories: {} },
+                    categories: {},
+                },
             },
             adapterFactory: badFactory,
         });
@@ -75,10 +76,11 @@ describe('Cortex.getStore()', () => {
     it('should throw when using default adapter factory', () => {
         const cortex = Cortex.init({
             stores: {
-                project: { 
+                project: {
                     kind: 'filesystem',
                     properties: { path: '/data/project' },
-                    categories: {} },
+                    categories: {},
+                },
             },
             adapterFactory: createDefaultAdapterFactory(),
         });
