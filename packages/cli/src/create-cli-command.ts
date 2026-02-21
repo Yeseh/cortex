@@ -1,4 +1,4 @@
-import { Cortex, err, getDefaultSettings, ok, parseConfig, type ConfigValidationError, type CortexContext, type Result } from "@yeseh/cortex-core";
+import { Cortex, err, getDefaultSettings, ok, parseConfig, type ConfigValidationError, type CortexContext, type Result, type StorageAdapter } from "@yeseh/cortex-core";
 import { homedir } from "os"
 import { isAbsolute, resolve } from "path"
 import { FilesystemStorageAdapter } from "@yeseh/cortex-storage-fs";

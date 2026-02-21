@@ -26,10 +26,8 @@ import { Command } from '@commander-js/extra-typings';
 import { resolve } from 'node:path';
 import { resolveStoreName } from '../index.ts';
 import { throwCliError } from '../../errors.ts';
-import { getDefaultConfigPath as getDefaultConfigPath } from '../../context.ts';
-import { initializeStore, type StoreData } from '@yeseh/cortex-core/store';
+import { type StoreData } from '@yeseh/cortex-core/store';
 import { type CategoryMode, type CortexContext } from '@yeseh/cortex-core';
-import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { serializeOutput, type OutputStoreInit, type OutputFormat } from '../../output.ts';
 import { resolveUserPath } from '../../paths.ts';
 import { createCliCommandContext } from '../../create-cli-command.ts';
@@ -102,7 +100,7 @@ export async function handleInit(
 
     const storeData: StoreData = {
         kind: 'filesystem',
-        categoryMode: options.categoryMode ?? 'free',
+        categoryMode: (options.categoryMode as CategoryMode) ?? 'free',
         categories: [],
         properties: {
             path: storePath,
@@ -149,5 +147,10 @@ export const initCommand = new Command('init')
             throwCliError(context.error);
         }
 
-        await handleInit(context.value, path, options);
+        await handleInit(context.value, path, {
+            name: options.name,
+            description: options.description,
+            categoryMode: options.categoryMode as CategoryMode,
+            format: options.format,
+        });
     });
