@@ -26,7 +26,7 @@ import {
     parseConfig,
     type Result,
 } from '@yeseh/cortex-core';
-import type { Registry, RegistryError, StorageAdapter, StoreNotFoundError } from '@yeseh/cortex-core/storage';
+import type { Registry, RegistryError, StorageAdapter, StoreError } from '@yeseh/cortex-core';
 import { FilesystemStorageAdapter } from './index.ts';
 import type { CortexSettings } from '../../core/src/config/types.ts';
 

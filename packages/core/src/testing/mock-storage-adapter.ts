@@ -1,11 +1,13 @@
-import type { StorageAdapter } from '@/storage/index.ts';
+import type { ConfigAdapter, StorageAdapter } from '@/storage/index.ts';
 import { err, ok } from '@/result.ts';
+import { getDefaultSettings } from '@/config/config';
 
 export type StorageAdapterOverrides = Partial<{
     memories: Partial<StorageAdapter['memories']>;
     indexes: Partial<StorageAdapter['indexes']>;
     categories: Partial<StorageAdapter['categories']>;
     stores: Partial<StorageAdapter['stores']>;
+    config: Partial<StorageAdapter['config']>;
 }>;
 
 export const createMockStorageAdapter = (
@@ -31,7 +33,6 @@ export const createMockStorageAdapter = (
         ensure: async () => ok(undefined),
         delete: async () => ok(undefined),
         setDescription: async () => ok(undefined),
-        removeSubcategoryEntry: async () => ok(undefined),
         ...overrides?.categories,
     },
     stores: {
@@ -44,5 +45,11 @@ export const createMockStorageAdapter = (
         remove: async () => ok(undefined),
         add: async () => ok(undefined),
         ...overrides?.stores,
+    },
+    config: {
+        getSettings: async () => ok(getDefaultSettings()),
+        getStore: async () => ok(null),
+        getStores: async () => ok({}),
+        ...overrides?.config,
     },
 });

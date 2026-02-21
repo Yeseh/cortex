@@ -8,12 +8,12 @@ import { describe, expect, it } from 'bun:test';
 import { Cortex, createDefaultAdapterFactory } from './cortex.ts';
 import type { AdapterFactory } from './types.ts';
 import type { StorageAdapter } from '@/storage/index.ts';
-import { createMockStorageAdapter } from '@/test/mock-storage-adapter.ts';
+import { createMockStorageAdapter } from '@/testing/mock-storage-adapter.ts';
 
 describe('Cortex.init()', () => {
     it('should apply default settings when none are provided', () => {
         const cortex = Cortex.init({
-            registry: {},
+            stores: {},
             adapterFactory: () => createMockStorageAdapter(),
         });
 
@@ -24,7 +24,7 @@ describe('Cortex.init()', () => {
     it('should merge custom settings with defaults', () => {
         const cortex = Cortex.init({
             settings: { outputFormat: 'json' },
-            registry: {},
+            stores: {},
             adapterFactory: () => createMockStorageAdapter(),
         });
 
@@ -36,7 +36,7 @@ describe('Cortex.init()', () => {
 describe('Cortex.getStore()', () => {
     it('should return STORE_NOT_FOUND for missing store name', () => {
         const cortex = Cortex.init({
-            registry: {},
+            stores: {},
             adapterFactory: () => createMockStorageAdapter(),
         });
 
@@ -55,7 +55,7 @@ describe('Cortex.getStore()', () => {
         };
 
         const cortex = Cortex.init({
-            registry: {
+            stores: {
                 project: {
                     kind: 'filesystem',
                     properties: { path: '/data/project' },
@@ -80,7 +80,7 @@ describe('Cortex.getStore()', () => {
         const badFactory: AdapterFactory = () => undefined as unknown as StorageAdapter;
 
         const cortex = Cortex.init({
-            registry: {
+            stores: {
                 project: { 
                     kind: 'filesystem',
                     properties: { path: '/data/project' },
@@ -98,7 +98,7 @@ describe('Cortex.getStore()', () => {
 
     it('should throw when using default adapter factory', () => {
         const cortex = Cortex.init({
-            registry: {
+            stores: {
                 project: { 
                     kind: 'filesystem',
                     properties: { path: '/data/project' },

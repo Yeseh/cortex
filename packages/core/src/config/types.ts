@@ -1,4 +1,4 @@
-import type { ErrorDetails } from "@/result";
+import type { ErrorDetails, Result } from "@/result";
 import type { CategoryMode } from "./config";
 
 /**
@@ -50,6 +50,7 @@ export type ConfigErrorCode =
  * ```
  */
 export type ConfigError = ErrorDetails<ConfigErrorCode> ;
+export type ConfigResult<T> = Result<T, ConfigError>;
 
 export type ConfigStore = {
     kind: string;

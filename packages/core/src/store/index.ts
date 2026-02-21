@@ -9,5 +9,10 @@ export {
 } from './result.ts';
 
 export {
+    type StoreClient,
+} from './store-client.ts';
+
+export {
     type Store,
+    type StoreData
 } from './store.ts';

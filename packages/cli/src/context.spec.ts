@@ -5,7 +5,7 @@ import { isAbsolute, join } from 'node:path';
 
 import {
     getDefaultGlobalStorePath,
-    getDefaultRegistryPath,
+    getDefaultConfigPath,
     loadRegistry,
     resolveStoreContext,
 } from './context.ts';
@@ -36,23 +36,23 @@ describe('context', () => {
 
     describe('getDefaultRegistryPath', () => {
         it('should return path ending with .config/cortex/config.yaml', () => {
-            const path = getDefaultRegistryPath();
+            const path = getDefaultConfigPath();
             expect(path.endsWith(join('.config', 'cortex', 'config.yaml'))).toBe(true);
         });
 
         it('should use homedir as base', () => {
-            const path = getDefaultRegistryPath();
+            const path = getDefaultConfigPath();
             expect(path.startsWith(homedir())).toBe(true);
         });
 
         it('should return absolute path', () => {
-            const path = getDefaultRegistryPath();
+            const path = getDefaultConfigPath();
             expect(isAbsolute(path)).toBe(true);
         });
 
         it('should return consistent value on multiple calls', () => {
-            const first = getDefaultRegistryPath();
-            const second = getDefaultRegistryPath();
+            const first = getDefaultConfigPath();
+            const second = getDefaultConfigPath();
             expect(first).toBe(second);
         });
     });

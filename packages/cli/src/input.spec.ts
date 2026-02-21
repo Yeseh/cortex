@@ -6,6 +6,12 @@ import { Readable } from 'node:stream';
 
 import { resolveInput } from './input.ts';
 
+const createMockStdin = (data: string, isTTY = false): NodeJS.ReadableStream => {
+    const stream = Readable.from([data]) as NodeJS.ReadableStream & { isTTY?: boolean };
+    stream.isTTY = isTTY;
+    return stream;
+};
+
 describe('resolveMemoryContentInput', () => {
     let tempDir: string;
 
@@ -100,17 +106,13 @@ describe('resolveMemoryContentInput', () => {
     });
 
     describe('stdin input', () => {
-        const createMockStdin = (data: string, isTTY = false): NodeJS.ReadableStream => {
-            const stream = Readable.from([data]) as NodeJS.ReadableStream & { isTTY?: boolean };
-            stream.isTTY = isTTY;
-            return stream;
-        };
+
 
         it('should read content from stdin', async () => {
             const mockStdin = createMockStdin('Stdin content');
 
             const result = await resolveInput({
-                stdin: mockStdin,
+                stream: mockStdin,
             });
 
             expect(result.ok()).toBe(true);
@@ -124,7 +126,7 @@ describe('resolveMemoryContentInput', () => {
             const mockStdin = createMockStdin('', true);
 
             const result = await resolveInput({
-                stdin: mockStdin,
+                stream: mockStdin,
             });
 
             expect(result.ok()).toBe(true);
@@ -138,45 +140,12 @@ describe('resolveMemoryContentInput', () => {
             const mockStdin = createMockStdin('Requested stdin');
 
             const result = await resolveInput({
-                stdin: mockStdin,
-                stdinRequested: true,
+                stream: mockStdin,
             });
 
             expect(result.ok()).toBe(true);
             if (result.ok()) {
                 expect(result.value.content).toBe('Requested stdin');
-                expect(result.value.source).toBe('stdin');
-            }
-        });
-
-        it('should skip stdin when requireStdinFlag is true but not requested', async () => {
-            const mockStdin = createMockStdin('Ignored stdin');
-
-            const result = await resolveInput({
-                stdin: mockStdin,
-                requireStdinFlag: true,
-                stdinRequested: false,
-            });
-
-            expect(result.ok()).toBe(true);
-            if (result.ok()) {
-                expect(result.value.content).toBeNull();
-                expect(result.value.source).toBe('none');
-            }
-        });
-
-        it('should read stdin when requireStdinFlag and stdinRequested are both true', async () => {
-            const mockStdin = createMockStdin('Required stdin');
-
-            const result = await resolveInput({
-                stdin: mockStdin,
-                requireStdinFlag: true,
-                stdinRequested: true,
-            });
-
-            expect(result.ok()).toBe(true);
-            if (result.ok()) {
-                expect(result.value.content).toBe('Required stdin');
                 expect(result.value.source).toBe('stdin');
             }
         });
@@ -198,7 +167,7 @@ describe('resolveMemoryContentInput', () => {
         it('should error when content and stdin are both requested', async () => {
             const result = await resolveInput({
                 content: 'Content',
-                stdinRequested: true,
+                stream: createMockStdin('Stdin content'),
             });
 
             expect(result.ok()).toBe(false);
@@ -210,7 +179,7 @@ describe('resolveMemoryContentInput', () => {
         it('should error when file and stdin are both requested', async () => {
             const result = await resolveInput({
                 filePath: '/some/file.txt',
-                stdinRequested: true,
+                stream: createMockStdin('Stdin content'),
             });
 
             expect(result.ok()).toBe(false);
@@ -223,7 +192,7 @@ describe('resolveMemoryContentInput', () => {
             const result = await resolveInput({
                 content: 'Content',
                 filePath: '/some/file.txt',
-                stdinRequested: true,
+                stream: createMockStdin('Stdin content'),
             });
 
             expect(result.ok()).toBe(false);
@@ -234,28 +203,11 @@ describe('resolveMemoryContentInput', () => {
     });
 
     describe('missing content error', () => {
-        it('should error when requireContent is true but no content provided', async () => {
-            const mockStdin = Readable.from([]) as NodeJS.ReadableStream & { isTTY?: boolean };
-            mockStdin.isTTY = true;
-
+        it('should error when no source was provided', async () => {
             const result = await resolveInput({
-                stdin: mockStdin,
-                requireContent: true,
-            });
-
-            expect(result.ok()).toBe(false);
-            if (!result.ok()) {
-                expect(result.error.code).toBe('MISSING_CONTENT');
-            }
-        });
-
-        it('should return null content when requireContent is false', async () => {
-            const mockStdin = Readable.from([]) as NodeJS.ReadableStream & { isTTY?: boolean };
-            mockStdin.isTTY = true;
-
-            const result = await resolveInput({
-                stdin: mockStdin,
-                requireContent: false,
+                content: undefined,
+                filePath: undefined,
+                stream: undefined,
             });
 
             expect(result.ok()).toBe(true);
@@ -291,7 +243,7 @@ describe('resolveMemoryContentInput', () => {
             mockStdin.isTTY = false;
 
             const result = await resolveInput({
-                stdin: mockStdin,
+                stream: mockStdin,
             });
 
             expect(result.ok()).toBe(true);
@@ -310,7 +262,7 @@ describe('resolveMemoryContentInput', () => {
             } as unknown as NodeJS.ReadableStream;
 
             const result = await resolveInput({
-                stdin: mockStdin,
+                stream: mockStdin,
             });
 
             expect(result.ok()).toBe(true);
@@ -324,7 +276,7 @@ describe('resolveMemoryContentInput', () => {
             mockStdin.isTTY = true;
 
             const result = await resolveInput({
-                stdin: mockStdin,
+                stream: mockStdin,
             });
 
             expect(result.ok()).toBe(true);

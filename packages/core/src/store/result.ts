@@ -7,27 +7,15 @@ import { err, type ErrorDetails, type Result } from '@/result.ts';
  */
 
 export type StoreErrorCode =
-    | 'LOCAL_STORE_MISSING'
-    | 'GLOBAL_STORE_MISSING'
-    | 'STORE_ACCESS_FAILED'
-    | 'MISSING_STORES_SECTION'
-    | 'INVALID_STORES_SECTION'
-    | 'INVALID_STORE_NAME'
-    | 'DUPLICATE_STORE_NAME'
-    | 'MISSING_STORE_PATH'
-    | 'INVALID_STORE_PATH'
-    | 'UNEXPECTED_ENTRY'
-    | 'REGISTRY_READ_FAILED'
-    | 'REGISTRY_PARSE_FAILED'
-    | 'REGISTRY_MISSING'
-    | 'REGISTRY_WRITE_FAILED'
-    | 'REGISTRY_SERIALIZE_FAILED'
-    | 'EMPTY_REGISTRY'
     | 'STORE_NOT_FOUND'
     | 'STORE_ALREADY_EXISTS'
     | 'STORE_CREATE_FAILED'
-    | 'STORE_INDEX_FAILED'
-    | 'REGISTRY_UPDATE_FAILED';
+    | 'STORE_CRATE_FAILED'
+    | 'STORE_SAVE_FAILED'
+    | 'STORE_INIT_FAILED'
+    | 'STORE_NAME_INVALID'
+    | 'MISSING_STORE_PATH'
+    | 'INVALID_STORE_NAME';
 
 export type StoreError = ErrorDetails<StoreErrorCode> & {
     store?: string;

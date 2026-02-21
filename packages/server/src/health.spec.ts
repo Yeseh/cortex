@@ -24,7 +24,7 @@ const createTestContext = async (
 
     const cortex = Cortex.init({
         rootDirectory: tempDir,
-        registry,
+        stores: registry,
         adapterFactory: (storePath: string) => new FilesystemStorageAdapter({ rootDirectory: storePath }),
     });
 
@@ -276,7 +276,7 @@ describe('health endpoint', () => {
             // Create context with non-existent path - cortex should still work
             const cortex = Cortex.init({
                 rootDirectory: nonExistentPath,
-                registry: {},
+                stores: {},
                 adapterFactory: (storePath: string) => new FilesystemStorageAdapter({ rootDirectory: storePath }),
             });
             const ctx: HealthContext = { config: configWithBadPath, cortex };

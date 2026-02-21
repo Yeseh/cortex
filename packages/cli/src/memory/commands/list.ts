@@ -31,7 +31,8 @@
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
 
-import { CategoryPath, type CategoryClient, type CortexContext } from '@yeseh/cortex-core';
+import { CategoryPath, type CategoryClient } from '@yeseh/cortex-core/category';
+import { type CortexContext } from '@yeseh/cortex-core';
 import type { SubcategoryEntry } from '@yeseh/cortex-core/category';
 import { serializeOutput, type OutputFormat } from '../../output.ts';
 import { createCliCommandContext } from '../../create-cli-command.ts';

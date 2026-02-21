@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'bun:test';
 import { CategoryClient } from './category-client.ts';
 import { ok } from '@/result.ts';
-import { createMockStorageAdapter } from '@/test/mock-storage-adapter.ts';
+import { createMockStorageAdapter } from '@/testing/mock-storage-adapter.ts';
 
 describe('CategoryClient.init()', () => {
     it('should create a client for root path', () => {

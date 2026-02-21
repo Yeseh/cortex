@@ -13,7 +13,7 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
-import { getDefaultRegistryPath } from '../../context.ts';
+import { getDefaultConfigPath } from '../../context.ts';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { serializeOutput, type OutputStore, type OutputFormat } from '../../output.ts';
 import { Slug } from '@yeseh/cortex-core';
@@ -91,7 +91,7 @@ export async function handleRemove(
     options: RemoveCommandOptions = {},
     deps: RemoveHandlerDeps = {},
 ): Promise<void> {
-    const registryPath = getDefaultRegistryPath();
+    const registryPath = getDefaultConfigPath();
 
     // 1. Validate store name
     const trimmedName = validateStoreName(name);

@@ -38,7 +38,7 @@ export const createTestContext = (testDir: string): ToolContext => {
 
     const cortex = Cortex.init({
         rootDirectory: testDir,
-        registry: { default: { path: memoryDir } },
+        stores: { default: { path: memoryDir } },
         adapterFactory: (storePath: string) => new FilesystemStorageAdapter({ rootDirectory: storePath }),
     });
 
@@ -71,7 +71,7 @@ export const createTestContextWithStores = (
 
     const cortex = Cortex.init({
         rootDirectory: testDir,
-        registry,
+        stores: registry,
         adapterFactory: (storePath: string) => new FilesystemStorageAdapter({ rootDirectory: storePath }),
     });
 

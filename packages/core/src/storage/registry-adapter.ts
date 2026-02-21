@@ -1,7 +1,4 @@
 import type { ErrorDetails, Result } from "@/result";
-import type { ConfigStore } from "@/config/types";
-import type { StoreResult } from "@/store";
-import type { Registry } from "@/store/store";
 
 /**
  * Error codes for registry operations.

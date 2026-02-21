@@ -23,15 +23,15 @@
  */
 
 import { Command } from '@commander-js/extra-typings';
-import { spawn } from 'node:child_process';
-import { basename, resolve } from 'node:path';
+import { resolve } from 'node:path';
+import { resolveStoreName } from '../index.ts';
 import { throwCoreError } from '../../errors.ts';
-import { getDefaultRegistryPath } from '../../context.ts';
+import { getDefaultConfigPath as getDefaultConfigPath } from '../../context.ts';
 import { initializeStore } from '@yeseh/cortex-core/store';
+import { type CortexContext } from '@yeseh/cortex-core';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { serializeOutput, type OutputStoreInit, type OutputFormat } from '../../output.ts';
 import { resolveUserPath } from '../../paths.ts';
-import { Slug } from '@yeseh/cortex-core';
 
 /**
  * Options for the init command.
@@ -41,119 +41,6 @@ export interface InitCommandOptions {
     name?: string;
     /** Output format (yaml, json, toon) */
     format?: string;
-}
-
-/**
- * Dependencies for the init command handler.
- * Allows injection for testing.
- */
-export interface InitHandlerDeps {
-    /** Output stream for writing results (defaults to process.stdout) */
-    stdout?: NodeJS.WritableStream;
-    /** Current working directory (defaults to process.cwd()) */
-    cwd?: string;
-}
-
-/**
- * Executes a git command and returns the trimmed stdout.
- */
-const runGitCommand = (
-    args: string[],
-    cwd: string,
-): Promise<{ ok: true; value: string } | { ok: false }> => {
-    return new Promise((resolvePromise) => {
-        const proc = spawn('git', args, { cwd });
-        let stdout = '';
-
-        proc.stdout.on('data', (data: Buffer) => {
-            stdout += data.toString();
-        });
-        proc.on('close', (code: number | null) => {
-            if (code === 0) {
-                resolvePromise({ ok: true, value: stdout.trim() });
-            }
-            else {
-                resolvePromise({ ok: false });
-            }
-        });
-        proc.on('error', () => {
-            resolvePromise({ ok: false });
-        });
-    });
-};
-
-/**
- * Detects the git repository name from the current working directory.
- *
- * Uses `git rev-parse --show-toplevel` to find the repository root,
- * then extracts the directory name as the repository name.
- *
- * @param cwd - The current working directory to check for git repository
- * @returns The repository directory name, or `null` if not in a git repository
- */
-const detectGitRepoName = async (cwd: string): Promise<string | null> => {
-    const result = await runGitCommand([
-        'rev-parse', '--show-toplevel',
-    ], cwd);
-    if (!result.ok) {
-        return null;
-    }
-    return basename(result.value);
-};
-
-/**
- * Resolves the store name using a priority-based strategy.
- *
- * Name resolution follows this precedence:
- * 1. **Explicit name** - If `--name` option is provided, use it directly
- * 2. **Git detection** - Auto-detect from git repository directory name
- * 3. **Error** - Fail with guidance to use `--name` flag
- *
- * Git repository names are normalized to valid store name format:
- * - Converted to lowercase
- * - Non-alphanumeric characters replaced with hyphens
- * - Leading/trailing hyphens removed
- *
- * @param cwd - Current working directory
- * @param explicitName - Optional explicit name provided via `--name` option
- * @returns The validated store name
- * @throws {InvalidArgumentError} When the name is invalid
- * @throws {CommanderError} When git detection fails and no name provided
- */
-async function resolveStoreName(cwd: string, explicitName?: string): Promise<string> {
-    // 1. Use explicit name if provided
-    if (explicitName) {
-        const slugResult = Slug.from(explicitName);
-        if (!slugResult.ok()) {
-            throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug (letters, numbers, hyphens).' });
-        }
-
-        return slugResult.value.toString();
-    }
-
-    // 2. Try git detection
-    const gitName = await detectGitRepoName(cwd);
-    if (gitName) {
-        // Convert to valid store name (lowercase slug)
-        const normalized = gitName
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-|-$/g, '');
-        const slugResult = Slug.from(normalized);
-        if (!slugResult.ok()) {
-            throwCoreError({
-                code: 'INVALID_STORE_NAME',
-                message: 'Could not derive valid store name from git repo.',
-            });
-        }
-        return slugResult.value.toString();
-    }
-
-    // 3. Error: require --name
-    throwCoreError({
-        code: 'GIT_REPO_REQUIRED',
-        message: 'Not in a git repository. Use --name to specify the store name.',
-    });
 }
 
 /**
@@ -191,21 +78,32 @@ function writeOutput(
  * @throws {CommanderError} When the store already exists or init fails
  */
 export async function handleInit(
+    ctx: CortexContext,
     targetPath: string | undefined,
     options: InitCommandOptions = {},
-    deps: InitHandlerDeps = {},
 ): Promise<void> {
-    const cwd = deps.cwd ?? process.cwd();
-    const registryPath = getDefaultRegistryPath();
+    const cwd = ctx.cwd ?? process.cwd();
+    const configPath = getDefaultConfigPath();
 
-    // 1. Resolve store name (explicit or git detection)
     const storeName = await resolveStoreName(cwd, options.name);
+    const rootPath = targetPath 
+        ? resolveUserPath(targetPath.trim(), cwd) 
+        : resolve(cwd, '.cortex');
 
-    // 2. Resolve target path (default to .cortex in cwd)
-    const rootPath = targetPath ? resolveUserPath(targetPath.trim(), cwd) : resolve(cwd, '.cortex');
+    const clientResult = ctx.cortex.getStore(storeName);
+    if (!clientResult.ok()) {
+        throwCoreError(clientResult.error);
+    }
+
+    const store = clientResult.value;
+    const createResult = await store.save(rootPath);
+
+    const 
+
+
 
     // 3. Use initializeStore to handle directory creation, index, and registration
-    const registry = new FilesystemRegistry(registryPath);
+    const registry = new FilesystemRegistry(configPath);
     const result = await initializeStore(registry, storeName, rootPath);
     if (!result.ok()) {
         // Map InitStoreError to CLI error

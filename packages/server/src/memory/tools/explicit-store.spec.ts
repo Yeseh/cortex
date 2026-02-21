@@ -1,7 +1,6 @@
 /**
  * Unit tests for explicit store parameter behavior.
  */
-
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';

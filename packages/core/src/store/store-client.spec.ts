@@ -8,31 +8,30 @@ import { describe, expect, it } from 'bun:test';
 import { StoreClient } from './store-client.ts';
 import type { StorageAdapter } from '@/storage/index.ts';
 import { ok } from '@/result.ts';
-import { createMockStorageAdapter } from '@/test/mock-storage-adapter.ts';
+import { createMockStorageAdapter } from '@/testing/mock-storage-adapter.ts';
+import { Slug } from '@/slug.ts';
 
 describe('StoreClient.init()', () => {
     it('should create a store client for valid adapter input', () => {
-        const result = StoreClient.init('my-store', '/data/my-store', createMockStorageAdapter(), 'Test store');
+        const result = StoreClient.init('my-store', createMockStorageAdapter());
 
         expect(result.ok()).toBe(true);
         if (!result.ok()) return;
-        expect(result.value.name).toBe('my-store');
-        expect(result.value.path).toBe('/data/my-store');
-        expect(result.value.description).toBe('Test store');
+        expect(result.value.name).toEqual(Slug.fromUnsafe('my-store'));
     });
 
     it('should return INVALID_STORE_ADAPTER when adapter is missing', () => {
-        const result = StoreClient.init('my-store', '/data/my-store', undefined as unknown as StorageAdapter);
+        const result = StoreClient.init('my-store', undefined as unknown as StorageAdapter);
 
         expect(result.ok()).toBe(false);
         if (result.ok()) return;
-        expect(result.error.code).toBe('INVALID_STORE_ADAPTER');
+        expect(result.error.code).toBe('STORE_CREATE_FAILED');
     });
 });
 
 describe('StoreClient.root()', () => {
     it('should return root category client with path "/"', () => {
-        const storeResult = StoreClient.init('my-store', '/data/my-store', createMockStorageAdapter());
+        const storeResult = StoreClient.init('my-store', createMockStorageAdapter());
         expect(storeResult.ok()).toBe(true);
         if (!storeResult.ok()) return;
 
@@ -54,7 +53,7 @@ describe('StoreClient.root()', () => {
             },
         });
 
-        const storeResult = StoreClient.init('my-store', '/data/my-store', adapter);
+        const storeResult = StoreClient.init('my-store', adapter);
         expect(storeResult.ok()).toBe(true);
         if (!storeResult.ok()) return;
 

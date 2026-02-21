@@ -99,16 +99,16 @@ export class CategoryPath {
      * const typescript = CategoryPath.fromString('standards/typescript').unwrap();
      * const human = CategoryPath.fromString('human').unwrap();
      *
-     * typescript.isUnder(standards); // true
-     * standards.isUnder(standards);  // true
-     * human.isUnder(standards);      // false
-     * standards.isUnder(CategoryPath.root()); // true
+     * typescript.isChildOf(standards); // true
+     * standards.isChildOf(standards);  // true
+     * human.isChildOf(standards);      // false
+     * standards.isChildOf(CategoryPath.root()); // true
      * ```
      *
      * @edgeCases
      * - Root scope always returns true
      * - Self-comparison returns true
-     * - Ancestor paths return false (standards is NOT under standards/typescript)
+     * - Ancestor paths return false (standards is NOT a child of standards/typescript)
      */
     isChildOf(scope: CategoryPath): boolean {
         // Root scope matches everything

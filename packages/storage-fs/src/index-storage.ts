@@ -12,8 +12,8 @@
  */
 
 import type { CategoryPath, Result } from '@yeseh/cortex-core';
-import { err, ok, type Memory } from '@yeseh/cortex-core/memory';
-import type { IndexStorage, ReindexResult, StorageAdapterError } from '@yeseh/cortex-core/storage';
+import { err, ok, type Memory } from '@yeseh/cortex-core';
+import type { IndexAdapter, ReindexResult, StorageAdapterError } from '@yeseh/cortex-core';
 import type { Category } from '@yeseh/cortex-core/category';
 import type { FilesystemContext } from './types.ts';
 import {
@@ -61,7 +61,7 @@ import { parseIndex, serializeIndex } from './index-serialization.ts';
  * @see {@link IndexStorage} - The interface this class implements
  * @see {@link FilesystemMemoryStorage} - Related memory storage implementation
  */
-export class FilesystemIndexStorage implements IndexStorage {
+export class FilesystemIndexStorage implements IndexAdapter {
     /**
      * Creates a new FilesystemIndexStorage instance.
      *

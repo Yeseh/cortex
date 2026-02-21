@@ -23,7 +23,7 @@ export const defaultGlobalStoreCategories: ConfigCategories = {
             }
         }
     }
-};
+}!;
 
 export const defaultProjectCategories: ConfigCategories = {
     admin: {
@@ -46,4 +46,4 @@ export const defaultProjectCategories: ConfigCategories = {
             },
         },
     }
-}
+}!;

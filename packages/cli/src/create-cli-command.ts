@@ -83,7 +83,7 @@ export const createCliCommandContext = async (
         const config = parseResult.value;
         const cortex = Cortex.init({
             settings: config.settings,
-            registry: config.stores,
+            stores: config.stores,
         });
 
         const adapterFactory = async (storepath: string) => {

@@ -18,6 +18,7 @@ import type { StoreAdapter } from './store-adapter.ts';
 import type { IndexAdapter, ReindexResult } from './index-adapter.ts';
 import type { MemoryAdapter } from './memory-adapter.ts';
 import type { CategoryAdapter } from './category-adapter.ts';
+import type { ConfigAdapter } from './config-adapter.ts';
 
 /**
  * Error codes for storage adapter operations.
@@ -71,7 +72,8 @@ export interface StorageAdapter {
     categories: CategoryAdapter;
     /** Store operations */
     stores: StoreAdapter;
-
+    /** Configuration operations */
+    config: ConfigAdapter
 }
 
 export {
@@ -81,3 +83,9 @@ export {
     type StoreAdapter,
     type ReindexResult,
 };
+
+export {
+    type RegistryAdapter,
+    type RegistryError,
+    type RegistryResult,
+} from './registry-adapter.ts';

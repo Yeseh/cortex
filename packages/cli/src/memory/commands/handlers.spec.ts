@@ -11,46 +11,20 @@ import {
     MemoryPath,
     ok,
     type Category,
+    type ConfigStores,
     type CortexContext,
     type MemoryMetadata,
     type StorageAdapter,
 } from '@yeseh/cortex-core';
-
-type RegistryInput = Record<string, { path: string }>;
 
 import { handleList } from './list.ts';
 import { handleMove } from './move.ts';
 import { handleRemove } from './remove.ts';
 import { handleShow } from './show.ts';
 import { handleUpdate } from './update.ts';
+import { type StorageAdapterOverrides } from '@yeseh/cortex-core';
 
-type AdapterOverrides = Partial<{
-    memories: Partial<{
-        load: (path: MemoryPath) => Promise<unknown>;
-        save: (memory: Memory) => Promise<unknown>;
-        add: (memory: Memory) => Promise<unknown>;
-        remove: (path: MemoryPath) => Promise<unknown>;
-        move: (from: MemoryPath, to: MemoryPath) => Promise<unknown>;
-    }>;
-    indexes: Partial<{
-        load: (path: CategoryPath) => Promise<unknown>;
-        write: (path: CategoryPath, category: Category) => Promise<unknown>;
-        reindex: (scope: CategoryPath) => Promise<unknown>;
-        updateAfterMemoryWrite: (memory: Memory) => Promise<unknown>;
-    }>;
-    categories: Partial<{
-        exists: (path: CategoryPath) => Promise<unknown>;
-        ensure: (path: CategoryPath) => Promise<unknown>;
-        delete: (path: CategoryPath) => Promise<unknown>;
-        updateSubcategoryDescription: (
-            path: CategoryPath,
-            description: string | null,
-        ) => Promise<unknown>;
-        removeSubcategoryEntry: (path: CategoryPath) => Promise<unknown>;
-    }>;
-}>;
-
-const createMockAdapter = (overrides: AdapterOverrides = {}): StorageAdapter =>
+const createMockAdapter = (overrides: StorageAdapterOverrides = {}): StorageAdapter =>
     ({
         memories: {
             load: async () => ok(null),
@@ -117,14 +91,12 @@ const createContext = (options: {
     storePath: string;
     stdout?: PassThrough;
     stdin?: PassThrough;
-    registry?: RegistryInput;
+    stores?: ConfigStores
     now?: () => Date;
 }): CortexContext => {
-    const registry = options.registry ?? { default: { path: options.storePath } };
     const cortex = Cortex.init({
         settings: {},
-        registry: registry as Record<string, { path: string; categories: Record<string, never> }>,
-
+        stores: options.stores,
         adapterFactory: () => options.adapter,
     });
 
@@ -160,7 +132,7 @@ describe('memory command handlers', () => {
             const ctx = createContext({
                 adapter: createMockAdapter(),
                 storePath: tempDir,
-                registry: {},
+                stores: {},
             });
 
             await expect(handleList(ctx, undefined, undefined, {})).rejects.toThrow(CommanderError);
@@ -236,7 +208,7 @@ describe('memory command handlers', () => {
             const ctx = createContext({
                 adapter: createMockAdapter(),
                 storePath: tempDir,
-                registry: {},
+                stores: {},
             });
 
             await expect(
@@ -280,7 +252,7 @@ describe('memory command handlers', () => {
             const ctx = createContext({
                 adapter: createMockAdapter(),
                 storePath: tempDir,
-                registry: {},
+                stores: {},
             });
 
             await expect(handleMove(ctx, undefined, 'project/one', 'project/two')).rejects.toThrow(
@@ -338,7 +310,7 @@ describe('memory command handlers', () => {
             const ctx = createContext({
                 adapter: createMockAdapter(),
                 storePath: tempDir,
-                registry: {},
+                stores: {},
             });
 
             await expect(handleRemove(ctx, undefined, 'project/one')).rejects.toThrow(
@@ -390,7 +362,7 @@ describe('memory command handlers', () => {
             const ctx = createContext({
                 adapter: createMockAdapter(),
                 storePath: tempDir,
-                registry: {},
+                stores: {},
             });
 
             await expect(

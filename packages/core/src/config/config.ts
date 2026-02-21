@@ -5,6 +5,8 @@
 import { type Result, ok, err } from '../result.ts';
 import z from 'zod';
 import type { ConfigCategory, ConfigCategories, CortexSettings } from './types.ts';
+import type { StoreCategories, StoreCategory } from '../store/store.ts';
+import { CategoryPath } from '../category/category-path.ts';
 
 /**
  * Category creation/deletion mode for a store.
@@ -15,10 +17,12 @@ import type { ConfigCategory, ConfigCategories, CortexSettings } from './types.t
 export const categoryMode = z.enum(['free', 'subcategories', 'strict']);
 export type CategoryMode = z.infer<typeof categoryMode>;
 
-export const category = z.object({
-    description: z.string().optional(),
-    subcategories: z.record(z.string(), z.unknown()).optional(),
-});
+export const category: z.ZodType<ConfigCategory> = z.lazy(() =>
+    z.object({
+        description: z.string().optional(),
+        subcategories: z.record(z.string(), category).optional(),
+    }),
+);
 
 /**
  * Output formats for handlers that support multiple formats. 
@@ -43,7 +47,7 @@ export const getDefaultSettings = (): CortexSettings => ({
     defaultStore: 'default',
 });
 
-const categoriesSchema = z.record(z.string(), z.unknown());
+const categoriesSchema = z.record(z.string(), category);
 
 /**
  * Schema for a single store definition.
@@ -52,7 +56,7 @@ const storeDefinitionSchema = z.object({
     kind: z.string(),
     description: z.string().optional(),
     categoryMode: categoryMode.optional(),
-    categories: z.record(z.string(), z.unknown()).default({}),
+    categories: categoriesSchema.default({}),
     properties: z.record(z.string(), z.unknown()).default({}),
 });
 
@@ -134,6 +138,148 @@ export const flattenCategoryPaths = (
     }
 
     return paths.sort();
+};
+
+/**
+ * Converts config category hierarchy into store category hierarchy.
+ *
+ * Config categories are represented as a filesystem-oriented nested tree,
+ * while store categories are self-contained and require a full `CategoryPath`
+ * on each node.
+ *
+ * @module core/config
+ * @param categories - Config category hierarchy (filesystem/tree representation)
+ * @param prefix - Parent path used internally for recursion
+ * @returns Result with store categories, or validation error when a path segment is invalid
+ *
+ * @example
+ * ```typescript
+ * const configCategories = {
+ *   standards: {
+ *     description: 'Standards root',
+ *     subcategories: {
+ *       architecture: { description: 'Architecture docs' },
+ *     },
+ *   },
+ * };
+ *
+ * const result = configCategoriesToStoreCategories(configCategories);
+ * if (result.ok()) {
+ *   result.value.standards?.path.toString(); // 'standards'
+ *   result.value.standards?.subcategories?.architecture?.path.toString(); // 'standards/architecture'
+ * }
+ * ```
+ *
+ * @edgeCases
+ * - Returns an empty object when categories is undefined
+ * - Returns CONFIG_VALIDATION_FAILED if any computed path is not a valid slug path
+ * - Preserves descriptions and nested structure
+ */
+export const configCategoriesToStoreCategories = (
+    categories: ConfigCategories | undefined,
+    prefix = '',
+): Result<StoreCategories, ConfigValidationError> => {
+    if (!categories) {
+        return ok([]);
+    }
+
+    const output: StoreCategories = [];
+    const entries = Object.entries(categories) as [string, ConfigCategory][];
+
+    for (const [name, category] of entries) {
+        const categoryPath = prefix ? `${prefix}/${name}` : name;
+        const pathResult = CategoryPath.fromString(categoryPath);
+        if (!pathResult.ok()) {
+            return err({
+                code: 'CONFIG_VALIDATION_FAILED',
+                message: `Category '${categoryPath}' is invalid. Use lowercase slug segments separated by '/'.`,
+                field: categoryPath,
+                cause: pathResult.error,
+            });
+        }
+
+        if (pathResult.value.toString() !== categoryPath) {
+            return err({
+                code: 'CONFIG_VALIDATION_FAILED',
+                message: `Category '${categoryPath}' is invalid. Use lowercase slug segments separated by '/'.`,
+                field: categoryPath,
+            });
+        }
+
+        const subcategoriesResult = configCategoriesToStoreCategories(
+            category.subcategories ?? {},
+            categoryPath,
+        );
+        if (!subcategoriesResult.ok()) {
+            return subcategoriesResult;
+        }
+
+        const storeCategory: StoreCategory = {
+            path: pathResult.value,
+            description: category.description,
+        };
+
+        if (subcategoriesResult.value.length > 0) {
+            storeCategory.subcategories = subcategoriesResult.value;
+        }
+
+        output.push(storeCategory);
+    }
+
+    return ok(output);
+};
+
+/**
+ * Converts store category hierarchy into config category hierarchy.
+ *
+ * Store categories include explicit `CategoryPath` values, while config
+ * categories only keep description and tree structure for filesystem config.
+ * This conversion strips the path value and preserves the nested hierarchy.
+ *
+ * @module core/config
+ * @param categories - Store category hierarchy
+ * @returns Config category hierarchy compatible with config serialization
+ *
+ * @example
+ * ```typescript
+ * const configCategories = storeCategoriesToConfigCategories(storeCategories);
+ * ```
+ *
+ * @edgeCases
+ * - Returns empty object when input is undefined
+ * - Ignores `path` field and keeps only config-relevant fields
+ * - Preserves nested subcategory structure
+ */
+export const storeCategoriesToConfigCategories = (
+    categories: StoreCategories | undefined,
+): ConfigCategories => {
+    if (!categories) {
+        return {};
+    }
+
+    const output: ConfigCategories = {};
+    for (const category of categories) {
+        const categoryPath = category.path.toString();
+        const categoryName = categoryPath.split('/').filter(Boolean).at(-1);
+        if (!categoryName) {
+            continue;
+        }
+
+        const configCategory: ConfigCategory = {};
+
+        if (category.description !== undefined) {
+            configCategory.description = category.description;
+        }
+
+        const subcategories = storeCategoriesToConfigCategories(category.subcategories);
+        if (Object.keys(subcategories).length > 0) {
+            configCategory.subcategories = subcategories;
+        }
+
+        output[categoryName] = configCategory;
+    }
+
+    return output;
 };
 
 /**

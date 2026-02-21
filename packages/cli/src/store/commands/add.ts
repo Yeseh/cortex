@@ -20,7 +20,7 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCoreError } from '../../errors.ts';
-import { getDefaultRegistryPath } from '../../context.ts';
+import { getDefaultConfigPath } from '../../context.ts';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { serializeOutput, type OutputStore, type OutputFormat } from '../../output.ts';
 import { resolveUserPath } from '../../paths.ts';
@@ -121,7 +121,7 @@ export async function handleAdd(
     deps: AddHandlerDeps = {},
 ): Promise<void> {
     const cwd = deps.cwd ?? process.cwd();
-    const registryPath = getDefaultRegistryPath();
+    const registryPath = getDefaultConfigPath();
 
     // 1. Validate inputs
     const trimmedName = validateStoreName(name);
@@ -143,6 +143,7 @@ export async function handleAdd(
     }
 
     // 4. Add to registry and save
+    currentRegistry.addStore({ name: trimmedName, path: resolvedPath });
     const saved = await registry.save(currentRegistry);
     if (!saved.ok()) {
         throwCoreError({ code: 'STORE_REGISTRY_FAILED', message: saved.error.message });

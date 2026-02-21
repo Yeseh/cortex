@@ -1,6 +1,7 @@
+import type { ConfigStore } from "@/config/types";
 import type { StorageAdapterResult } from ".";
 import type { Store, StoreResult } from "@/store";
-import type { StoreName } from "@/store/store";
+import type { StoreData, StoreName } from "@/store/store";
 
 /**
  * Storage interface for store registry operations.
@@ -35,7 +36,7 @@ export interface StoreAdapter {
      * @param store - The store data to persist
      * @returns Result indicating success or failure
      */
-    save(name: StoreName, store: Store): Promise<StoreResult<void>>;
+    save(name: StoreName, store: StoreData): Promise<StoreResult<void>>;
 
     /**
      * Removes a store from backing storage.
@@ -54,5 +55,5 @@ export interface StoreAdapter {
      * @param store - The store data to persist
      * @returns Result indicating success or failure
      */
-    add(name: StoreName, store: Store): Promise<StoreResult<void>>;
+    add(name: StoreName, store: StoreData): Promise<StoreResult<void>>;
 }

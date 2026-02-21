@@ -28,8 +28,8 @@ import {
     defaultTokenizer,
     MemoryPath,
     type CortexContext,
-    type StoreClient,
 } from '@yeseh/cortex-core';
+import {type StoreClient} from '@yeseh/cortex-core/store';
 import { serializeOutput, type OutputMemory, type OutputFormat } from '../../output.ts';
 import { createCliCommandContext } from '../../create-cli-command.ts';
 

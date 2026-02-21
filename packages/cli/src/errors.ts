@@ -28,6 +28,7 @@ import { InvalidArgumentError, CommanderError } from '@commander-js/extra-typing
 export interface CoreError {
     code: string;
     message: string;
+    cause?: unknown;
 }
 
 /**

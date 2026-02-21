@@ -18,11 +18,12 @@ import type {
     SetDescriptionResult,
     SubcategoryEntry,
     CategoryResult,
+    CategoryMemoryEntry,
 } from '@/category/types.ts';
 import { createCategory, deleteCategory, setDescription } from '@/category/operations/index.ts';
 import type { PruneOptions, PruneResult } from '@/memory/operations/prune.ts';
 import { pruneExpiredMemories } from '@/memory/operations/prune.ts';
-import { MemoryClient } from './memory-client.ts';
+import { MemoryClient } from '../memory/memory-client.ts';
 
 /**
  * Client for category navigation and operations.
@@ -93,9 +94,11 @@ export class CategoryClient {
      * @param adapter - The storage adapter for the store
      * @returns A CategoryResult with a CategoryClient for the specified path
      */
-    static init(path: string, adapter: StorageAdapter): CategoryResult<CategoryClient> {
-        const normalizedPath = CategoryClient.normalizePath(path);
-        const pathPayload = normalizedPath === '/' ? '' : normalizedPath.slice(1);
+    static init(path: string | CategoryPath, adapter: StorageAdapter): CategoryResult<CategoryClient> {
+        const normalizedPath = CategoryClient.normalizePath(path.toString());
+        const pathPayload = normalizedPath === '/' 
+            ? '' 
+            : normalizedPath.slice(1);
 
         const pathResult = CategoryPath.fromString(pathPayload);
         if (!pathResult.ok()) {

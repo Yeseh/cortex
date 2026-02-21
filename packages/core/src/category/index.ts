@@ -25,6 +25,7 @@ export type {
 export { MAX_DESCRIPTION_LENGTH } from './types.ts';
 
 export * from './category-templates.ts'
+export * from './category-client.ts';
 
 export {
     createCategory,

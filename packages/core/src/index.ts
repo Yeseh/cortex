@@ -9,7 +9,9 @@ export * from './result.ts';
 export * from './memory';
 export * from './category';
 export * from './store';
-export * from './storage/index.ts';
+export * from './storage';
+export * from './types';
+export * from './testing/mock-storage-adapter.ts';
 export * from './cortex';
 
 export {

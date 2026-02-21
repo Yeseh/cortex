@@ -39,7 +39,7 @@ import {
     type CortexOptions,
     type AdapterFactory,
 } from './types.ts';
-import { StoreClient, type StoreClientResult } from './store-client.ts';
+import { StoreClient, type StoreClientResult } from './store/store-client.ts';
 import { getDefaultSettings } from '@/config/config.ts';
 import type {  CortexSettings, ConfigStores } from '@/config/types.ts';
 import { err, ok, type ErrorDetails, type Result } from '@/result.ts';
@@ -71,9 +71,6 @@ export class Cortex {
     /** Current runtime settings */
     public readonly settings: CortexSettings;
 
-    /** Store definitions mapping store names to their configuration */
-    private readonly registry: ConfigStores 
-
     /** Factory for creating scoped storage adapters */
     private readonly adapterFactory: AdapterFactory;
 
@@ -82,7 +79,6 @@ export class Cortex {
      */
     private constructor(options: CortexOptions) {
         this.settings = { ...getDefaultSettings(), ...options.settings };
-        this.registry = options.registry ?? {};
         this.adapterFactory = options.adapterFactory;
     }
 
@@ -154,22 +150,15 @@ export class Cortex {
      * ```
      */
     getStore(name: string): CortexClientResult<StoreClient> {
-        const definition = this.registry[name];
-        if (!definition) {
-            return err({
-                code: 'STORE_NOT_FOUND',
-                message: `Store '${name}' not found in registry`,
-                store: name,
-            });
-        }
+        const adapter = this.adapterFactory(name);
+        const storeClient = StoreClient.init(
+            name, 
+            adapter);
 
-        // Create new adapter
-        const adapter = this.adapterFactory(definition.properties["path"] as string);
-        const storeClient = StoreClient.init(name, definition.properties["path"] as string, adapter, definition.description);
         if (!storeClient.ok()) {
              return err({
                 code: 'INVALID_STORE_ADAPTER',
-                message: `Adapter was null or undefined for store '${name}' at path '${definition.properties["path"]}'`,
+                message: `Adapter was null or undefined for store '${name}'`,
                 store: name,
              });
         }

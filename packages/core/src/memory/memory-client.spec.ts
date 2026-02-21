@@ -5,10 +5,10 @@
  */
 
 import { describe, expect, it } from 'bun:test';
-import { MemoryClient } from './memory-client.ts';
+import { MemoryClient } from '@/memory/memory-client.ts';
 import { Memory } from '@/memory/memory.ts';
 import { ok } from '@/result.ts';
-import { createMockStorageAdapter } from '@/test/mock-storage-adapter.ts';
+import { createMockStorageAdapter } from '@/testing/mock-storage-adapter';
 
 const buildMemory = (path: string): Memory => {
     const now = new Date('2026-02-19T00:00:00.000Z');

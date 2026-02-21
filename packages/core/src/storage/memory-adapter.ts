@@ -19,7 +19,7 @@ import type { StorageAdapterError } from ".";
  */
 export interface MemoryAdapter {
     /**
-     * Loads the contents of a memory 
+     * Loads the contents of a memory.
      *
      * @param path - Memory identifier path (e.g., "project/cortex/architecture")
      * @returns Result with file contents, or null if the memory does not exist

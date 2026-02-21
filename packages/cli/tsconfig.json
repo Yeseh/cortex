@@ -5,7 +5,7 @@
         "rootDir": "src",
         "emitDeclarationOnly": true
     },
-    "include": ["src/**/*"],
+    "include": ["src/**/*", "../core/src/category/category-templates.ts"],
     "exclude": ["node_modules", "dist"],
     "references": [{ "path": "../core" }, { "path": "../storage-fs" }]
 }

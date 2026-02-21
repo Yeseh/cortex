@@ -9,7 +9,7 @@ import { err, ok } from '@/result.ts';
 import { initializeStore } from './initialize.ts';
 import type { Store, StoreData } from '../store.ts';
 import type { CategoryPath } from '@/category/category-path.ts';
-import { createMockStorageAdapter } from '@/test/mock-storage-adapter.ts';
+import { createMockStorageAdapter } from '@/testing/mock-storage-adapter.ts';
 
 describe('initializeStore', () => {
     it('should reject invalid store names', async () => {
@@ -29,7 +29,7 @@ describe('initializeStore', () => {
 
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
-            expect(result.error.code).toBe('INVALID_STORE_NAME');
+            expect(result.error.code).toBe('STORE_NAME_INVALID');
         }
         expect(load.mock.calls.length).toBe(0);
     });
@@ -172,7 +172,7 @@ describe('initializeStore', () => {
 
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
-            expect(result.error.code).toBe('STORE_INDEX_FAILED');
+            expect(result.error.code).toBe('STORE_CRATE_FAILED');
         }
     });
 });

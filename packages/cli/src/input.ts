@@ -90,7 +90,6 @@ export const resolveInput = async (source: InputSource)
     : Promise<InputResult> => {
 
     const contentProvided = source.content !== undefined 
-        && source.content.trim() !== '';
     const fileProvided = source.filePath !== undefined 
         && source.filePath.trim() !== '';
     const streamRequested = source.stream !== null 

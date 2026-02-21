@@ -9,6 +9,7 @@ import { storeError, type StoreResult } from '@/store/result.ts';
 import { Slug } from '@/slug.ts';
 import type { Store, StoreData } from '../store.ts';
 import type { StorageAdapter } from '@/storage/index.ts';
+import type { ConfigStore } from '@/config/types.ts';
 
 /**
  * Initializes a new store with proper directory structure and registry entry.
@@ -53,7 +54,7 @@ export const initializeStore = async (
     const slugResult = Slug.from(name);
     if (!slugResult.ok()) {
         return storeError(
-            'INVALID_STORE_NAME', 
+            'STORE_NAME_INVALID', 
             'Store name must be a lowercase slug (letters, numbers, hyphens).',
             {store: name}
         );
@@ -63,21 +64,16 @@ export const initializeStore = async (
     const storeResult = await stores.load(storeName); 
     if (storeResult.ok()) {
         return storeError(
-            'DUPLICATE_STORE_NAME',
+            'STORE_ALREADY_EXISTS',
             'Store name already exists in registry.',
             { store: name, cause: storeResult.error },
         );
     }
-    else if (storeResult.err() && storeResult.error.code !== 'STORE_NOT_FOUND') {
+    else if (storeResult.error.code !== 'STORE_NOT_FOUND') {
         return err(storeResult.error); 
     }
 
-    const store: Store = {
-        name: storeName,
-        ...data,
-    };
-
-    const saveResult = await stores.save(storeName, store); 
+    const saveResult = await stores.save(storeName, data); 
     if (!saveResult.ok()) {
         return err(saveResult.error)
     }
@@ -86,11 +82,11 @@ export const initializeStore = async (
     for (const name of Object.keys(initialCategories)) {
         const category = initialCategories[name]!;
 
-        // TODO: Warn instead?
+        // TODO: Create what we can, warn instead?
         const categoryResult = await categories.ensure(category.path);
         if (!categoryResult.ok()) {
             return storeError(
-                'STORE_INDEX_FAILED',
+                'STORE_CREATE_FAILED',
                 `Failed to initialie store category '${name}' in store '${storeName}'.`,
                 { store: name, cause: categoryResult.error },
             );
