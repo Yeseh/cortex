@@ -82,10 +82,5 @@ export {
     type IndexAdapter,
     type StoreAdapter,
     type ReindexResult,
+    type ConfigAdapter,
 };
-
-export {
-    type RegistryAdapter,
-    type RegistryError,
-    type RegistryResult,
-} from './registry-adapter.ts';

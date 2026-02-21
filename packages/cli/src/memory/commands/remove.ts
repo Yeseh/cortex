@@ -14,7 +14,7 @@
  */
 
 import { Command } from '@commander-js/extra-typings';
-import { throwCoreError } from '../../errors.ts';
+import { throwCliError } from '../../errors.ts';
 import { MemoryPath, type CortexContext } from '@yeseh/cortex-core';
 import { createCliCommandContext } from '../../create-cli-command.ts';
 
@@ -33,31 +33,31 @@ export async function handleRemove(
 ): Promise<void> {
     const pathResult = MemoryPath.fromString(path);
     if (!pathResult.ok()) {
-        throwCoreError(pathResult.error);
+        throwCliError(pathResult.error);
     }
 
     const storeResult = ctx.cortex.getStore(storeName ?? 'default');
     if (!storeResult.ok()) {
-        throwCoreError(storeResult.error);
+        throwCliError(storeResult.error);
     }
 
     const store = storeResult.value;
     const rootResult = store.root();
     if (!rootResult.ok()) {
-        throwCoreError(rootResult.error);
+        throwCliError(rootResult.error);
     }
 
     const categoryResult = pathResult.value.category.isRoot
         ? rootResult
         : rootResult.value.getCategory(pathResult.value.category.toString());
     if (!categoryResult.ok()) {
-        throwCoreError(categoryResult.error);
+        throwCliError(categoryResult.error);
     }
 
     const memoryClient = categoryResult.value.getMemory(pathResult.value.slug.toString());
     const removeResult = await memoryClient.delete();
     if (!removeResult.ok()) {
-        throwCoreError(removeResult.error);
+        throwCliError(removeResult.error);
     }
 
     const out = ctx.stdout ?? process.stdout;
@@ -78,7 +78,7 @@ export const removeCommand = new Command('remove')
         const parentOpts = command.parent?.opts() as { store?: string } | undefined;
         const context = await createCliCommandContext();
         if (!context.ok()) {
-            throwCoreError(context.error);
+            throwCliError(context.error);
         }
 
         await handleRemove(context.value, parentOpts?.store, path);

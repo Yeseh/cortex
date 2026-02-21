@@ -258,13 +258,9 @@ export const storeCategoriesToConfigCategories = (
     }
 
     const output: ConfigCategories = {};
-    for (const category of categories) {
-        const categoryPath = category.path.toString();
-        const categoryName = categoryPath.split('/').filter(Boolean).at(-1);
-        if (!categoryName) {
-            continue;
-        }
+    const entries = Object.entries(categories) as [string, StoreCategory][];
 
+    for (const [name, category] of entries) {
         const configCategory: ConfigCategory = {};
 
         if (category.description !== undefined) {
@@ -276,7 +272,7 @@ export const storeCategoriesToConfigCategories = (
             configCategory.subcategories = subcategories;
         }
 
-        output[categoryName] = configCategory;
+        output[name] = configCategory;
     }
 
     return output;

@@ -20,7 +20,7 @@ import { mkdir, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import { Command } from '@commander-js/extra-typings';
-import { throwCoreError as throwCliError } from '../errors.ts';
+import { throwCliError as throwCliError } from '../errors.ts';
 import { serializeOutput, type OutputFormat, type OutputInit, type OutputPayload } from '../output.ts';
 import { defaultGlobalStoreCategories } from '@yeseh/cortex-core/category'; 
 import { configCategoriesToStoreCategories, getDefaultSettings,  type CortexConfig, type CortexContext, type CortexSettings, type StoreData } from '@yeseh/cortex-core';

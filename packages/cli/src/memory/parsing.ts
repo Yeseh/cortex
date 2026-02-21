@@ -1,4 +1,4 @@
-import { throwCoreError } from "../errors";
+import { throwCliError } from "../errors";
 
 export const parseTags = (raw?: string[]): string[] =>
     raw
@@ -15,7 +15,7 @@ export const parseExpiresAt = (raw?: string): Date | undefined => {
 
     const parsed = new Date(raw);
     if (Number.isNaN(parsed.getTime())) {
-        throwCoreError({ code: 'INVALID_ARGUMENTS', message: 'Invalid expiration date format' });
+        throwCliError({ code: 'INVALID_ARGUMENTS', message: 'Invalid expiration date format' });
     }
 
     return parsed;

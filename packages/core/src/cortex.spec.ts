@@ -10,29 +10,6 @@ import type { AdapterFactory } from './types.ts';
 import type { StorageAdapter } from '@/storage/index.ts';
 import { createMockStorageAdapter } from '@/testing/mock-storage-adapter.ts';
 
-describe('Cortex.init()', () => {
-    it('should apply default settings when none are provided', () => {
-        const cortex = Cortex.init({
-            stores: {},
-            adapterFactory: () => createMockStorageAdapter(),
-        });
-
-        expect(cortex.settings.outputFormat).toBe('yaml');
-        expect(cortex.settings.defaultStore).toBe('default');
-    });
-
-    it('should merge custom settings with defaults', () => {
-        const cortex = Cortex.init({
-            settings: { outputFormat: 'json' },
-            stores: {},
-            adapterFactory: () => createMockStorageAdapter(),
-        });
-
-        expect(cortex.settings.outputFormat).toBe('json');
-        expect(cortex.settings.defaultStore).toBe('default');
-    });
-});
-
 describe('Cortex.getStore()', () => {
     it('should return STORE_NOT_FOUND for missing store name', () => {
         const cortex = Cortex.init({
@@ -70,10 +47,9 @@ describe('Cortex.getStore()', () => {
 
         expect(result.ok()).toBe(true);
         if (!result.ok()) return;
+
         expect(receivedPath).toBe('/data/project');
         expect(result.value.name).toBe('project');
-        expect(result.value.path).toBe('/data/project');
-        expect(result.value.description).toBe('Project store');
     });
 
     it('should return INVALID_STORE_ADAPTER when factory returns undefined', () => {

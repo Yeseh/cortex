@@ -47,13 +47,4 @@ export interface StoreAdapter {
      * @returns Result indicating success or failure
      */
     remove(name: StoreName): Promise<StoreResult<void>>;
-
-    /**
-     * Adds a new store to the registry and persists it.
-     *
-     * @param name - The store name to add
-     * @param store - The store data to persist
-     * @returns Result indicating success or failure
-     */
-    add(name: StoreName, store: StoreData): Promise<StoreResult<void>>;
 }

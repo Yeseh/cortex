@@ -15,7 +15,7 @@
  */
 
 import { Command } from '@commander-js/extra-typings';
-import { throwCoreError } from '../../errors.ts';
+import { throwCliError } from '../../errors.ts';
 import { loadRegistry } from '../../context.ts';
 import { serializeOutput, type OutputStoreRegistry, type OutputFormat } from '../../output.ts';
 
@@ -55,7 +55,7 @@ export async function handleList(
     // 1. Load the registry
     const registryResult = await loadRegistry();
     if (!registryResult.ok()) {
-        throwCoreError(registryResult.error);
+        throwCliError(registryResult.error);
     }
 
     // 2. Format the output as a sorted list of stores
@@ -71,7 +71,7 @@ export async function handleList(
     const format: OutputFormat = (options.format as OutputFormat) ?? 'yaml';
     const serialized = serializeOutput({ kind: 'store-registry', value: output }, format);
     if (!serialized.ok()) {
-        throwCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
+        throwCliError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
     }
 
     const out = deps.stdout ?? process.stdout;

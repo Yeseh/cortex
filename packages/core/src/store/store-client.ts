@@ -13,10 +13,12 @@ import { CategoryClient } from '../category/category-client.ts';
 import { err, ok, type Result } from '@/result.ts';
 import { MemoryClient } from '../memory/memory-client.ts';
 import type { CategoryResult } from '@/category/types.ts';
-import type { StoreData, StoreName } from './store.ts';
+import type { Store, StoreData, StoreName } from './store.ts';
 import type { StoreError, StoreResult } from './result.ts';
 import { Slug } from '@/slug.ts';
 import type { ConfigStore } from '@/config/types.ts';
+import type { MemoryPath } from '@/memory/memory-path.ts';
+import { initializeStore } from './operations/initialize.ts';
 
 
 /**
@@ -43,7 +45,7 @@ import type { ConfigStore } from '@/config/types.ts';
  */
 export class StoreClient {
     /** Store name (e.g., 'my-project') */
-    readonly name: StoreName;
+    readonly name: string;
 
     /** Storage adapter for this store (null if store not found) */
     private readonly adapter: StorageAdapter;
@@ -58,7 +60,7 @@ export class StoreClient {
      * @param adapter - Storage adapter for operations (null if not found)
      */
     private constructor(
-        name: StoreName,
+        name: string,
         adapter: StorageAdapter,
     ) {
         this.name = name;
@@ -88,16 +90,7 @@ export class StoreClient {
             })
         }
 
-        const storeName = Slug.from(name);
-        if (!storeName.ok()) {
-            return err({
-                code: 'INVALID_STORE_NAME',
-                message: `Store '${name}' has an invalid name.`,
-                store: name,
-            });
-        }
-
-        return ok(new StoreClient(storeName.value, adapter));
+        return ok(new StoreClient(name, adapter));
     }
 
     /**
@@ -106,11 +99,17 @@ export class StoreClient {
      * @returns {@link StoreData}
      */
     async load(): Promise<Result<StoreData, StoreError>> {
-        if (this.data) {
-            return ok(this.data);
+        const parse = Slug.from(this.name);
+        if (!parse.ok()) {
+            return err({
+                code: 'STORE_NAME_INVALID',
+                message: `Store name '${this.name}' is invalid. Must be a lowercase slug (letters, numbers, hyphens).`,
+                store: this.name.toString(),
+                cause: parse.error,
+            });
         }
 
-        const storeData = await this.adapter.stores.load(this.name);
+        const storeData = await this.adapter.stores.load(parse.value);
         if (!storeData.ok()) {
             return err({
                 code: 'STORE_NOT_FOUND',
@@ -131,7 +130,17 @@ export class StoreClient {
      * @returns Result indicating success or failure
      */
     async save(data: StoreData): Promise<StoreResult<void>> {
-        const result = await this.adapter.stores.save(this.name, data);
+        const parse = Slug.from(this.name);
+        if (!parse.ok()) {
+            return err({
+                code: 'STORE_NAME_INVALID',
+                message: `Store name '${this.name}' is invalid. Must be a lowercase slug (letters, numbers, hyphens).`,
+                store: this.name.toString(),
+                cause: parse.error,
+            });
+        }
+
+        const result = await this.adapter.stores.save(parse.value, data);
         if (!result.ok()) {
             return err({
                 code: 'STORE_SAVE_FAILED',
@@ -147,54 +156,19 @@ export class StoreClient {
     }
 
     async initialize(data: StoreData): Promise<StoreResult<void>> {
-        const result = await this.adapter.stores.save(this.name, data);
-        if (!result.ok()) {
+        const parse = Slug.from(this.name);
+        if (!parse.ok()) {
             return err({
-                code: 'STORE_SAVE_FAILED',
-                message: `Failed to initialize store '${this.name}'.`,
+                code: 'STORE_NAME_INVALID',
+                message: `Store name '${this.name}' is invalid. Must be a lowercase slug (letters, numbers, hyphens).`,
                 store: this.name.toString(),
-                cause: result.error,
+                cause: parse.error,
             });
         }
 
-        const hierarchyResult = await this.ensureHierarchy();
-        if (!hierarchyResult.ok()) {
-            return err({
-                code: 'STORE_INIT_FAILED',
-                message: `Failed to ensure category hierarchy for store '${this.name}'.`,
-                store: this.name.toString(),
-                cause: hierarchyResult.error,
-            });
-        }
+        await initializeStore(this.adapter, this.name, data);
 
         this.data = data;
-
-        return ok(undefined);
-    }
-
-    private async ensureHierarchy(): Promise<CategoryResult<void> | StoreResult<void>> {
-        const configuredHierarhyResult = await this.load();
-        if (!configuredHierarhyResult.ok()) {
-            return err(configuredHierarhyResult.error);
-        }
-
-        for (const category of configuredHierarhyResult.value.categories) {
-            const categoryResult = CategoryClient.init(category.path, this.adapter);
-            if (!categoryResult.ok()) {
-                return err(categoryResult.error);
-            }
-
-            const categoryClient = categoryResult.value;
-            const ensureResult = await categoryClient.create();
-            if (!ensureResult.ok()) {
-                return err({
-                    code: 'STORE_INIT_FAILED',
-                    message: `Failed to create category '${category.path}' during store initialization.`,
-                    store: this.name.toString(),
-                    cause: ensureResult.error,
-                });
-            }
-        }
 
         return ok(undefined);
     }
@@ -236,9 +210,8 @@ export class StoreClient {
     }
 
     getMemory(memoryPath: string): MemoryClient {
-        const memoryClient = MemoryClient.create(
+        const memoryClient = MemoryClient.pointTo(
             memoryPath, 
-            memoryPath.split('/').slice(-1)[0]!, 
             this.adapter);   
 
         return memoryClient;

@@ -43,10 +43,10 @@ export const createMockStorageAdapter = (
             }),
         save: async () => ok(undefined),
         remove: async () => ok(undefined),
-        add: async () => ok(undefined),
         ...overrides?.stores,
     },
     config: {
+        initialize: async () => ok(undefined),
         getSettings: async () => ok(getDefaultSettings()),
         getStore: async () => ok(null),
         getStores: async () => ok({}),

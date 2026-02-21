@@ -9,7 +9,7 @@ import { storeError, type StoreResult } from '@/store/result.ts';
 import { Slug } from '@/slug.ts';
 import type { Store, StoreData } from '../store.ts';
 import type { StorageAdapter } from '@/storage/index.ts';
-import type { ConfigStore } from '@/config/types.ts';
+import { CategoryPath } from '@/category/category-path.ts';
 
 /**
  * Initializes a new store with proper directory structure and registry entry.
@@ -49,7 +49,7 @@ export const initializeStore = async (
     {stores, categories}: StorageAdapter,
     name: string,
     data: StoreData,
-): Promise<StoreResult<Store>> => {
+): Promise<StoreResult<void>> => {
     // 1. Validate store name
     const slugResult = Slug.from(name);
     if (!slugResult.ok()) {
@@ -64,7 +64,7 @@ export const initializeStore = async (
     const storeResult = await stores.load(storeName); 
     if (storeResult.ok()) {
         return storeError(
-            'STORE_ALREADY_EXISTS',
+            'DUPLICATE_STORE_NAME',
             'Store name already exists in registry.',
             { store: name, cause: storeResult.error },
         );
@@ -73,25 +73,76 @@ export const initializeStore = async (
         return err(storeResult.error); 
     }
 
-    const saveResult = await stores.save(storeName, data); 
+    const normalizeCategories = (value: unknown): Store['categories'] => {
+        if (!value) {
+            return [];
+        }
+
+        if (Array.isArray(value)) {
+            return value as Store['categories'];
+        }
+
+        if (typeof value === 'object') {
+            const objectValues = Object.values(value as Record<string, unknown>);
+            return objectValues
+                .filter((item): item is { path: unknown; description?: unknown; subcategories?: unknown } => {
+                    return !!item && typeof item === 'object' && 'path' in item;
+                })
+                .map((item) => {
+                    const pathResult = CategoryPath.fromString(String(item.path));
+                    const safePath = pathResult.ok() ? pathResult.value : CategoryPath.root();
+
+                    return {
+                        path: safePath,
+                        description: typeof item.description === 'string' ? item.description : undefined,
+                        subcategories: normalizeCategories(item.subcategories),
+                    };
+                })
+                .filter((item) => item.path.toString() !== '');
+        }
+
+        return [];
+    };
+
+    const flattenCategories = (items: Store['categories']): Store['categories'] => {
+        const output: Store['categories'] = [];
+        for (const item of items) {
+            output.push(item);
+            if (item.subcategories && item.subcategories.length > 0) {
+                output.push(...flattenCategories(item.subcategories));
+            }
+        }
+        return output;
+    };
+
+    const normalizedStore: Store = {
+        name: storeName,
+        kind: data.kind,
+        categoryMode: data.categoryMode ?? 'free',
+        categories: normalizeCategories(data.categories),
+        properties: data.properties ?? {},
+        description: data.description,
+    };
+
+    const saveResult = await stores.save(storeName, normalizedStore); 
     if (!saveResult.ok()) {
         return err(saveResult.error)
     }
 
-    const initialCategories = data.categories ?? {};
-    for (const name of Object.keys(initialCategories)) {
-        const category = initialCategories[name]!;
+    const initialCategories = flattenCategories(normalizedStore.categories);
+    for (const category of initialCategories) {
 
         // TODO: Create what we can, warn instead?
-        const categoryResult = await categories.ensure(category.path);
+        const categoryResult = await categories.ensure(category.path.toString() as unknown as CategoryPath);
         if (!categoryResult.ok()) {
             return storeError(
-                'STORE_CREATE_FAILED',
+                'STORE_CRATE_FAILED',
                 `Failed to initialie store category '${name}' in store '${storeName}'.`,
                 { store: name, cause: categoryResult.error },
             );
         }
     }
 
-    return ok(store);
+    return ok(normalizedStore);
 };
+

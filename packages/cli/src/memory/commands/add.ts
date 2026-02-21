@@ -22,7 +22,7 @@
  */
 
 import { Command } from '@commander-js/extra-typings';
-import { throwCoreError } from '../../errors.ts';
+import { throwCliError } from '../../errors.ts';
 import { MemoryPath, type CortexContext } from '@yeseh/cortex-core';
 import { resolveInput as resolveCliContent } from '../../input.ts';
 import { parseExpiresAt, parseTags } from '../parsing.ts';
@@ -51,12 +51,6 @@ export async function handleAdd(
     path: string,
     options: AddCommandOptions,
 ): Promise<void> {
-    const pathResult = MemoryPath.fromString(path);
-    if (!pathResult.ok()) {
-        throwCoreError(pathResult.error);
-    }
-
-    const memoryPath = pathResult.value;
     const content = await resolveCliContent({
         content: options.content,
         filePath: options.file,
@@ -64,11 +58,11 @@ export async function handleAdd(
     });
 
     if (!content.ok()) {
-        throwCoreError(content.error);
+        throwCliError(content.error);
     }
 
     if (!content.value.content) {
-        throwCoreError({
+        throwCliError({
             code: 'MISSING_CONTENT',
             message: 'Memory content is required via --content, --file, or stdin.',
         });
@@ -81,33 +75,31 @@ export async function handleAdd(
 
     const storeResult = ctx.cortex.getStore(storeName ?? 'default');
     if (!storeResult.ok()) {
-        throwCoreError(storeResult.error);
+        throwCliError(storeResult.error);
     }
 
     const store = storeResult.value;
     const rootResult = store.root();
     if (!rootResult.ok()) {
-        throwCoreError(rootResult.error);
+        throwCliError(rootResult.error);
     }
 
-    const categoryResult = memoryPath.category.isRoot
-        ? rootResult
-        : rootResult.value.getCategory(memoryPath.category.toString());
-    if (!categoryResult.ok()) {
-        throwCoreError(categoryResult.error);
-    }
-
-    const memoryClient = categoryResult.value.getMemory(memoryPath.slug.toString());
+    const timestamp = ctx.now() ?? new Date(); 
+    const memoryClient = store.getMemory(path);
     const memoryResult = await memoryClient.create({
         content: memoryContent!,
-        tags,
-        source,
-        expiresAt,
-        citations,
+        metadata: {
+            tags,
+            source,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+            expiresAt,
+            citations,
+        }
     });
 
     if (!memoryResult.ok()) {
-        throwCoreError(memoryResult.error);
+        throwCliError(memoryResult.error);
     }
 
     const memory = memoryResult.value;
@@ -138,7 +130,7 @@ export const addCommand = new Command('add')
         const parentOpts = command.parent?.opts() as { store?: string } | undefined;
         const context = await createCliCommandContext();
         if (!context.ok()) {
-            throwCoreError(context.error);
+            throwCliError(context.error);
         }
 
         await handleAdd(context.value, parentOpts?.store, path, options);

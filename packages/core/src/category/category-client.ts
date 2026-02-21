@@ -291,9 +291,8 @@ export class CategoryClient {
             ? '/' + slug
             : this.rawPath + '/' + slug;
 
-        const client = MemoryClient.create(
+        const client = MemoryClient.pointTo(
             memoryPath, 
-            slug,
             this.adapter);
 
         return client;

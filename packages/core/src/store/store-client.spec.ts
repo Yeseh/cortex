@@ -17,7 +17,7 @@ describe('StoreClient.init()', () => {
 
         expect(result.ok()).toBe(true);
         if (!result.ok()) return;
-        expect(result.value.name).toEqual(Slug.fromUnsafe('my-store'));
+        expect(result.value.name).toEqual('my-store');
     });
 
     it('should return INVALID_STORE_ADAPTER when adapter is missing', () => {

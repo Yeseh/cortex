@@ -33,7 +33,7 @@ const buildMemory = (path: string): Memory => {
 
 describe('MemoryClient properties', () => {
     it('should normalize rawPath on create()', () => {
-        const clientResult = MemoryClient.create('standards//typescript/style/', 'style', createMockStorageAdapter());
+        const clientResult = MemoryClient.pointTo('standards//typescript/style/', createMockStorageAdapter());
 
         expect(clientResult.path.toString()).toBe('standards/typescript/style');
         expect(clientResult.slug.toString()).toBe('style');
@@ -42,7 +42,7 @@ describe('MemoryClient properties', () => {
 
 describe('MemoryClient.parsePath()', () => {
     it('should parse a valid memory path', () => {
-        const clientResult = MemoryClient.create('/standards/typescript/style', 'style', createMockStorageAdapter());
+        const clientResult = MemoryClient.pointTo('/standards/typescript/style', createMockStorageAdapter());
         const result = clientResult.parsePath();
 
         expect(result.ok()).toBe(true);
@@ -54,21 +54,12 @@ describe('MemoryClient.parsePath()', () => {
 
 describe('MemoryClient.parseSlug()', () => {
     it('should normalize valid slug values', () => {
-        const clientResult = MemoryClient.create('/standards/typescript/my-style', 'My Style', createMockStorageAdapter());
+        const clientResult = MemoryClient.pointTo('/standards/typescript/my-style', createMockStorageAdapter());
         const result = clientResult.parseSlug();
 
         expect(result.ok()).toBe(true);
         if (!result.ok()) return;
         expect(result.value.toString()).toBe('my-style');
-    });
-
-    it('should return INVALID_PATH for empty slug', () => {
-        const clientResult = MemoryClient.create('/standards/typescript/style', '', createMockStorageAdapter());
-        const result = clientResult.parseSlug();
-
-        expect(result.ok()).toBe(false);
-        if (result.ok()) return;
-        expect(result.error.code).toBe('INVALID_PATH');
     });
 });
 
@@ -86,7 +77,7 @@ describe('MemoryClient.exists()', () => {
             },
         });
 
-        const clientResult = MemoryClient.create('/standards/typescript/style', 'style', adapter);
+        const clientResult = MemoryClient.pointTo('/standards/typescript/style', adapter);
         const result = await clientResult.exists();
 
         expect(result.ok()).toBe(true);
@@ -96,7 +87,7 @@ describe('MemoryClient.exists()', () => {
     });
 
     it('should return false when memory file is absent', async () => {
-        const clientResult = MemoryClient.create('/standards/typescript/missing', 'missing', createMockStorageAdapter());
+        const clientResult = MemoryClient.pointTo('/standards/typescript/missing', createMockStorageAdapter());
         const result = await clientResult.exists();
 
         expect(result.ok()).toBe(true);

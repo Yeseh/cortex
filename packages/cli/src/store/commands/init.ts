@@ -25,13 +25,14 @@
 import { Command } from '@commander-js/extra-typings';
 import { resolve } from 'node:path';
 import { resolveStoreName } from '../index.ts';
-import { throwCoreError } from '../../errors.ts';
+import { throwCliError } from '../../errors.ts';
 import { getDefaultConfigPath as getDefaultConfigPath } from '../../context.ts';
-import { initializeStore } from '@yeseh/cortex-core/store';
-import { type CortexContext } from '@yeseh/cortex-core';
+import { initializeStore, type StoreData } from '@yeseh/cortex-core/store';
+import { type CategoryMode, type CortexContext } from '@yeseh/cortex-core';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { serializeOutput, type OutputStoreInit, type OutputFormat } from '../../output.ts';
 import { resolveUserPath } from '../../paths.ts';
+import { createCliCommandContext } from '../../create-cli-command.ts';
 
 /**
  * Options for the init command.
@@ -39,8 +40,12 @@ import { resolveUserPath } from '../../paths.ts';
 export interface InitCommandOptions {
     /** Explicit store name (otherwise auto-detected from git) */
     name?: string;
+    /** Category mode for the store */
+    categoryMode?: string;
     /** Output format (yaml, json, toon) */
     format?: string;
+    /** Optional description for the store */
+    description?: string;
 }
 
 /**
@@ -57,7 +62,7 @@ function writeOutput(
 ): void {
     const serialized = serializeOutput({ kind: 'store-init', value: output }, format);
     if (!serialized.ok()) {
-        throwCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
+        throwCliError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
     }
     stdout.write(serialized.value + '\n');
 }
@@ -83,43 +88,38 @@ export async function handleInit(
     options: InitCommandOptions = {},
 ): Promise<void> {
     const cwd = ctx.cwd ?? process.cwd();
-    const configPath = getDefaultConfigPath();
+    const stdout = ctx.stdout ?? process.stdout;
 
     const storeName = await resolveStoreName(cwd, options.name);
-    const rootPath = targetPath 
+    const storePath = targetPath 
         ? resolveUserPath(targetPath.trim(), cwd) 
         : resolve(cwd, '.cortex');
 
     const clientResult = ctx.cortex.getStore(storeName);
     if (!clientResult.ok()) {
-        throwCoreError(clientResult.error);
+        throwCliError(clientResult.error);
     }
 
+    const storeData: StoreData = {
+        kind: 'filesystem',
+        categoryMode: options.categoryMode ?? 'free',
+        categories: [],
+        properties: {
+            path: storePath,
+        },
+        description: options.description,
+    };
+
     const store = clientResult.value;
-    const createResult = await store.save(rootPath);
-
-    const 
-
-
-
-    // 3. Use initializeStore to handle directory creation, index, and registration
-    const registry = new FilesystemRegistry(configPath);
-    const result = await initializeStore(registry, storeName, rootPath);
-    if (!result.ok()) {
-        // Map InitStoreError to CLI error
-        const errorCode =
-            result.error.code === 'STORE_ALREADY_EXISTS'
-                ? 'STORE_ALREADY_EXISTS'
-                : result.error.code === 'INVALID_STORE_NAME'
-                    ? 'INVALID_STORE_NAME'
-                    : 'STORE_INIT_FAILED';
-        throwCoreError({ code: errorCode, message: result.error.message });
+    const createResult = await store.initialize(storeData);
+    if (!createResult.ok()) {
+        throwCliError(createResult.error);
     }
 
     // 4. Output result
-    const output: OutputStoreInit = { path: rootPath, name: storeName };
+    const output: OutputStoreInit = { path: storePath, name: storeName };
     const format: OutputFormat = (options.format as OutputFormat) ?? 'yaml';
-    writeOutput(output, format, deps.stdout ?? process.stdout);
+    writeOutput(output, format, stdout);
 }
 
 /**
@@ -140,7 +140,14 @@ export const initCommand = new Command('init')
     .description('Initialize a new memory store')
     .argument('[path]', 'Path for the store (defaults to .cortex in current directory)')
     .option('-n, --name <name>', 'Explicit store name (otherwise auto-detected from git)')
+    .option('-d, --description <description>', 'Optional description for the store')
+    .option('-c, --category-mode <mode>', 'Category mode (free, strict, flat)', 'free')
     .option('-o, --format <format>', 'Output format (yaml, json, toon)', 'yaml')
     .action(async (path, options) => {
-        await handleInit(path, options);
+        const context = await createCliCommandContext();
+        if (!context.ok()) {
+            throwCliError(context.error);
+        }
+
+        await handleInit(context.value, path, options);
     });

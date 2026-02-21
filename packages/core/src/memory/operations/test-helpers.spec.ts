@@ -13,6 +13,7 @@ import { Memory, type MemoryMetadata } from '@/memory/memory.ts';
 import type { Category } from '@/category/types.ts';
 import { CategoryPath } from '@/category/category-path.ts';
 import { MemoryPath } from '@/memory/memory-path.ts';
+import { createMockStorageAdapter, type StorageAdapterOverrides } from '@/testing/mock-storage-adapter';
 
 
 // ============================================================================
@@ -32,30 +33,18 @@ export const buildIndex = (
 // ============================================================================
 
 export const createMockStorage = (
-    overrides: Partial<{
-        memories: Partial<StorageAdapter['memories']> & Partial<{
-            read: StorageAdapter['memories']['load'];
-            write: StorageAdapter['memories']['save'];
-        }>;
-        indexes: Partial<StorageAdapter['indexes']> & Partial<{
-            read: StorageAdapter['indexes']['load'];
-        }>;
-        categories: Partial<StorageAdapter['categories']> & Partial<{
-            updateSubcategoryDescription: StorageAdapter['categories']['setDescription'];
-        }>;
-        stores: Partial<StorageAdapter['stores']>;
-    }> = {},
-): StorageAdapter => ({
+    overrides: StorageAdapterOverrides = {},
+): StorageAdapter => createMockStorageAdapter({
     memories: {
-        load: overrides.memories?.load ?? overrides.memories?.read ?? (async () => ok(null)),
-        save: overrides.memories?.save ?? overrides.memories?.write ?? (async () => ok(undefined)),
+        load: overrides.memories?.load ?? overrides.memories?.load ?? (async () => ok(null)),
+        save: overrides.memories?.save ?? overrides.memories?.save ?? (async () => ok(undefined)),
         add: async () => ok(undefined),
         remove: async () => ok(undefined),
         move: async () => ok(undefined),
         ...overrides.memories,
     },
     indexes: {
-        load: overrides.indexes?.load ?? overrides.indexes?.read ?? (async () => ok(null)),
+        load: overrides.indexes?.load ?? overrides.indexes?.load ?? (async () => ok(null)),
         write: async () => ok(undefined),
         reindex: async (_scope: CategoryPath) => ok({ warnings: [] }),
         updateAfterMemoryWrite: async () => ok(undefined),
@@ -67,7 +56,6 @@ export const createMockStorage = (
         delete: async () => ok(undefined),
         setDescription: (
             overrides.categories?.setDescription
-            ?? overrides.categories?.updateSubcategoryDescription
             ?? (async () => ok(undefined))
         ),
         ...overrides.categories,
@@ -76,9 +64,8 @@ export const createMockStorage = (
         load: async () => err({ code: 'STORE_NOT_FOUND', message: 'Store not found' }),
         save: async () => ok(undefined),
         remove: async () => ok(undefined),
-        add: async () => ok(undefined),
         ...overrides.stores,
-    },
+    }
 });
 
 // ============================================================================

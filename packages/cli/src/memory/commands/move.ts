@@ -13,7 +13,7 @@
  * ```\n */
 
 import { Command } from '@commander-js/extra-typings';
-import { throwCoreError } from '../../errors.ts';
+import { throwCliError } from '../../errors.ts';
 import { MemoryPath, type CortexContext } from '@yeseh/cortex-core';
 import { createCliCommandContext } from '../../create-cli-command.ts';
 
@@ -34,36 +34,36 @@ export async function handleMove(
 ): Promise<void> {
     const fromResult = MemoryPath.fromString(from);
     if (!fromResult.ok()) {
-        throwCoreError(fromResult.error);
+        throwCliError(fromResult.error);
     }
 
     const toResult = MemoryPath.fromString(to);
     if (!toResult.ok()) {
-        throwCoreError(toResult.error);
+        throwCliError(toResult.error);
     }
 
     const storeResult = ctx.cortex.getStore(storeName ?? 'default');
     if (!storeResult.ok()) {
-        throwCoreError(storeResult.error);
+        throwCliError(storeResult.error);
     }
 
     const store = storeResult.value;
     const rootResult = store.root();
     if (!rootResult.ok()) {
-        throwCoreError(rootResult.error);
+        throwCliError(rootResult.error);
     }
 
     const sourceCategoryResult = fromResult.value.category.isRoot
         ? rootResult
         : rootResult.value.getCategory(fromResult.value.category.toString());
     if (!sourceCategoryResult.ok()) {
-        throwCoreError(sourceCategoryResult.error);
+        throwCliError(sourceCategoryResult.error);
     }
 
     const sourceMemory = sourceCategoryResult.value.getMemory(fromResult.value.slug.toString());
     const moveResult = await sourceMemory.move(toResult.value);
     if (!moveResult.ok()) {
-        throwCoreError(moveResult.error);
+        throwCliError(moveResult.error);
     }
 
     const out = ctx.stdout ?? process.stdout;
@@ -86,7 +86,7 @@ export const moveCommand = new Command('move')
         const parentOpts = command.parent?.opts() as { store?: string } | undefined;
         const context = await createCliCommandContext();
         if (!context.ok()) {
-            throwCoreError(context.error);
+            throwCliError(context.error);
         }
 
         await handleMove(context.value, parentOpts?.store, from, to);

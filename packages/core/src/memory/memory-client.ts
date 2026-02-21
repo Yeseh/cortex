@@ -11,10 +11,10 @@ import { ok, err, type Result } from '@/result.ts';
 import type { StorageAdapter } from '@/storage';
 import { MemoryPath } from '@/memory/memory-path.ts';
 import { Slug } from '@/slug.ts';
-import type { Memory } from '@/memory/memory.ts';
+import type { Memory, MemoryData } from '@/memory/memory.ts';
 import type { MemoryError, MemoryResult } from '@/memory/result.ts';
 import { memoryError } from '@/memory/result.ts';
-import { createMemory, type CreateMemoryInput } from '@/memory/operations/create.ts';
+import { createMemory } from '@/memory/operations/create.ts';
 import { getMemory, type GetMemoryOptions } from '@/memory/operations/get.ts';
 import { updateMemory, type UpdateMemoryInput } from '@/memory/operations/update.ts';
 import { removeMemory } from '@/memory/operations/remove.ts';
@@ -77,13 +77,16 @@ export class MemoryClient {
     /**
      * Private constructor - use CategoryClient.getMemory() or factory method.
      *
-     * @param rawPath - The full memory path (normalized to canonical format)
+     * @param path - The full memory path (normalized to canonical format)
      * @param rawSlug - The memory slug
      * @param adapter - The storage adapter for performing operations
      */
-    private constructor(rawPath: string, rawSlug: string, adapter: StorageAdapter) {
-        this.#rawPath = MemoryClient.normalizePath(rawPath);
-        this.#rawSlug = rawSlug;
+    private constructor(path: string, adapter: StorageAdapter) {
+        const normalizedPath = MemoryClient.normalizePath(path);
+        const slug = normalizedPath.split('/').slice(-1)[0] || '';
+
+        this.#rawPath = normalizedPath;
+        this.#rawSlug = slug;
         this.adapter = adapter;
     }
 
@@ -128,11 +131,15 @@ export class MemoryClient {
      * @example
      * ```typescript
      * // Internal usage
-     * const client = MemoryClient.create('/standards/typescript/style', 'style', adapter);
+     * const client = MemoryClient.init('/standards/typescript/style', adapter);
      * ```
      */
-    static create(path: string, slug: string, adapter: StorageAdapter): MemoryClient {
-        return new MemoryClient(path, slug, adapter);
+    static pointTo(path: string | MemoryPath, adapter: StorageAdapter): MemoryClient {
+        if (path instanceof MemoryPath) {
+            return new MemoryClient(path.toString(), adapter);
+        }
+
+        return new MemoryClient(path, adapter);
     }
 
     /**
@@ -316,13 +323,16 @@ export class MemoryClient {
      * - Parent categories are created automatically
      * - Storage errors return STORAGE_ERROR
      */
-    async create(input: CreateMemoryInput): Promise<Result<Memory, MemoryError>> {
+    async create(input: MemoryData): Promise<Result<Memory, MemoryError>> {
         const pathResult = this.parsePath();
         if (!pathResult.ok()) {
             return pathResult;
         }
 
-        return createMemory(this.adapter, this.getPathWithoutLeadingSlash(), input);
+        return createMemory(
+            this.adapter, 
+            this.getPathWithoutLeadingSlash(), 
+            input);
     }
 
     /**
@@ -558,7 +568,7 @@ export class MemoryClient {
             return moveResult;
         }
 
-        const destinationClient = MemoryClient.create('/' + destPathString, destSlug, this.adapter);
+        const destinationClient = MemoryClient.pointTo('/' + destPathString, this.adapter);
         return ok(destinationClient);
     }
 }

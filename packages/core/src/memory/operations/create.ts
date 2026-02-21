@@ -6,40 +6,10 @@
 
 import type { StorageAdapter } from '@/storage/index.ts';
 import { CategoryPath } from '@/category/category-path.ts';
-import { Memory } from '@/memory';
+import { Memory, type MemoryData } from '@/memory';
 import { ok } from '@/result.ts';
 import { memoryError, type MemoryResult } from '../result.ts';
 
-/** Input for creating a new memory */
-export interface CreateMemoryInput {
-    /** Memory content (markdown) */
-    content: string;
-    /** Tags for categorization */
-    tags?: string[];
-    /** Source identifier (e.g., "cli", "mcp", "user") */
-    source: string;
-    /** Optional expiration timestamp */
-    expiresAt?: Date;
-    /**
-     * References to source material (file paths, URLs, document identifiers).
-     *
-     * When omitted or undefined, defaults to an empty array. Each citation must
-     * be a non-empty string.
-     *
-     * @example
-     * ```typescript
-     * const input: CreateMemoryInput = {
-     *     content: 'API design decisions for v2',
-     *     source: 'user',
-     *     citations: [
-     *         'docs/api-spec.md',
-     *         'https://github.com/org/repo/issues/123',
-     *     ],
-     * };
-     * ```
-     */
-    citations?: string[];
-}
 
 /**
  * Creates a new memory at the specified path.
@@ -69,7 +39,7 @@ export interface CreateMemoryInput {
 export const createMemory = async (
     storage: StorageAdapter,
     path: string,
-    input: CreateMemoryInput,
+    input: MemoryData,
     now?: Date,
 ): Promise<MemoryResult<Memory>> => {
     // Extract category path from memory path
@@ -110,10 +80,10 @@ export const createMemory = async (
         {
             createdAt: timestamp,
             updatedAt: timestamp,
-            tags: input.tags ?? [],
-            source: input.source,
-            expiresAt: input.expiresAt,
-            citations: input.citations ?? [],
+            tags: input.metadata.tags ?? [],
+            source: input.metadata.source,
+            expiresAt: input.metadata.expiresAt,
+            citations: input.metadata.citations ?? [],
         },
         input.content,
     );
@@ -124,7 +94,8 @@ export const createMemory = async (
 
     const memory = memoryResult.value;
 
-    const writeResult = await storage.memories.save(memory);
+    // TODO: Save signature here is not pretty
+    const writeResult = await storage.memories.save(memory.path, memory);
     if (!writeResult.ok()) {
         return memoryError('STORAGE_ERROR', `Failed to write memory: ${path}`, {
             path,

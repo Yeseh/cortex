@@ -9,6 +9,7 @@ import { err, type ErrorDetails, type Result } from '@/result.ts';
 export type StoreErrorCode =
     | 'STORE_NOT_FOUND'
     | 'STORE_ALREADY_EXISTS'
+    | 'DUPLICATE_STORE_NAME'
     | 'STORE_CREATE_FAILED'
     | 'STORE_CRATE_FAILED'
     | 'STORE_SAVE_FAILED'

@@ -39,9 +39,7 @@ import {
     type CortexOptions,
     type AdapterFactory,
 } from './types.ts';
-import { StoreClient, type StoreClientResult } from './store/store-client.ts';
-import { getDefaultSettings } from '@/config/config.ts';
-import type {  CortexSettings, ConfigStores } from '@/config/types.ts';
+import { StoreClient } from './store/store-client.ts';
 import { err, ok, type ErrorDetails, type Result } from '@/result.ts';
 
 
@@ -68,9 +66,6 @@ export type CortexClientResult<T> = Result<T, CortexClientError>;
  * 3. Use `getStore(name)` to get adapters for specific stores
  */
 export class Cortex {
-    /** Current runtime settings */
-    public readonly settings: CortexSettings;
-
     /** Factory for creating scoped storage adapters */
     private readonly adapterFactory: AdapterFactory;
 
@@ -78,7 +73,6 @@ export class Cortex {
      * Private constructor - use `Cortex.init()` or `Cortex.fromConfig()`.
      */
     private constructor(options: CortexOptions) {
-        this.settings = { ...getDefaultSettings(), ...options.settings };
         this.adapterFactory = options.adapterFactory;
     }
 
@@ -150,20 +144,16 @@ export class Cortex {
      * ```
      */
     getStore(name: string): CortexClientResult<StoreClient> {
-        const adapter = this.adapterFactory(name);
-        const storeClient = StoreClient.init(
-            name, 
-            adapter);
-
-        if (!storeClient.ok()) {
-             return err({
+        const client = StoreClient.init(name, this.adapterFactory(name));
+        if (!client.ok()) {
+            return err({
                 code: 'INVALID_STORE_ADAPTER',
-                message: `Adapter was null or undefined for store '${name}'`,
+                message: `Failed to create adapter for store '${name}': ${client.error.message}`,
                 store: name,
-             });
+                cause: client.error,
+            });
         }
-
-        return ok(storeClient.value);
+        return ok(client.value);
     }
 }
 

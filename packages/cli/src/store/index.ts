@@ -26,7 +26,7 @@ import { removeCommand } from './commands/remove.ts';
 import { initCommand } from './commands/init.ts';
 import { pruneCommand } from './commands/prune.ts';
 import { reindexCommand } from './commands/reindexs.ts';
-import { throwCoreError } from '../errors.ts';
+import { throwCliError } from '../errors.ts';
 import { Slug } from '@yeseh/cortex-core';
 import { basename } from 'node:path';
 import { detectGitRepoName } from '../utils/git.ts';
@@ -56,7 +56,7 @@ export async function resolveStoreName(cwd: string, explicitName?: string): Prom
     if (explicitName) {
         const slugResult = Slug.from(explicitName);
         if (!slugResult.ok()) {
-            throwCoreError({ 
+            throwCliError({ 
                 code: 'INVALID_STORE_NAME', 
                 message: 'Store name must be a lowercase slug (letters, numbers, hyphens).' 
             });
@@ -75,7 +75,7 @@ export async function resolveStoreName(cwd: string, explicitName?: string): Prom
             .replace(/^-|-$/g, '');
         const slugResult = Slug.from(normalized);
         if (!slugResult.ok()) {
-            throwCoreError({
+            throwCliError({
                 code: 'INVALID_STORE_NAME',
                 message: 'Could not derive valid store name from git repo.',
             });
@@ -91,7 +91,7 @@ export async function resolveStoreName(cwd: string, explicitName?: string): Prom
     }
 
     // 4. Error: require --name
-    throwCoreError({
+    throwCliError({
         code: 'GIT_REPO_REQUIRED',
         message: 'Not in a git repository. Use --name to specify the store name.',
     });

@@ -1,4 +1,4 @@
-import type { Memory, MemoryPath } from "@/memory";
+import type { Memory, MemoryData, MemoryPath } from "@/memory";
 import type { Result } from "@/result";
 import type { StorageAdapterError } from ".";
 
@@ -35,7 +35,7 @@ export interface MemoryAdapter {
      * @param memory - The content to write
      * @returns Result indicating success or failure
      */
-    save(path: MemoryPath, memory: Partial<Memory>): Promise<Result<void, StorageAdapterError>>;
+    save(path: MemoryPath, memory: MemoryData): Promise<Result<void, StorageAdapterError>>;
 
     /**
      * Adds a new memory.

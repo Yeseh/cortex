@@ -20,7 +20,7 @@
  */
 
 import { Command } from '@commander-js/extra-typings';
-import { throwCoreError } from '../../errors.ts';
+import { throwCliError } from '../../errors.ts';
 import { resolveStoreAdapter } from '../../context.ts';
 import {
     pruneExpiredMemories,
@@ -100,7 +100,7 @@ export async function handlePrune(
     else {
         const storeResult = await resolveStoreAdapter(storeName);
         if (!storeResult.ok()) {
-            throwCoreError(storeResult.error);
+            throwCliError(storeResult.error);
         }
         adapter = storeResult.value.adapter;
     }
@@ -112,7 +112,7 @@ export async function handlePrune(
     });
 
     if (!result.ok()) {
-        throwCoreError(result.error);
+        throwCliError(result.error);
     }
 
     const pruned = result.value.pruned;

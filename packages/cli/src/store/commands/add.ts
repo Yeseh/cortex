@@ -19,7 +19,7 @@
  */
 
 import { Command } from '@commander-js/extra-typings';
-import { throwCoreError } from '../../errors.ts';
+import { throwCliError } from '../../errors.ts';
 import { getDefaultConfigPath } from '../../context.ts';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { serializeOutput, type OutputStore, type OutputFormat } from '../../output.ts';
@@ -55,7 +55,7 @@ export interface AddHandlerDeps {
 function validateStoreName(name: string): string {
     const slugResult = Slug.from(name);
     if (!slugResult.ok()) {
-        throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug (letters, numbers, hyphens).' });
+        throwCliError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug (letters, numbers, hyphens).' });
     }
 
     return slugResult.value.toString();
@@ -72,7 +72,7 @@ function validateStoreName(name: string): string {
 function validateAndResolvePath(storePath: string, cwd: string): string {
     const trimmed = storePath.trim();
     if (!trimmed) {
-        throwCoreError({ code: 'INVALID_STORE_PATH', message: 'Store path is required.' });
+        throwCliError({ code: 'INVALID_STORE_PATH', message: 'Store path is required.' });
     }
     return resolveUserPath(trimmed, cwd);
 }
@@ -91,7 +91,7 @@ function writeOutput(
 ): void {
     const serialized = serializeOutput({ kind: 'store', value: output }, format);
     if (!serialized.ok()) {
-        throwCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
+        throwCliError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
     }
     stdout.write(serialized.value + '\n');
 }
@@ -132,21 +132,21 @@ export async function handleAdd(
     const registryResult = await registry.load();
 
     if (!registryResult.ok()) {
-        throwCoreError({ code: 'STORE_REGISTRY_FAILED', message: registryResult.error.message });
+        throwCliError({ code: 'STORE_REGISTRY_FAILED', message: registryResult.error.message });
     }
 
     // 3. Check for existing store
     const currentRegistry = registryResult.value;
     const currentStore = currentRegistry.getStore(trimmedName);
     if (currentStore.ok()) {
-        throwCoreError({ code: 'STORE_ALREADY_EXISTS', message: `Store '${trimmedName}' is already registered.` });
+        throwCliError({ code: 'STORE_ALREADY_EXISTS', message: `Store '${trimmedName}' is already registered.` });
     }
 
     // 4. Add to registry and save
     currentRegistry.addStore({ name: trimmedName, path: resolvedPath });
     const saved = await registry.save(currentRegistry);
     if (!saved.ok()) {
-        throwCoreError({ code: 'STORE_REGISTRY_FAILED', message: saved.error.message });
+        throwCliError({ code: 'STORE_REGISTRY_FAILED', message: saved.error.message });
     }
 
     // 5. Output result

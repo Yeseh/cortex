@@ -1,4 +1,4 @@
-import { err, type Result } from '@/result';
+import { err, type ErrorDetails, type Result } from '@/result';
 
 export type MemoryResult<T> = Result<T, MemoryError>;
 
@@ -9,20 +9,7 @@ export type MemoryResult<T> = Result<T, MemoryError>;
  * programmatic handling, a human-readable message, and optional
  * context about the specific field or line that caused the error.
  */
-export type MemoryError = {
-    /** Machine-readable error code for programmatic handling */
-    code: MemoryErrorCode;
-    /** Human-readable error message */
-    message: string;
-    /** Field name that caused the error (when applicable) */
-    field?: string;
-    /** Line number where the error occurred (for parse errors) */
-    line?: number;
-    /** Memory path that caused the error (when applicable) */
-    path?: string;
-    /** Underlying error that caused this failure (for debugging) */
-    cause?: unknown;
-};
+export type MemoryError = ErrorDetails<MemoryErrorCode>; 
 
 /**
  * Error codes for memory parsing and validation operations.

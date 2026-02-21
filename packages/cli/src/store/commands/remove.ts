@@ -12,7 +12,7 @@
  */
 
 import { Command } from '@commander-js/extra-typings';
-import { throwCoreError } from '../../errors.ts';
+import { throwCliError } from '../../errors.ts';
 import { getDefaultConfigPath } from '../../context.ts';
 import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { serializeOutput, type OutputStore, type OutputFormat } from '../../output.ts';
@@ -45,7 +45,7 @@ export interface RemoveHandlerDeps {
 function validateStoreName(name: string): string {
     const slugResult = Slug.from(name);
     if (!slugResult.ok()) {
-        throwCoreError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug (letters, numbers, hyphens).' });
+        throwCliError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug (letters, numbers, hyphens).' });
     }
 
     return slugResult.value.toString();
@@ -65,7 +65,7 @@ function writeOutput(
 ): void {
     const serialized = serializeOutput({ kind: 'store', value: output }, format);
     if (!serialized.ok()) {
-        throwCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
+        throwCliError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
     }
     stdout.write(serialized.value + '\n');
 }
@@ -102,22 +102,22 @@ export async function handleRemove(
     // Handle REGISTRY_MISSING - if registry doesn't exist, nothing to remove
     if (!loadResult.ok()) {
         if (loadResult.error.code === 'REGISTRY_MISSING') {
-            throwCoreError({ code: 'STORE_NOT_FOUND', message: `Store '${trimmedName}' is not registered.` });
+            throwCliError({ code: 'STORE_NOT_FOUND', message: `Store '${trimmedName}' is not registered.` });
         }
-        throwCoreError({ code: 'STORE_REGISTRY_FAILED', message: loadResult.error.message });
+        throwCliError({ code: 'STORE_REGISTRY_FAILED', message: loadResult.error.message });
     }
 
     // 3. Check store exists
     const existingStore = loadResult.value[trimmedName];
     if (!existingStore) {
-        throwCoreError({ code: 'STORE_NOT_FOUND', message: `Store '${trimmedName}' is not registered.` });
+        throwCliError({ code: 'STORE_NOT_FOUND', message: `Store '${trimmedName}' is not registered.` });
     }
 
     // 4. Remove from registry and save (even if registry would be empty, just save empty registry)
     const { [trimmedName]: _removed, ...rest } = loadResult.value;
     const saveResult = await registry.save(rest);
     if (!saveResult.ok()) {
-        throwCoreError({ code: 'STORE_REGISTRY_FAILED', message: saveResult.error.message });
+        throwCliError({ code: 'STORE_REGISTRY_FAILED', message: saveResult.error.message });
     }
 
     // 5. Output result

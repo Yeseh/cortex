@@ -27,7 +27,7 @@
  */
 
 import { Command } from '@commander-js/extra-typings';
-import { throwCoreError } from '../../errors.ts';
+import { throwCliError } from '../../errors.ts';
 import { MemoryPath, type CortexContext, type UpdateMemoryInput } from '@yeseh/cortex-core';
 import { resolveInput as resolveCliContent } from '../../input.ts';
 import { parseExpiresAt, parseTags } from '../parsing.ts';
@@ -75,11 +75,11 @@ const resolveUpdateContent = async (
     });
 
     if (!content.ok()) {
-        throwCoreError(content.error);
+        throwCliError(content.error);
     }
 
     if (!content.value.content) {
-        throwCoreError({
+        throwCliError({
             code: 'MISSING_CONTENT',
             message: 'Memory content is required via --content or --file.',
         });
@@ -109,7 +109,7 @@ const buildUpdates = (
     }
 
     if (Object.keys(updates).length === 0) {
-        throwCoreError({
+        throwCliError({
             code: 'INVALID_ARGUMENTS',
             message:
                 'No updates provided. Use --content, --file, --tags, --citation, or expiry flags.',
@@ -136,7 +136,7 @@ export async function handleUpdate(
 ): Promise<void> {
     const pathResult = MemoryPath.fromString(path);
     if (!pathResult.ok()) {
-        throwCoreError(pathResult.error);
+        throwCliError(pathResult.error);
     }
 
     const content = await resolveUpdateContent(ctx, options);
@@ -146,26 +146,26 @@ export async function handleUpdate(
 
     const storeResult = ctx.cortex.getStore(storeName ?? 'default');
     if (!storeResult.ok()) {
-        throwCoreError(storeResult.error);
+        throwCliError(storeResult.error);
     }
 
     const store = storeResult.value;
     const rootResult = store.root();
     if (!rootResult.ok()) {
-        throwCoreError(rootResult.error);
+        throwCliError(rootResult.error);
     }
 
     const categoryResult = pathResult.value.category.isRoot
         ? rootResult
         : rootResult.value.getCategory(pathResult.value.category.toString());
     if (!categoryResult.ok()) {
-        throwCoreError(categoryResult.error);
+        throwCliError(categoryResult.error);
     }
 
     const memoryClient = categoryResult.value.getMemory(pathResult.value.slug.toString());
     const updateResult = await memoryClient.update(updates);
     if (!updateResult.ok()) {
-        throwCoreError(updateResult.error);
+        throwCliError(updateResult.error);
     }
 
     const memory = updateResult.value;
@@ -196,7 +196,7 @@ export const updateCommand = new Command('update')
         const parentOpts = command.parent?.opts() as { store?: string } | undefined;
         const context = await createCliCommandContext();
         if (!context.ok()) {
-            throwCoreError(context.error);
+            throwCliError(context.error);
         }
 
         await handleUpdate(context.value, parentOpts?.store, path, options);

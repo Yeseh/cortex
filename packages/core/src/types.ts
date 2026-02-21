@@ -76,57 +76,6 @@ export interface CortexOptions {
 }
 
 
-
-/**
- * Error codes for Cortex initialization operations.
- *
- * @module core/cortex/types
- *
- * - `DIRECTORY_CREATE_FAILED` - Failed to create Cortex directories (permissions, disk full)
- * - `CONFIG_WRITE_FAILED` - Failed to write initial configuration file
- *
- * @example
- * ```typescript
- * function handleInitError(error: InitializeError): void {
- *     switch (error.code) {
- *         case 'DIRECTORY_CREATE_FAILED':
- *             console.log(`Cannot create directory: ${error.path}`);
- *             break;
- *         case 'CONFIG_WRITE_FAILED':
- *             console.log('Check write permissions for config directory');
- *             break;
- *     }
- * }
- * ```
- */
-export type InitializeErrorCode = 'DIRECTORY_CREATE_FAILED' | 'CONFIG_WRITE_FAILED';
-
-/**
- * Error returned when initializing Cortex fails.
- *
- * @module core/cortex/types
- *
- * @example
- * ```typescript
- * const error: InitializeError = {
- *     code: 'DIRECTORY_CREATE_FAILED',
- *     message: 'Failed to create config directory: permission denied',
- *     path: '/home/user/.config/cortex',
- *     cause: new Error('EACCES: permission denied'),
- * };
- * ```
- */
-export interface InitializeError {
-    /** Machine-readable error code */
-    code: InitializeErrorCode;
-    /** Human-readable error message */
-    message: string;
-    /** Path involved in the failure */
-    path?: string;
-    /** Underlying error cause (for debugging) */
-    cause?: unknown;
-}
-
 /**
  * Context object for dependency injection into handlers.
  *

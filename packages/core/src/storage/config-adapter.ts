@@ -3,6 +3,7 @@ import type { ConfigResult, ConfigStore, ConfigStores, CortexSettings } from "@/
 
 /** Provides readonly access to configuration data for stores and Cortex settings. */
 export interface ConfigAdapter {
+    initialize(): Promise<ConfigResult<void>>;
     /** Retrieves the Cortex settings. */
     getSettings(): Promise<ConfigResult<CortexSettings>>;
     /** Retrieves the list of all configured stores. */

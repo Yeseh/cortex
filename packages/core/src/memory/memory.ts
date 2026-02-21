@@ -60,6 +60,14 @@ export type MemoryMetadata = {
 };
 
 
+/** Input for creating a new memory */
+export type MemoryData = { 
+    /** Memory content (markdown) */
+    content: string;
+    /** Metadata for the memory */
+    metadata: MemoryMetadata;
+}
+
 
 /**
  * A memory entry combining metadata and content.

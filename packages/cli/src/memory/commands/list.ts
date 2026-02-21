@@ -29,10 +29,10 @@
  */
 
 import { Command } from '@commander-js/extra-typings';
-import { throwCoreError } from '../../errors.ts';
+import { throwCliError } from '../../errors.ts';
 
 import { CategoryPath, type CategoryClient } from '@yeseh/cortex-core/category';
-import { type CortexContext } from '@yeseh/cortex-core';
+import { serialize, type CortexContext } from '@yeseh/cortex-core';
 import type { SubcategoryEntry } from '@yeseh/cortex-core/category';
 import { serializeOutput, type OutputFormat } from '../../output.ts';
 import { createCliCommandContext } from '../../create-cli-command.ts';
@@ -114,7 +114,7 @@ const formatOutput = (result: ListResult, format: OutputFormat): string => {
     const serialized = serializeOutput({ kind: 'memory', value: data }, format);
 
     if (!serialized.ok()) {
-        throwCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
+        throwCliError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
     }
 
     return serialized.value;
@@ -145,17 +145,17 @@ export async function handleList(
 ): Promise<void> {
     const categoryResult = CategoryPath.fromString(category ?? '');
     if (!categoryResult.ok()) {
-        throwCoreError(categoryResult.error);
+        throwCliError(categoryResult.error);
     }
 
     const storeResult = ctx.cortex.getStore(storeName ?? 'default');
     if (!storeResult.ok()) {
-        throwCoreError(storeResult.error);
+        throwCliError(storeResult.error);
     }
 
     const rootResult = storeResult.value.root();
     if (!rootResult.ok()) {
-        throwCoreError(rootResult.error);
+        throwCliError(rootResult.error);
     }
 
     const root = rootResult.value;
@@ -167,7 +167,7 @@ export async function handleList(
     else {
         const categoryClientResult = root.getCategory(categoryResult.value.toString());
         if (!categoryClientResult.ok()) {
-            throwCoreError(categoryClientResult.error);
+            throwCliError(categoryClientResult.error);
         }
 
         categoryClient = categoryClientResult.value;
@@ -185,7 +185,7 @@ export async function handleList(
 
         const memoriesResult = await client.listMemories({ includeExpired });
         if (!memoriesResult.ok()) {
-            throwCoreError(memoriesResult.error);
+            throwCliError(memoriesResult.error);
         }
 
         const memories: ListMemoryEntry[] = [];
@@ -199,7 +199,7 @@ export async function handleList(
                 if (!includeExpired && memoryResult.error.code === 'MEMORY_EXPIRED') {
                     continue;
                 }
-                throwCoreError(memoryResult.error);
+                throwCliError(memoryResult.error);
             }
 
             const memory = memoryResult.value;
@@ -219,13 +219,13 @@ export async function handleList(
 
         const subcategoriesResult = await client.listSubcategories();
         if (!subcategoriesResult.ok()) {
-            throwCoreError(subcategoriesResult.error);
+            throwCliError(subcategoriesResult.error);
         }
 
         for (const subcategory of subcategoriesResult.value) {
             const subcategoryClientResult = root.getCategory(subcategory.path.toString());
             if (!subcategoryClientResult.ok()) {
-                throwCoreError(subcategoryClientResult.error);
+                throwCliError(subcategoryClientResult.error);
             }
             const subMemories = await collectMemories(subcategoryClientResult.value);
             memories.push(...subMemories);
@@ -236,7 +236,7 @@ export async function handleList(
 
     const subcategoriesResult = await categoryClient.listSubcategories();
     if (!subcategoriesResult.ok()) {
-        throwCoreError(subcategoriesResult.error);
+        throwCliError(subcategoriesResult.error);
     }
 
     const memories = await collectMemories(categoryClient);
@@ -251,10 +251,13 @@ export async function handleList(
 
     // 3. Format and output
     const format = (options.format as OutputFormat) ?? 'yaml';
-    const output = formatOutput(result, format);
+    const output = serialize(result, format); 
+    if (!output.ok()) {
+        throwCliError({ code: 'SERIALIZE_FAILED', message: output.error.message });
+    }
 
     const out = deps.stdout ?? process.stdout;
-    out.write(output + '\n');
+    out.write(output.value + '\n');
 }
 
 /**
@@ -288,7 +291,7 @@ export const listCommand = new Command('list')
         const storeName = options.store ?? parentOpts?.store;
         const context = await createCliCommandContext();
         if (!context.ok()) {
-            throwCoreError(context.error);
+            throwCliError(context.error);
         }
 
         await handleList(context.value, storeName, category, options);

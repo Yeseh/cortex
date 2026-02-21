@@ -22,7 +22,7 @@
  */
 
 import { Command } from '@commander-js/extra-typings';
-import { throwCoreError } from '../../errors.ts';
+import { throwCliError } from '../../errors.ts';
 
 import {
     defaultTokenizer,
@@ -81,26 +81,26 @@ export async function handleShow(
 ): Promise<void> {
     const pathResult = MemoryPath.fromString(path);
     if (!pathResult.ok()) {
-        throwCoreError(pathResult.error);
+        throwCliError(pathResult.error);
     }
 
     const storeResult = ctx.cortex.getStore(storeName ?? 'default');
     if (!storeResult.ok()) {
-        throwCoreError(storeResult.error);
+        throwCliError(storeResult.error);
     }
 
     const store = deps.store ?? storeResult.value;
 
     const rootResult = store.root();
     if (!rootResult.ok()) {
-        throwCoreError(rootResult.error);
+        throwCliError(rootResult.error);
     }
 
     const categoryResult = pathResult.value.category.isRoot
         ? rootResult
         : rootResult.value.getCategory(pathResult.value.category.toString());
     if (!categoryResult.ok()) {
-        throwCoreError(categoryResult.error);
+        throwCliError(categoryResult.error);
     }
 
     const memoryClient = categoryResult.value.getMemory(pathResult.value.slug.toString());
@@ -109,7 +109,7 @@ export async function handleShow(
         now: ctx.now(),
     });
     if (!readResult.ok()) {
-        throwCoreError(readResult.error);
+        throwCliError(readResult.error);
     }
 
     const memory = readResult.value;
@@ -132,7 +132,7 @@ export async function handleShow(
     const format = (options.format as OutputFormat) ?? 'yaml';
     const serialized = serializeOutput({ kind: 'memory', value: outputMemory }, format);
     if (!serialized.ok()) {
-        throwCoreError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
+        throwCliError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
     }
 
     const out = deps.stdout ?? process.stdout;
@@ -161,7 +161,7 @@ export const showCommand = new Command('show')
         const parentOpts = command.parent?.opts() as { store?: string } | undefined;
         const context = await createCliCommandContext();
         if (!context.ok()) {
-            throwCoreError(context.error);
+            throwCliError(context.error);
         }
 
         await handleShow(context.value, parentOpts?.store, path, options);
