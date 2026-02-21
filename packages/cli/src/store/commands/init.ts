@@ -26,10 +26,8 @@ import { Command } from '@commander-js/extra-typings';
 import { resolve } from 'node:path';
 import { resolveStoreName } from '../index.ts';
 import { throwCliError } from '../../errors.ts';
-import { getDefaultConfigPath as getDefaultConfigPath } from '../../context.ts';
-import { initializeStore, type StoreData } from '@yeseh/cortex-core/store';
+import { type StoreData } from '@yeseh/cortex-core/store';
 import { type CategoryMode, type CortexContext } from '@yeseh/cortex-core';
-import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { serializeOutput, type OutputStoreInit, type OutputFormat } from '../../output.ts';
 import { resolveUserPath } from '../../paths.ts';
 import { createCliCommandContext } from '../../create-cli-command.ts';
@@ -41,7 +39,7 @@ export interface InitCommandOptions {
     /** Explicit store name (otherwise auto-detected from git) */
     name?: string;
     /** Category mode for the store */
-    categoryMode?: CategoryMode;
+    categoryMode?: string;
     /** Output format (yaml, json, toon) */
     format?: string;
     /** Optional description for the store */
@@ -102,7 +100,7 @@ export async function handleInit(
 
     const storeData: StoreData = {
         kind: 'filesystem',
-        categoryMode: options.categoryMode ?? 'free',
+        categoryMode: options.categoryMode as CategoryMode ?? 'free',
         categories: [],
         properties: {
             path: storePath,
