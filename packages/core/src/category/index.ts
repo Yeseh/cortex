@@ -13,6 +13,7 @@ export type {
     SetDescriptionResult,
     DeleteCategoryResult,
     CategoryModeContext,
+    CategoryMemoryEntry,
     // New types from index module
     Category,
     SubcategoryEntry,
@@ -24,7 +25,7 @@ export type {
 
 export { MAX_DESCRIPTION_LENGTH } from './types.ts';
 
-export * from './category-templates.ts'
+export * from './category-templates.ts';
 export * from './category-client.ts';
 
 export {

@@ -11,7 +11,7 @@ import {
     removeSubcategoryEntry,
 } from './categories.ts';
 import type { FilesystemContext } from './types.ts';
-import { CategoryPath } from '../../core/src/category/category-path.ts';
+import { CategoryPath } from '@yeseh/cortex-core/category';
 
 const categoryPath = (path: string): CategoryPath => CategoryPath.fromString(path).unwrap();
 

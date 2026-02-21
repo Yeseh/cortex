@@ -1,4 +1,4 @@
-import type { ConfigResult, ConfigStore, ConfigStores, CortexSettings } from "@/config/types";
+import type { ConfigResult, ConfigStore, ConfigStores, CortexSettings } from '@/config/types';
 
 
 /** Provides readonly access to configuration data for stores and Cortex settings. */

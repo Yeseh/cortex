@@ -1,5 +1,5 @@
-import type { CategoryPath } from "@/category";
-import type { CategoryResult } from "@/category/types";
+import type { CategoryPath } from '@/category';
+import type { CategoryResult } from '@/category/types';
 
 /**
  * Abstract storage port for category operations.

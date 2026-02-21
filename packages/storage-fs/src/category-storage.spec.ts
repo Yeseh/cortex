@@ -119,7 +119,7 @@ describe('FilesystemCategoryStorage', () => {
         });
     });
 
-    describe('updateSubcategoryDescription', () => {
+    describe('setDescription', () => {
         it('should add description to existing subcategory', async () => {
             await fs.mkdir(join(tempDir, 'parent'), { recursive: true });
             const indexContent = [
@@ -130,7 +130,7 @@ describe('FilesystemCategoryStorage', () => {
             ].join('\n');
             await fs.writeFile(join(tempDir, 'parent', 'index.yaml'), indexContent);
 
-            const result = await storage.updateSubcategoryDescription(
+            const result = await storage.setDescription(
                 categoryPath('parent/child'),
                 'A child category',
             );
@@ -146,7 +146,7 @@ describe('FilesystemCategoryStorage', () => {
             const indexContent = 'memories: []\nsubcategories: []';
             await fs.writeFile(join(tempDir, 'parent2', 'index.yaml'), indexContent);
 
-            const result = await storage.updateSubcategoryDescription(
+            const result = await storage.setDescription(
                 categoryPath('parent2/new-child'),
                 'New child description',
             );
@@ -169,7 +169,7 @@ describe('FilesystemCategoryStorage', () => {
             ].join('\n');
             await fs.writeFile(join(tempDir, 'parent3', 'index.yaml'), indexContent);
 
-            const result = await storage.updateSubcategoryDescription(
+            const result = await storage.setDescription(
                 categoryPath('parent3/child'),
                 null,
             );
@@ -183,7 +183,7 @@ describe('FilesystemCategoryStorage', () => {
         it('should create index file if parent does not have one', async () => {
             await fs.mkdir(join(tempDir, 'no-index-parent'), { recursive: true });
 
-            const result = await storage.updateSubcategoryDescription(
+            const result = await storage.setDescription(
                 categoryPath('no-index-parent/child'),
                 'Child category',
             );
@@ -195,54 +195,6 @@ describe('FilesystemCategoryStorage', () => {
                 'utf8',
             );
             expect(content).toContain('no-index-parent/child');
-        });
-    });
-
-    describe('removeSubcategoryEntry', () => {
-        it('should remove subcategory from parent index', async () => {
-            await fs.mkdir(join(tempDir, 'parent4'), { recursive: true });
-            const indexContent = [
-                'memories: []',
-                'subcategories:',
-                '  - path: parent4/child1',
-                '    memory_count: 0',
-                '  - path: parent4/child2',
-                '    memory_count: 0',
-            ].join('\n');
-            await fs.writeFile(join(tempDir, 'parent4', 'index.yaml'), indexContent);
-
-            const result = await storage.removeSubcategoryEntry(categoryPath('parent4/child1'));
-
-            expect(result.ok()).toBe(true);
-
-            const content = await fs.readFile(join(tempDir, 'parent4', 'index.yaml'), 'utf8');
-            expect(content).not.toContain('parent4/child1');
-            expect(content).toContain('parent4/child2');
-        });
-
-        it('should succeed if parent index does not exist', async () => {
-            const result = await storage.removeSubcategoryEntry(categoryPath('nonexistent/child'));
-
-            expect(result.ok()).toBe(true);
-        });
-
-        it('should succeed if subcategory is not in index', async () => {
-            await fs.mkdir(join(tempDir, 'parent5'), { recursive: true });
-            const indexContent = [
-                'memories: []',
-                'subcategories:',
-                '  - path: parent5/existing',
-                '    memory_count: 0',
-            ].join('\n');
-            await fs.writeFile(join(tempDir, 'parent5', 'index.yaml'), indexContent);
-
-            const result = await storage.removeSubcategoryEntry(categoryPath('parent5/nonexistent'));
-
-            expect(result.ok()).toBe(true);
-
-            // Existing entry should still be there
-            const content = await fs.readFile(join(tempDir, 'parent5', 'index.yaml'), 'utf8');
-            expect(content).toContain('parent5/existing');
         });
     });
 });

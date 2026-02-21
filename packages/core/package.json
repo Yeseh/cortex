@@ -29,8 +29,8 @@
       "types": "./src/store/index.ts"
     },
     "./storage": {
-      "import": "./src/storage/adapter.ts",
-      "types": "./src/storage/adapter.ts"
+      "import": "./src/storage/index.ts",
+      "types": "./src/storage/index.ts"
     }
   },
   "files": ["src", "dist"],

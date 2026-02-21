@@ -1,7 +1,5 @@
-import type { ConfigStore } from "@/config/types";
-import type { StorageAdapterResult } from ".";
-import type { Store, StoreResult } from "@/store";
-import type { StoreData, StoreName } from "@/store/store";
+import type { Store, StoreResult } from '@/store';
+import type { StoreData, StoreName } from '@/store/store';
 
 /**
  * Storage interface for store registry operations.
