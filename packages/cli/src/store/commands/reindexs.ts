@@ -16,9 +16,8 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCliError } from '../../errors.ts';
-import { resolveStoreAdapter } from '../../context.ts';
-import { CategoryPath } from '@yeseh/cortex-core';
-import type { StorageAdapter } from '@yeseh/cortex-core/storage';
+import { type CortexContext } from '@yeseh/cortex-core';
+import { createCliCommandContext } from '../../create-cli-command.ts';
 
 /**
  * Dependencies for the reindex command handler.
@@ -27,8 +26,6 @@ import type { StorageAdapter } from '@yeseh/cortex-core/storage';
 export interface ReindexHandlerDeps {
     /** Output stream for writing results (defaults to process.stdout) */
     stdout?: NodeJS.WritableStream;
-    /** Pre-resolved adapter for testing */
-    adapter?: StorageAdapter;
 }
 
 /**
@@ -36,34 +33,43 @@ export interface ReindexHandlerDeps {
  *
  * This function:
  * 1. Resolves the store context (from --store option or default resolution)
- * 2. Creates a filesystem adapter for the store
+ * 2. Gets the root category for the store
  * 3. Rebuilds the category indexes
  * 4. Outputs the result
  *
+ * @param ctx - The Cortex context
  * @param storeName - Optional store name from parent --store option
  * @param deps - Optional dependencies for testing
  * @throws {CommanderError} When store resolution or reindexing fails
  */
 export async function handleReindex(
+    ctx: CortexContext,
     storeName: string | undefined,
     deps: ReindexHandlerDeps = {},
 ): Promise<void> {
-    // 1. Resolve store context
-    const storeResult = await resolveStoreAdapter(storeName);
+    const stdout = deps.stdout ?? ctx.stdout ?? process.stdout;
+    
+    // Get store through Cortex client
+    const effectiveStoreName = storeName ?? 'default';
+    const storeResult = ctx.cortex.getStore(effectiveStoreName);
     if (!storeResult.ok()) {
         throwCliError(storeResult.error);
     }
 
-    // 2. Create adapter and reindex
-    const adapter = deps.adapter ?? storeResult.value.adapter;
-    const reindexResult = await adapter.indexes.reindex(CategoryPath.root());
+    const store = storeResult.value;
+    const rootResult = store.root();
+    if (!rootResult.ok()) {
+        throwCliError(rootResult.error);
+    }
+
+    // Use the category's reindex method
+    const reindexResult = await rootResult.value.reindex();
     if (!reindexResult.ok()) {
         throwCliError({ code: 'REINDEX_FAILED', message: reindexResult.error.message });
     }
 
-    // 3. Output result
-    const out = deps.stdout ?? process.stdout;
-    out.write(`Reindexed category indexes for ${storeResult.value.context.root}.\n`);
+    // Output result
+    stdout.write(`Reindexed category indexes for store '${effectiveStoreName}'.\n`);
 }
 
 /**
@@ -82,5 +88,9 @@ export const reindexCommand = new Command('reindex')
     .description('Rebuild category indexes for the store')
     .action(async (_options, command) => {
         const parentOpts = command.parent?.opts() as { store?: string } | undefined;
-        await handleReindex(parentOpts?.store);
+        const context = await createCliCommandContext();
+        if (!context.ok()) {
+            throwCliError(context.error);
+        }
+        await handleReindex(context.value, parentOpts?.store);
     });
