@@ -1,17 +1,10 @@
-import { Cortex, err, getDefaultSettings, ok, parseConfig, type ConfigValidationError, type CortexContext, type InitializeError, type Registry, type Result } from "@yeseh/cortex-core";
-import type { Command } from "commander"
+import { Cortex, err, getDefaultSettings, ok, parseConfig, type ConfigValidationError, type CortexContext, type Result } from "@yeseh/cortex-core";
 import { homedir } from "os"
 import { isAbsolute, resolve } from "path"
 import { FilesystemStorageAdapter } from "@yeseh/cortex-storage-fs";
 import {stdin, stdout} from 'process';
 
-// TODO: Much of this module should move to the FS adapter, since it's all about loading config from the filesystem. The CLI command handlers should just call into the core module to load config and create a context, rather than having all the logic here. 
-
-
-type CommandHandler<
-    Args extends any[] = any[],
-    Opts extends Record<string, unknown> = {}
-> = (this: Command, ...args: [...Args, Opts, Command]) => void | Promise<void>
+// TODO: Much of this module should move to the FS adapter, since it's all about loading config from the filesystem. The CLI command handlers should just call into the core module to load config and create a context, rather than having all the logic here.
 
 const makeAbsolute = (pathStr: string): string => {
     if (pathStr.startsWith('~')) {
@@ -80,7 +73,7 @@ export const createCliCommandContext = async (
             return parseResult;
         }
 
-        const adapterFactory = async (storepath: string) => {
+        const adapterFactory = (storepath: string) => {
             return new FilesystemStorageAdapter({
                 rootDirectory: storepath
             });
@@ -110,70 +103,3 @@ export const createCliCommandContext = async (
         throw new Error(`Unexpected error creating CLI command context: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
-
-
-    /**
-     * Creates the folder structure and config file for this Cortex instance.
-     *
-     * This operation is idempotent - calling it multiple times is safe.
-     * If the directory and config already exist, they are preserved.
-     *
-     * @returns Result indicating success or failure
-     *
-     * @example
-     * ```typescript
-     * const cortex = Cortex.init({
-     *     rootDirectory: '/path/to/new/config',
-     *     registry: { 'default': { path: '/path/to/store' } },
-     * });
-     *
-     * const result = await cortex.initialize();
-     * if (result.ok()) {
-     *     console.log('Cortex initialized successfully');
-     * }
-     * ```
-    async function initialize(
-        rootDirectory: string,
-        registry: Registry,
-        settings: Partial<CortexSettings>,
-
-    ): Promise<Result<void, InitializeError>> {
-        const configPath = resolve(rootDirectory, 'config.yaml');
-        const configFile = Bun.file(configPath);
-
-        // Check if config already exists using Bun.file()
-        if (await configFile.exists()) {
-            // Config exists, preserve it (idempotent)
-            return ok(undefined);
-        }
-
-        // Create directory structure
-        try {
-            await mkdir(rootDirectory, { recursive: true }, null);
-        }
-        catch (error) {
-            return err({
-                code: 'DIRECTORY_CREATE_FAILED',
-                message: `Failed to create directory at ${rootDirectory}. Check that the parent directory exists and you have write permissions.`,
-                path: rootDirectory,
-                cause: error,
-            });
-        }
-
-        // Write config file using Bun.write()
-        try {
-            const configContent = serializeConfig(this.settings, this.registry);
-            await Bun.write(configPath, configContent);
-        }
-        catch (error) {
-            return err({
-                code: 'CONFIG_WRITE_FAILED',
-                message: `Failed to write config file at ${configPath}. Check that you have write permissions to the directory.`,
-                path: configPath,
-                cause: error,
-            });
-        }
-
-        return ok(undefined);
-    }
-     */

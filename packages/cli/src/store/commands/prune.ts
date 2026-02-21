@@ -21,12 +21,8 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCliError } from '../../errors.ts';
-import { resolveStoreAdapter } from '../../context.ts';
-import {
-    pruneExpiredMemories,
-} from '@yeseh/cortex-core/memory';
-import { CategoryPath } from '@yeseh/cortex-core';
-import type { StorageAdapter } from '@yeseh/cortex-core/storage';
+import { type CortexContext } from '@yeseh/cortex-core';
+import { createCliCommandContext } from '../../create-cli-command.ts';
 
 /**
  * Options for the prune command.
@@ -43,20 +39,18 @@ export interface PruneCommandOptions {
 export interface PruneHandlerDeps {
     /** Output stream for writing results (defaults to process.stdout) */
     stdout?: NodeJS.WritableStream;
-    /** Current time for expiry checks (defaults to new Date()) */
+    /** Current time for expiry checks (defaults to ctx.now()) */
     now?: Date;
-    /** Pre-resolved adapter for testing */
-    adapter?: StorageAdapter;
 }
 
 /**
  * Handles the prune command execution.
  *
  * Thin CLI handler that delegates all business logic to the core
- * {@link pruneExpiredMemories} operation. This handler is responsible
+ * prune operation via CategoryClient. This handler is responsible
  * only for:
- * 1. Resolving the store adapter (from `storeName` or the default store)
- * 2. Calling the core prune operation with the appropriate serializer
+ * 1. Resolving the store via CortexContext
+ * 2. Calling the category prune operation
  * 3. Formatting output for the CLI (dry-run preview vs. deletion summary)
  *
  * After pruning, the core operation automatically triggers a reindex to
@@ -64,10 +58,11 @@ export interface PruneHandlerDeps {
  *
  * @module cli/commands/store/prune
  *
- * @param options - Command options controlling pruning behavior
- * @param options.dryRun - When `true`, lists expired memories without deleting
+ * @param ctx - CortexContext providing access to Cortex client
  * @param storeName - Optional store name from the parent `--store` flag;
  *   when `undefined`, resolves the default store
+ * @param options - Command options controlling pruning behavior
+ * @param options.dryRun - When `true`, lists expired memories without deleting
  * @param deps - Optional injected dependencies for testing
  * @throws {InvalidArgumentError} When the store cannot be resolved
  *   (e.g., store name does not exist)
@@ -78,35 +73,35 @@ export interface PruneHandlerDeps {
  * ```typescript
  * // Direct invocation in tests
  * const out = new PassThrough();
- * await handlePrune({ dryRun: true }, 'my-store', {
+ * await handlePrune(ctx, 'my-store', { dryRun: true }, {
  *   stdout: out,
  *   now: new Date('2025-01-01'),
- *   adapter: mockAdapter,
  * });
  * ```
  */
 export async function handlePrune(
-    options: PruneCommandOptions,
+    ctx: CortexContext,
     storeName: string | undefined,
+    options: PruneCommandOptions,
     deps: PruneHandlerDeps = {},
 ): Promise<void> {
-    // 1. Resolve store adapter
-    const now = deps.now ?? new Date();
-    let adapter: StorageAdapter;
+    const now = deps.now ?? ctx.now();
+    const stdout = deps.stdout ?? ctx.stdout ?? process.stdout;
 
-    if (deps.adapter) {
-        adapter = deps.adapter;
-    }
-    else {
-        const storeResult = await resolveStoreAdapter(storeName);
-        if (!storeResult.ok()) {
-            throwCliError(storeResult.error);
-        }
-        adapter = storeResult.value.adapter;
+    // Get store through Cortex client
+    const storeResult = ctx.cortex.getStore(storeName ?? 'default');
+    if (!storeResult.ok()) {
+        throwCliError(storeResult.error);
     }
 
-    // 2. Delegate to core operation
-    const result = await pruneExpiredMemories(adapter, CategoryPath.root(), {
+    const store = storeResult.value;
+    const rootResult = store.root();
+    if (!rootResult.ok()) {
+        throwCliError(rootResult.error);
+    }
+
+    // Use the category's prune method
+    const result = await rootResult.value.prune({
         dryRun: options.dryRun,
         now,
     });
@@ -116,20 +111,19 @@ export async function handlePrune(
     }
 
     const pruned = result.value.pruned;
-    const out = deps.stdout ?? process.stdout;
 
-    // 3. Format output
+    // Format output
     if (pruned.length === 0) {
-        out.write('No expired memories found.\n');
+        stdout.write('No expired memories found.\n');
         return;
     }
 
     const paths = pruned.map((entry) => entry.path).join('\n  ');
     if (options.dryRun) {
-        out.write(`Would prune ${pruned.length} expired memories:\n  ${paths}\n`);
+        stdout.write(`Would prune ${pruned.length} expired memories:\n  ${paths}\n`);
     }
     else {
-        out.write(`Pruned ${pruned.length} expired memories:\n  ${paths}\n`);
+        stdout.write(`Pruned ${pruned.length} expired memories:\n  ${paths}\n`);
     }
 }
 
@@ -150,5 +144,9 @@ export const pruneCommand = new Command('prune')
     .option('--dry-run', 'Show what would be pruned without deleting')
     .action(async (options, command) => {
         const parentOpts = command.parent?.opts() as { store?: string } | undefined;
-        await handlePrune(options, parentOpts?.store);
+        const context = await createCliCommandContext();
+        if (!context.ok()) {
+            throwCliError(context.error);
+        }
+        await handlePrune(context.value, parentOpts?.store, options);
     });

@@ -15,8 +15,9 @@
  */
 
 import { Command } from '@commander-js/extra-typings';
+import { type CortexContext } from '@yeseh/cortex-core';
 import { throwCliError } from '../../errors.ts';
-import { loadRegistry } from '../../context.ts';
+import { createCliCommandContext } from '../../create-cli-command.ts';
 import { serializeOutput, type OutputStoreRegistry, type OutputFormat } from '../../output.ts';
 
 /**
@@ -40,34 +41,33 @@ export interface ListHandlerDeps {
  * Handles the list command execution.
  *
  * This function:
- * 1. Loads the store registry
+ * 1. Gets stores from the context
  * 2. Formats the stores as a sorted list
  * 3. Serializes and outputs the result
  *
+ * @param ctx - The Cortex context containing stores configuration
  * @param options - Command options (format)
  * @param deps - Optional dependencies for testing
- * @throws {CommanderError} When the registry cannot be loaded or serialization fails
+ * @throws {CommanderError} When serialization fails
  */
 export async function handleList(
+    ctx: CortexContext,
     options: ListCommandOptions,
     deps: ListHandlerDeps = {},
 ): Promise<void> {
-    // 1. Load the registry
-    const registryResult = await loadRegistry();
-    if (!registryResult.ok()) {
-        throwCliError(registryResult.error);
-    }
-
-    // 2. Format the output as a sorted list of stores
-    const stores = Object.entries(registryResult.value)
+    // 1. Get stores from context
+    const stores = Object.entries(ctx.stores)
         .map(([
             name, def,
-        ]) => ({ name, path: def.path }))
+        ]) => ({
+            name,
+            path: (def.properties as { path: string }).path,
+        }))
         .sort((a, b) => a.name.localeCompare(b.name));
 
     const output: OutputStoreRegistry = { stores };
 
-    // 3. Serialize and output
+    // 2. Serialize and output
     const format: OutputFormat = (options.format as OutputFormat) ?? 'yaml';
     const serialized = serializeOutput({ kind: 'store-registry', value: output }, format);
     if (!serialized.ok()) {
@@ -94,5 +94,9 @@ export const listCommand = new Command('list')
     .description('List all registered stores')
     .option('-o, --format <format>', 'Output format (yaml, json, toon)', 'yaml')
     .action(async (options) => {
-        await handleList(options);
+        const context = await createCliCommandContext();
+        if (!context.ok()) {
+            throwCliError(context.error);
+        }
+        await handleList(context.value, options);
     });
