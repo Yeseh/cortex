@@ -1,4 +1,4 @@
-import { Cortex, err, ok, parseConfig, type ConfigValidationError, type CortexContext, type InitializeError, type Registry, type Result } from "@yeseh/cortex-core";
+import { Cortex, err, getDefaultSettings, ok, parseConfig, type ConfigValidationError, type CortexContext, type InitializeError, type Registry, type Result } from "@yeseh/cortex-core";
 import type { Command } from "commander"
 import { homedir } from "os"
 import { isAbsolute, resolve } from "path"
@@ -80,21 +80,24 @@ export const createCliCommandContext = async (
             return parseResult;
         }
 
-        const config = parseResult.value;
-        const cortex = Cortex.init({
-            settings: config.settings,
-            stores: config.stores,
-        });
-
         const adapterFactory = async (storepath: string) => {
             return new FilesystemStorageAdapter({
                 rootDirectory: storepath
             });
         }
 
+        const config = parseResult.value;
+        const cortex = Cortex.init({
+            settings: config.settings,
+            stores: config.stores,
+            adapterFactory: adapterFactory
+        });
+
         const now = () => new Date();
 
         const context: CortexContext = {
+            settings: config.settings ?? getDefaultSettings(),
+            stores: config.stores ?? {},
             cortex,
             now,
             stdin,

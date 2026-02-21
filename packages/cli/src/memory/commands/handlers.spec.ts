@@ -13,6 +13,7 @@ import {
     type Category,
     type ConfigStores,
     type CortexContext,
+    type CortexSettings,
     type MemoryMetadata,
     type StorageAdapter,
 } from '@yeseh/cortex-core';
@@ -92,17 +93,18 @@ const createContext = (options: {
     stdout?: PassThrough;
     stdin?: PassThrough;
     stores?: ConfigStores
+    settings?: CortexSettings;
     now?: () => Date;
 }): CortexContext => {
     const cortex = Cortex.init({
-        settings: {},
+        settings: options.settings ?? {},
         stores: options.stores,
         adapterFactory: () => options.adapter,
     });
 
     return {
         cortex,
-        settings: cortex.settings,
+        settings: options.settings ?? {},
         stores: options.stores ?? {},
         now: options.now ?? (() => new Date('2025-01-01T00:00:00.000Z')),
         stdin: (options.stdin ?? new PassThrough()) as unknown as NodeJS.ReadStream,

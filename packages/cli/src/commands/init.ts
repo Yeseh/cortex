@@ -76,6 +76,9 @@ export const initCommand = new Command('init')
  * @throws {InvalidArgumentError} When arguments are invalid
  * @throws {CommanderError} When initialization fails
  */
+
+// TODO: We should move this logic into the core package as a helper function, and just call it from the CLI command handler. 
+//       Use the ConfigAdapter to initialize the config store and write the default config, instead of manually writing files here. This way we can reuse the same initialization logic in other contexts (e.g. programmatic setup, tests). 
 export async function handleInit(
     ctx: CortexContext,
     options: InitCommandOptions = {},
