@@ -16,17 +16,11 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import type { StorageAdapter } from '@yeseh/cortex-core/storage';
-import type { CategoryStorage, CategoryModeContext } from '@yeseh/cortex-core/category';
-import type { CategoryMode, CategoryDefinition } from '@yeseh/cortex-core';
-import {
-    createCategory,
-    setDescription,
-    deleteCategory,
-    MAX_DESCRIPTION_LENGTH,
-} from '@yeseh/cortex-core/category';
+import type { CategoryModeContext } from '@yeseh/cortex-core/category';
+import type { CategoryMode, ConfigCategory } from '@yeseh/cortex-core';
+import { MAX_DESCRIPTION_LENGTH } from '@yeseh/cortex-core/category';
 import { storeNameSchema } from '../store/tools.ts';
-import { type ToolContext, resolveStoreAdapter } from '../memory/tools/shared.ts';
+import { type ToolContext } from '../memory/tools/shared.ts';
 
 /**
  * Options for category tool registration.
@@ -81,7 +75,7 @@ export interface CategoryToolsOptions {
      * In `subcategories` or `strict` mode, this hierarchy determines which
      * categories are protected and which root categories are allowed.
      */
-    configCategories?: Record<string, CategoryDefinition>;
+    configCategories?: Record<string, ConfigCategory>;
 }
 
 // ---------------------------------------------------------------------------
@@ -185,19 +179,6 @@ interface McpToolResponse {
 }
 
 /**
- * Creates a CategoryStorage adapter from a ScopedStorageAdapter.
- *
- * The ScopedStorageAdapter already provides a categories interface that
- * implements CategoryStorage, so this simply returns that interface.
- *
- * @param adapter - Scoped storage adapter from registry.getStore()
- * @returns CategoryStorage implementation
- */
-const createCategoryStoragePort = (adapter: StorageAdapter): CategoryStorage => {
-    return adapter.categories;
-};
-
-/**
  * Parses and validates input against a Zod schema.
  *
  * @param schema - Zod schema to validate against
@@ -247,13 +228,17 @@ export const createCategoryHandler = async (
     input: CreateCategoryInput,
     modeContext?: CategoryModeContext,
 ): Promise<McpToolResponse> => {
-    const adapterResult = resolveStoreAdapter(ctx, input.store);
-    if (!adapterResult.ok()) {
-        throw adapterResult.error;
+    const storeResult = ctx.cortex.getStore(input.store);
+    if (!storeResult.ok()) {
+        throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
     }
 
-    const port = createCategoryStoragePort(adapterResult.value);
-    const result = await createCategory(port, input.path, modeContext);
+    // Access the adapter through the store client
+    // The adapter is private, but we need it to pass modeContext to operations
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const adapter = (storeResult.value as any).adapter;
+    const { createCategory } = await import('@yeseh/cortex-core/category');
+    const result = await createCategory(adapter.categories, input.path, modeContext);
 
     if (!result.ok()) {
         if (result.error.code === 'INVALID_PATH') {
@@ -312,15 +297,18 @@ export const setCategoryDescriptionHandler = async (
     input: SetCategoryDescriptionInput,
     modeContext?: CategoryModeContext,
 ): Promise<McpToolResponse> => {
-    const adapterResult = resolveStoreAdapter(ctx, input.store);
-    if (!adapterResult.ok()) {
-        throw adapterResult.error;
+    const storeResult = ctx.cortex.getStore(input.store);
+    if (!storeResult.ok()) {
+        throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
     }
 
-    const port = createCategoryStoragePort(adapterResult.value);
+    // Access the adapter through the store client
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const adapter = (storeResult.value as any).adapter;
+    const { createCategory, setDescription } = await import('@yeseh/cortex-core/category');
 
     // MCP convenience: auto-create category if it doesn't exist
-    const createResult = await createCategory(port, input.path, modeContext);
+    const createResult = await createCategory(adapter.categories, input.path, modeContext);
     if (!createResult.ok() && createResult.error.code !== 'INVALID_PATH') {
         if (createResult.error.code === 'ROOT_CATEGORY_NOT_ALLOWED' || createResult.error.code === 'CATEGORY_PROTECTED') {
             throw new McpError(ErrorCode.InvalidParams, createResult.error.message);
@@ -328,7 +316,12 @@ export const setCategoryDescriptionHandler = async (
         throw new McpError(ErrorCode.InternalError, createResult.error.message);
     }
 
-    const result = await setDescription(port, input.path, input.description, modeContext);
+    const result = await setDescription(
+        adapter.categories,
+        input.path,
+        input.description,
+        modeContext,
+    );
 
     if (!result.ok()) {
         if (result.error.code === 'DESCRIPTION_TOO_LONG') {
@@ -383,13 +376,16 @@ export const deleteCategoryHandler = async (
     input: DeleteCategoryInput,
     modeContext?: CategoryModeContext,
 ): Promise<McpToolResponse> => {
-    const adapterResult = resolveStoreAdapter(ctx, input.store);
-    if (!adapterResult.ok()) {
-        throw adapterResult.error;
+    const storeResult = ctx.cortex.getStore(input.store);
+    if (!storeResult.ok()) {
+        throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
     }
 
-    const port = createCategoryStoragePort(adapterResult.value);
-    const result = await deleteCategory(port, input.path, modeContext);
+    // Access the adapter through the store client
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const adapter = (storeResult.value as any).adapter;
+    const { deleteCategory } = await import('@yeseh/cortex-core/category');
+    const result = await deleteCategory(adapter.categories, input.path, modeContext);
 
     if (!result.ok()) {
         if (result.error.code === 'ROOT_CATEGORY_REJECTED') {

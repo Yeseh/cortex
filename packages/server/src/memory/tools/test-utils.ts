@@ -4,16 +4,23 @@
  * @module server/memory/tools/test-utils
  */
 
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { ServerConfig } from '../../config.ts';
 import { MEMORY_SUBDIR } from '../../config.ts';
-import { type Memory, serializeStoreRegistry, Cortex } from '@yeseh/cortex-core';
+import { type Memory, Cortex } from '@yeseh/cortex-core';
 import { createMemory } from '@yeseh/cortex-core/memory';
 import { createCategory } from '@yeseh/cortex-core/category';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 import type { ToolContext } from './shared.ts';
+
+// Type for test store configuration
+type TestStoreConfig = Record<string, {
+    kind: string;
+    properties: { path: string };
+    categories: Record<string, unknown>;
+}>;
 
 // Test configuration
 export const createTestConfig = (dataPath: string): ServerConfig => ({
@@ -36,10 +43,24 @@ export const createTestContext = (testDir: string): ToolContext => {
     const config = createTestConfig(testDir);
     const memoryDir = join(testDir, MEMORY_SUBDIR);
 
+    // Create store configuration mapping
+    const storeConfig: TestStoreConfig = {
+        default: {
+            kind: 'filesystem',
+            properties: { path: memoryDir },
+            categories: {},
+        },
+    };
+
     const cortex = Cortex.init({
-        rootDirectory: testDir,
-        stores: { default: { path: memoryDir } },
-        adapterFactory: (storePath: string) => new FilesystemStorageAdapter({ rootDirectory: storePath }),
+        // Type compatibility - will be fixed in core migration
+        stores: storeConfig as any,
+        adapterFactory: (storeName: string) => {
+            // Lookup the store path from config
+            const store = storeConfig[storeName];
+            const storePath = store ? store.properties.path : memoryDir;
+            return new FilesystemStorageAdapter({ rootDirectory: storePath });
+        },
     });
 
     return { config, cortex };
@@ -59,26 +80,53 @@ export const createTestContextWithStores = (
     const config = createTestConfig(testDir);
     const memoryDir = join(testDir, MEMORY_SUBDIR);
 
-    const registry: Record<string, { path: string }> = {
-        default: { path: memoryDir },
+    const storeConfig: TestStoreConfig = {
+        default: {
+            kind: 'filesystem',
+            properties: { path: memoryDir },
+            categories: {},
+        },
     };
 
     for (const [
         name, path,
     ] of Object.entries(additionalStores)) {
-        registry[name] = { path };
+        storeConfig[name] = {
+            kind: 'filesystem',
+            properties: { path },
+            categories: {},
+        };
     }
 
     const cortex = Cortex.init({
-        rootDirectory: testDir,
-        stores: registry,
-        adapterFactory: (storePath: string) => new FilesystemStorageAdapter({ rootDirectory: storePath }),
+        // Type compatibility - will be fixed in core migration
+        stores: storeConfig as any,
+        adapterFactory: (storeName: string) => {
+            // Lookup the store path from config
+            const store = storeConfig[storeName];
+            const storePath = store ? store.properties.path : memoryDir;
+            return new FilesystemStorageAdapter({ rootDirectory: storePath });
+        },
     });
 
     return { config, cortex };
 };
 
-// Helper to create test directory with store registry
+/**
+ * Creates a test directory for test stores.
+ *
+ * Creates a temporary directory with a memory subdirectory for the default store.
+ * Use this with `createTestContext()` or `createTestContextWithStores()` to set up
+ * a test environment.
+ *
+ * @returns Path to the test directory
+ *
+ * @example
+ * ```typescript
+ * const testDir = await createTestDir();
+ * const ctx = createTestContext(testDir);
+ * ```
+ */
 export const createTestDir = async (): Promise<string> => {
     const testDir = join(
         tmpdir(),
@@ -86,41 +134,11 @@ export const createTestDir = async (): Promise<string> => {
     );
     await mkdir(testDir, { recursive: true });
 
-    // Create stores.yaml registry pointing default store to memory subdirectory
+    // Create memory subdirectory for default store
     const memoryDir = join(testDir, MEMORY_SUBDIR);
     await mkdir(memoryDir, { recursive: true });
-    const registry = { default: { path: memoryDir } };
-    const serialized = serializeStoreRegistry(registry);
-    if (!serialized.ok()) {
-        throw new Error(`Failed to serialize registry: ${serialized.error.message}`);
-    }
-    await writeFile(join(testDir, 'stores.yaml'), serialized.value);
 
     return testDir;
-};
-
-// Helper to register an additional store in the registry
-export const registerStore = async (
-    testDir: string,
-    storeName: string,
-    storePath: string,
-): Promise<void> => {
-    const registryPath = join(testDir, 'stores.yaml');
-    const memoryDir = join(testDir, MEMORY_SUBDIR);
-
-    // Create the store directory
-    await mkdir(storePath, { recursive: true });
-
-    // Build registry with default + new store
-    const registry = {
-        default: { path: memoryDir },
-        [storeName]: { path: storePath },
-    };
-    const serialized = serializeStoreRegistry(registry);
-    if (!serialized.ok()) {
-        throw new Error(`Failed to serialize registry: ${serialized.error.message}`);
-    }
-    await writeFile(registryPath, serialized.value);
 };
 
 /**
@@ -188,10 +206,14 @@ export const createMemoryFile = async (
         slugPath,
         {
             content: contents.content!,
-            tags: contents.metadata?.tags ?? [],
-            source: contents.metadata?.source ?? 'test',
-            citations: contents.metadata?.citations ?? [],
-            expiresAt: contents.metadata?.expiresAt,
+            metadata: {
+                tags: contents.metadata?.tags ?? [],
+                source: contents.metadata?.source ?? 'test',
+                citations: contents.metadata?.citations ?? [],
+                expiresAt: contents.metadata?.expiresAt,
+                createdAt: contents.metadata?.createdAt ?? new Date(),
+                updatedAt: contents.metadata?.updatedAt ?? new Date(),
+            },
         },
         contents.metadata?.createdAt, // Pass timestamp for test determinism
     );

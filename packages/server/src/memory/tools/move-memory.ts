@@ -5,13 +5,12 @@
  */
 
 import { z } from 'zod';
-import { moveMemory } from '@yeseh/cortex-core';
+import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { storeNameSchema } from '../../store/tools.ts';
 import {
     memoryPathSchema,
     type ToolContext,
     type McpToolResponse,
-    resolveStoreAdapter,
     translateMemoryError,
 } from './shared.ts';
 
@@ -36,12 +35,15 @@ export const moveMemoryHandler = async (
     ctx: ToolContext,
     input: MoveMemoryInput,
 ): Promise<McpToolResponse> => {
-    const adapterResult = resolveStoreAdapter(ctx, input.store);
-    if (!adapterResult.ok()) {
-        throw adapterResult.error;
+    const storeResult = ctx.cortex.getStore(input.store);
+    if (!storeResult.ok()) {
+        throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
     }
+    const store = storeResult.value;
 
-    const result = await moveMemory(adapterResult.value, input.from_path, input.to_path);
+    const sourceMemory = store.getMemory(input.from_path);
+    const destMemory = store.getMemory(input.to_path);
+    const result = await sourceMemory.move(destMemory);
 
     if (!result.ok()) {
         throw translateMemoryError(result.error);

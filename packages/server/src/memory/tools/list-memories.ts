@@ -5,14 +5,12 @@
  */
 
 import { z } from 'zod';
-import { listMemories, type MemoryError } from '@yeseh/cortex-core';
-import { CategoryPath } from '@yeseh/cortex-core/category';
+import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import type { CategoryError } from '@yeseh/cortex-core';
 import { storeNameSchema } from '../../store/tools.ts';
 import {
     type ToolContext,
     type McpToolResponse,
-    resolveStoreAdapter,
-    translateMemoryError,
 } from './shared.ts';
 
 /** Schema for list_memories tool input */
@@ -33,53 +31,81 @@ export interface ListMemoriesInput {
 }
 
 /**
+ * Translates a CategoryError to an MCP McpError.
+ */
+const translateCategoryError = (error: CategoryError): McpError => {
+    switch (error.code) {
+        case 'CATEGORY_NOT_FOUND':
+            return new McpError(ErrorCode.InvalidParams, error.message);
+        case 'INVALID_PATH':
+            return new McpError(ErrorCode.InvalidParams, error.message);
+        case 'ROOT_CATEGORY_REJECTED':
+        case 'ROOT_CATEGORY_NOT_ALLOWED':
+        case 'CATEGORY_PROTECTED':
+            return new McpError(ErrorCode.InvalidParams, error.message);
+        case 'DESCRIPTION_TOO_LONG':
+            return new McpError(ErrorCode.InvalidParams, error.message);
+        case 'STORAGE_ERROR':
+            return new McpError(ErrorCode.InternalError, error.message);
+        default:
+            return new McpError(ErrorCode.InternalError, `Unknown error: ${error.message}`);
+    }
+};
+
+/**
  * Lists memories in a category.
  */
 export const listMemoriesHandler = async (
     ctx: ToolContext,
     input: ListMemoriesInput,
 ): Promise<McpToolResponse> => {
-    const adapterResult = resolveStoreAdapter(ctx, input.store);
-    if (!adapterResult.ok()) {
-        throw adapterResult.error;
+    // Get store using fluent API
+    const storeResult = ctx.cortex.getStore(input.store);
+    if (!storeResult.ok()) {
+        throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
     }
+    const store = storeResult.value;
 
-    const categoryResult = input.category
-        ? CategoryPath.fromString(input.category)
-        : undefined;
-
-    if (categoryResult && !categoryResult.ok()) {
-        const error: MemoryError = {
-            code: 'INVALID_PATH',
-            message: 'Invalid category path.',
-            path: input.category,
-            cause: categoryResult.error,
-        };
-        throw translateMemoryError(error);
+    // Get category client (root or specific category)
+    const categoryResult = input.category 
+        ? store.getCategory(input.category)
+        : store.root();
+    
+    if (!categoryResult.ok()) {
+        throw new McpError(ErrorCode.InvalidParams, categoryResult.error.message);
     }
+    const category = categoryResult.value;
 
-    const result = await listMemories(adapterResult.value, {
-        category: categoryResult?.value,
-        includeExpired: input.include_expired,
+    // List memories in the category
+    const memoriesResult = await category.listMemories({
+        includeExpired: input.include_expired ?? false,
     });
 
-    if (!result.ok()) {
-        throw translateMemoryError(result.error);
+    if (!memoriesResult.ok()) {
+        throw translateCategoryError(memoriesResult.error);
     }
 
-    const listResult = result.value;
+    // List subcategories in the category
+    const subcategoriesResult = await category.listSubcategories();
+    if (!subcategoriesResult.ok()) {
+        throw translateCategoryError(subcategoriesResult.error);
+    }
+
+    const memories = memoriesResult.value;
+    const subcategories = subcategoriesResult.value;
+
     const output = {
-        category: listResult.category.isRoot ? 'all' : listResult.category.toString(),
-        count: listResult.memories.length,
-        memories: listResult.memories.map((m) => ({
+        category: input.category ?? 'root',
+        count: memories.length,
+        memories: memories.map((m) => ({
             path: m.path.toString(),
             token_estimate: m.tokenEstimate,
-            summary: m.summary,
-            expires_at: m.expiresAt?.toISOString(),
-            is_expired: m.isExpired,
+            summary: undefined, // CategoryMemoryEntry doesn't have summary
+            expires_at: undefined, // CategoryMemoryEntry doesn't track expiration
+            is_expired: undefined, // CategoryMemoryEntry doesn't track expiration
             updated_at: m.updatedAt?.toISOString(),
         })),
-        subcategories: listResult.subcategories.map((s) => ({
+        subcategories: subcategories.map((s) => ({
             path: s.path.toString(),
             memory_count: s.memoryCount,
             description: s.description,

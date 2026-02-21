@@ -6,7 +6,6 @@
 
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import { updateMemory } from '@yeseh/cortex-core';
 import { storeNameSchema } from '../../store/tools.ts';
 import {
     isoDateSchema,
@@ -14,7 +13,6 @@ import {
     tagsSchema,
     type ToolContext,
     type McpToolResponse,
-    resolveStoreAdapter,
     translateMemoryError,
 } from './shared.ts';
 
@@ -98,12 +96,14 @@ export const updateMemoryHandler = async (
         );
     }
 
-    const adapterResult = resolveStoreAdapter(ctx, input.store);
-    if (!adapterResult.ok()) {
-        throw adapterResult.error;
+    const storeResult = ctx.cortex.getStore(input.store);
+    if (!storeResult.ok()) {
+        throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
     }
+    const store = storeResult.value;
 
-    const result = await updateMemory(adapterResult.value, input.path, {
+    const memoryClient = store.getMemory(input.path);
+    const result = await memoryClient.update({
         content: input.content,
         tags: input.tags,
         expiresAt: input.expires_at === null
@@ -118,7 +118,8 @@ export const updateMemoryHandler = async (
         throw translateMemoryError(result.error);
     }
 
+    const memory = result.value;
     return {
-        content: [{ type: 'text', text: `Memory updated at ${input.path}` }],
+        content: [{ type: 'text', text: `Memory updated at ${memory.path}` }],
     };
 };
