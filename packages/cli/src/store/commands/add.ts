@@ -171,7 +171,7 @@ export async function handleAdd(
     };
 
     // 5. Write updated config
-    const serialized = Bun.YAML.stringify(updatedConfig);
+    const serialized = Bun.YAML.stringify(updatedConfig, null, 2);
     try {
         await Bun.write(configPath, serialized);
     }

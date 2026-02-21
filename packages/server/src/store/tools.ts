@@ -14,12 +14,9 @@
  */
 
 import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
 import { z } from 'zod';
 import { err, ok, type Result } from '@yeseh/cortex-core';
 import type { CategoryMode } from '@yeseh/cortex-core';
-import { initializeStore } from '@yeseh/cortex-core/store';
-import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import type { ToolContext } from '../memory/tools/shared.ts';
 import { convertToCategories, type CategoryInfo } from './shared.ts';
 
@@ -52,12 +49,10 @@ export interface StoreToolError {
  */
 export const storeNameSchema = z
     .string()
-    .min(
-        1, 'Store name must not be empty',
-    )
+    .min(1, 'Store name must not be empty')
     .regex(
         /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/,
-        'Store name must start with alphanumeric and contain only alphanumeric, hyphens, or underscores',
+        'Store name must start with alphanumeric and contain only alphanumeric, hyphens, or underscores'
     );
 
 /**
@@ -112,19 +107,15 @@ export interface ListStoresResult {
  * }
  * ```
  */
-export const listStores = async (dataPath: string)
-: Promise<Result<string[], StoreToolError>> => {
+export const listStores = async (dataPath: string): Promise<Result<string[], StoreToolError>> => {
     try {
-        const entries = await fs.readdir(
-            dataPath, { withFileTypes: true },
-        );
+        const entries = await fs.readdir(dataPath, { withFileTypes: true });
         const stores = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
         return ok(stores);
-    }
-    catch (error) {
-    // Handle ENOENT (data path doesn't exist yet) by returning empty array
+    } catch (error) {
+        // Handle ENOENT (data path doesn't exist yet) by returning empty array
         if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-            return ok([]); 
+            return ok([]);
         }
         return err({
             code: 'STORE_LIST_FAILED',
@@ -135,57 +126,47 @@ export const listStores = async (dataPath: string)
 };
 
 /**
- * Lists all stores from the registry with their metadata.
+ * Lists all stores from the context registry with their metadata.
  *
- * Reads the store registry file and returns all registered stores
- * with their names, paths, and optional descriptions. If the registry
- * doesn't exist yet, returns an empty list.
+ * Returns all registered stores with their names, paths, and optional
+ * descriptions from the CortexContext stores configuration.
  *
- * @param registryPath - Path to the stores.yaml registry file
+ * @param ctx - Tool context containing cortex instance
  * @returns Result with list of stores or error
  *
  * @example
  * ```ts
- * const result = await listStoresFromRegistry('/path/to/stores.yaml');
+ * const result = await listStoresFromContext(ctx);
  * if (result.ok()) {
  *   console.log('Stores:', result.value.stores);
  *   // [{ name: 'default', path: '/path/to/default', description: 'Default store' }]
  * }
  * ```
  */
-export const listStoresFromRegistry = async (
-    registryPath: string,
-): Promise<Result<ListStoresResult, StoreToolError>> => {
-    const registry = new FilesystemRegistry(registryPath);
-    const loadResult = await registry.load();
+export const listStoresFromContext = (
+    ctx: ToolContext
+): Result<ListStoresResult, StoreToolError> => {
+    try {
+        const stores: StoreInfo[] = Object.entries(ctx.stores)
+            .map(([name, definition]) => ({
+                name,
+                path: (definition.properties as { path: string }).path,
+                ...(definition.description !== undefined && {
+                    description: definition.description,
+                }),
+                categoryMode: definition.categoryMode ?? 'free',
+                categories: convertToCategories(definition.categories),
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name));
 
-    if (!loadResult.ok()) {
-        // Handle REGISTRY_MISSING as empty list (like allowMissing: true did)
-        if (loadResult.error.code === 'REGISTRY_MISSING') {
-            return ok({ stores: [] });
-        }
+        return ok({ stores });
+    } catch (error) {
         return err({
             code: 'STORE_LIST_FAILED',
-            message: `Failed to load store registry: ${loadResult.error.message}`,
-            cause: loadResult.error,
+            message: `Failed to list stores: ${error instanceof Error ? error.message : String(error)}`,
+            cause: error,
         });
     }
-
-    const stores: StoreInfo[] = Object.entries(loadResult.value)
-        .map((
-            [
-                name, definition,
-            ],
-        ) => ({
-            name,
-            path: definition.path,
-            ...(definition.description !== undefined && { description: definition.description }),
-            categoryMode: definition.categoryMode ?? 'free',
-            categories: convertToCategories(definition.categories),
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name));
-
-    return ok({ stores });
 };
 
 // ---------------------------------------------------------------------------
@@ -219,14 +200,10 @@ export interface StoreToolResponse {
  * // { content: [{ type: 'text', text: '{"stores":[...]}' }] }
  * ```
  */
-export const listStoresHandler = async (
-    ctx: ToolContext,
-): Promise<StoreToolResponse> => {
+export const listStoresHandler = async (ctx: ToolContext): Promise<StoreToolResponse> => {
     const registry = ctx.cortex.getRegistry();
     const stores: StoreInfo[] = Object.entries(registry)
-        .map(([
-            name, definition,
-        ]) => ({
+        .map(([name, definition]) => ({
             name,
             path: definition.path,
             ...(definition.description !== undefined && { description: definition.description }),
@@ -257,13 +234,18 @@ export const listStoresHandler = async (
  */
 export const createStoreHandler = async (
     ctx: ToolContext,
-    input: CreateStoreInput,
+    input: CreateStoreInput
 ): Promise<StoreToolResponse> => {
     // Validate input
     const validation = createStoreInputSchema.safeParse(input);
     if (!validation.success) {
         return {
-            content: [{ type: 'text', text: `Error: Store name is invalid: ${validation.error.issues[0]?.message}` }],
+            content: [
+                {
+                    type: 'text',
+                    text: `Error: Store name is invalid: ${validation.error.issues[0]?.message}`,
+                },
+            ],
             isError: true,
         };
     }

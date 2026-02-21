@@ -258,7 +258,7 @@ export class FilesystemStoreAdapter implements StoreAdapter {
 
         let yamlContent: string;
         try {
-            yamlContent = Bun.YAML.stringify(yamlData);
+            yamlContent = Bun.YAML.stringify(yamlData, null, 2);
         }
         catch (error) {
             return storeError(

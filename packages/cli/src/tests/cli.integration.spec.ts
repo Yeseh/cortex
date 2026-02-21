@@ -151,7 +151,7 @@ const createMemoryFile = async (
     }
 
     const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
-    const writeResult = await adapter.memories.write(memoryResult.value);
+    const writeResult = await adapter.memories.save(memoryResult.value.path, memoryResult.value);
     if (!writeResult.ok()) {
         throw new Error(`Failed to write memory: ${writeResult.error.message}`);
     }
