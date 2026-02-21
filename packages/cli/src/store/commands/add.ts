@@ -21,10 +21,10 @@
 import { Command } from '@commander-js/extra-typings';
 import { throwCliError } from '../../errors.ts';
 import { getDefaultConfigPath } from '../../context.ts';
-import { FilesystemRegistry } from '@yeseh/cortex-storage-fs';
 import { serializeOutput, type OutputStore, type OutputFormat } from '../../output.ts';
 import { resolveUserPath } from '../../paths.ts';
-import { Slug } from '@yeseh/cortex-core';
+import { Slug, parseConfig, type CortexContext, type ConfigStore } from '@yeseh/cortex-core';
+import { createCliCommandContext } from '../../create-cli-command.ts';
 
 /**
  * Options for the add command.
@@ -41,8 +41,6 @@ export interface AddCommandOptions {
 export interface AddHandlerDeps {
     /** Output stream for writing results (defaults to process.stdout) */
     stdout?: NodeJS.WritableStream;
-    /** Current working directory (defaults to process.cwd()) */
-    cwd?: string;
 }
 
 /**
@@ -102,57 +100,92 @@ function writeOutput(
  * This function:
  * 1. Validates the store name format
  * 2. Validates and resolves the store path
- * 3. Loads the existing registry
- * 4. Checks for existing store with the same name
- * 5. Adds the store to the registry and saves
+ * 3. Checks if store already exists in context
+ * 4. Reads current config file
+ * 5. Adds the store to the config and saves
  * 6. Outputs the result
  *
+ * @param ctx - The CortexContext with loaded configuration
  * @param name - The store name to register
  * @param storePath - The filesystem path to the store
  * @param options - Command options (format)
  * @param deps - Optional dependencies for testing
  * @throws {InvalidArgumentError} When the store name or path is invalid
- * @throws {CommanderError} When the store already exists or registry operations fail
+ * @throws {CommanderError} When the store already exists or config operations fail
  */
 export async function handleAdd(
+    ctx: CortexContext,
     name: string,
     storePath: string,
     options: AddCommandOptions = {},
     deps: AddHandlerDeps = {},
 ): Promise<void> {
-    const cwd = deps.cwd ?? process.cwd();
-    const registryPath = getDefaultConfigPath();
+    const cwd = ctx.cwd ?? process.cwd();
+    const stdout = deps.stdout ?? ctx.stdout ?? process.stdout;
+    const configPath = getDefaultConfigPath();
 
     // 1. Validate inputs
     const trimmedName = validateStoreName(name);
     const resolvedPath = validateAndResolvePath(storePath, cwd);
 
-    // 2. Load existing registry
-    const registry = new FilesystemRegistry(registryPath);
-    const registryResult = await registry.load();
-
-    if (!registryResult.ok()) {
-        throwCliError({ code: 'STORE_REGISTRY_FAILED', message: registryResult.error.message });
+    // 2. Check if store already exists in context
+    if (ctx.stores[trimmedName]) {
+        throwCliError({
+            code: 'STORE_ALREADY_EXISTS',
+            message: `Store '${trimmedName}' is already registered.`,
+        });
     }
 
-    // 3. Check for existing store
-    const currentRegistry = registryResult.value;
-    const currentStore = currentRegistry.getStore(trimmedName);
-    if (currentStore.ok()) {
-        throwCliError({ code: 'STORE_ALREADY_EXISTS', message: `Store '${trimmedName}' is already registered.` });
+    // 3. Read current config file
+    const configFile = Bun.file(configPath);
+    let configContents: string;
+    try {
+        configContents = await configFile.text();
+    }
+    catch {
+        throwCliError({
+            code: 'CONFIG_READ_FAILED',
+            message: `Failed to read config at ${configPath}`,
+        });
     }
 
-    // 4. Add to registry and save
-    currentRegistry.addStore({ name: trimmedName, path: resolvedPath });
-    const saved = await registry.save(currentRegistry);
-    if (!saved.ok()) {
-        throwCliError({ code: 'STORE_REGISTRY_FAILED', message: saved.error.message });
+    const configResult = parseConfig(configContents);
+    if (!configResult.ok()) {
+        throwCliError(configResult.error);
     }
 
-    // 5. Output result
+    // 4. Add new store to config
+    const newStore: ConfigStore = {
+        kind: 'filesystem',
+        categoryMode: 'free',
+        categories: {},
+        properties: { path: resolvedPath },
+    };
+
+    const updatedConfig = {
+        ...configResult.value,
+        stores: {
+            ...configResult.value.stores,
+            [trimmedName]: newStore,
+        },
+    };
+
+    // 5. Write updated config
+    const serialized = Bun.YAML.stringify(updatedConfig);
+    try {
+        await Bun.write(configPath, serialized);
+    }
+    catch {
+        throwCliError({
+            code: 'CONFIG_WRITE_FAILED',
+            message: `Failed to write config at ${configPath}`,
+        });
+    }
+
+    // 6. Output result
     const output: OutputStore = { name: trimmedName, path: resolvedPath };
     const format: OutputFormat = (options.format as OutputFormat) ?? 'yaml';
-    writeOutput(output, format, deps.stdout ?? process.stdout);
+    writeOutput(output, format, stdout);
 }
 
 /**
@@ -174,5 +207,9 @@ export const addCommand = new Command('add')
     .argument('<path>', 'Filesystem path to the store')
     .option('-o, --format <format>', 'Output format (yaml, json, toon)', 'yaml')
     .action(async (name, path, options) => {
-        await handleAdd(name, path, options);
+        const context = await createCliCommandContext();
+        if (!context.ok()) {
+            throwCliError(context.error);
+        }
+        await handleAdd(context.value, name, path, options);
     });
