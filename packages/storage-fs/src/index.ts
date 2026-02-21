@@ -12,22 +12,20 @@
  *
  * @example
  * ```typescript
- * import { FilesystemStorageAdapter } from './filesystem';
+ * import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
+ * import { MemoryPath } from '@yeseh/cortex-core';
  *
  * const adapter = new FilesystemStorageAdapter({
  *     rootDirectory: '/path/to/storage',
  * });
  *
- * // Legacy API: Read a memory file
- * const result = await adapter.readMemoryFile('project/cortex/config');
- * if (result.ok() && result.value) {
- *     console.log(result.value);
- * }
- *
- * // New ISP API: Use focused storage interfaces
- * const memoryPath = MemoryPath.fromPath('project/cortex/config');
+ * // Load a memory using the ISP API
+ * const memoryPath = MemoryPath.fromString('project/cortex/config');
  * if (memoryPath.ok()) {
- *   const memoryResult = await adapter.memories.read(memoryPath.value);
+ *   const result = await adapter.memories.load(memoryPath.value);
+ *   if (result.ok() && result.value) {
+ *     console.log(result.value);
+ *   }
  * }
  * ```
  */
@@ -36,10 +34,10 @@ import { resolve } from 'node:path';
 import {
     type MemoryStorage,
     type IndexStorage,
-
+    type CategoryStorage,
+    type StoreAdapter,
     type StorageAdapter,
 } from '@yeseh/cortex-core';
-import type { CategoryStorage } from '@yeseh/cortex-core/category';
 import type {
     FilesystemStorageAdapterOptions,
     FilesystemContext,
@@ -49,11 +47,7 @@ import { normalizeExtension } from './utils.ts';
 import { FilesystemMemoryStorage } from './memory-storage.ts';
 import { FilesystemIndexStorage } from './index-storage.ts';
 import { FilesystemCategoryStorage } from './category-storage.ts';
-
-// Export FilesystemRegistry for the new Registry pattern
-export { FilesystemRegistry } from './filesystem-registry.ts';
-
-// Import legacy operations needed for backward-compatible port methods
+import { FilesystemStoreAdapter } from './store-storage.ts';
 
 /**
  * Filesystem-based storage adapter for Cortex memory system.
@@ -90,6 +84,8 @@ export class FilesystemStorageAdapter implements StorageAdapter{
     public readonly indexes: IndexStorage;
     /** Category operations */
     public readonly categories: CategoryStorage;
+    /** Store operations */
+    public readonly stores: StoreAdapter;
 
     constructor(options: FilesystemStorageAdapterOptions) {
         this.ctx = {
@@ -102,6 +98,7 @@ export class FilesystemStorageAdapter implements StorageAdapter{
         this.memories = new FilesystemMemoryStorage(this.ctx);
         this.indexes = new FilesystemIndexStorage(this.ctx);
         this.categories = new FilesystemCategoryStorage(this.ctx);
+        this.stores = new FilesystemStoreAdapter(this.ctx);
     }
 }
 
@@ -118,7 +115,7 @@ export { parseMemory, serializeMemory } from './memories.ts';
  * - {@link FilesystemMemoryStorage} - Memory file I/O operations
  * - {@link FilesystemIndexStorage} - Index file I/O and reindexing
  * - {@link FilesystemCategoryStorage} - Category directory management
- * - {@link FilesystemRegistry} - Store registry management (implements Registry interface)
+ * - {@link FilesystemStoreAdapter} - Store configuration persistence
  *
  * New code should prefer these focused interfaces over the legacy
  * {@link FilesystemStorageAdapter} methods for better testability
@@ -146,4 +143,6 @@ export { parseMemory, serializeMemory } from './memories.ts';
 export { FilesystemMemoryStorage } from './memory-storage.ts';
 export { FilesystemIndexStorage } from './index-storage.ts';
 export { FilesystemCategoryStorage } from './category-storage.ts';
+export { FilesystemStoreAdapter } from './store-storage.ts';
+export { FilesystemConfigAdapter } from './config-storage.ts';
 

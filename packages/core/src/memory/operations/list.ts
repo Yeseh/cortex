@@ -32,8 +32,6 @@ export interface ListedMemory {
     path: MemoryPath;
     /** Estimated token count */
     tokenEstimate: number;
-    /** Brief summary if available */
-    summary?: string;
     /** Expiration timestamp if set */
     expiresAt?: Date;
     /** Whether the memory is currently expired */

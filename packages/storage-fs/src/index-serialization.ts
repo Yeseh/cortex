@@ -27,7 +27,6 @@ export interface IndexSerializationError {
 const IndexMemoryEntrySchema = z.object({
     path: z.string().min(1),
     token_estimate: z.number().int().nonnegative(),
-    summary: z.string().optional(),
     updated_at: z.union([
         z.string().datetime(), z.date(),
     ]).optional(),
@@ -81,7 +80,6 @@ export const parseIndex = (raw: string): Result<Category, IndexSerializationErro
         memories: parsed.data.memories.map((memory) => ({
             path: MemoryPath.fromString(memory.path).unwrap(),
             tokenEstimate: memory.token_estimate,
-            ...(memory.summary ? { summary: memory.summary } : {}),
             ...(memory.updated_at
                 ? {
                     updatedAt:
@@ -107,7 +105,6 @@ export const serializeIndex = (index: Category): Result<string, IndexSerializati
         memories: index.memories.map((memory) => ({
             path: memory.path.toString(),
             token_estimate: memory.tokenEstimate,
-            ...(memory.summary ? { summary: memory.summary } : {}),
             ...(memory.updatedAt ? { updated_at: memory.updatedAt.toISOString() } : {}),
         })),
         subcategories: index.subcategories.map((subcategory) => ({

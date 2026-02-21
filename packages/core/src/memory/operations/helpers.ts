@@ -160,7 +160,6 @@ export const collectMemoriesFromCategory = async (
         memories.push({
             path: entry.path,
             tokenEstimate: entry.tokenEstimate,
-            summary: entry.summary,
             expiresAt: memory.metadata.expiresAt,
             isExpired: memoryExpired,
             updatedAt: entry.updatedAt,

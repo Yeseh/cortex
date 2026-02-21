@@ -5,7 +5,7 @@
  * following the Interface Segregation Principle (ISP). Each interface
  * handles a specific concern:
  *
- * - {@link IndexAdapter} - Raw memory file operations
+ * - {@link MemoryAdapter} - Raw memory file operations
  * - {@link IndexAdapter} - Index file operations and reindexing
  * - {@link StoreAdapter} - Store registry persistence
  * - {@link CategoryStorage} - Category operations (imported from category/types)
@@ -19,6 +19,11 @@ import type { IndexAdapter, ReindexResult } from './index-adapter.ts';
 import type { MemoryAdapter } from './memory-adapter.ts';
 import type { CategoryAdapter } from './category-adapter.ts';
 import type { ConfigAdapter } from './config-adapter.ts';
+
+// Type aliases for backward compatibility and clearer naming
+export type MemoryStorage = MemoryAdapter;
+export type IndexStorage = IndexAdapter;
+export type CategoryStorage = CategoryAdapter;
 
 /**
  * Error codes for storage adapter operations.
@@ -72,8 +77,6 @@ export interface StorageAdapter {
     categories: CategoryAdapter;
     /** Store operations */
     stores: StoreAdapter;
-    /** Configuration operations */
-    config: ConfigAdapter
 }
 
 export {

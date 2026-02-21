@@ -1,18 +1,18 @@
 /**
- * Filesystem implementation of the MemoryStorage interface.
+ * Filesystem implementation of the MemoryAdapter interface.
  *
  * Provides file-based storage for memory files using the focused
- * MemoryStorage interface from the ISP refactoring. Memory files
+ * MemoryAdapter interface from the ISP refactoring. Memory files
  * are stored as Markdown files (`.md` by default) with content
  * frontmatter for metadata.
  *
  * @module core/storage/filesystem/memory-storage
- * @see {@link MemoryStorage} - The interface this class implements
+ * @see {@link MemoryAdapter} - The interface this class implements
  * @see {@link FilesystemIndexStorage} - Related index storage implementation
  */
 
-import { ok, err, Memory, type Result, type MemoryPath } from '@yeseh/cortex-core';
-import type { MemoryStorage, StorageAdapterError } from '@yeseh/cortex-core/storage';
+import { ok, err, Memory, type Result, type MemoryPath, type MemoryData } from '@yeseh/cortex-core';
+import type { MemoryAdapter, StorageAdapterError } from '@yeseh/cortex-core/storage';
 import type { FilesystemContext } from './types.ts';
 import {
     parseMemory,
@@ -24,7 +24,7 @@ import {
 } from './memories.ts';
 
 /**
- * Filesystem-based implementation of the MemoryStorage interface.
+ * Filesystem-based implementation of the MemoryAdapter interface.
  *
  * Delegates to the existing memory file operations in memories.ts,
  * providing a focused interface for memory file I/O without index
@@ -46,7 +46,7 @@ import {
  *
  * const storage = new FilesystemMemoryStorage(ctx);
  *
- * // Write a memory file
+ * // Add a new memory file
  * const memoryResult = Memory.init('project/cortex/architecture', {
  *   createdAt: new Date(),
  *   updatedAt: new Date(),
@@ -55,15 +55,18 @@ import {
  *   citations: [],
  * }, '# Architecture Overview\n');
  * if (memoryResult.ok()) {
- *   await storage.write(memoryResult.value);
+ *   await storage.add(memoryResult.value);
  * }
  *
- * // Read a memory file
+ * // Load a memory file
  * const pathResult = MemoryPath.fromPath('project/cortex/architecture');
- * const result = pathResult.ok() ? await storage.read(pathResult.value) : null;
+ * const result = pathResult.ok() ? await storage.load(pathResult.value) : null;
  * if (result.ok() && result.value !== null) {
  *     console.log('Memory contents:', result.value);
  * }
+ *
+ * // Save (update) a memory
+ * await storage.save(path, { content: 'Updated content', metadata: {...} });
  *
  * // Move a memory to a new location
  * await storage.move(
@@ -75,10 +78,10 @@ import {
  * await storage.remove('project/cortex/deprecated-doc');
  * ```
  *
- * @see {@link MemoryStorage} - The interface this class implements
+ * @see {@link MemoryAdapter} - The interface this class implements
  * @see {@link FilesystemIndexStorage} - Use with index storage for full functionality
  */
-export class FilesystemMemoryStorage implements MemoryStorage {
+export class FilesystemMemoryStorage implements MemoryAdapter {
     /**
      * Creates a new FilesystemMemoryStorage instance.
      *
@@ -87,7 +90,7 @@ export class FilesystemMemoryStorage implements MemoryStorage {
     constructor(private readonly ctx: FilesystemContext) {}
 
     /**
-     * Reads the contents of a memory file.
+     * Loads the contents of a memory file.
      *
      * Resolves the slug path to a filesystem path and reads the file contents.
      * Returns null (not an error) if the memory file does not exist.
@@ -97,7 +100,7 @@ export class FilesystemMemoryStorage implements MemoryStorage {
      *
      * @example
      * ```typescript
-     * const result = await storage.read('project/cortex/config');
+     * const result = await storage.load('project/cortex/config');
      * if (result.ok()) {
      *     if (result.value !== null) {
      *         console.log('Found memory:', result.value);
@@ -105,11 +108,11 @@ export class FilesystemMemoryStorage implements MemoryStorage {
      *         console.log('Memory not found');
      *     }
      * } else {
-     *     console.error('Read failed:', result.error.message);
+     *     console.error('Load failed:', result.error.message);
      * }
      * ```
      */
-    async read(slugPath: MemoryPath): Promise<Result<Memory | null, StorageAdapterError>> {
+    async load(slugPath: MemoryPath): Promise<Result<Memory | null, StorageAdapterError>> {
         const readResult = await readMemory(this.ctx, slugPath);
         if (!readResult.ok()) {
             return readResult;
@@ -143,7 +146,7 @@ export class FilesystemMemoryStorage implements MemoryStorage {
     }
 
     /**
-     * Writes contents to a memory file.
+     * Saves contents to a memory file.
      *
      * Creates the file if it does not exist. Overwrites existing content.
      * Parent directories are created recursively as needed.
@@ -151,25 +154,97 @@ export class FilesystemMemoryStorage implements MemoryStorage {
      * Note: This method only writes the file. To update category indexes
      * after writing, use {@link FilesystemIndexStorage.updateAfterMemoryWrite}.
      *
-     * @param memory - The Memory object to serialize and write
+     * @param path - Memory identifier path (e.g., "project/cortex/architecture")
+     * @param memoryData - The content and metadata to write
      * @returns Result indicating success or failure
      *
      * @example
      * ```typescript
-     * const content = `---
-     * tags: [api, reference]
-     * ---
-     * # API Reference
-     * Documentation for the API...
-     * `;
+     * const memoryData: MemoryData = {
+     *     content: '# API Reference\nDocumentation for the API...',
+     *     metadata: {
+     *         createdAt: new Date(),
+     *         updatedAt: new Date(),
+     *         tags: ['api', 'reference'],
+     *         source: 'user',
+     *         citations: [],
+     *     },
+     * };
      *
-     * const result = await storage.write('project/cortex/api', content);
+     * const result = await storage.save('project/cortex/api', memoryData);
      * if (!result.ok()) {
-     *     console.error('Write failed:', result.error.message);
+     *     console.error('Save failed:', result.error.message);
      * }
      * ```
      */
-    async write(memory: Memory): Promise<Result<void, StorageAdapterError>> {
+    async save(
+        path: MemoryPath,
+        memoryData: MemoryData,
+    ): Promise<Result<void, StorageAdapterError>> {
+        const memoryResult = Memory.init(path, memoryData.metadata, memoryData.content);
+        if (!memoryResult.ok()) {
+            return err({
+                code: 'IO_WRITE_ERROR',
+                message: `Failed to create memory: ${memoryResult.error.message}`,
+                path: path.toString(),
+                cause: memoryResult.error,
+            });
+        }
+
+        const memory = memoryResult.value;
+        const serialized = serializeMemory(memory);
+        if (!serialized.ok()) {
+            return err({
+                code: 'IO_WRITE_ERROR',
+                message: `Failed to serialize memory: ${path}.`,
+                path: path.toString(),
+                cause: serialized.error,
+            });
+        }
+        return writeMemory(this.ctx, path, serialized.value);
+    }
+
+    /**
+     * Adds a new memory.
+     *
+     * Fails if a memory already exists at the given path.
+     * Parent directories are created recursively as needed.
+     *
+     * @param memory - The Memory object to add
+     * @returns Result indicating success or failure
+     *
+     * @example
+     * ```typescript
+     * const memoryResult = Memory.init('project/cortex/architecture', {
+     *     createdAt: new Date(),
+     *     updatedAt: new Date(),
+     *     tags: ['design', 'overview'],
+     *     source: 'user',
+     *     citations: [],
+     * }, '# Architecture Overview\n');
+     *
+     * if (memoryResult.ok()) {
+     *     const result = await storage.add(memoryResult.value);
+     *     if (!result.ok()) {
+     *         console.error('Add failed:', result.error.message);
+     *     }
+     * }
+     * ```
+     */
+    async add(memory: Memory): Promise<Result<void, StorageAdapterError>> {
+        // Check if memory already exists
+        const existingResult = await readMemory(this.ctx, memory.path);
+        if (!existingResult.ok()) {
+            return existingResult;
+        }
+        if (existingResult.value !== null) {
+            return err({
+                code: 'IO_WRITE_ERROR',
+                message: `Memory already exists at path: ${memory.path}. Use save() to update existing memories.`,
+                path: memory.path.toString(),
+            });
+        }
+
         const serialized = serializeMemory(memory);
         if (!serialized.ok()) {
             return err({

@@ -1,7 +1,7 @@
-import type { Category, CategoryPath } from "@/category";
-import type { Memory } from "@/memory";
-import type { StorageAdapterError } from ".";
-import type { Result } from "@/result";
+import type { Category, CategoryPath } from '@/category';
+import type { Memory } from '@/memory';
+import type { StorageAdapterError } from '.';
+import type { Result } from '@/result';
 
 /**
  * Result of a reindex operation.
