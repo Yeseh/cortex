@@ -62,7 +62,7 @@ const parseUpdateExpiresAt = (raw?: string | false): Date | null | undefined => 
 
 const resolveUpdateContent = async (
     ctx: CortexContext,
-    options: UpdateCommandOptions,
+    options: UpdateCommandOptions
 ): Promise<string | null> => {
     if (options.content === undefined && options.file === undefined) {
         return null;
@@ -72,6 +72,8 @@ const resolveUpdateContent = async (
         content: options.content,
         filePath: options.file,
         stream: ctx.stdin,
+        // `memory update` does not read stdin.
+        stdinRequested: false,
     });
 
     if (!content.ok()) {
@@ -92,7 +94,7 @@ const buildUpdates = (
     content: string | null,
     tags: string[] | undefined,
     expiresAt: Date | null | undefined,
-    citations: string[] | undefined,
+    citations: string[] | undefined
 ): UpdateMemoryInput => {
     const updates: UpdateMemoryInput = {};
     if (content !== null) {
@@ -132,7 +134,7 @@ export async function handleUpdate(
     ctx: CortexContext,
     storeName: string | undefined,
     path: string,
-    options: UpdateCommandOptions,
+    options: UpdateCommandOptions
 ): Promise<void> {
     const pathResult = MemoryPath.fromString(path);
     if (!pathResult.ok()) {

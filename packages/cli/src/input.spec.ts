@@ -106,13 +106,27 @@ describe('resolveMemoryContentInput', () => {
     });
 
     describe('stdin input', () => {
+        it('should NOT treat an inherited stdin stream as provided unless explicitly requested', async () => {
+            const mockStdin = createMockStdin('Should be ignored');
 
+            const result = await resolveInput({
+                stream: mockStdin,
+                // stdinRequested intentionally omitted
+            });
+
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
+                expect(result.value.content).toBeNull();
+                expect(result.value.source).toBe('none');
+            }
+        });
 
         it('should read content from stdin', async () => {
             const mockStdin = createMockStdin('Stdin content');
 
             const result = await resolveInput({
                 stream: mockStdin,
+                stdinRequested: true,
             });
 
             expect(result.ok()).toBe(true);
@@ -127,6 +141,7 @@ describe('resolveMemoryContentInput', () => {
 
             const result = await resolveInput({
                 stream: mockStdin,
+                stdinRequested: true,
             });
 
             expect(result.ok()).toBe(true);
@@ -141,6 +156,7 @@ describe('resolveMemoryContentInput', () => {
 
             const result = await resolveInput({
                 stream: mockStdin,
+                stdinRequested: true,
             });
 
             expect(result.ok()).toBe(true);
@@ -168,6 +184,7 @@ describe('resolveMemoryContentInput', () => {
             const result = await resolveInput({
                 content: 'Content',
                 stream: createMockStdin('Stdin content'),
+                stdinRequested: true,
             });
 
             expect(result.ok()).toBe(false);
@@ -180,6 +197,7 @@ describe('resolveMemoryContentInput', () => {
             const result = await resolveInput({
                 filePath: '/some/file.txt',
                 stream: createMockStdin('Stdin content'),
+                stdinRequested: true,
             });
 
             expect(result.ok()).toBe(false);
@@ -193,6 +211,7 @@ describe('resolveMemoryContentInput', () => {
                 content: 'Content',
                 filePath: '/some/file.txt',
                 stream: createMockStdin('Stdin content'),
+                stdinRequested: true,
             });
 
             expect(result.ok()).toBe(false);
@@ -244,6 +263,7 @@ describe('resolveMemoryContentInput', () => {
 
             const result = await resolveInput({
                 stream: mockStdin,
+                stdinRequested: true,
             });
 
             expect(result.ok()).toBe(true);
@@ -263,6 +283,7 @@ describe('resolveMemoryContentInput', () => {
 
             const result = await resolveInput({
                 stream: mockStdin,
+                stdinRequested: true,
             });
 
             expect(result.ok()).toBe(true);
@@ -277,6 +298,7 @@ describe('resolveMemoryContentInput', () => {
 
             const result = await resolveInput({
                 stream: mockStdin,
+                stdinRequested: true,
             });
 
             expect(result.ok()).toBe(true);

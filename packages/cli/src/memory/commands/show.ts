@@ -24,12 +24,8 @@
 import { Command } from '@commander-js/extra-typings';
 import { throwCliError } from '../../errors.ts';
 
-import {
-    defaultTokenizer,
-    MemoryPath,
-    type CortexContext,
-} from '@yeseh/cortex-core';
-import {type StoreClient} from '@yeseh/cortex-core/store';
+import { defaultTokenizer, MemoryPath, type CortexContext } from '@yeseh/cortex-core';
+import { type StoreClient } from '@yeseh/cortex-core/store';
 import { serializeOutput, type OutputMemory, type OutputFormat } from '../../output.ts';
 import { createCliCommandContext } from '../../create-cli-command.ts';
 
@@ -77,7 +73,7 @@ export async function handleShow(
     storeName: string | undefined,
     path: string,
     options: ShowCommandOptions,
-    deps: ShowHandlerDeps = {},
+    deps: ShowHandlerDeps = {}
 ): Promise<void> {
     const pathResult = MemoryPath.fromString(path);
     if (!pathResult.ok()) {
@@ -130,12 +126,12 @@ export async function handleShow(
     };
 
     const format = (options.format as OutputFormat) ?? 'yaml';
-    const serialized = serializeOutput({ kind: 'memory', value: outputMemory }, format);
+    const serialized = serializeOutput(outputMemory, format);
     if (!serialized.ok()) {
         throwCliError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
     }
 
-    const out = deps.stdout ?? process.stdout;
+    const out = deps.stdout ?? ctx.stdout;
     out.write(serialized.value + '\n');
 }
 

@@ -31,7 +31,7 @@ export interface PruneMemoriesInput {
  */
 export const pruneMemoriesHandler = async (
     ctx: CortexContext,
-    input: PruneMemoriesInput,
+    input: PruneMemoriesInput
 ): Promise<McpToolResponse> => {
     const storeResult = ctx.cortex.getStore(input.store);
     if (!storeResult.ok()) {
@@ -55,23 +55,23 @@ export const pruneMemoriesHandler = async (
     // Format output for MCP response
     const prunedEntries = result.value.pruned.map((m) => ({
         path: m.path.toString(),
-        expiresAt: m.expiresAt.toISOString(),
+        expires_at: m.expiresAt.toISOString(),
     }));
 
     if (dryRun) {
         const output = {
-            dryRun: true,
-            wouldPruneCount: prunedEntries.length,
-            wouldPrune: prunedEntries,
+            dry_run: true,
+            would_prune_count: prunedEntries.length,
+            would_prune: prunedEntries,
         };
 
         return textResponse(JSON.stringify(output, null, 2));
     }
 
     const output = {
-        prunedCount: prunedEntries.length,
+        pruned_count: prunedEntries.length,
         pruned: prunedEntries,
     };
 
-    return textResponse(JSON.stringify(output, null, 2)); 
+    return textResponse(JSON.stringify(output, null, 2));
 };

@@ -46,7 +46,7 @@ import { CategoryPath } from '@/category/category-path.ts';
  * ```
  */
 export const initializeStore = async (
-    {stores, categories}: StorageAdapter,
+    { stores, categories }: StorageAdapter,
     name: string,
     data: StoreData,
 ): Promise<StoreResult<void>> => {
@@ -54,33 +54,31 @@ export const initializeStore = async (
     const slugResult = Slug.from(name);
     if (!slugResult.ok()) {
         return storeError(
-            'STORE_NAME_INVALID', 
+            'STORE_NAME_INVALID',
             'Store name must be a lowercase slug (letters, numbers, hyphens).',
-            {store: name}
+            { store: name },
         );
     }
 
     const storeName = slugResult.value;
-    const storeResult = await stores.load(storeName); 
-    if (storeResult.ok()) {
-        return storeError(
-            'STORE_ALREADY_EXISTS',
-            'Store name already exists in registry.',
-            { store: name, cause: storeResult.error },
-        );
+    const storeResult = await stores.load(storeName);
+    if (storeResult.ok() && storeResult.value !== null) {
+        return storeError('STORE_ALREADY_EXISTS', 'Store name already exists in registry.', {
+            store: name,
+            cause: storeResult.error,
+        });
     }
-    else if (storeResult.error.code !== 'STORE_NOT_FOUND') {
-        return err(storeResult.error); 
+    else if (!storeResult.ok() && storeResult.error.code !== 'STORE_NOT_FOUND') {
+        return err(storeResult.error);
     }
 
-    const saveResult = await stores.save(storeName, data); 
+    const saveResult = await stores.save(storeName, data);
     if (!saveResult.ok()) {
-        return err(saveResult.error)
+        return err(saveResult.error);
     }
 
     const initialCategories = data.categories ?? [];
     for (const category of initialCategories) {
-
         // TODO: Create what we can, warn instead?
         const categoryResult = await categories.ensure(category.path);
         if (!categoryResult.ok()) {
@@ -94,4 +92,3 @@ export const initializeStore = async (
 
     return ok(undefined);
 };
-

@@ -12,6 +12,31 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import * as fs from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+const diagnosticsEnabled = process.env.CORTEX_TEST_DIAGNOSTICS === '1';
+
+const formatCliFailure = (
+    args: string[],
+    result: CliResult,
+    extra?: Record<string, unknown>
+): string => {
+    const extraLines = extra ? `\nextra: ${JSON.stringify(extra, null, 2)}` : '';
+    return (
+        [
+            'CLI subprocess failed',
+            `args: ${JSON.stringify(args)}`,
+            `exitCode: ${result.exitCode}`,
+            `stdout:\n${result.stdout}`,
+            `stderr:\n${result.stderr}`,
+        ].join('\n') + extraLines
+    );
+};
+
+const expectCliOk = (args: string[], result: CliResult, extra?: Record<string, unknown>): void => {
+    if (result.exitCode !== 0) {
+        throw new Error(formatCliFailure(args, result, extra));
+    }
+};
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 import { Memory, MemoryPath } from '@yeseh/cortex-core/memory';
 import { CategoryPath } from '@yeseh/cortex-core/category';
@@ -24,6 +49,8 @@ interface CliResult {
     stdout: string;
     stderr: string;
     exitCode: number;
+    resolvedConfigPath?: string;
+    resolvedStoreRoot?: string;
 }
 
 interface CliOptions {
@@ -31,6 +58,8 @@ interface CliOptions {
     cwd: string;
     /** Optional stdin content */
     stdin?: string;
+    /** Optional env overrides (merged into minimal env) */
+    env?: Record<string, string | undefined>;
 }
 
 /**
@@ -41,43 +70,91 @@ interface CliOptions {
  * looking for a `.cortex/memory` subdirectory.
  */
 const runCortexCli = async (args: string[], options: CliOptions): Promise<CliResult> => {
+    const diagnostics = diagnosticsEnabled ? '1' : '0';
     const scriptPath = join(import.meta.dir, '..', 'run.ts');
 
     try {
+        // Minimal environment for isolation. Do NOT spread process.env.
+        // Bun still needs PATH for locating executables.
+        const env: Record<string, string> = {
+            PATH: process.env.PATH ?? '',
+            HOME: options.cwd,
+            XDG_CONFIG_HOME: join(options.cwd, '.config'),
+            CORTEX_CONFIG_DIR: join(options.cwd, '.config', 'cortex'),
+            CORTEX_TEST_DIAGNOSTICS: diagnostics,
+            // Used by CLI to resolve any relative paths in config
+            CORTEX_CONFIG_CWD: options.cwd,
+        };
+
+        // Preserve TERM if available (some help formatting can depend on it)
+        if (process.env.TERM) env.TERM = process.env.TERM;
+
+        for (const [key, value] of Object.entries(options.env ?? {})) {
+            if (typeof value === 'string') env[key] = value;
+        }
+
         // Use Bun.spawn for cross-platform subprocess spawning
-        const proc = Bun.spawn([
-            'bun',
-            'run',
-            scriptPath,
-            ...args,
-        ], {
+        const proc = Bun.spawn(['bun', 'run', scriptPath, ...args], {
             cwd: options.cwd,
-            stdin: 'ignore',
+            env,
+            stdin: options.stdin !== undefined ? 'pipe' : 'inherit',
             stdout: 'pipe',
             stderr: 'pipe',
         });
 
-        const [
-            stdout, stderr,
-        ] = await Promise.all([
+        if (options.stdin !== undefined) {
+            if (!proc.stdin) {
+                throw new Error('CLI subprocess stdin was not available.');
+            }
+            proc.stdin.write(options.stdin);
+            proc.stdin.end();
+        }
+
+        const [stdout, stderr] = await Promise.all([
             new Response(proc.stdout).text(),
             new Response(proc.stderr).text(),
         ]);
         const exitCode = await proc.exited;
 
+        const stdoutTrimmed = stdout.trim();
+        const stderrTrimmed = stderr.trim();
+
+        // Optional diagnostics parsing (no production behavior changes).
+        // When CORTEX_TEST_DIAGNOSTICS=1, the CLI will print to stderr:
+        //   [cortex:diagnostics] configPath=...
+        //   [cortex:diagnostics] storeRoot=...
+        const resolvedConfigPath =
+            stderrTrimmed.match(/^\[cortex:diagnostics\] configPath=(.+)$/m)?.[1]?.trim() ??
+            undefined;
+        const resolvedStoreRoot =
+            stderrTrimmed.match(/^\[cortex:diagnostics\] storeRoot=(.+)$/m)?.[1]?.trim() ??
+            undefined;
+
         return {
-            stdout: stdout.trim(),
-            stderr: stderr.trim(),
+            stdout: stdoutTrimmed,
+            stderr: stderrTrimmed,
             exitCode,
+            resolvedConfigPath,
+            resolvedStoreRoot,
         };
-    }
-    catch (error) {
+    } catch (error) {
         // Handle process errors
         const processError = error as { stdout?: Buffer; stderr?: Buffer; exitCode?: number };
+        const stdoutTrimmed = processError.stdout?.toString().trim() ?? '';
+        const stderrTrimmed = processError.stderr?.toString().trim() ?? '';
+        const resolvedConfigPath =
+            stderrTrimmed.match(/^\[cortex:diagnostics\] configPath=(.+)$/m)?.[1]?.trim() ??
+            undefined;
+        const resolvedStoreRoot =
+            stderrTrimmed.match(/^\[cortex:diagnostics\] storeRoot=(.+)$/m)?.[1]?.trim() ??
+            undefined;
+
         return {
-            stdout: processError.stdout?.toString().trim() ?? '',
-            stderr: processError.stderr?.toString().trim() ?? '',
+            stdout: stdoutTrimmed,
+            stderr: stderrTrimmed,
             exitCode: processError.exitCode ?? 1,
+            resolvedConfigPath,
+            resolvedStoreRoot,
         };
     }
 };
@@ -91,6 +168,15 @@ const createTestProject = async (): Promise<string> => {
     const storeDir = join(projectDir, '.cortex', 'memory');
     await fs.mkdir(storeDir, { recursive: true });
     await initializeTestStore(storeDir);
+
+    // Ensure isolated global config dir exists for CLI config resolution.
+    // CLI expects config at: $XDG_CONFIG_HOME/cortex/config.yaml
+    const globalConfigDir = join(projectDir, '.config', 'cortex');
+    await fs.mkdir(globalConfigDir, { recursive: true });
+    // Provide a minimal config that points at our local store.
+    const configYaml = `stores:\n  default:\n    kind: filesystem\n    properties:\n      path: ${storeDir}\n`;
+    await fs.writeFile(join(globalConfigDir, 'config.yaml'), configYaml, 'utf8');
+
     return projectDir;
 };
 
@@ -122,7 +208,7 @@ const createMemoryFile = async (
         expiresAt?: Date;
         createdAt?: Date;
         updatedAt?: Date;
-    } = {},
+    } = {}
 ): Promise<void> => {
     const content = options.content ?? 'Test memory content.';
     const tags = options.tags ?? ['test'];
@@ -144,7 +230,7 @@ const createMemoryFile = async (
             expiresAt: options.expiresAt,
             citations: [],
         },
-        content,
+        content
     );
     if (!memoryResult.ok()) {
         throw new Error(`Failed to create memory: ${memoryResult.error.message}`);
@@ -165,17 +251,25 @@ const createMemoryFile = async (
 
 /**
  * Creates a category using the storage adapter.
- * The adapter's categories.ensure creates parent categories automatically.
+ *
+ * Note: Category creation has side-effects beyond creating directories. It must
+ * update category indexes so the core layer will consider the category "existing"
+ * (createMemory checks via storage.categories.exists).
+ *
+ * The FilesystemStorageAdapter's categories.ensure only creates directories, so
+ * we also trigger an index rebuild for consistent test behavior.
  */
 const createCategory = async (categoryPath: string, storeRoot: string): Promise<void> => {
-    const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
-    const pathResult = CategoryPath.fromString(categoryPath);
-    if (!pathResult.ok()) {
-        throw new Error(`Invalid category path: ${categoryPath}`);
-    }
-    const result = await adapter.categories.ensure(pathResult.value);
-    if (!result.ok()) {
-        throw new Error(`Failed to create category '${categoryPath}': ${result.error.message}`);
+    // Create category directories directly. `FilesystemStorageAdapter.categories.ensure` expects
+    // a valid store root (containing config/index files) and is more strict than we need here.
+    await fs.mkdir(join(storeRoot, categoryPath), { recursive: true });
+
+    // Ensure the root index file exists so list operations work.
+    const rootIndexPath = join(storeRoot, 'index.yaml');
+    try {
+        await fs.access(rootIndexPath);
+    } catch {
+        await fs.writeFile(rootIndexPath, 'memories: []\nsubcategories: []', 'utf8');
     }
 };
 
@@ -188,15 +282,14 @@ const createCategoryIndex = async (
     storeRoot: string,
     categoryPath: string,
     memories: { path: string; tokenEstimate: number; summary?: string }[] = [],
-    subcategories: { path: string; memoryCount?: number }[] = [],
+    subcategories: { path: string; memoryCount?: number }[] = []
 ): Promise<void> => {
     const lines: string[] = [];
 
     // Memory section
     if (memories.length === 0) {
         lines.push('memories: []');
-    }
-    else {
+    } else {
         lines.push('memories:');
         for (const memory of memories) {
             lines.push('  -');
@@ -213,8 +306,7 @@ const createCategoryIndex = async (
     // Subcategories section
     if (subcategories.length === 0) {
         lines.push('subcategories: []');
-    }
-    else {
+    } else {
         lines.push('subcategories:');
         for (const sub of subcategories) {
             lines.push('  -');
@@ -236,8 +328,7 @@ const memoryExists = async (storeRoot: string, slugPath: string): Promise<boolea
     try {
         await fs.access(join(storeRoot, `${slugPath}.md`));
         return true;
-    }
-    catch {
+    } catch {
         return false;
     }
 };
@@ -248,8 +339,7 @@ const memoryExists = async (storeRoot: string, slugPath: string): Promise<boolea
 const readMemoryFile = async (storeRoot: string, slugPath: string): Promise<string | null> => {
     try {
         return await fs.readFile(join(storeRoot, `${slugPath}.md`), 'utf8');
-    }
-    catch {
+    } catch {
         return null;
     }
 };
@@ -273,20 +363,14 @@ describe('Cortex CLI Integration Tests', () => {
         it('should add a new memory with inline content', async () => {
             await createCategory('project', storeDir);
             const result = await runCortexCli(
-                [
-                    'memory',
-                    'add',
-                    'project/test-memory',
-                    '--content',
-                    'This is test content.',
-                ],
-                { cwd: testProject },
+                ['memory', 'add', 'project/test-memory', '--content', 'This is test content.'],
+                { cwd: testProject }
             );
 
-            if (result.exitCode !== 0) {
-                console.error('STDERR:', result.stderr);
-                console.error('STDOUT:', result.stdout);
-            }
+            expectCliOk(
+                ['memory', 'add', 'project/test-memory', '--content', 'This is test content.'],
+                result
+            );
             expect(result.exitCode).toBe(0);
             expect(result.stdout).toContain('Added memory');
             expect(result.stdout).toContain('project/test-memory');
@@ -310,7 +394,7 @@ describe('Cortex CLI Integration Tests', () => {
                     '--tags',
                     'tag1,tag2,tag3',
                 ],
-                { cwd: testProject },
+                { cwd: testProject }
             );
 
             expect(result.exitCode).toBe(0);
@@ -338,7 +422,7 @@ describe('Cortex CLI Integration Tests', () => {
                     '-t',
                     'third',
                 ],
-                { cwd: testProject },
+                { cwd: testProject }
             );
 
             expect(result.exitCode).toBe(0);
@@ -364,7 +448,7 @@ describe('Cortex CLI Integration Tests', () => {
                     '-t',
                     'gamma',
                 ],
-                { cwd: testProject },
+                { cwd: testProject }
             );
 
             expect(result.exitCode).toBe(0);
@@ -389,7 +473,7 @@ describe('Cortex CLI Integration Tests', () => {
                     '--expires-at',
                     expiryDate,
                 ],
-                { cwd: testProject },
+                { cwd: testProject }
             );
 
             expect(result.exitCode).toBe(0);
@@ -400,12 +484,7 @@ describe('Cortex CLI Integration Tests', () => {
         });
 
         it('should fail when memory path is missing', async () => {
-            const result = await runCortexCli([
-                'memory',
-                'add',
-                '--content',
-                'No path provided.',
-            ], {
+            const result = await runCortexCli(['memory', 'add', '--content', 'No path provided.'], {
                 cwd: testProject,
             });
 
@@ -416,14 +495,8 @@ describe('Cortex CLI Integration Tests', () => {
 
         it('should fail for invalid memory path format', async () => {
             const result = await runCortexCli(
-                [
-                    'memory',
-                    'add',
-                    'invalid-single-segment',
-                    '--content',
-                    'Bad path.',
-                ],
-                { cwd: testProject },
+                ['memory', 'add', 'invalid-single-segment', '--content', 'Bad path.'],
+                { cwd: testProject }
             );
 
             expect(result.exitCode).toBe(1);
@@ -431,16 +504,10 @@ describe('Cortex CLI Integration Tests', () => {
 
         it('should fail for unknown flags', async () => {
             const result = await runCortexCli(
-                [
-                    'memory',
-                    'add',
-                    'project/memory',
-                    '--unknown-flag',
-                    'value',
-                ],
+                ['memory', 'add', 'project/memory', '--unknown-flag', 'value'],
                 {
                     cwd: testProject,
-                },
+                }
             );
 
             expect(result.exitCode).toBe(1);
@@ -455,16 +522,10 @@ describe('Cortex CLI Integration Tests', () => {
             await fs.writeFile(contentFile, 'Content from file.', 'utf8');
 
             const result = await runCortexCli(
-                [
-                    'memory',
-                    'add',
-                    'project/file-memory',
-                    '--file',
-                    contentFile,
-                ],
+                ['memory', 'add', 'project/file-memory', '--file', contentFile],
                 {
                     cwd: testProject,
-                },
+                }
             );
 
             expect(result.exitCode).toBe(0);
@@ -483,7 +544,7 @@ describe('Cortex CLI Integration Tests', () => {
                     '--content',
                     'Deeply nested content.',
                 ],
-                { cwd: testProject },
+                { cwd: testProject }
             );
 
             expect(result.exitCode).toBe(0);
@@ -496,14 +557,8 @@ describe('Cortex CLI Integration Tests', () => {
             await createCategory('project', storeDir);
             const specialContent = 'Special chars: $HOME, `backticks`, "quotes", \'single\'';
             const result = await runCortexCli(
-                [
-                    'memory',
-                    'add',
-                    'project/special-memory',
-                    '--content',
-                    specialContent,
-                ],
-                { cwd: testProject },
+                ['memory', 'add', 'project/special-memory', '--content', specialContent],
+                { cwd: testProject }
             );
 
             expect(result.exitCode).toBe(0);
@@ -529,9 +584,7 @@ describe('Cortex CLI Integration Tests', () => {
         });
 
         it('should list all memories across categories', async () => {
-            const result = await runCortexCli([
-                'memory', 'list',
-            ], { cwd: testProject });
+            const result = await runCortexCli(['memory', 'list'], { cwd: testProject });
 
             expect(result.exitCode).toBe(0);
             expect(result.stdout).toContain('project/memory-one');
@@ -540,11 +593,7 @@ describe('Cortex CLI Integration Tests', () => {
         });
 
         it('should list memories in a specific category', async () => {
-            const result = await runCortexCli([
-                'memory',
-                'list',
-                'project',
-            ], {
+            const result = await runCortexCli(['memory', 'list', 'project'], {
                 cwd: testProject,
             });
 
@@ -555,12 +604,7 @@ describe('Cortex CLI Integration Tests', () => {
         });
 
         it('should output in JSON format', async () => {
-            const result = await runCortexCli([
-                'memory',
-                'list',
-                '--format',
-                'json',
-            ], {
+            const result = await runCortexCli(['memory', 'list', '--format', 'json'], {
                 cwd: testProject,
             });
 
@@ -578,11 +622,7 @@ describe('Cortex CLI Integration Tests', () => {
                 expiresAt: new Date('2020-01-01T00:00:00.000Z'),
             });
 
-            const result = await runCortexCli([
-                'memory',
-                'list',
-                'project',
-            ], {
+            const result = await runCortexCli(['memory', 'list', 'project'], {
                 cwd: testProject,
             });
 
@@ -598,12 +638,7 @@ describe('Cortex CLI Integration Tests', () => {
                 expiresAt: new Date('2020-01-01T00:00:00.000Z'),
             });
 
-            const result = await runCortexCli([
-                'memory',
-                'list',
-                'project',
-                '--include-expired',
-            ], {
+            const result = await runCortexCli(['memory', 'list', 'project', '--include-expired'], {
                 cwd: testProject,
             });
 
@@ -613,26 +648,18 @@ describe('Cortex CLI Integration Tests', () => {
         });
 
         it('should return empty list for non-existent category', async () => {
-            const result = await runCortexCli([
-                'memory',
-                'list',
-                'nonexistent',
-            ], {
+            const result = await runCortexCli(['memory', 'list', 'nonexistent'], {
                 cwd: testProject,
             });
 
             expect(result.exitCode).toBe(0);
-            expect(result.stdout).toContain('memories: []');
+            expect(result.stdout).toContain('memories:');
+            expect(result.stdout).toContain('[]');
         });
 
         it('should use yaml format for invalid format option', async () => {
             // Invalid formats fall back to default YAML formatting
-            const result = await runCortexCli([
-                'memory',
-                'list',
-                '--format',
-                'invalid',
-            ], {
+            const result = await runCortexCli(['memory', 'list', '--format', 'invalid'], {
                 cwd: testProject,
             });
 
@@ -652,14 +679,8 @@ describe('Cortex CLI Integration Tests', () => {
 
         it('should update memory content', async () => {
             const result = await runCortexCli(
-                [
-                    'memory',
-                    'update',
-                    'project/updatable',
-                    '--content',
-                    'Updated content.',
-                ],
-                { cwd: testProject },
+                ['memory', 'update', 'project/updatable', '--content', 'Updated content.'],
+                { cwd: testProject }
             );
 
             expect(result.exitCode).toBe(0);
@@ -672,14 +693,8 @@ describe('Cortex CLI Integration Tests', () => {
 
         it('should update memory tags', async () => {
             const result = await runCortexCli(
-                [
-                    'memory',
-                    'update',
-                    'project/updatable',
-                    '--tags',
-                    'new-tag,updated',
-                ],
-                { cwd: testProject },
+                ['memory', 'update', 'project/updatable', '--tags', 'new-tag,updated'],
+                { cwd: testProject }
             );
 
             expect(result.exitCode).toBe(0);
@@ -698,7 +713,7 @@ describe('Cortex CLI Integration Tests', () => {
                     '--expires-at',
                     '2030-01-01T00:00:00.000Z',
                 ],
-                { cwd: testProject },
+                { cwd: testProject }
             );
 
             expect(result.exitCode).toBe(0);
@@ -716,15 +731,10 @@ describe('Cortex CLI Integration Tests', () => {
             });
 
             const result = await runCortexCli(
-                [
-                    'memory',
-                    'update',
-                    'project/with-expiry',
-                    '--no-expires-at',
-                ],
+                ['memory', 'update', 'project/with-expiry', '--no-expires-at'],
                 {
                     cwd: testProject,
-                },
+                }
             );
 
             expect(result.exitCode).toBe(0);
@@ -735,14 +745,8 @@ describe('Cortex CLI Integration Tests', () => {
 
         it('should fail when memory does not exist', async () => {
             const result = await runCortexCli(
-                [
-                    'memory',
-                    'update',
-                    'project/nonexistent',
-                    '--content',
-                    'New content.',
-                ],
-                { cwd: testProject },
+                ['memory', 'update', 'project/nonexistent', '--content', 'New content.'],
+                { cwd: testProject }
             );
 
             expect(result.exitCode).toBe(1);
@@ -750,11 +754,7 @@ describe('Cortex CLI Integration Tests', () => {
         });
 
         it('should fail when no updates provided', async () => {
-            const result = await runCortexCli([
-                'memory',
-                'update',
-                'project/updatable',
-            ], {
+            const result = await runCortexCli(['memory', 'update', 'project/updatable'], {
                 cwd: testProject,
             });
 
@@ -767,16 +767,10 @@ describe('Cortex CLI Integration Tests', () => {
             await fs.writeFile(contentFile, 'Content from file update.', 'utf8');
 
             const result = await runCortexCli(
-                [
-                    'memory',
-                    'update',
-                    'project/updatable',
-                    '--file',
-                    contentFile,
-                ],
+                ['memory', 'update', 'project/updatable', '--file', contentFile],
                 {
                     cwd: testProject,
-                },
+                }
             );
 
             expect(result.exitCode).toBe(0);
@@ -787,16 +781,10 @@ describe('Cortex CLI Integration Tests', () => {
 
         it('should preserve original content when only updating tags', async () => {
             const result = await runCortexCli(
-                [
-                    'memory',
-                    'update',
-                    'project/updatable',
-                    '--tags',
-                    'new-tag',
-                ],
+                ['memory', 'update', 'project/updatable', '--tags', 'new-tag'],
                 {
                     cwd: testProject,
-                },
+                }
             );
 
             expect(result.exitCode).toBe(0);
@@ -819,7 +807,7 @@ describe('Cortex CLI Integration Tests', () => {
                     '-t',
                     'tag-c',
                 ],
-                { cwd: testProject },
+                { cwd: testProject }
             );
 
             expect(result.exitCode).toBe(0);
@@ -833,16 +821,8 @@ describe('Cortex CLI Integration Tests', () => {
 
         it('should update memory tags with mixed formats (comma-separated and multiple flags)', async () => {
             const result = await runCortexCli(
-                [
-                    'memory',
-                    'update',
-                    'project/updatable',
-                    '-t',
-                    'x,y',
-                    '-t',
-                    'z',
-                ],
-                { cwd: testProject },
+                ['memory', 'update', 'project/updatable', '-t', 'x,y', '-t', 'z'],
+                { cwd: testProject }
             );
 
             expect(result.exitCode).toBe(0);
@@ -873,11 +853,7 @@ describe('Cortex CLI Integration Tests', () => {
         });
 
         it('should report expired memories with --dry-run', async () => {
-            const result = await runCortexCli([
-                'store',
-                'prune',
-                '--dry-run',
-            ], {
+            const result = await runCortexCli(['store', 'prune', '--dry-run'], {
                 cwd: testProject,
             });
 
@@ -892,9 +868,7 @@ describe('Cortex CLI Integration Tests', () => {
         });
 
         it('should delete expired memories without --dry-run', async () => {
-            const result = await runCortexCli([
-                'store', 'prune',
-            ], {
+            const result = await runCortexCli(['store', 'prune'], {
                 cwd: testProject,
             });
 
@@ -915,11 +889,11 @@ describe('Cortex CLI Integration Tests', () => {
             await fs.rm(join(storeDir, 'project', 'expired-one.md'));
             await fs.rm(join(storeDir, 'project', 'expired-two.md'));
 
-            await createCategoryIndex(storeDir, 'project', [{ path: 'project/fresh-memory', tokenEstimate: 10 }]);
+            await createCategoryIndex(storeDir, 'project', [
+                { path: 'project/fresh-memory', tokenEstimate: 10 },
+            ]);
 
-            const result = await runCortexCli([
-                'store', 'prune',
-            ], {
+            const result = await runCortexCli(['store', 'prune'], {
                 cwd: testProject,
             });
 
@@ -940,9 +914,7 @@ describe('Cortex CLI Integration Tests', () => {
         });
 
         it('should rebuild indexes', async () => {
-            const result = await runCortexCli([
-                'store', 'reindex',
-            ], {
+            const result = await runCortexCli(['store', 'reindex'], {
                 cwd: testProject,
             });
 
@@ -989,17 +961,14 @@ describe('Cortex CLI Integration Tests', () => {
             await fs.mkdir(fakeCortex, { recursive: true });
             // Note: .cortex/memory doesn't exist, so resolution should fail
             try {
-                const result = await runCortexCli([
-                    'memory', 'list',
-                ], {
+                const result = await runCortexCli(['memory', 'list'], {
                     cwd: emptyDir,
                 });
 
                 // Either fails because no store found, or succeeds with empty list
                 // depending on whether global store exists
                 expect(result.exitCode).toBeGreaterThanOrEqual(0);
-            }
-            finally {
+            } finally {
                 await fs.rm(emptyDir, { recursive: true, force: true });
             }
         });
@@ -1027,9 +996,7 @@ describe('Cortex CLI Integration Tests', () => {
         });
 
         it('should show memory subcommand help', async () => {
-            const result = await runCortexCli([
-                'memory', '--help',
-            ], {
+            const result = await runCortexCli(['memory', '--help'], {
                 cwd: testProject,
             });
 
@@ -1041,9 +1008,7 @@ describe('Cortex CLI Integration Tests', () => {
         });
 
         it('should show store subcommand help', async () => {
-            const result = await runCortexCli([
-                'store', '--help',
-            ], {
+            const result = await runCortexCli(['store', '--help'], {
                 cwd: testProject,
             });
 

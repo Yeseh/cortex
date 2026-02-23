@@ -10,7 +10,7 @@ import { testContext } from '../../../core/src/testing/createContext.ts';
 import { registerStoreTools } from './index.ts';
 import { listStoresHandler, createStoreHandler } from './tools.ts';
 import type { ServerConfig } from '../config.ts';
-import type { CortexContext } from '@yeseh/cortex-core'
+import type { CortexContext } from '@yeseh/cortex-core';
 
 describe('store tool registration', () => {
     let server: McpServer;
@@ -35,12 +35,10 @@ describe('store tool registration', () => {
     });
 
     // Helper to create a CortexContext with actual Cortex instance
-    const createTestCortexContext = (
-        registry: ConfigStores = {},
-    ): CortexContext => {
+    const createTestCortexContext = (registry: ConfigStores = {}): CortexContext => {
         const adapter = new FilesystemStorageAdapter({ rootDirectory: testDir });
         const ctx = testContext({ adapter, storePath: testDir, stores: registry, settings: {} });
-        return { ...ctx, config } as unknown as CortexContext;
+        return { ...ctx, config, globalDataPath: testDir } as unknown as CortexContext;
     };
 
     describe('registerStoreTools function', () => {
@@ -181,8 +179,16 @@ describe('store tool registration', () => {
         it('should return stores when stores exist', async () => {
             // Create a context with stores in the registry
             const ctx = createTestCortexContext({
-                'store-a': { kind: 'filesystem', categories: {}, properties: { path: '/data/store-a' } },
-                'store-b': { kind: 'filesystem', categories: {}, properties: { path: '/data/store-b' } },
+                'store-a': {
+                    kind: 'filesystem',
+                    categories: {},
+                    properties: { path: '/data/store-a' },
+                },
+                'store-b': {
+                    kind: 'filesystem',
+                    categories: {},
+                    properties: { path: '/data/store-b' },
+                },
             });
 
             const result = await listStoresHandler(ctx);
@@ -244,16 +250,13 @@ describe('store tool registration', () => {
 
         it('should return error with existing store name', async () => {
             // Create a registry with an existing store entry
-            const registryContent = [
-                'stores:',
-                '  existing-store:',
-                `    kind: "filesystem"`,
-                `    categories: {}`,
-                `    properties: { path: "${path.join(testDir, 'existing-store').replace(/\\/g, '/')}" }`,
-            ].join('\n');
-            await fs.writeFile(path.join(testDir, 'stores.yaml'), registryContent);
-
-            const ctx = createTestCortexContext();
+            const ctx = createTestCortexContext({
+                'existing-store': {
+                    kind: 'filesystem',
+                    categories: {},
+                    properties: { path: path.join(testDir, 'existing-store') },
+                },
+            });
 
             const result = await createStoreHandler(ctx, { name: 'existing-store' });
 

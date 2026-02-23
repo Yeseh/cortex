@@ -35,7 +35,7 @@ export const createTestConfig = (dataPath: string): CortexConfig => ({
  * @returns A CortexContext ready for use in test handlers
  */
 export const createTestContext = (testDir: string): CortexContext => {
-    const context = testContext
+    const context = testContext;
     const adapter = new FilesystemStorageAdapter({ rootDirectory: testDir });
 
     const config = createTestConfig(testDir);
@@ -57,20 +57,25 @@ export const createTestContext = (testDir: string): CortexContext => {
         // Type compatibility - will be fixed in core migration
         stores: storeConfig as any,
         adapterFactory: (storeName: string) => {
-            // Lookup the store path from config
+            // Lookup the store path from config — reject unknown stores
             const store = storeConfig[storeName];
-            const storePath = store ? store.properties.path as string : memoryDir;
+            if (!store) {
+                throw new Error(
+                    `Store '${storeName}' is not registered. Available stores: ${Object.keys(storeConfig).join(', ')}`
+                );
+            }
+            const storePath = store.properties.path as string;
             return new FilesystemStorageAdapter({ rootDirectory: storePath });
         },
     });
 
-    return { 
-        settings: config.settings!, 
-        stores: config.stores, 
+    return {
+        settings: config.settings!,
+        stores: config.stores,
         cortex,
         now: () => TestDate, // Override now for test determinism
-        stdin: new PassThrough() as unknown as NodeJS.ReadStream,  // Default stdin (can be overridden in tests)
-        stdout: new PassThrough() as unknown as NodeJS.WriteStream,  // Default stdout (can be overridden in tests)
+        stdin: new PassThrough() as unknown as NodeJS.ReadStream, // Default stdin (can be overridden in tests)
+        stdout: new PassThrough() as unknown as NodeJS.WriteStream, // Default stdout (can be overridden in tests)
     };
 };
 
@@ -83,7 +88,7 @@ export const createTestContext = (testDir: string): CortexContext => {
  */
 export const createTestContextWithStores = (
     testDir: string,
-    additionalStores: Record<string, string>,
+    additionalStores: Record<string, string>
 ): CortexContext => {
     const config = createTestConfig(testDir);
     const memoryDir = join(testDir, MEMORY_SUBDIR);
@@ -97,9 +102,7 @@ export const createTestContextWithStores = (
         },
     };
 
-    for (const [
-        name, path,
-    ] of Object.entries(additionalStores)) {
+    for (const [name, path] of Object.entries(additionalStores)) {
         storeConfig[name] = {
             kind: 'filesystem',
             properties: { path },
@@ -111,20 +114,25 @@ export const createTestContextWithStores = (
         // Type compatibility - will be fixed in core migration
         stores: storeConfig as any,
         adapterFactory: (storeName: string) => {
-            // Lookup the store path from config
+            // Lookup the store path from config — reject unknown stores
             const store = storeConfig[storeName];
-            const storePath = store ? store.properties.path as string : memoryDir;
+            if (!store) {
+                throw new Error(
+                    `Store '${storeName}' is not registered. Available stores: ${Object.keys(storeConfig).join(', ')}`
+                );
+            }
+            const storePath = store.properties.path as string;
             return new FilesystemStorageAdapter({ rootDirectory: storePath });
         },
     });
 
-    return { 
-        settings: config.settings!, 
+    return {
+        settings: config.settings!,
         stores: config.stores,
-        cortex, 
-        now: () => TestDate, 
-        stdin: new PassThrough() as unknown as NodeJS.ReadStream, 
-        stdout: new PassThrough() as unknown as NodeJS.WriteStream 
+        cortex,
+        now: () => TestDate,
+        stdin: new PassThrough() as unknown as NodeJS.ReadStream,
+        stdout: new PassThrough() as unknown as NodeJS.WriteStream,
     };
 };
 
@@ -146,7 +154,7 @@ export const createTestContextWithStores = (
 export const createTestDir = async (): Promise<string> => {
     const testDir = join(
         tmpdir(),
-        `cortex-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        `cortex-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
     );
     await mkdir(testDir, { recursive: true });
 
@@ -189,7 +197,7 @@ export const createTestDir = async (): Promise<string> => {
  */
 export const createTestCategory = async (
     storeRoot: string,
-    categoryPath: string,
+    categoryPath: string
 ): Promise<void> => {
     const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
     const result = await createCategory(adapter.categories, categoryPath);
@@ -202,7 +210,7 @@ export const createTestCategory = async (
 export const createMemoryFile = async (
     storeRoot: string,
     slugPath: string,
-    contents: Partial<Memory>,
+    contents: Partial<Memory>
 ): Promise<void> => {
     const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
 
@@ -213,7 +221,9 @@ export const createMemoryFile = async (
         // Create category (idempotent - succeeds if already exists)
         const categoryResult = await createCategory(adapter.categories, categoryPath);
         if (!categoryResult.ok()) {
-            throw new Error(`Failed to create category '${categoryPath}': ${categoryResult.error.message}`);
+            throw new Error(
+                `Failed to create category '${categoryPath}': ${categoryResult.error.message}`
+            );
         }
     }
 
@@ -231,7 +241,7 @@ export const createMemoryFile = async (
                 updatedAt: contents.metadata?.updatedAt ?? new Date(),
             },
         },
-        contents.metadata?.createdAt, // Pass timestamp for test determinism
+        contents.metadata?.createdAt // Pass timestamp for test determinism
     );
 
     if (!result.ok()) {

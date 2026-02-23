@@ -49,12 +49,14 @@ export async function handleAdd(
     ctx: CortexContext,
     storeName: string | undefined,
     path: string,
-    options: AddCommandOptions,
+    options: AddCommandOptions
 ): Promise<void> {
     const content = await resolveCliContent({
         content: options.content,
         filePath: options.file,
         stream: ctx.stdin,
+        // `memory add` accepts stdin by default (when piped).
+        stdinRequested: options.content === undefined && options.file === undefined,
     });
 
     if (!content.ok()) {
@@ -84,7 +86,7 @@ export async function handleAdd(
         throwCliError(rootResult.error);
     }
 
-    const timestamp = ctx.now() ?? new Date(); 
+    const timestamp = ctx.now() ?? new Date();
     const memoryClient = store.getMemory(path);
     const memoryResult = await memoryClient.create({
         content: memoryContent!,
@@ -95,7 +97,7 @@ export async function handleAdd(
             updatedAt: timestamp,
             expiresAt,
             citations,
-        }
+        },
     });
 
     if (!memoryResult.ok()) {

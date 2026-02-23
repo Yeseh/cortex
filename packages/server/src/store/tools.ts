@@ -53,7 +53,7 @@ export const storeNameSchema = z
     .min(1, 'Store name must not be empty')
     .regex(
         /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/,
-        'Store name must start with alphanumeric and contain only alphanumeric, hyphens, or underscores'
+        'Store name must start with alphanumeric and contain only alphanumeric, hyphens, or underscores',
     );
 
 /**
@@ -113,7 +113,8 @@ export const listStores = async (dataPath: string): Promise<Result<string[], Sto
         const entries = await fs.readdir(dataPath, { withFileTypes: true });
         const stores = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
         return ok(stores);
-    } catch (error) {
+    }
+    catch (error) {
         // Handle ENOENT (data path doesn't exist yet) by returning empty array
         if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
             return ok([]);
@@ -145,11 +146,13 @@ export const listStores = async (dataPath: string): Promise<Result<string[], Sto
  * ```
  */
 export const listStoresFromContext = (
-    ctx: CortexContext
+    ctx: CortexContext,
 ): Result<ListStoresResult, StoreToolError> => {
     try {
         const stores: StoreInfo[] = Object.entries(ctx.stores)
-            .map(([name, definition]) => ({
+            .map(([
+                name, definition,
+            ]) => ({
                 name,
                 path: (definition.properties as { path: string }).path,
                 ...(definition.description !== undefined && {
@@ -161,7 +164,8 @@ export const listStoresFromContext = (
             .sort((a, b) => a.name.localeCompare(b.name));
 
         return ok({ stores });
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'STORE_LIST_FAILED',
             message: `Failed to list stores: ${error instanceof Error ? error.message : String(error)}`,
@@ -194,7 +198,9 @@ export const listStoresFromContext = (
  */
 export const listStoresHandler = async (ctx: CortexContext): Promise<McpToolResponse> => {
     const stores: StoreInfo[] = Object.entries(ctx.stores)
-        .map(([name, definition]) => ({
+        .map(([
+            name, definition,
+        ]) => ({
             name,
             path: (definition.properties as { path: string }).path,
             ...(definition.description !== undefined && {
@@ -225,38 +231,60 @@ export const listStoresHandler = async (ctx: CortexContext): Promise<McpToolResp
  */
 export const createStoreHandler = async (
     ctx: CortexContext,
-    input: CreateStoreInput
+    input: CreateStoreInput,
 ): Promise<McpToolResponse> => {
     // Validate input
     const validation = createStoreInputSchema.safeParse(input);
     if (!validation.success) {
-        return errorResponse(`Store name is invalid: ${validation.error.issues.map(issue => issue.message).join('\n')}`);
+        return errorResponse(
+            `Store name is invalid: ${validation.error.issues.map((issue) => issue.message).join('\n')}`,
+        );
+    }
+
+    // Check if store already exists in registry
+    if (ctx.stores[input.name]) {
+        return errorResponse(`Store '${input.name}' already exists. Choose a different name.`);
     }
 
     const storeClient = ctx.cortex.getStore(input.name);
     if (!storeClient.ok()) {
-        return errorResponse("Failed to create store client for default store. Please check server configuration. Message: " + storeClient.error.message);
+        return errorResponse(
+            'Failed to create store client for default store. Please check server configuration. Message: ' +
+                storeClient.error.message,
+        );
     }
 
     if (!ctx.globalDataPath) {
-        return errorResponse("Server configuration error: globalDataPath is not defined in context.");
+        return errorResponse(
+            'Server configuration error: globalDataPath is not defined in context.',
+        );
     }
 
     // TODO: Coupled on fs implementation
-    const storesPath = resolve(ctx.globalDataPath, 'stores');
+    const storePath = resolve(ctx.globalDataPath, input.name);
     const storeData: StoreData = {
         kind: 'filesystem',
         categoryMode: 'free',
         categories: [], // No pre-defined categories for new stores, but could add templates in the future
         properties: {
-            path: storesPath
-        }
-    }
+            path: storePath,
+        },
+    };
 
     const store = storeClient.value;
     const initializeResult = await store.initialize(storeData);
     if (!initializeResult.ok()) {
         return errorResponse(`Failed to initialize store: ${initializeResult.error.message}`);
+    }
+
+    // Create the store directory
+    try {
+        await fs.mkdir(storePath, { recursive: true });
+    }
+    catch (error) {
+        return errorResponse(
+            `Failed to create store directory: ${error instanceof Error ? error.message : String(error)}`,
+        );
     }
 
     return textResponse(JSON.stringify({ created: input.name }, null, 2));

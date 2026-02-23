@@ -6,13 +6,10 @@
 
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import type { CategoryError } from '@yeseh/cortex-core';
+import type { CategoryError, CategoryClient } from '@yeseh/cortex-core';
 import { storeNameSchema } from '../../store/tools.ts';
 import { type CortexContext } from '@yeseh/cortex-core';
-import {
-    textResponse,
-    type McpToolResponse,
-} from '../../response.ts';
+import { textResponse, type McpToolResponse } from '../../response.ts';
 
 /** Schema for list_memories tool input */
 export const listMemoriesInputSchema = z.object({
@@ -54,11 +51,82 @@ const translateCategoryError = (error: CategoryError): McpError => {
 };
 
 /**
+ * Collects memory entries from a category, optionally recursing into
+ * subcategories and filtering out expired memories.
+ *
+ * @param root - The root CategoryClient for resolving subcategory paths
+ * @param client - The current category client to collect from
+ * @param includeExpired - Whether to include expired memories
+ * @param now - Current time for expiration checks
+ * @param visited - Set of visited category paths to prevent cycles
+ * @returns Array of memory entry objects with path, token_estimate, and updated_at
+ */
+const collectMemories = async (
+    root: CategoryClient,
+    client: CategoryClient,
+    includeExpired: boolean,
+    now: Date,
+    visited: Set<string> = new Set()
+): Promise<{ path: string; token_estimate: number; updated_at?: string }[]> => {
+    const key = client.rawPath;
+    if (visited.has(key)) return [];
+    visited.add(key);
+
+    const memoriesResult = await client.listMemories({ includeExpired: true });
+    if (!memoriesResult.ok()) {
+        throw translateCategoryError(memoriesResult.error);
+    }
+
+    const entries: { path: string; token_estimate: number; updated_at?: string }[] = [];
+
+    for (const m of memoriesResult.value) {
+        // When filtering expired, load each memory to check expiration
+        if (!includeExpired) {
+            const memoryClient = client.getMemory(m.path.slug.toString());
+            const memoryResult = await memoryClient.get({ includeExpired: true, now });
+            if (!memoryResult.ok()) {
+                continue; // Skip memories that can't be loaded
+            }
+            if (memoryResult.value.isExpired(now)) {
+                continue; // Skip expired memories
+            }
+        }
+
+        entries.push({
+            path: m.path.toString(),
+            token_estimate: m.tokenEstimate,
+            updated_at: m.updatedAt?.toISOString(),
+        });
+    }
+
+    // Recurse into subcategories
+    const subcategoriesResult = await client.listSubcategories();
+    if (!subcategoriesResult.ok()) {
+        throw translateCategoryError(subcategoriesResult.error);
+    }
+
+    for (const sub of subcategoriesResult.value) {
+        const subResult = root.getCategory(sub.path.toString());
+        if (!subResult.ok()) continue;
+        const subMemories = await collectMemories(
+            root,
+            subResult.value,
+            includeExpired,
+            now,
+            visited
+        );
+        entries.push(...subMemories);
+    }
+
+    return entries;
+};
+
+/**
  * Lists memories in a category.
  */
 export const listMemoriesHandler = async (
     ctx: CortexContext,
-    input: ListMemoriesInput,
+    input: ListMemoriesInput
 ): Promise<McpToolResponse> => {
     const storeResult = ctx.cortex.getStore(input.store);
     if (!storeResult.ok()) {
@@ -66,42 +134,46 @@ export const listMemoriesHandler = async (
     }
 
     const store = storeResult.value;
-    const categoryResult = input.category 
-        ? store.getCategory(input.category)
-        : store.root();
-    
-    if (!categoryResult.ok()) {
-        throw new McpError(ErrorCode.InvalidParams, categoryResult.error.message);
+    const rootResult = store.root();
+    if (!rootResult.ok()) {
+        throw new McpError(ErrorCode.InvalidParams, rootResult.error.message);
     }
 
-    const category = categoryResult.value;
-    const memoriesResult = await category.listMemories({
-        includeExpired: input.includeExpired ?? false,
-    });
+    const root = rootResult.value;
+    const includeExpired = input.includeExpired ?? false;
+    const now = ctx.now ? ctx.now() : new Date();
 
-    if (!memoriesResult.ok()) {
-        throw translateCategoryError(memoriesResult.error);
+    // Resolve the target category
+    let category: CategoryClient;
+    if (input.category) {
+        const categoryResult = root.getCategory(input.category);
+        if (!categoryResult.ok()) {
+            throw new McpError(ErrorCode.InvalidParams, categoryResult.error.message);
+        }
+        category = categoryResult.value;
+    } else {
+        category = root;
     }
+
+    // Collect memories (recursing into subcategories when listing from root)
+    const memories = input.category
+        ? await collectMemories(root, category, includeExpired, now)
+        : await collectMemories(root, category, includeExpired, now);
 
     const subcategoriesResult = await category.listSubcategories();
     if (!subcategoriesResult.ok()) {
         throw translateCategoryError(subcategoriesResult.error);
     }
 
-    const memories = memoriesResult.value;
     const subcategories = subcategoriesResult.value;
 
     const output = {
-        category: input.category ?? 'root',
+        category: input.category ?? 'all',
         count: memories.length,
-        memories: memories.map((m) => ({
-            path: m.path.toString(),
-            tokenEstimate: m.tokenEstimate,
-            updatedAt: m.updatedAt?.toISOString(),
-        })),
+        memories,
         subcategories: subcategories.map((s) => ({
             path: s.path.toString(),
-            memoryCount: s.memoryCount,
+            memory_count: s.memoryCount,
             description: s.description,
         })),
     };

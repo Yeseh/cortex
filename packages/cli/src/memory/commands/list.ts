@@ -141,7 +141,7 @@ export async function handleList(
     storeName: string | undefined,
     category: string | undefined,
     options: ListCommandOptions,
-    deps: ListHandlerDeps = {},
+    deps: ListHandlerDeps = {}
 ): Promise<void> {
     const categoryResult = CategoryPath.fromString(category ?? '');
     if (!categoryResult.ok()) {
@@ -163,8 +163,7 @@ export async function handleList(
 
     if (categoryResult.value.isRoot) {
         categoryClient = root;
-    }
-    else {
+    } else {
         const categoryClientResult = root.getCategory(categoryResult.value.toString());
         if (!categoryClientResult.ok()) {
             throwCliError(categoryClientResult.error);
@@ -250,13 +249,16 @@ export async function handleList(
     };
 
     // 3. Format and output
-    const format = (options.format as OutputFormat) ?? 'yaml';
-    const output = serialize(result, format); 
+    const validFormats = ['yaml', 'json', 'toon'] as const;
+    const format: OutputFormat = validFormats.includes(options.format as OutputFormat)
+        ? (options.format as OutputFormat)
+        : 'yaml';
+    const output = serialize(result, format);
     if (!output.ok()) {
         throwCliError({ code: 'SERIALIZE_FAILED', message: output.error.message });
     }
 
-    const out = deps.stdout ?? process.stdout;
+    const out = deps.stdout ?? ctx.stdout;
     out.write(output.value + '\n');
 }
 
