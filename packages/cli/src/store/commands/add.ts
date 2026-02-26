@@ -18,6 +18,8 @@
  * ```
  */
 
+import { mkdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import { Command } from '@commander-js/extra-typings';
 import { throwCliError } from '../../errors.ts';
 import { getDefaultConfigPath } from '../../context.ts';
@@ -53,7 +55,10 @@ export interface AddHandlerDeps {
 function validateStoreName(name: string): string {
     const slugResult = Slug.from(name);
     if (!slugResult.ok()) {
-        throwCliError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug (letters, numbers, hyphens).' });
+        throwCliError({
+            code: 'INVALID_STORE_NAME',
+            message: 'Store name must be a lowercase slug (letters, numbers, hyphens).',
+        });
     }
 
     return slugResult.value.toString();
@@ -136,22 +141,33 @@ export async function handleAdd(
         });
     }
 
-    // 3. Read current config file
+    // 3. Read current config file (or start with empty config if it doesn't exist)
     const configFile = Bun.file(configPath);
-    let configContents: string;
-    try {
-        configContents = await configFile.text();
-    }
-    catch {
-        throwCliError({
-            code: 'CONFIG_READ_FAILED',
-            message: `Failed to read config at ${configPath}`,
-        });
-    }
+    let parsedConfig: { settings?: unknown; stores: Record<string, unknown> };
 
-    const configResult = parseConfig(configContents);
-    if (!configResult.ok()) {
-        throwCliError(configResult.error);
+    if (await configFile.exists()) {
+        let configContents: string;
+        try {
+            configContents = await configFile.text();
+        }
+        catch {
+            throwCliError({
+                code: 'CONFIG_READ_FAILED',
+                message: `Failed to read config at ${configPath}`,
+            });
+        }
+
+        const parsed = parseConfig(configContents!);
+        if (!parsed.ok()) {
+            throwCliError(parsed.error);
+        }
+        parsedConfig = parsed.value;
+    }
+    else {
+        // Config doesn't exist yet — start with empty config
+        parsedConfig = { settings: undefined, stores: {} };
+        // Ensure config directory exists
+        await mkdir(dirname(configPath), { recursive: true });
     }
 
     // 4. Add new store to config
@@ -163,9 +179,9 @@ export async function handleAdd(
     };
 
     const updatedConfig = {
-        ...configResult.value,
+        ...parsedConfig,
         stores: {
-            ...configResult.value.stores,
+            ...parsedConfig.stores,
             [trimmedName]: newStore,
         },
     };

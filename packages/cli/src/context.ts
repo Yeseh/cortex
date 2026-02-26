@@ -17,6 +17,12 @@ export const getDefaultGlobalStorePath = (): string =>
 
 /**
  * Default path to the store configuration file.
+ * Respects the CORTEX_CONFIG_DIR environment variable when set.
  */
-export const getDefaultConfigPath = (): string =>
-    resolve(homedir(), '.config', 'cortex', 'config.yaml');
+export const getDefaultConfigPath = (): string => {
+    const envConfigDir = process.env.CORTEX_CONFIG_DIR;
+    if (envConfigDir) {
+        return resolve(envConfigDir, 'config.yaml');
+    }
+    return resolve(homedir(), '.config', 'cortex', 'config.yaml');
+};
