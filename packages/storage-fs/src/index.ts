@@ -37,6 +37,7 @@ import {
     type CategoryStorage,
     type StoreAdapter,
     type StorageAdapter,
+    type ConfigAdapter,
 } from '@yeseh/cortex-core';
 import type {
     FilesystemStorageAdapterOptions,
@@ -44,10 +45,9 @@ import type {
 } from './types.ts';
 import { normalizeExtension } from './utils.ts';
 // Import ISP-compliant storage implementations
-import { FilesystemMemoryStorage } from './memory-storage.ts';
-import { FilesystemIndexStorage } from './index-storage.ts';
-import { FilesystemCategoryStorage } from './category-storage.ts';
-import { FilesystemStoreAdapter } from './store-storage.ts';
+import { FilesystemMemoryAdapter } from './memory-adapter.ts';
+import { FilesystemIndexAdapter } from './index-adapter.ts';
+import { FilesystemCategoryAdapter } from './category-adapter.ts';
 
 /**
  * Filesystem-based storage adapter for Cortex memory system.
@@ -84,10 +84,11 @@ export class FilesystemStorageAdapter implements StorageAdapter{
     public readonly indexes: IndexStorage;
     /** Category operations */
     public readonly categories: CategoryStorage;
-    /** Store operations */
-    public readonly stores: StoreAdapter;
+    public readonly config: ConfigAdapter;
 
-    constructor(options: FilesystemStorageAdapterOptions) {
+    constructor(
+        configAdapter: ConfigAdapter,
+        options: FilesystemStorageAdapterOptions) {
         this.ctx = {
             storeRoot: resolve(options.rootDirectory),
             memoryExtension: normalizeExtension(options.memoryExtension, '.md'),
@@ -95,10 +96,10 @@ export class FilesystemStorageAdapter implements StorageAdapter{
         };
 
         // Initialize composed storage instances
-        this.memories = new FilesystemMemoryStorage(this.ctx);
-        this.indexes = new FilesystemIndexStorage(this.ctx);
-        this.categories = new FilesystemCategoryStorage(this.ctx);
-        this.stores = new FilesystemStoreAdapter(this.ctx);
+        this.memories = new FilesystemMemoryAdapter(this.ctx);
+        this.indexes = new FilesystemIndexAdapter(this.ctx);
+        this.categories = new FilesystemCategoryAdapter(this.ctx);
+        this.config = configAdapter; 
     }
 }
 
@@ -140,9 +141,8 @@ export { parseMemory, serializeMemory } from './memories.ts';
  * }
  * ```
  */
-export { FilesystemMemoryStorage } from './memory-storage.ts';
-export { FilesystemIndexStorage } from './index-storage.ts';
-export { FilesystemCategoryStorage } from './category-storage.ts';
-export { FilesystemStoreAdapter } from './store-storage.ts';
-export { FilesystemConfigAdapter } from './config-storage.ts';
+export { FilesystemMemoryAdapter } from './memory-adapter.ts';
+export { FilesystemIndexAdapter } from './index-adapter.ts';
+export { FilesystemCategoryAdapter } from './category-adapter.ts';
+export { FilesystemConfigAdapter } from './config-adapter.ts';
 

@@ -15,7 +15,7 @@ import { PassThrough } from 'node:stream';
 
 import { MEMORY_SUBDIR } from '../config.ts';
 import { Cortex } from '@yeseh/cortex-core';
-import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
+import { FilesystemConfigAdapter, FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 import type { CortexContext, ConfigStores } from '@yeseh/cortex-core';
 import {
     createMockCortexContext,
@@ -76,7 +76,8 @@ const createTestContext = (testDir: string): CortexContext => {
                 );
             }
             const storePath = store.properties.path as string;
-            return new FilesystemStorageAdapter({ rootDirectory: storePath });
+            const configAdapter = new FilesystemConfigAdapter(join(testDir, 'config.yaml'));
+            return new FilesystemStorageAdapter(configAdapter, { rootDirectory: storePath });
         },
     });
 

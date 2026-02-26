@@ -45,7 +45,7 @@ import type { StorageAdapter } from '@/storage/index.ts';
  * ```
  */
 export const initializeStore = async (
-    { stores, categories }: StorageAdapter,
+    { config, categories }: StorageAdapter,
     name: string,
     data: StoreData,
 ): Promise<StoreResult<void>> => {
@@ -60,20 +60,33 @@ export const initializeStore = async (
     }
 
     const storeName = slugResult.value;
-    const storeResult = await stores.load(storeName);
+    const storeResult = await config.getStore(storeName.toString());
     if (storeResult.ok() && storeResult.value !== null) {
         return storeError('STORE_ALREADY_EXISTS', 'Store name already exists in registry.', {
             store: name,
-            cause: storeResult.error,
         });
     }
-    else if (!storeResult.ok() && storeResult.error.code !== 'STORE_NOT_FOUND') {
-        return err(storeResult.error);
+    else if (!storeResult.ok()) {
+        return storeError(
+            'STORE_READ_FAILED',
+            `Failed to check whether store '${name}' already exists: ${storeResult.error.message}`,
+            {
+                store: name,
+                cause: storeResult.error,
+            },
+        );
     }
 
-    const saveResult = await stores.save(storeName, data);
+    const saveResult = await config.saveStore(storeName.toString(), data);
     if (!saveResult.ok()) {
-        return err(saveResult.error);
+        return storeError(
+            'STORE_CREATE_FAILED',
+            `Failed to create store '${name}': ${saveResult.error.message}`,
+            {
+                store: name,
+                cause: saveResult.error,
+            },
+        );
     }
 
     const initialCategories = data.categories ?? [];

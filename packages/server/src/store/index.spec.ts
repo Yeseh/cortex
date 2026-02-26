@@ -4,7 +4,13 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
-import type { ConfigStores } from '@yeseh/cortex-core';
+import {
+    ok,
+    storeCategoriesToConfigCategories,
+    type ConfigAdapter,
+    type ConfigStores,
+    type StoreData,
+} from '@yeseh/cortex-core';
 import { testContext } from '../../../core/src/testing/createContext.ts';
 import { registerStoreTools } from './index.ts';
 import { listStoresHandler, createStoreHandler } from './tools.ts';
@@ -33,9 +39,35 @@ describe('store tool registration', () => {
         await fs.rm(testDir, { recursive: true, force: true });
     });
 
+    const createInMemoryConfigAdapter = (initialStores: ConfigStores): ConfigAdapter => {
+        const stores: ConfigStores = { ...initialStores };
+
+        return {
+            path: path.join(testDir, 'config.yaml'),
+            data: null,
+            stores,
+            settings: {},
+            initializeConfig: async () => ok(undefined),
+            getSettings: async () => ok({}),
+            getStores: async () => ok(stores),
+            getStore: async (storeName: string) => ok(stores[storeName] ?? null),
+            saveStore: async (storeName: string, data: StoreData) => {
+                stores[storeName] = {
+                    kind: data.kind,
+                    categoryMode: data.categoryMode,
+                    description: data.description,
+                    categories: storeCategoriesToConfigCategories(data.categories),
+                    properties: data.properties,
+                };
+                return ok(undefined);
+            },
+        };
+    };
+
     // Helper to create a CortexContext with actual Cortex instance
     const createTestCortexContext = (registry: ConfigStores = {}): CortexContext => {
-        const adapter = new FilesystemStorageAdapter({ rootDirectory: testDir });
+        const configAdapter = createInMemoryConfigAdapter(registry);
+        const adapter = new FilesystemStorageAdapter(configAdapter, { rootDirectory: testDir });
         const ctx = testContext({ adapter, storePath: testDir, stores: registry, settings: {} });
         return { ...ctx, config, globalDataPath: testDir } as unknown as CortexContext;
     };

@@ -115,10 +115,6 @@ export class FilesystemConfigAdapter implements ConfigAdapter {
         this.path = configPath;
     }
 
-    async initialize(): Promise<ConfigResult<void>> {
-        return this.initializeConfig();
-    }
-
     // Returns the raw config data or null if not loaded
     get data(): CortexConfig | null {
         return this.#config;

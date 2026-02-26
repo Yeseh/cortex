@@ -5,7 +5,7 @@ export type StorageAdapterOverrides = Partial<{
     memories: Partial<StorageAdapter['memories']>;
     indexes: Partial<StorageAdapter['indexes']>;
     categories: Partial<StorageAdapter['categories']>;
-    stores: Partial<StorageAdapter['stores']>;
+    config: Partial<StorageAdapter['config']>;
 }>;
 
 export const createMockStorageAdapter = (
@@ -33,14 +33,16 @@ export const createMockStorageAdapter = (
         setDescription: async () => ok(undefined),
         ...overrides?.categories,
     },
-    stores: {
-        load: async () =>
-            err({
-                code: 'STORE_NOT_FOUND',
-                message: 'Store not found',
-            }),
-        save: async () => ok(undefined),
-        remove: async () => ok(undefined),
-        ...overrides?.stores,
+    config: {
+        path: '/tmp/cortex-test-config.yaml',
+        data: null,
+        stores: null,
+        settings: null,
+        initializeConfig: async () => ok(undefined),
+        getSettings: async () => ok({}),
+        getStores: async () => ok({}),
+        getStore: async () => ok(null),
+        saveStore: async () => ok(undefined),
+        ...overrides?.config,
     },
 });

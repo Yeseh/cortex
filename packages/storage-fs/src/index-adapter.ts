@@ -59,11 +59,11 @@ import { parseIndex, serializeIndex } from './index-serialization.ts';
  * ```
  *
  * @see {@link IndexStorage} - The interface this class implements
- * @see {@link FilesystemMemoryStorage} - Related memory storage implementation
+ * @see {@link FilesystemMemoryAdapter} - Related memory storage implementation
  */
-export class FilesystemIndexStorage implements IndexAdapter {
+export class FilesystemIndexAdapter implements IndexAdapter {
     /**
-     * Creates a new FilesystemIndexStorage instance.
+     * Creates a new FilesystemIndexAdapter instance.
      *
      * @param ctx - Filesystem context containing storage root and file extensions
      */

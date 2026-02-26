@@ -73,7 +73,7 @@ describe('StoreClient.load()', () => {
     it('should return STORE_NOT_INITIALIZED when store.yaml does not exist', async () => {
         // Mock adapter that returns ok(null) — simulating missing store.yaml
         const adapter = createMockStorageAdapter({
-            stores: { load: async () => ok(null) },
+            config: { getStore: async () => ok(null) },
         });
         const client = StoreClient.init('my-store', adapter);
         expect(client.ok()).toBe(true);
@@ -88,7 +88,13 @@ describe('StoreClient.load()', () => {
     it('should return STORE_NOT_FOUND when storage read fails', async () => {
         // Mock adapter that returns a storage error
         const adapter = createMockStorageAdapter({
-            stores: { load: async () => err({ code: 'STORE_READ_FAILED', message: 'disk error', store: 'my-store' }) },
+            config: {
+                getStore: async () =>
+                    err({
+                        code: 'CONFIG_READ_FAILED',
+                        message: 'disk error',
+                    }),
+            },
         });
         const client = StoreClient.init('my-store', adapter);
         expect(client.ok()).toBe(true);

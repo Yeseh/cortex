@@ -17,6 +17,7 @@ import type { StoreData } from './store.ts';
 import type { StoreError, StoreResult } from './result.ts';
 import { Slug } from '@/slug.ts';
 import { initializeStore } from './operations/initialize.ts';
+import { configCategoriesToStoreCategories } from '@/config/config.ts';
 
 
 /**
@@ -134,7 +135,7 @@ export class StoreClient {
             });
         }
 
-        const storeData = await this.adapter.stores.load(parse.value);
+        const storeData = await this.adapter.config.getStore(parse.value.toString());
         if (!storeData.ok()) {
             return err({
                 code: 'STORE_NOT_FOUND',
@@ -153,8 +154,26 @@ export class StoreClient {
             });
         }
 
-        this.data = storeData.value;
-        return ok(storeData.value);
+        const categoriesResult = configCategoriesToStoreCategories(storeData.value.categories);
+        if (!categoriesResult.ok()) {
+            return err({
+                code: 'STORE_READ_FAILED',
+                message: `Failed to parse categories for store '${this.name}': ${categoriesResult.error.message}`,
+                store: this.name.toString(),
+                cause: categoriesResult.error,
+            });
+        }
+
+        const normalizedStoreData: StoreData = {
+            kind: storeData.value.kind,
+            categoryMode: storeData.value.categoryMode ?? 'free',
+            categories: categoriesResult.value,
+            properties: storeData.value.properties,
+            description: storeData.value.description,
+        };
+
+        this.data = normalizedStoreData;
+        return ok(normalizedStoreData);
     }
 
     /**
@@ -174,7 +193,7 @@ export class StoreClient {
             });
         }
 
-        const result = await this.adapter.stores.save(parse.value, data);
+        const result = await this.adapter.config.saveStore(parse.value.toString(), data);
         if (!result.ok()) {
             return err({
                 code: 'STORE_SAVE_FAILED',

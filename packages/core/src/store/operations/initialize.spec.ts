@@ -16,12 +16,12 @@ describe('initializeStore', () => {
     it('should reject invalid store names', async () => {
         const load = mock(async () =>
             err({
-                code: 'STORE_NOT_FOUND' as const,
+                code: 'CONFIG_NOT_FOUND' as const,
                 message: 'Store not found',
             }),
         );
         const adapter = createMockStorageAdapter({
-            stores: { load },
+            config: { getStore: load },
         });
 
         const result = await initializeStore(adapter, '   ', {
@@ -48,8 +48,13 @@ describe('initializeStore', () => {
         };
 
         const adapter = createMockStorageAdapter({
-            stores: {
-                load: async () => ok(existingStore),
+            config: {
+                getStore: async () => ok({
+                    kind: existingStore.kind,
+                    categoryMode: existingStore.categoryMode,
+                    categories: {},
+                    properties: existingStore.properties,
+                }),
             },
         });
 
@@ -68,10 +73,10 @@ describe('initializeStore', () => {
 
     it('should return unexpected load errors', async () => {
         const adapter = createMockStorageAdapter({
-            stores: {
-                load: async () =>
+            config: {
+                getStore: async () =>
                     err({
-                        code: 'STORE_READ_FAILED' as const,
+                        code: 'CONFIG_READ_FAILED' as const,
                         message: 'Cannot read registry',
                     }),
             },
@@ -94,7 +99,7 @@ describe('initializeStore', () => {
         const save = mock(async () => ok(undefined));
         const ensure = mock(async () => ok(undefined));
         const adapter = createMockStorageAdapter({
-            stores: { save },
+            config: { saveStore: save },
             categories: { ensure },
         });
 
@@ -145,10 +150,10 @@ describe('initializeStore', () => {
 
     it('should return STORE_CREATE_FAILED errors from save', async () => {
         const adapter = createMockStorageAdapter({
-            stores: {
-                save: async () =>
+            config: {
+                saveStore: async () =>
                     err({
-                        code: 'STORE_CREATE_FAILED' as const,
+                        code: 'CONFIG_WRITE_FAILED' as const,
                         message: 'Failed to create store',
                     }),
             },

@@ -64,11 +64,11 @@ import type { CategoryPath } from '@yeseh/cortex-core';
  * ```
  *
  * @see {@link CategoryStorage} - The interface this class implements
- * @see {@link FilesystemMemoryStorage} - For memory file operations
+ * @see {@link FilesystemMemoryAdapter} - For memory file operations
  */
-export class FilesystemCategoryStorage implements CategoryAdapter {
+export class FilesystemCategoryAdapter implements CategoryAdapter {
     /**
-     * Creates a new FilesystemCategoryStorage instance.
+     * Creates a new FilesystemCategoryAdapter instance.
      *
      * @param ctx - Filesystem context containing storage root and file extensions
      */

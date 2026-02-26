@@ -11,11 +11,16 @@ import { MEMORY_SUBDIR } from '../../config.ts';
 import { type Memory, Cortex } from '@yeseh/cortex-core';
 import { createMemory } from '@yeseh/cortex-core/memory';
 import { createCategory } from '@yeseh/cortex-core/category';
-import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
+import { FilesystemConfigAdapter, FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 import type { ConfigStores, CortexConfig, CortexContext } from '@yeseh/cortex-core';
 import { PassThrough } from 'node:stream';
 
 export const TestDate = new Date('2024-01-01T00:00:00Z'); // Fixed date for test determinism
+
+const createFilesystemStorageAdapter = (storeRoot: string): FilesystemStorageAdapter => {
+    const configAdapter = new FilesystemConfigAdapter(join(storeRoot, '.config.yaml'));
+    return new FilesystemStorageAdapter(configAdapter, { rootDirectory: storeRoot });
+};
 
 // Test configuration
 export const createTestConfig = (_dataPath: string): CortexConfig => ({
@@ -60,7 +65,7 @@ export const createTestContext = (testDir: string): CortexContext => {
                 );
             }
             const storePath = store.properties.path as string;
-            return new FilesystemStorageAdapter({ rootDirectory: storePath });
+            return createFilesystemStorageAdapter(storePath);
         },
     });
 
@@ -119,7 +124,7 @@ export const createTestContextWithStores = (
                 );
             }
             const storePath = store.properties.path as string;
-            return new FilesystemStorageAdapter({ rootDirectory: storePath });
+            return createFilesystemStorageAdapter(storePath);
         },
     });
 
@@ -196,7 +201,7 @@ export const createTestCategory = async (
     storeRoot: string,
     categoryPath: string,
 ): Promise<void> => {
-    const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
+    const adapter = createFilesystemStorageAdapter(storeRoot);
     const result = await createCategory(adapter.categories, categoryPath);
     if (!result.ok()) {
         throw new Error(`Failed to create category '${categoryPath}': ${result.error.message}`);
@@ -209,7 +214,7 @@ export const createMemoryFile = async (
     slugPath: string,
     contents: Partial<Memory>,
 ): Promise<void> => {
-    const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
+    const adapter = createFilesystemStorageAdapter(storeRoot);
 
     // Extract category path from memory path and ensure it exists
     const pathSegments = slugPath.split('/');

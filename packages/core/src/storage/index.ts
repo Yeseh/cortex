@@ -75,8 +75,8 @@ export interface StorageAdapter {
     indexes: IndexAdapter;
     /** Category operations (list, create, delete) */
     categories: CategoryAdapter;
-    /** Store operations */
-    stores: StoreAdapter;
+    /** Store configuration operations */
+    config: ConfigAdapter;
 }
 
 export {

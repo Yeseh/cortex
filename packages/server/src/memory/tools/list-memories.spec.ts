@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { MEMORY_SUBDIR } from '../../config.ts';
-import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
+import { FilesystemConfigAdapter, FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 import { createMemoryFile, createTestContext, createTestDir } from './test-utils.ts';
 import type { CortexContext } from '@yeseh/cortex-core';
 import { listMemoriesHandler, type ListMemoriesInput } from './list-memories.ts';
@@ -150,7 +150,8 @@ describe('cortex_list_memories tool', () => {
 
     it('should include subcategory descriptions in response', async () => {
         const storeRoot = join(testDir, MEMORY_SUBDIR);
-        const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
+        const configAdapter = new FilesystemConfigAdapter(join(testDir, 'config.yaml'));
+        const adapter = new FilesystemStorageAdapter(configAdapter, { rootDirectory: storeRoot });
 
         await adapter.indexes.write(categoryPath('project'), {
             memories: [],

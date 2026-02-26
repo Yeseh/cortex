@@ -4,6 +4,7 @@ import {
     getDefaultSettings,
     ok,
     parseConfig,
+    type ConfigAdapter,
     type ConfigValidationError,
     type CortexConfig,
     type CortexContext,
@@ -11,7 +12,7 @@ import {
 } from '@yeseh/cortex-core';
 import { homedir } from 'os';
 import { isAbsolute, resolve } from 'path';
-import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
+import { FilesystemConfigAdapter, FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 import { stdin, stdout } from 'process';
 import type { ServerConfig } from './config';
 import { exists, mkdir } from 'fs/promises';
@@ -47,25 +48,23 @@ export interface ConfigLoadOptions {
     localConfigPath?: string;
 }
 
-const createAdapterFactory = (config: CortexConfig) => {
+const createAdapterFactory = (configAdapter: ConfigAdapter) => {
     // TODO: This should return results
     return (storeName: string) => {
-        const storeEntry = config.stores[storeName];
-        if (!storeEntry) {
+        const stores = configAdapter.stores;
+        const store = stores ? stores[storeName] : null;
+        if (!store) {
             throw new Error(`Store '${storeName}' not found in configuration.`);
         }
-        if (storeEntry.kind === 'filesystem') {
-            const storePath = storeEntry.properties.path;
-            if (typeof storePath !== 'string') {
-                throw new Error(`Store '${storeName}' has invalid path configuration.`);
-            }
-            return new FilesystemStorageAdapter({
-                rootDirectory: storePath,
-            });
-        } else {
-            throw new Error(
-                `Unsupported store kind '${storeEntry.kind}' for store '${storeName}'.`
-            );
+
+        switch (store.kind) {
+            case 'filesystem':
+                const path = store.properties.path as string;
+                return new FilesystemStorageAdapter(configAdapter, {
+                    rootDirectory: path,
+                });
+            default:
+                throw new Error(`Unsupported store kind '${store.kind}' for store '${storeName}'.`);
         }
     };
 };
@@ -81,22 +80,15 @@ export const createCortexContext = async (
         const dir = options.dataPath ?? resolve(homedir(), '.config', 'cortex');
         const absoluteDir = makeAbsolute(dir);
         const configPath = resolve(absoluteDir, 'config.yaml');
+        const storesDir = resolve(absoluteDir, 'stores');
 
-        const dataPathExists = await exists(absoluteDir);
         const configPathExists = await exists(configPath);
+        const configAdapter = new FilesystemConfigAdapter(configPath);
 
-        if (!dataPathExists) {
-            await mkdir(absoluteDir, { recursive: true });
-        }
-
-        let config: CortexConfig;
         if (!configPathExists) {
             const defaultSettings = getDefaultSettings();
-            const defaultStorePath = resolve(absoluteDir, 'stores', 'default');
-
-            await mkdir(defaultStorePath, { recursive: true });
-
-            config = {
+            const globalStorePath = resolve(storesDir, 'global');
+            const config: CortexConfig = {
                 settings: {
                     outputFormat: options.outputFormat ?? defaultSettings.outputFormat,
                     defaultStore: options.defaultStore ?? defaultSettings.defaultStore,
@@ -109,46 +101,26 @@ export const createCortexContext = async (
                         categoryMode: 'free',
                         categories: {}, // TODO: category templates for MCP servers. ENV does not make sense
                         properties: {
-                            path: defaultStorePath,
+                            path: globalStorePath,
                         },
                     },
                 },
             };
 
-            await Bun.write(configPath, Bun.YAML.stringify(config, null, 2));
-        } else {
-            // Read config file using Bun.file()
-            const configFile = Bun.file(configPath);
-            let contents: string;
-            try {
-                if (!(await configFile.exists())) {
-                    return err({
-                        code: 'CONFIG_NOT_FOUND',
-                        message: `Config file not found at ${configPath}. Run 'cortex init' to create one.`,
-                        path: configPath,
-                    });
-                }
-                contents = await configFile.text();
-            } catch (error) {
+            // If config doesn't exist, we will create a default one. But we still need to initialize the adapter to set its internal state.
+            const initResult = await configAdapter.initializeConfig(config);
+            if (!initResult.ok()) {
                 return err({
-                    code: 'CONFIG_READ_FAILED',
-                    message: `Failed to read config file at ${configPath}.`,
-                    path: configPath,
-                    cause: error,
+                    code: 'CONFIG_INIT_FAILED',
+                    message: `Failed to initialize configuration at ${configPath}.`,
                 });
             }
-
-            // Parse and validate config file
-            const parseResult = parseConfig(contents);
-            if (!parseResult.ok()) {
-                return parseResult;
-            }
-
-            config = parseResult.value;
         }
-
-        const storesDir = resolve(absoluteDir, 'stores');
-        const adapterFactory = createAdapterFactory(config);
+        else {
+            await configAdapter.reload();
+        }
+        const config = configAdapter.data!;
+        const adapterFactory = createAdapterFactory(configAdapter);
         const cortex = Cortex.init({
             settings: config.settings,
             stores: config.stores,
