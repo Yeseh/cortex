@@ -34,19 +34,14 @@ describe('MCP error handling integration', () => {
             sandbox.baseUrl,
             'cortex_get_memory',
             { store: 'default' },
-            60,
+            60
         );
 
         expectMcpToolError(response);
     });
 
     it('should return protocol error for unknown tool', async () => {
-        const response = await callTool(
-            sandbox.baseUrl,
-            'cortex_tool_does_not_exist',
-            {},
-            61,
-        );
+        const response = await callTool(sandbox.baseUrl, 'cortex_tool_does_not_exist', {}, 61);
 
         expectMcpToolError(response, 'not found');
     });
@@ -56,15 +51,16 @@ describe('MCP error handling integration', () => {
             sandbox.baseUrl,
             'cortex_list_memories',
             { store: 'missing-store', category: 'notes' },
-            62,
+            62
         );
+        console.log('DEBUG invalidStore:', JSON.stringify(invalidStore, null, 2));
         expectMcpToolError(invalidStore, 'Store');
 
         const invalidPath = await callTool(
             sandbox.baseUrl,
             'cortex_create_category',
             { store: 'default', path: '   ' },
-            63,
+            63
         );
         expectMcpToolError(invalidPath, 'Category path is required');
     });
@@ -90,7 +86,7 @@ describe('MCP error handling integration', () => {
             body: oversizedPayload,
         });
 
-        const body = await response.json() as { error?: string };
+        const body = (await response.json()) as { error?: string };
         expect(response.status).toBe(413);
         expect(body.error).toContain('too large');
     });

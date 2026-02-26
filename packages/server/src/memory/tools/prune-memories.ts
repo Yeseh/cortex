@@ -22,7 +22,7 @@ export const pruneMemoriesInputSchema = z.object({
 /** Input type for prune_memories tool */
 export interface PruneMemoriesInput {
     store: string;
-    dryRun?: boolean;
+    dry_run?: boolean;
 }
 
 /**
@@ -39,7 +39,7 @@ export const pruneMemoriesHandler = async (
     }
 
     const store = storeResult.value;
-    const dryRun = input.dryRun ?? false;
+    const dryRun = input.dry_run ?? false;
     const rootClient = store.root();
     if (!rootClient.ok()) {
         throw new McpError(ErrorCode.InternalError, rootClient.error.message);

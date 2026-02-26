@@ -165,6 +165,21 @@ describe('resolveMemoryContentInput', () => {
                 expect(result.value.source).toBe('stdin');
             }
         });
+
+        it('should skip stdin when stdinRequested is false', async () => {
+            const mockStdin = createMockStdin('Ignored stdin');
+
+            const result = await resolveInput({
+                stream: mockStdin,
+                stdinRequested: false,
+            });
+
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
+                expect(result.value.content).toBeNull();
+                expect(result.value.source).toBe('none');
+            }
+        });
     });
 
     describe('multiple sources error', () => {
@@ -222,7 +237,7 @@ describe('resolveMemoryContentInput', () => {
     });
 
     describe('missing content error', () => {
-        it('should error when no source was provided', async () => {
+        it('should return null content when no source was provided', async () => {
             const result = await resolveInput({
                 content: undefined,
                 filePath: undefined,

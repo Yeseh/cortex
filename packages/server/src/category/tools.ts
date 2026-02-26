@@ -21,6 +21,7 @@ import type { CategoryMode, ConfigCategories } from '@yeseh/cortex-core';
 import { MAX_DESCRIPTION_LENGTH } from '@yeseh/cortex-core/category';
 import { storeNameSchema } from '../store/tools.ts';
 import { type CortexContext } from '@yeseh/cortex-core';
+import { errorResponse } from '../response.ts';
 
 /**
  * Options for category tool registration.
@@ -120,7 +121,7 @@ export const setCategoryDescriptionInputSchema = z.object({
         .string()
         .max(
             MAX_DESCRIPTION_LENGTH,
-            `Description must be ${MAX_DESCRIPTION_LENGTH} characters or less`,
+            `Description must be ${MAX_DESCRIPTION_LENGTH} characters or less`
         )
         .describe('Category description (empty string to clear)'),
 });
@@ -226,7 +227,7 @@ const parseInput = <T>(schema: z.ZodSchema<T>, input: unknown): T => {
 export const createCategoryHandler = async (
     ctx: CortexContext,
     input: CreateCategoryInput,
-    modeContext?: CategoryModeContext,
+    modeContext?: CategoryModeContext
 ): Promise<McpToolResponse> => {
     // Validate input path: empty string should be considered invalid
     if (typeof input.path !== 'string' || input.path.trim() === '') {
@@ -258,13 +259,15 @@ export const createCategoryHandler = async (
     }
 
     return {
-        content: [{
-            type: 'text',
-            text: JSON.stringify({
-                path: result.value.path,
-                created: result.value.created,
-            }),
-        }],
+        content: [
+            {
+                type: 'text',
+                text: JSON.stringify({
+                    path: result.value.path,
+                    created: result.value.created,
+                }),
+            },
+        ],
     };
 };
 
@@ -302,7 +305,7 @@ export const createCategoryHandler = async (
 export const setCategoryDescriptionHandler = async (
     ctx: CortexContext,
     input: SetCategoryDescriptionInput,
-    modeContext?: CategoryModeContext,
+    modeContext?: CategoryModeContext
 ): Promise<McpToolResponse> => {
     const storeResult = ctx.cortex.getStore(input.store);
     if (!storeResult.ok()) {
@@ -330,7 +333,7 @@ export const setCategoryDescriptionHandler = async (
         adapter.categories,
         input.path,
         input.description,
-        modeContext,
+        modeContext
     );
 
     if (!result.ok()) {
@@ -347,13 +350,15 @@ export const setCategoryDescriptionHandler = async (
     }
 
     return {
-        content: [{
-            type: 'text',
-            text: JSON.stringify({
-                path: result.value.path,
-                description: result.value.description,
-            }),
-        }],
+        content: [
+            {
+                type: 'text',
+                text: JSON.stringify({
+                    path: result.value.path,
+                    description: result.value.description,
+                }),
+            },
+        ],
     };
 };
 
@@ -384,7 +389,7 @@ export const setCategoryDescriptionHandler = async (
 export const deleteCategoryHandler = async (
     ctx: CortexContext,
     input: DeleteCategoryInput,
-    modeContext?: CategoryModeContext,
+    modeContext?: CategoryModeContext
 ): Promise<McpToolResponse> => {
     const storeResult = ctx.cortex.getStore(input.store);
     if (!storeResult.ok()) {
@@ -411,13 +416,15 @@ export const deleteCategoryHandler = async (
     }
 
     return {
-        content: [{
-            type: 'text',
-            text: JSON.stringify({
-                path: result.value.path,
-                deleted: result.value.deleted,
-            }),
-        }],
+        content: [
+            {
+                type: 'text',
+                text: JSON.stringify({
+                    path: result.value.path,
+                    deleted: result.value.deleted,
+                }),
+            },
+        ],
     };
 };
 
@@ -463,14 +470,14 @@ export const deleteCategoryHandler = async (
 export const registerCategoryTools = (
     server: McpServer,
     ctx: CortexContext,
-    categoryConfig?: CategoryToolsOptions,
+    categoryConfig?: CategoryToolsOptions
 ): void => {
     const mode = categoryConfig?.mode ?? 'free';
     const modeContext: CategoryModeContext | undefined = categoryConfig
         ? {
-            mode,
-            configCategories: categoryConfig.configCategories,
-        }
+              mode,
+              configCategories: categoryConfig.configCategories,
+          }
         : undefined;
 
     // In strict mode, don't register create/delete tools
@@ -480,9 +487,14 @@ export const registerCategoryTools = (
             'Create a category and its parent hierarchy',
             createCategoryInputSchema.shape,
             async (input) => {
-                const parsed = parseInput(createCategoryInputSchema, input);
-                return createCategoryHandler(ctx, parsed, modeContext);
-            },
+                try {
+                    const parsed = parseInput(createCategoryInputSchema, input);
+                    return createCategoryHandler(ctx, parsed, modeContext);
+                } catch (error) {
+                    if (error instanceof McpError) return errorResponse(error.message);
+                    throw error;
+                }
+            }
         );
 
         server.tool(
@@ -490,9 +502,14 @@ export const registerCategoryTools = (
             'Delete a category and all its contents recursively',
             deleteCategoryInputSchema.shape,
             async (input) => {
-                const parsed = parseInput(deleteCategoryInputSchema, input);
-                return deleteCategoryHandler(ctx, parsed, modeContext);
-            },
+                try {
+                    const parsed = parseInput(deleteCategoryInputSchema, input);
+                    return deleteCategoryHandler(ctx, parsed, modeContext);
+                } catch (error) {
+                    if (error instanceof McpError) return errorResponse(error.message);
+                    throw error;
+                }
+            }
         );
     }
 
@@ -502,8 +519,13 @@ export const registerCategoryTools = (
         'Set or clear a category description (auto-creates category)',
         setCategoryDescriptionInputSchema.shape,
         async (input) => {
-            const parsed = parseInput(setCategoryDescriptionInputSchema, input);
-            return setCategoryDescriptionHandler(ctx, parsed, modeContext);
-        },
+            try {
+                const parsed = parseInput(setCategoryDescriptionInputSchema, input);
+                return setCategoryDescriptionHandler(ctx, parsed, modeContext);
+            } catch (error) {
+                if (error instanceof McpError) return errorResponse(error.message);
+                throw error;
+            }
+        }
     );
 };

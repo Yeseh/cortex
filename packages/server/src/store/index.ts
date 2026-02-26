@@ -25,6 +25,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CortexContext } from '@yeseh/cortex-core';
 import { listStoresHandler, createStoreHandler, storeNameSchema } from './tools.ts';
+import { wrapToolHandler } from '../response.ts';
 
 /**
  * Registers store management tools with the MCP server.
@@ -54,7 +55,7 @@ export const registerStoreTools = (server: McpServer, ctx: CortexContext): void 
         {
             description: 'List all available memory stores',
         },
-        async () => listStoresHandler(ctx),
+        wrapToolHandler(async () => listStoresHandler(ctx))
     );
 
     // Register cortex_create_store tool with input schema
@@ -64,17 +65,23 @@ export const registerStoreTools = (server: McpServer, ctx: CortexContext): void 
             description: 'Create a new memory store',
             inputSchema: {
                 name: storeNameSchema.describe(
-                    'Name of the store to create (alphanumeric, hyphens, underscores only)',
+                    'Name of the store to create (alphanumeric, hyphens, underscores only)'
                 ),
             },
         },
-        async ({ name }) => createStoreHandler(ctx, { name: name as string }),
+        wrapToolHandler(async ({ name }) => createStoreHandler(ctx, { name: name as string }))
     );
 };
 
 // Re-export tools for direct usage
 export { listStores, storeNameSchema, createStoreInputSchema } from './tools.ts';
-export type { StoreToolError, StoreToolErrorCode, CreateStoreInput, StoreInfo, ListStoresResult } from './tools.ts';
+export type {
+    StoreToolError,
+    StoreToolErrorCode,
+    CreateStoreInput,
+    StoreInfo,
+    ListStoresResult,
+} from './tools.ts';
 
 // Re-export shared utilities
 export { convertToCategories } from './shared.ts';

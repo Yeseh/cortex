@@ -7,6 +7,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { parseInput } from './shared.ts';
 import type { CortexContext } from '@yeseh/cortex-core';
+import { wrapToolHandler } from '../../response.ts';
 import { addMemoryHandler, addMemoryInputSchema, type AddMemoryInput } from './add-memory.ts';
 import { getMemoryHandler, getMemoryInputSchema, type GetMemoryInput } from './get-memory.ts';
 import {
@@ -81,10 +82,10 @@ export const registerMemoryTools = (server: McpServer, ctx: CortexContext): void
             description: 'Create a new memory with auto-creation of stores and categories',
             inputSchema: addMemoryInputSchema.shape,
         },
-        async (input) => {
+        wrapToolHandler(async (input) => {
             const parsed = parseInput(addMemoryInputSchema, input);
             return addMemoryHandler(ctx, parsed);
-        },
+        })
     );
 
     server.registerTool(
@@ -93,11 +94,10 @@ export const registerMemoryTools = (server: McpServer, ctx: CortexContext): void
             description: 'Retrieve memory content and metadata',
             inputSchema: getMemoryInputSchema.shape,
         },
-
-        async (input) => {
+        wrapToolHandler(async (input) => {
             const parsed = parseInput(getMemoryInputSchema, input);
             return getMemoryHandler(ctx, parsed);
-        },
+        })
     );
 
     server.registerTool(
@@ -106,10 +106,10 @@ export const registerMemoryTools = (server: McpServer, ctx: CortexContext): void
             description: 'Update memory content or metadata',
             inputSchema: updateMemoryInputSchema.shape,
         },
-        async (input) => {
+        wrapToolHandler(async (input) => {
             const parsed = parseInput(updateMemoryInputSchema, input);
             return updateMemoryHandler(ctx, parsed);
-        },
+        })
     );
 
     server.registerTool(
@@ -118,10 +118,10 @@ export const registerMemoryTools = (server: McpServer, ctx: CortexContext): void
             description: 'Delete a memory',
             inputSchema: removeMemoryInputSchema.shape,
         },
-        async (input) => {
+        wrapToolHandler(async (input) => {
             const parsed = parseInput(removeMemoryInputSchema, input);
             return removeMemoryHandler(ctx, parsed);
-        },
+        })
     );
 
     server.registerTool(
@@ -130,10 +130,10 @@ export const registerMemoryTools = (server: McpServer, ctx: CortexContext): void
             description: 'Move or rename a memory',
             inputSchema: moveMemoryInputSchema.shape,
         },
-        async (input) => {
+        wrapToolHandler(async (input) => {
             const parsed = parseInput(moveMemoryInputSchema, input);
             return moveMemoryHandler(ctx, parsed);
-        },
+        })
     );
 
     server.registerTool(
@@ -142,10 +142,10 @@ export const registerMemoryTools = (server: McpServer, ctx: CortexContext): void
             description: 'List memories in a category',
             inputSchema: listMemoriesInputSchema.shape,
         },
-        async (input) => {
+        wrapToolHandler(async (input) => {
             const parsed = parseInput(listMemoriesInputSchema, input);
             return listMemoriesHandler(ctx, parsed);
-        },
+        })
     );
 
     server.registerTool(
@@ -154,10 +154,10 @@ export const registerMemoryTools = (server: McpServer, ctx: CortexContext): void
             description: 'Delete all expired memories',
             inputSchema: pruneMemoriesInputSchema.shape,
         },
-        async (input) => {
+        wrapToolHandler(async (input) => {
             const parsed = parseInput(pruneMemoriesInputSchema, input);
             return pruneMemoriesHandler(ctx, parsed);
-        },
+        })
     );
 
     server.registerTool(
@@ -166,10 +166,10 @@ export const registerMemoryTools = (server: McpServer, ctx: CortexContext): void
             description: 'Rebuild category indexes for a store',
             inputSchema: reindexStoreInputSchema.shape,
         },
-        async (input) => {
+        wrapToolHandler(async (input) => {
             const parsed = parseInput(reindexStoreInputSchema, input);
             return reindexStoreHandler(ctx, parsed);
-        },
+        })
     );
 
     server.registerTool(
@@ -178,9 +178,9 @@ export const registerMemoryTools = (server: McpServer, ctx: CortexContext): void
             description: 'Retrieve the N most recently updated memories across a store or category',
             inputSchema: getRecentMemoriesInputSchema.shape,
         },
-        async (input) => {
+        wrapToolHandler(async (input) => {
             const parsed = parseInput(getRecentMemoriesInputSchema, input);
             return getRecentMemoriesHandler(ctx, parsed);
-        },
+        })
     );
 };

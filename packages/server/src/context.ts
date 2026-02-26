@@ -1,10 +1,20 @@
-import { Cortex, err, getDefaultSettings, ok, parseConfig, type ConfigValidationError, type CortexConfig, type CortexContext, type Result } from "@yeseh/cortex-core";
-import { homedir } from "os"
-import { isAbsolute, resolve } from "path"
-import { FilesystemStorageAdapter } from "@yeseh/cortex-storage-fs";
-import {stdin, stdout} from 'process';
-import type { ServerConfig } from "./config";
-import { exists, mkdir } from "fs/promises";
+import {
+    Cortex,
+    err,
+    getDefaultSettings,
+    ok,
+    parseConfig,
+    type ConfigValidationError,
+    type CortexConfig,
+    type CortexContext,
+    type Result,
+} from '@yeseh/cortex-core';
+import { homedir } from 'os';
+import { isAbsolute, resolve } from 'path';
+import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
+import { stdin, stdout } from 'process';
+import type { ServerConfig } from './config';
+import { exists, mkdir } from 'fs/promises';
 
 // TODO: Much of this module should move to the FS adapter, since it's all about loading config from the filesystem. The CLI command handlers should just call into the core module to load config and create a context, rather than having all the logic here.
 
@@ -17,12 +27,13 @@ const makeAbsolute = (pathStr: string): string => {
 
 export const validateStorePath = (
     storePath: string,
-    storeName: string,
+    storeName: string
 ): Result<void, ConfigValidationError> => {
     if (!isAbsolute(storePath)) {
         return err({
             code: 'INVALID_STORE_PATH',
-            message: `Store '${storeName}' path must be absolute. Got: ${storePath}. ` +
+            message:
+                `Store '${storeName}' path must be absolute. Got: ${storePath}. ` +
                 "Use an absolute path like '/home/user/.cortex/memory'.",
             store: storeName,
         });
@@ -38,16 +49,17 @@ export interface ConfigLoadOptions {
 
 /* Creates a CortexContext from the environment, including loading configuration and setting up dependencies.
  * This function is used to create a context object that can be injected into command handlers for consistent access to the Cortex client and other utilities.
- * The MCP server is self-initializing, so it also uses this function to create a context for its handlers. 
+ * The MCP server is self-initializing, so it also uses this function to create a context for its handlers.
  */
-export const createCortexContext = async (options: ServerConfig): 
-Promise<Result<CortexContext, any>> => {
+export const createCortexContext = async (
+    options: ServerConfig
+): Promise<Result<CortexContext, any>> => {
     try {
         const dir = options.dataPath ?? resolve(homedir(), '.config', 'cortex');
         const absoluteDir = makeAbsolute(dir);
         const configPath = resolve(absoluteDir, 'config.yaml');
 
-        const dataPathExists = await exists(absoluteDir); 
+        const dataPathExists = await exists(absoluteDir);
         const configPathExists = await exists(configPath);
 
         if (!dataPathExists) {
@@ -67,22 +79,21 @@ Promise<Result<CortexContext, any>> => {
                     defaultStore: options.defaultStore ?? defaultSettings.defaultStore,
                 },
                 stores: {
-                    // TODO: Allow configuring additional stores and categories for MCP servers. 
+                    // TODO: Allow configuring additional stores and categories for MCP servers.
                     // For now we just create a default store with a free category mode
                     default: {
                         kind: 'filesystem',
                         categoryMode: 'free',
-                        categories: {}, // TODO: category templates for MCP servers. ENV does not make sense 
+                        categories: {}, // TODO: category templates for MCP servers. ENV does not make sense
                         properties: {
-                            path: defaultStorePath 
+                            path: defaultStorePath,
                         },
-                    }
+                    },
                 },
             };
 
             await Bun.write(configPath, Bun.YAML.stringify(config, null, 2));
-        }
-        else {
+        } else {
             // Read config file using Bun.file()
             const configFile = Bun.file(configPath);
             let contents: string;
@@ -95,8 +106,7 @@ Promise<Result<CortexContext, any>> => {
                     });
                 }
                 contents = await configFile.text();
-            }
-            catch (error) {
+            } catch (error) {
                 return err({
                     code: 'CONFIG_READ_FAILED',
                     message: `Failed to read config file at ${configPath}.`,
@@ -114,16 +124,28 @@ Promise<Result<CortexContext, any>> => {
             config = parseResult.value;
         }
 
-        const adapterFactory = (storepath: string) => {
+        const storesDir = resolve(absoluteDir, 'stores');
+
+        const adapterFactory = (storeName: string) => {
+            // Look up store path from config first
+            const storeEntry = config.stores[storeName];
+            const storePath = storeEntry?.properties?.path as string | undefined;
+
+            // Fall back to the conventional stores directory for dynamically
+            // created stores that aren't in the initial config yet.
+            const resolvedPath = storePath
+                ? makeAbsolute(storePath)
+                : resolve(storesDir, storeName);
+
             return new FilesystemStorageAdapter({
-                rootDirectory: storepath
+                rootDirectory: resolvedPath,
             });
-        }
+        };
 
         const cortex = Cortex.init({
             settings: config.settings,
             stores: config.stores,
-            adapterFactory: adapterFactory
+            adapterFactory: adapterFactory,
         });
 
         const now = () => new Date();
@@ -135,11 +157,13 @@ Promise<Result<CortexContext, any>> => {
             now,
             stdin,
             stdout,
+            globalDataPath: storesDir,
         };
 
         return ok(context);
+    } catch (error) {
+        throw new Error(
+            `Unexpected error creating Cortex context: ${error instanceof Error ? error.message : String(error)}`
+        );
     }
-    catch (error) {
-        throw new Error(`Unexpected error creating Cortex context: ${error instanceof Error ? error.message : String(error)}`);
-    }
-}
+};

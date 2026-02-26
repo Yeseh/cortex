@@ -6,7 +6,12 @@ import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { MEMORY_SUBDIR } from '../../config.ts';
-import { createMemoryFile, createTestContext, createTestContextWithStores, createTestDir } from './test-utils.ts';
+import {
+    createMemoryFile,
+    createTestContext,
+    createTestContextWithStores,
+    createTestDir,
+} from './test-utils.ts';
 import type { CortexContext } from '@yeseh/cortex-core';
 import { ok, err } from '@yeseh/cortex-core';
 import { getMemoryHandler } from './get-memory.ts';
@@ -82,21 +87,20 @@ describe('cortex_prune_memories tool', () => {
         expect(output.pruned_count).toBe(2);
         expect(output.pruned).toHaveLength(2);
 
-        const getResult = await getMemoryHandler(
-            ctx,
-            { store: 'default', path: 'project/active' },
-        );
+        const getResult = await getMemoryHandler(ctx, { store: 'default', path: 'project/active' });
         expect(getResult.content[0]!.text).toContain('Active memory');
 
         await expect(
-            getMemoryHandler(ctx, { store: 'default', path: 'project/expired-1' }),
+            getMemoryHandler(ctx, { store: 'default', path: 'project/expired-1' })
         ).rejects.toThrow('not found');
     });
 
     it('should return zero when no memories are expired', async () => {
         const cleanStorePath = join(testDir, 'clean-store');
         await mkdir(cleanStorePath, { recursive: true });
-        const ctxWithStores = createTestContextWithStores(testDir, { 'clean-store': cleanStorePath });
+        const ctxWithStores = createTestContextWithStores(testDir, {
+            'clean-store': cleanStorePath,
+        });
 
         await createMemoryFile(cleanStorePath, 'project/active', {
             metadata: {
@@ -123,7 +127,7 @@ describe('cortex_prune_memories tool', () => {
     it('should return what would be pruned in dry_run mode without deleting', async () => {
         const input: PruneMemoriesInput = {
             store: 'default',
-            dryRun: true,
+            dry_run: true,
         };
 
         const result = await pruneMemoriesHandler(ctx, input);
@@ -133,23 +137,27 @@ describe('cortex_prune_memories tool', () => {
         expect(output.would_prune_count).toBe(2);
         expect(output.would_prune).toHaveLength(2);
 
-        const getResult1 = await getMemoryHandler(
-            ctx,
-            { store: 'default', path: 'project/expired-1', include_expired: true },
-        );
+        const getResult1 = await getMemoryHandler(ctx, {
+            store: 'default',
+            path: 'project/expired-1',
+            include_expired: true,
+        });
         expect(getResult1.content[0]!.text).toContain('Expired 1');
 
-        const getResult2 = await getMemoryHandler(
-            ctx,
-            { store: 'default', path: 'human/expired-2', include_expired: true },
-        );
+        const getResult2 = await getMemoryHandler(ctx, {
+            store: 'default',
+            path: 'human/expired-2',
+            include_expired: true,
+        });
         expect(getResult2.content[0]!.text).toContain('Expired 2');
     });
 
     it('should return zero in dry_run mode when no memories are expired', async () => {
         const cleanStorePath = join(testDir, 'dry-clean-store');
         await mkdir(cleanStorePath, { recursive: true });
-        const ctxWithStores = createTestContextWithStores(testDir, { 'dry-clean-store': cleanStorePath });
+        const ctxWithStores = createTestContextWithStores(testDir, {
+            'dry-clean-store': cleanStorePath,
+        });
 
         await createMemoryFile(cleanStorePath, 'project/active', {
             metadata: {
@@ -164,7 +172,7 @@ describe('cortex_prune_memories tool', () => {
 
         const input: PruneMemoriesInput = {
             store: 'dry-clean-store',
-            dryRun: true,
+            dry_run: true,
         };
 
         const result = await pruneMemoriesHandler(ctxWithStores, input);
@@ -184,13 +192,13 @@ describe('pruneMemoriesHandler (unit)', () => {
     it('should throw McpError(InvalidParams) when store resolution fails', async () => {
         const ctx = createMockCortexContext({
             cortex: createMockCortex({
-                getStore: mock(() => err({ code: 'STORE_NOT_FOUND', message: 'Store not found' }) as any),
+                getStore: mock(
+                    () => err({ code: 'STORE_NOT_FOUND', message: 'Store not found' }) as any
+                ),
             }) as any,
         });
 
-        await expectMcpInvalidParams(() =>
-            pruneMemoriesHandler(ctx, { store: 'missing' }),
-        );
+        await expectMcpInvalidParams(() => pruneMemoriesHandler(ctx, { store: 'missing' }));
     });
 
     it('should throw McpError(InternalError) when store.root() fails', async () => {
@@ -201,9 +209,7 @@ describe('pruneMemoriesHandler (unit)', () => {
             cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
         });
 
-        await expectMcpInternalError(() =>
-            pruneMemoriesHandler(ctx, { store: 'default' }),
-        );
+        await expectMcpInternalError(() => pruneMemoriesHandler(ctx, { store: 'default' }));
     });
 
     it('should throw McpError(InternalError) when prune() fails', async () => {
@@ -217,20 +223,19 @@ describe('pruneMemoriesHandler (unit)', () => {
             cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
         });
 
-        await expectMcpInternalError(() =>
-            pruneMemoriesHandler(ctx, { store: 'default' }),
-        );
+        await expectMcpInternalError(() => pruneMemoriesHandler(ctx, { store: 'default' }));
     });
 
     it('should return dry_run response with would_prune list when dryRun=true', async () => {
         const expiresAt = new Date('2024-01-01');
         const rootCategory = createMockCategoryClient({
-            prune: mock(async () => ok({
-                pruned: [
-                    { path: { toString: () => 'project/old-memory' }, expiresAt },
-                ],
-                dryRun: true,
-            }) as any),
+            prune: mock(
+                async () =>
+                    ok({
+                        pruned: [{ path: { toString: () => 'project/old-memory' }, expiresAt }],
+                        dryRun: true,
+                    }) as any
+            ),
         });
         const storeClient = createMockStoreClient({
             root: mock(() => ok(rootCategory) as any),
@@ -239,7 +244,7 @@ describe('pruneMemoriesHandler (unit)', () => {
             cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
         });
 
-        const result = await pruneMemoriesHandler(ctx, { store: 'default', dryRun: true });
+        const result = await pruneMemoriesHandler(ctx, { store: 'default', dry_run: true });
         const output = parseResponseJson(result) as any;
 
         expect(output.dry_run).toBe(true);
@@ -255,13 +260,16 @@ describe('pruneMemoriesHandler (unit)', () => {
     it('should return pruned response when dryRun=false', async () => {
         const expiresAt = new Date('2023-06-01');
         const rootCategory = createMockCategoryClient({
-            prune: mock(async () => ok({
-                pruned: [
-                    { path: { toString: () => 'stale/memory-a' }, expiresAt },
-                    { path: { toString: () => 'stale/memory-b' }, expiresAt },
-                ],
-                dryRun: false,
-            }) as any),
+            prune: mock(
+                async () =>
+                    ok({
+                        pruned: [
+                            { path: { toString: () => 'stale/memory-a' }, expiresAt },
+                            { path: { toString: () => 'stale/memory-b' }, expiresAt },
+                        ],
+                        dryRun: false,
+                    }) as any
+            ),
         });
         const storeClient = createMockStoreClient({
             root: mock(() => ok(rootCategory) as any),
@@ -270,7 +278,7 @@ describe('pruneMemoriesHandler (unit)', () => {
             cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
         });
 
-        const result = await pruneMemoriesHandler(ctx, { store: 'default', dryRun: false });
+        const result = await pruneMemoriesHandler(ctx, { store: 'default', dry_run: false });
         const output = parseResponseJson(result) as any;
 
         expect(output.pruned_count).toBe(2);
