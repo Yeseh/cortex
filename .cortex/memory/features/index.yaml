@@ -1,1 +1,24 @@
-{memories: [{path: features/category-hierarchy-enforcement,token_estimate: 489,updated_at: 2026-02-17T20:13:00.151Z},{path: features/dashboard,token_estimate: 378,updated_at: 2026-02-05T21:09:01.437Z},{path: features/fluent-client-api,token_estimate: 631,updated_at: 2026-02-17T20:36:26.000Z},{path: features/get-recent-memories,token_estimate: 204,updated_at: 2026-02-13T18:41:21.509Z},{path: features/sqlite-derived-index,token_estimate: 428,updated_at: 2026-02-13T21:47:14.829Z}],subcategories: []}
+memories: 
+  - path: features/category-hierarchy-enforcement
+    token_estimate: 489
+    updated_at: 2026-02-17T20:13:00.151Z
+  - path: features/category-policies
+    token_estimate: 536
+    updated_at: 2026-02-26T19:40:49.916Z
+  - path: features/dashboard
+    token_estimate: 378
+    updated_at: 2026-02-05T21:09:01.437Z
+  - path: features/fluent-client-api
+    token_estimate: 631
+    updated_at: 2026-02-17T20:36:26.000Z
+  - path: features/get-recent-memories
+    token_estimate: 204
+    updated_at: 2026-02-13T18:41:21.509Z
+  - path: features/sqlite-derived-index
+    token_estimate: 428
+    updated_at: 2026-02-13T21:47:14.829Z
+  - path: features/store-guardrails
+    token_estimate: 163
+    updated_at: 2026-02-26T19:40:32.634Z
+subcategories: 
+  []

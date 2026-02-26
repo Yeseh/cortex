@@ -25,7 +25,7 @@ const makeAbsolute = (pathStr: string): string => {
 
 export const validateStorePath = (
     storePath: string,
-    storeName: string
+    storeName: string,
 ): Result<void, ConfigValidationError> => {
     if (!isAbsolute(storePath)) {
         return err({
@@ -49,7 +49,7 @@ export interface ConfigLoadOptions {
  * This function is used to create a context object that can be injected into command handlers for consistent access to the Cortex client and other utilities.
  */
 export const createCliCommandContext = async (
-    configDir?: string
+    configDir?: string,
 ): Promise<Result<CortexContext, any>> => {
     try {
         // Allow test harnesses / subprocesses to isolate config resolution.
@@ -65,17 +65,34 @@ export const createCliCommandContext = async (
 
         // Read config file using Bun.file()
         const configFile = Bun.file(configPath);
+
+        // If config file doesn't exist, return empty context (no stores configured)
+        if (!(await configFile.exists())) {
+            const cortex = Cortex.init({
+                settings: undefined,
+                stores: {},
+                adapterFactory: (_storeName: string) => {
+                    throw new Error(
+                        `Store '${_storeName}' not found. Run 'cortex store add' to register a store.`,
+                    );
+                },
+            });
+            const context: CortexContext = {
+                settings: getDefaultSettings(),
+                stores: {},
+                cortex,
+                now: () => new Date(),
+                stdin,
+                stdout,
+            };
+            return ok(context);
+        }
+
         let contents: string;
         try {
-            if (!(await configFile.exists())) {
-                return err({
-                    code: 'CONFIG_NOT_FOUND',
-                    message: `Config file not found at ${configPath}. Run 'cortex init' to create one.`,
-                    path: configPath,
-                });
-            }
             contents = await configFile.text();
-        } catch (error) {
+        }
+        catch (error) {
             return err({
                 code: 'CONFIG_READ_FAILED',
                 message: `Failed to read config file at ${configPath}.`,
@@ -95,7 +112,7 @@ export const createCliCommandContext = async (
             const storeEntry = config.stores?.[storeName];
             if (!storeEntry) {
                 throw new Error(
-                    `Store '${storeName}' is not configured. Available stores: ${Object.keys(config.stores ?? {}).join(', ')}`
+                    `Store '${storeName}' is not configured. Available stores: ${Object.keys(config.stores ?? {}).join(', ')}`,
                 );
             }
             const storePath = storeEntry.properties?.path as string | undefined;
@@ -128,9 +145,10 @@ export const createCliCommandContext = async (
         };
 
         return ok(context);
-    } catch (error) {
+    }
+    catch (error) {
         throw new Error(
-            `Unexpected error creating CLI command context: ${error instanceof Error ? error.message : String(error)}`
+            `Unexpected error creating CLI command context: ${error instanceof Error ? error.message : String(error)}`,
         );
     }
 };

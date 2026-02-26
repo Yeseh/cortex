@@ -53,7 +53,10 @@ export interface AddHandlerDeps {
 function validateStoreName(name: string): string {
     const slugResult = Slug.from(name);
     if (!slugResult.ok()) {
-        throwCliError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug (letters, numbers, hyphens).' });
+        throwCliError({
+            code: 'INVALID_STORE_NAME',
+            message: 'Store name must be a lowercase slug (letters, numbers, hyphens).',
+        });
     }
 
     return slugResult.value.toString();
@@ -136,22 +139,38 @@ export async function handleAdd(
         });
     }
 
-    // 3. Read current config file
+    // 3. Read current config file (or start with empty config if it doesn't exist)
     const configFile = Bun.file(configPath);
-    let configContents: string;
-    try {
-        configContents = await configFile.text();
-    }
-    catch {
-        throwCliError({
-            code: 'CONFIG_READ_FAILED',
-            message: `Failed to read config at ${configPath}`,
-        });
-    }
+    let configResult: {
+        value: { settings?: unknown; stores: Record<string, unknown> };
+        ok: () => boolean;
+    };
 
-    const configResult = parseConfig(configContents);
-    if (!configResult.ok()) {
-        throwCliError(configResult.error);
+    if (await configFile.exists()) {
+        let configContents: string;
+        try {
+            configContents = await configFile.text();
+        }
+        catch {
+            throwCliError({
+                code: 'CONFIG_READ_FAILED',
+                message: `Failed to read config at ${configPath}`,
+            });
+        }
+
+        const parsed = parseConfig(configContents);
+        if (!parsed.ok()) {
+            throwCliError(parsed.error);
+        }
+        configResult = parsed;
+    }
+    else {
+        // Config doesn't exist yet — start with empty config
+        configResult = { value: { settings: undefined, stores: {} }, ok: () => true };
+        // Ensure config directory exists
+        const { mkdir } = await import('node:fs/promises');
+        const { dirname } = await import('node:path');
+        await mkdir(dirname(configPath), { recursive: true });
     }
 
     // 4. Add new store to config
