@@ -73,7 +73,7 @@ describe('Cortex.getStore()', () => {
         expect(result.error.code).toBe('INVALID_STORE_ADAPTER');
     });
 
-    it('should throw when using default adapter factory', () => {
+    it('should return STORE_NOT_FOUND when using default adapter factory', () => {
         const cortex = Cortex.init({
             stores: {
                 project: {
@@ -85,6 +85,11 @@ describe('Cortex.getStore()', () => {
             adapterFactory: createDefaultAdapterFactory(),
         });
 
-        expect(() => cortex.getStore('project')).toThrow('No adapter factory provided');
+        const result = cortex.getStore('project');
+
+        expect(result.ok()).toBe(false);
+        if (result.ok()) return;
+        expect(result.error.code).toBe('STORE_NOT_FOUND');
+        expect(result.error.message).toContain('No adapter factory provided');
     });
 });

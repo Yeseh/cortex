@@ -35,15 +35,11 @@
  */
 
 import type { StorageAdapter } from '@/storage/index.ts';
-import {
-    type CortexOptions,
-    type AdapterFactory,
-} from './types.ts';
+import { type CortexOptions, type AdapterFactory } from './types.ts';
 import { StoreClient } from './store/store-client.ts';
 import { err, ok, type ErrorDetails, type Result } from '@/result.ts';
 
-
-export type CortexErrorCode = 'STORE_NOT_FOUND' | 'INVALID_STORE_ADAPTER'; 
+export type CortexErrorCode = 'STORE_NOT_FOUND' | 'INVALID_STORE_ADAPTER';
 export type CortexClientError = ErrorDetails<CortexErrorCode>;
 export type CortexClientResult<T> = Result<T, CortexClientError>;
 
@@ -143,7 +139,18 @@ export class Cortex {
      * ```
      */
     getStore(name: string): CortexClientResult<StoreClient> {
-        const client = StoreClient.init(name, this.adapterFactory(name));
+        let adapter: StorageAdapter;
+        try {
+            adapter = this.adapterFactory(name);
+        } catch (error) {
+            return err({
+                code: 'STORE_NOT_FOUND',
+                message: error instanceof Error ? error.message : `Store '${name}' not found.`,
+                store: name,
+            });
+        }
+
+        const client = StoreClient.init(name, adapter);
         if (!client.ok()) {
             return err({
                 code: 'INVALID_STORE_ADAPTER',
@@ -160,7 +167,6 @@ export class Cortex {
 // Helper Functions
 // =============================================================================
 
-
 /**
  * Creates a default adapter factory that throws until storage-fs is available.
  *
@@ -174,8 +180,7 @@ export const createDefaultAdapterFactory = (): AdapterFactory => {
     return (_storePath: string): StorageAdapter => {
         throw new Error(
             'No adapter factory provided. Either provide an adapterFactory in CortexOptions, ' +
-                'or use createFilesystemCortex() from @yeseh/cortex-storage-fs.',
+                'or use createFilesystemCortex() from @yeseh/cortex-storage-fs.'
         );
     };
 };
-
