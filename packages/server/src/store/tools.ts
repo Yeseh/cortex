@@ -240,14 +240,6 @@ export const createStoreHandler = async (
         return errorResponse(`Store '${input.name}' already exists. Choose a different name.`);
     }
 
-    const storeClient = ctx.cortex.getStore(input.name);
-    if (!storeClient.ok()) {
-        return errorResponse(
-            'Failed to create store client for default store. Please check server configuration. Message: ' +
-                storeClient.error.message
-        );
-    }
-
     if (!ctx.globalDataPath) {
         return errorResponse(
             'Server configuration error: globalDataPath is not defined in context.'
@@ -265,9 +257,28 @@ export const createStoreHandler = async (
         },
     };
 
+    // Register the new store in the context first so the adapter factory can resolve it
+    ctx.stores[input.name] = {
+        kind: storeData.kind,
+        categoryMode: storeData.categoryMode,
+        categories: {},
+        properties: storeData.properties,
+    };
+
+    const storeClient = ctx.cortex.getStore(input.name);
+    if (!storeClient.ok()) {
+        // Roll back the registration on failure
+        delete ctx.stores[input.name];
+        return errorResponse(
+            'Failed to create store client. Please check server configuration. Message: ' +
+                storeClient.error.message
+        );
+    }
+
     const store = storeClient.value;
     const initializeResult = await store.initialize(storeData);
     if (!initializeResult.ok()) {
+        delete ctx.stores[input.name];
         return errorResponse(`Failed to initialize store: ${initializeResult.error.message}`);
     }
 
@@ -275,18 +286,11 @@ export const createStoreHandler = async (
     try {
         await fs.mkdir(storePath, { recursive: true });
     } catch (error) {
+        delete ctx.stores[input.name];
         return errorResponse(
             `Failed to create store directory: ${error instanceof Error ? error.message : String(error)}`
         );
     }
-
-    // Register the new store in the context so subsequent operations can find it
-    ctx.stores[input.name] = {
-        kind: storeData.kind,
-        categoryMode: storeData.categoryMode,
-        categories: {},
-        properties: storeData.properties,
-    };
 
     return textResponse(JSON.stringify({ created: input.name }, null, 2));
 };

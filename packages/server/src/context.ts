@@ -47,6 +47,29 @@ export interface ConfigLoadOptions {
     localConfigPath?: string;
 }
 
+const createAdapterFactory = (config: CortexConfig) => {
+    // TODO: This should return results
+    return (storeName: string) => {
+        const storeEntry = config.stores[storeName];
+        if (!storeEntry) {
+            throw new Error(`Store '${storeName}' not found in configuration.`);
+        }
+        if (storeEntry.kind === 'filesystem') {
+            const storePath = storeEntry.properties.path;
+            if (typeof storePath !== 'string') {
+                throw new Error(`Store '${storeName}' has invalid path configuration.`);
+            }
+            return new FilesystemStorageAdapter({
+                rootDirectory: storePath,
+            });
+        } else {
+            throw new Error(
+                `Unsupported store kind '${storeEntry.kind}' for store '${storeName}'.`
+            );
+        }
+    };
+};
+
 /* Creates a CortexContext from the environment, including loading configuration and setting up dependencies.
  * This function is used to create a context object that can be injected into command handlers for consistent access to the Cortex client and other utilities.
  * The MCP server is self-initializing, so it also uses this function to create a context for its handlers.
@@ -125,23 +148,7 @@ export const createCortexContext = async (
         }
 
         const storesDir = resolve(absoluteDir, 'stores');
-
-        const adapterFactory = (storeName: string) => {
-            // Look up store path from config first
-            const storeEntry = config.stores[storeName];
-            const storePath = storeEntry?.properties?.path as string | undefined;
-
-            // Fall back to the conventional stores directory for dynamically
-            // created stores that aren't in the initial config yet.
-            const resolvedPath = storePath
-                ? makeAbsolute(storePath)
-                : resolve(storesDir, storeName);
-
-            return new FilesystemStorageAdapter({
-                rootDirectory: resolvedPath,
-            });
-        };
-
+        const adapterFactory = createAdapterFactory(config);
         const cortex = Cortex.init({
             settings: config.settings,
             stores: config.stores,
