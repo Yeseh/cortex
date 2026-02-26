@@ -14,7 +14,7 @@
  * @module cli/store/commands/add.spec
  */
 
-import { describe, it, expect } from 'bun:test';
+import { describe, it } from 'bun:test';
 import { handleAdd } from './add.ts';
 import {
     createMockContext,

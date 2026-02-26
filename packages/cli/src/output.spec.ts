@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 import { serializeOutput } from './output.ts';
 import type {
     OutputCategory,
@@ -38,7 +38,7 @@ const toonSerialize = <T>(kind: string, value: T) =>
     serializeOutput({ kind, value } as Parameters<typeof serializeOutput>[0], 'toon');
 
 describe('serializeMemoryToon', () => {
-    test('encodes memory with all metadata fields', () => {
+    it('should encodes memory with all metadata fields', () => {
         const result = toonSerialize('memory', sampleMemory);
 
         expect(result.ok()).toBe(true);
@@ -55,7 +55,7 @@ describe('serializeMemoryToon', () => {
         }
     });
 
-    test('uses nested structure for metadata (not key folding)', () => {
+    it('should uses nested structure for metadata (not key folding)', () => {
         const memory: OutputMemory = {
             path: 'test/path',
             metadata: {
@@ -75,7 +75,7 @@ describe('serializeMemoryToon', () => {
         }
     });
 
-    test('quotes multiline content', () => {
+    it('should quotes multiline content', () => {
         const memory: OutputMemory = {
             path: 'test/multiline',
             metadata: {
@@ -93,7 +93,7 @@ describe('serializeMemoryToon', () => {
         }
     });
 
-    test('handles missing optional fields (updatedAt, source, tokenEstimate, expiresAt)', () => {
+    it('should handles missing optional fields (updatedAt, source, tokenEstimate, expiresAt)', () => {
         const memory: OutputMemory = {
             path: 'test/minimal',
             metadata: {
@@ -118,7 +118,7 @@ describe('serializeMemoryToon', () => {
         }
     });
 
-    test('serializes whitespace path without error (no validation)', () => {
+    it('should serializes whitespace path without error (no validation)', () => {
         // The output module does NOT validate - it just serializes
         const memory: OutputMemory = {
             path: '   ', // Whitespace path - serializes as-is
@@ -137,7 +137,7 @@ describe('serializeMemoryToon', () => {
         }
     });
 
-    test('serializes Invalid Date as SERIALIZE_FAILED', () => {
+    it('should serializes Invalid Date as SERIALIZE_FAILED', () => {
         const memory: OutputMemory = {
             path: 'test/path',
             metadata: {
@@ -157,7 +157,7 @@ describe('serializeMemoryToon', () => {
 });
 
 describe('serializeCategoryToon', () => {
-    test('encodes category with memories and subcategories', () => {
+    it('should encodes category with memories and subcategories', () => {
         const result = toonSerialize('category', sampleCategory);
 
         expect(result.ok()).toBe(true);
@@ -170,7 +170,7 @@ describe('serializeCategoryToon', () => {
         }
     });
 
-    test('uses tabular format for uniform memories array', () => {
+    it('should uses tabular format for uniform memories array', () => {
         // Create a uniform array (all items have same keys)
         const category: OutputCategory = {
             path: 'test/uniform-memories',
@@ -192,7 +192,7 @@ describe('serializeCategoryToon', () => {
         }
     });
 
-    test('uses tabular format for subcategories array', () => {
+    it('should uses tabular format for subcategories array', () => {
         const result = toonSerialize('category', sampleCategory);
 
         expect(result.ok()).toBe(true);
@@ -204,7 +204,7 @@ describe('serializeCategoryToon', () => {
         }
     });
 
-    test('handles empty memories array', () => {
+    it('should handles empty memories array', () => {
         const category: OutputCategory = {
             path: 'test/empty-memories',
             memories: [],
@@ -219,7 +219,7 @@ describe('serializeCategoryToon', () => {
         }
     });
 
-    test('handles empty subcategories array', () => {
+    it('should handles empty subcategories array', () => {
         const category: OutputCategory = {
             path: 'test/empty-subcategories',
             memories: [{ path: 'test/mem1', tokenEstimate: 10 }],
@@ -234,7 +234,7 @@ describe('serializeCategoryToon', () => {
         }
     });
 
-    test('serializes empty path without error (no validation)', () => {
+    it('should serializes empty path without error (no validation)', () => {
         // The output module does NOT validate - it just serializes
         const category: OutputCategory = {
             path: '', // Empty path - serializes as-is
@@ -249,7 +249,7 @@ describe('serializeCategoryToon', () => {
 });
 
 describe('serializeStoreToon', () => {
-    test('encodes store with name and path', () => {
+    it('should encodes store with name and path', () => {
         const store: OutputStore = {
             name: 'my-store',
             path: '/data/my-store',
@@ -264,7 +264,7 @@ describe('serializeStoreToon', () => {
         }
     });
 
-    test('serializes invalid store name without error (no validation)', () => {
+    it('should serializes invalid store name without error (no validation)', () => {
         // The output module does NOT validate - it just serializes
         const store: OutputStore = {
             name: 'Invalid Name!', // Not lowercase slug - serializes as-is
@@ -279,7 +279,7 @@ describe('serializeStoreToon', () => {
         }
     });
 
-    test('serializes whitespace store path without error (no validation)', () => {
+    it('should serializes whitespace store path without error (no validation)', () => {
         // The output module does NOT validate - it just serializes
         const store: OutputStore = {
             name: 'valid-name',
@@ -293,7 +293,7 @@ describe('serializeStoreToon', () => {
 });
 
 describe('serializeStoreRegistryToon', () => {
-    test('encodes registry with multiple stores', () => {
+    it('should encodes registry with multiple stores', () => {
         const registry: OutputStoreRegistry = {
             stores: [
                 { name: 'store-one', path: '/data/one' },
@@ -310,7 +310,7 @@ describe('serializeStoreRegistryToon', () => {
         }
     });
 
-    test('uses tabular format for stores array', () => {
+    it('should uses tabular format for stores array', () => {
         const registry: OutputStoreRegistry = {
             stores: [
                 { name: 'alpha', path: '/a' },
@@ -326,7 +326,7 @@ describe('serializeStoreRegistryToon', () => {
         }
     });
 
-    test('handles empty stores array', () => {
+    it('should handles empty stores array', () => {
         const registry: OutputStoreRegistry = {
             stores: [],
         };
@@ -339,7 +339,7 @@ describe('serializeStoreRegistryToon', () => {
         }
     });
 
-    test('serializes invalid store in array without error (no validation)', () => {
+    it('should serializes invalid store in array without error (no validation)', () => {
         // The output module does NOT validate - it just serializes
         const registry: OutputStoreRegistry = {
             stores: [
@@ -358,7 +358,7 @@ describe('serializeStoreRegistryToon', () => {
 });
 
 describe('serializeStoreInitToon', () => {
-    test('encodes store init with path and name', () => {
+    it('should encodes store init with path and name', () => {
         const storeInit: OutputStoreInit = {
             path: '/initialized/store/path',
             name: 'my-store',
@@ -373,7 +373,7 @@ describe('serializeStoreInitToon', () => {
         }
     });
 
-    test('serializes empty path without error (no validation)', () => {
+    it('should serializes empty path without error (no validation)', () => {
         // The output module does NOT validate - it just serializes
         const storeInit: OutputStoreInit = {
             path: '',
@@ -387,7 +387,7 @@ describe('serializeStoreInitToon', () => {
 });
 
 describe('serializeInitToon', () => {
-    test('encodes init with path and categories', () => {
+    it('should encodes init with path and categories', () => {
         const init: OutputInit = {
             path: '/project/root',
             categories: [
@@ -410,7 +410,7 @@ describe('serializeInitToon', () => {
         }
     });
 
-    test('handles empty categories array', () => {
+    it('should handles empty categories array', () => {
         const init: OutputInit = {
             path: '/project/empty',
             categories: [],
@@ -425,7 +425,7 @@ describe('serializeInitToon', () => {
         }
     });
 
-    test('serializes whitespace path without error (no validation)', () => {
+    it('should serializes whitespace path without error (no validation)', () => {
         // The output module does NOT validate - it just serializes
         const init: OutputInit = {
             path: '   ',
@@ -439,7 +439,7 @@ describe('serializeInitToon', () => {
 });
 
 describe('TOON edge cases', () => {
-    test('handles special characters in content', () => {
+    it('should handles special characters in content', () => {
         const memory: OutputMemory = {
             path: 'test/special-chars',
             metadata: {
@@ -457,7 +457,7 @@ describe('TOON edge cases', () => {
         }
     });
 
-    test('handles tab characters in strings', () => {
+    it('should handles tab characters in strings', () => {
         const memory: OutputMemory = {
             path: 'test/tabs',
             metadata: {
@@ -475,7 +475,7 @@ describe('TOON edge cases', () => {
         }
     });
 
-    test('handles newlines in strings', () => {
+    it('should handles newlines in strings', () => {
         const memory: OutputMemory = {
             path: 'test/newlines',
             metadata: {
@@ -493,7 +493,7 @@ describe('TOON edge cases', () => {
         }
     });
 
-    test('handles empty strings', () => {
+    it('should handles empty strings', () => {
         const memory: OutputMemory = {
             path: 'test/empty-content',
             metadata: {
@@ -511,7 +511,7 @@ describe('TOON edge cases', () => {
         }
     });
 
-    test('handles unicode characters', () => {
+    it('should handles unicode characters', () => {
         const memory: OutputMemory = {
             path: 'test/unicode',
             metadata: {
@@ -530,7 +530,7 @@ describe('TOON edge cases', () => {
         }
     });
 
-    test('handles memory with expiresAt field', () => {
+    it('should handles memory with expiresAt field', () => {
         const memory: OutputMemory = {
             path: 'test/expires',
             metadata: {
@@ -549,7 +549,7 @@ describe('TOON edge cases', () => {
         }
     });
 
-    test('handles category memory with summary containing special characters', () => {
+    it('should handles category memory with summary containing special characters', () => {
         const category: OutputCategory = {
             path: 'test/special-summary',
             memories: [{
@@ -568,7 +568,7 @@ describe('TOON edge cases', () => {
         }
     });
 
-    test('handles tags array in memory', () => {
+    it('should handles tags array in memory', () => {
         const memory: OutputMemory = {
             path: 'test/tags',
             metadata: {
@@ -593,7 +593,7 @@ describe('TOON edge cases', () => {
         }
     });
 
-    test('handles empty tags array', () => {
+    it('should handles empty tags array', () => {
         const memory: OutputMemory = {
             path: 'test/no-tags',
             metadata: {
@@ -611,7 +611,7 @@ describe('TOON edge cases', () => {
         }
     });
 
-    test('handles large token estimate values', () => {
+    it('should handles large token estimate values', () => {
         const memory: OutputMemory = {
             path: 'test/large-tokens',
             metadata: {
@@ -630,7 +630,7 @@ describe('TOON edge cases', () => {
         }
     });
 
-    test('serializes negative token estimate without error (no validation)', () => {
+    it('should serializes negative token estimate without error (no validation)', () => {
         // The output module does NOT validate - it just serializes
         const memory: OutputMemory = {
             path: 'test/negative-tokens',
@@ -650,7 +650,7 @@ describe('TOON edge cases', () => {
         }
     });
 
-    test('serializes Infinity token estimate without error (no validation)', () => {
+    it('should serializes Infinity token estimate without error (no validation)', () => {
         // The output module does NOT validate - it just serializes
         const memory: OutputMemory = {
             path: 'test/infinite-tokens',
@@ -667,7 +667,7 @@ describe('TOON edge cases', () => {
         expect(result.ok()).toBe(true);
     });
 
-    test('serializes invalid updatedAt date as SERIALIZE_FAILED', () => {
+    it('should serializes invalid updatedAt date as SERIALIZE_FAILED', () => {
         const memory: OutputMemory = {
             path: 'test/invalid-updated',
             metadata: {
@@ -686,7 +686,7 @@ describe('TOON edge cases', () => {
         }
     });
 
-    test('serializes invalid expiresAt date as SERIALIZE_FAILED', () => {
+    it('should serializes invalid expiresAt date as SERIALIZE_FAILED', () => {
         const memory: OutputMemory = {
             path: 'test/invalid-expires',
             metadata: {
@@ -705,7 +705,7 @@ describe('TOON edge cases', () => {
         }
     });
 
-    test('handles subcategory with zero memory count', () => {
+    it('should handles subcategory with zero memory count', () => {
         const category: OutputCategory = {
             path: 'test/zero-count',
             memories: [],
@@ -720,7 +720,7 @@ describe('TOON edge cases', () => {
         }
     });
 
-    test('serializes negative memory count without error (no validation)', () => {
+    it('should serializes negative memory count without error (no validation)', () => {
         // The output module does NOT validate - it just serializes
         const category: OutputCategory = {
             path: 'test/negative-count',
@@ -736,7 +736,7 @@ describe('TOON edge cases', () => {
         }
     });
 
-    test('serializes whitespace memory path in category without error (no validation)', () => {
+    it('should serializes whitespace memory path in category without error (no validation)', () => {
         // The output module does NOT validate - it just serializes
         const category: OutputCategory = {
             path: 'test/valid-path',
@@ -749,7 +749,7 @@ describe('TOON edge cases', () => {
         expect(result.ok()).toBe(true);
     });
 
-    test('serializes empty subcategory path without error (no validation)', () => {
+    it('should serializes empty subcategory path without error (no validation)', () => {
         // The output module does NOT validate - it just serializes
         const category: OutputCategory = {
             path: 'test/valid-path',
@@ -762,7 +762,7 @@ describe('TOON edge cases', () => {
         expect(result.ok()).toBe(true);
     });
 
-    test('serializes negative token estimate in category memory without error (no validation)', () => {
+    it('should serializes negative token estimate in category memory without error (no validation)', () => {
         // The output module does NOT validate - it just serializes
         const category: OutputCategory = {
             path: 'test/valid-path',
@@ -780,7 +780,7 @@ describe('TOON edge cases', () => {
 });
 
 describe('TOON format output structure', () => {
-    test('output uses newlines between top-level key-value pairs', () => {
+    it('should output uses newlines between top-level key-value pairs', () => {
         const store: OutputStore = {
             name: 'test-store',
             path: '/test/path',
@@ -796,7 +796,7 @@ describe('TOON format output structure', () => {
         }
     });
 
-    test('output uses nested structure for metadata (not key folding)', () => {
+    it('should output uses nested structure for metadata (not key folding)', () => {
         const memory: OutputMemory = {
             path: 'test/folding',
             metadata: {
@@ -816,7 +816,7 @@ describe('TOON format output structure', () => {
         }
     });
 
-    test('tabular format uses correct header syntax with tab separators', () => {
+    it('should tabular format uses correct header syntax with tab separators', () => {
         const registry: OutputStoreRegistry = {
             stores: [
                 { name: 'a', path: '/a' },

@@ -6,13 +6,13 @@
 
 import { describe, it, expect, afterEach } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 import { runGitCommand, detectGitRepoName } from './git';
 
-// The worktree directory is a real git worktree - rev-parse will return this path
-const WORKTREE_DIR = '/home/jesse/repo/cortex/.worktrees/cli-unit-tests';
-const EXPECTED_REPO_NAME = 'cli-unit-tests';
+// The spec file lives inside a git worktree — use its own directory as a real
+// git repo for tests that require one.
+const THIS_DIR = import.meta.dir;
 
 // ============================================================================
 // Temp dir management
@@ -41,7 +41,7 @@ describe('runGitCommand', () => {
     it('should return ok with stdout for a valid git command', async () => {
         const result = await runGitCommand([
             'rev-parse', '--show-toplevel',
-        ], WORKTREE_DIR);
+        ], THIS_DIR);
         expect(result.ok).toBe(true);
         if (result.ok) {
             expect(typeof result.value).toBe('string');
@@ -50,7 +50,7 @@ describe('runGitCommand', () => {
     });
 
     it('should return {ok: false} for an invalid git command', async () => {
-        const result = await runGitCommand(['not-a-real-subcommand-xyz'], WORKTREE_DIR);
+        const result = await runGitCommand(['not-a-real-subcommand-xyz'], THIS_DIR);
         expect(result.ok).toBe(false);
     });
 
@@ -68,9 +68,23 @@ describe('runGitCommand', () => {
 // ============================================================================
 
 describe('detectGitRepoName', () => {
-    it('should return the repo directory name for a git repo', async () => {
-        const name = await detectGitRepoName(WORKTREE_DIR);
-        expect(name).toBe(EXPECTED_REPO_NAME);
+    it('should return a non-empty string for a git repo', async () => {
+        const name = await detectGitRepoName(THIS_DIR);
+        expect(typeof name).toBe('string');
+        expect((name ?? '').length).toBeGreaterThan(0);
+    });
+
+    it('should return the toplevel directory basename for a git repo', async () => {
+        // Get the toplevel via git, then compare what detectGitRepoName returns
+        const toplevelResult = await runGitCommand([
+            'rev-parse', '--show-toplevel',
+        ], THIS_DIR);
+        expect(toplevelResult.ok).toBe(true);
+        if (toplevelResult.ok) {
+            const expectedName = basename(toplevelResult.value);
+            const name = await detectGitRepoName(THIS_DIR);
+            expect(name).toBe(expectedName);
+        }
     });
 
     it('should return null for a non-git directory', async () => {
