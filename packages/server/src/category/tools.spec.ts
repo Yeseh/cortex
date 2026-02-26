@@ -1,25 +1,46 @@
 /**
  * Unit tests for MCP category tools.
+ *
+ * Uses a real temp filesystem via FilesystemStorageAdapter for success-path tests,
+ * and mock CortexContext for error-path tests (store resolution failures).
+ *
+ * @module server/category/tools.spec
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { PassThrough } from 'node:stream';
 
 import { MEMORY_SUBDIR } from '../config.ts';
 import { Cortex } from '@yeseh/cortex-core';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
-import type { CortexContext } from '@yeseh/cortex-core';
+import type { CortexContext, ConfigStores } from '@yeseh/cortex-core';
+import {
+    createMockCortexContext,
+    createMockCortex,
+    createMockMcpServer,
+    expectMcpInvalidParams,
+    errResult,
+} from '../test-helpers.spec.ts';
 import {
     createCategoryHandler,
     setCategoryDescriptionHandler,
     deleteCategoryHandler,
+    registerCategoryTools,
     type CreateCategoryInput,
     type SetCategoryDescriptionInput,
     type DeleteCategoryInput,
 } from './tools.ts';
 
+// =============================================================================
+// Test helpers
+// =============================================================================
+
+/**
+ * Creates a temp directory with a `memory/` subdirectory for the default store.
+ */
 const createTestDir = async (): Promise<string> => {
     const testDir = await mkdtemp(join(tmpdir(), 'cortex-cat-tools-'));
     const memoryDir = join(testDir, MEMORY_SUBDIR);
@@ -27,201 +48,414 @@ const createTestDir = async (): Promise<string> => {
     return testDir;
 };
 
+/**
+ * Creates a real CortexContext backed by a FilesystemStorageAdapter rooted in
+ * `${testDir}/memory/`. The default store is registered so that
+ * `ctx.cortex.getStore('default')` succeeds and returns an adapter with a
+ * real `.categories` property.
+ */
 const createTestContext = (testDir: string): CortexContext => {
     const memoryDir = join(testDir, MEMORY_SUBDIR);
 
+    const storeConfig: ConfigStores = {
+        default: {
+            kind: 'filesystem',
+            categoryMode: 'free',
+            properties: { path: memoryDir },
+            categories: {},
+        },
+    };
+
     const cortex = Cortex.init({
-        // Adapter factory for tests: use the test memory directory as the
-        // adapter root so files are created under `${testDir}/memory/...`.
-        adapterFactory: (_storePath: string) =>
-            new FilesystemStorageAdapter({ rootDirectory: memoryDir }),
+        stores: storeConfig as any,
+        adapterFactory: (storeName: string) => {
+            const store = storeConfig[storeName];
+            if (!store) {
+                throw new Error(
+                    `Store '${storeName}' is not registered. Available stores: ${Object.keys(storeConfig).join(', ')}`,
+                );
+            }
+            const storePath = store.properties.path as string;
+            return new FilesystemStorageAdapter({ rootDirectory: storePath });
+        },
     });
 
     return {
-        config: {
-            dataPath: testDir,
-            port: 3000,
-            host: '127.0.0.1',
-            defaultStore: 'default',
-            logLevel: 'info',
-            outputFormat: 'yaml',
-        },
+        settings: { defaultStore: 'default', outputFormat: 'json' },
+        stores: storeConfig,
         cortex,
+        now: () => new Date('2024-01-01T00:00:00Z'),
+        stdin: new PassThrough() as unknown as NodeJS.ReadStream,
+        stdout: new PassThrough() as unknown as NodeJS.WriteStream,
     };
 };
 
-describe('cortex_create_category tool', () => {
-    let testDir: string;
-    let ctx: CortexContext;
+// =============================================================================
+// createCategoryHandler
+// =============================================================================
 
-    beforeEach(async () => {
-        testDir = await createTestDir();
-        ctx = createTestContext(testDir);
+describe('createCategoryHandler', () => {
+    describe('store resolution failure', () => {
+        it('should throw McpError(InvalidParams) when store does not exist', async () => {
+            const ctx = createMockCortexContext({
+                cortex: createMockCortex({
+                    getStore: mock(() => errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' })) as any,
+                }) as unknown as CortexContext['cortex'],
+            });
+
+            await expectMcpInvalidParams(
+                () => createCategoryHandler(ctx, { store: 'missing', path: 'foo' }),
+                'not found',
+            );
+        });
     });
 
-    afterEach(async () => {
-        await rm(testDir, { recursive: true, force: true });
+    describe('input validation', () => {
+        it('should throw McpError(InvalidParams) for empty path', async () => {
+            // The empty-path guard in the handler fires before the store lookup,
+            // so the default mock cortex is fine here.
+            const ctx = createMockCortexContext();
+
+            await expectMcpInvalidParams(
+                () => createCategoryHandler(ctx, { store: 'default', path: '' }),
+            );
+        });
+
+        it('should throw McpError(InvalidParams) for whitespace-only path', async () => {
+            const ctx = createMockCortexContext();
+
+            await expectMcpInvalidParams(
+                () => createCategoryHandler(ctx, { store: 'default', path: '   ' }),
+            );
+        });
     });
 
-    it('should create a new category', async () => {
-        const input: CreateCategoryInput = {
-            store: 'default',
-            path: 'project/cortex',
-        };
+    describe('with real filesystem', () => {
+        let testDir: string;
+        let ctx: CortexContext;
 
-        const result = await createCategoryHandler(ctx, input);
-        const output = JSON.parse(result.content[0]!.text);
+        beforeEach(async () => {
+            testDir = await createTestDir();
+            ctx = createTestContext(testDir);
+        });
 
-        expect(output.path).toBe('project/cortex');
-        expect(output.created).toBe(true);
-    });
+        afterEach(async () => {
+            await rm(testDir, { recursive: true, force: true });
+        });
 
-    it('should return created: false for existing category', async () => {
-        const input: CreateCategoryInput = { store: 'default', path: 'project/cortex' };
+        it('should create a new category and return created: true', async () => {
+            const input: CreateCategoryInput = { store: 'default', path: 'project/cortex' };
 
-        // Create first time
-        await createCategoryHandler(ctx, input);
+            const result = await createCategoryHandler(ctx, input);
+            const output = JSON.parse(result.content[0]!.text);
 
-        // Create again
-        const result = await createCategoryHandler(ctx, input);
-        const output = JSON.parse(result.content[0]!.text);
+            expect(output.path).toBe('project/cortex');
+            expect(output.created).toBe(true);
+        });
 
-        expect(output.created).toBe(false);
-    });
+        it('should return created: false when category already exists', async () => {
+            const input: CreateCategoryInput = { store: 'default', path: 'project/cortex' };
 
-    it('should reject empty path', async () => {
-        const input = { store: 'default', path: '' };
+            // First creation
+            await createCategoryHandler(ctx, input);
 
-        await expect(createCategoryHandler(ctx, input as CreateCategoryInput)).rejects.toThrow();
+            // Second creation — idempotent
+            const result = await createCategoryHandler(ctx, input);
+            const output = JSON.parse(result.content[0]!.text);
+
+            expect(output.path).toBe('project/cortex');
+            expect(output.created).toBe(false);
+        });
+
+        it('should auto-create intermediate ancestors', async () => {
+            const input: CreateCategoryInput = { store: 'default', path: 'a/b/c' };
+
+            const result = await createCategoryHandler(ctx, input);
+            const output = JSON.parse(result.content[0]!.text);
+
+            expect(output.path).toBe('a/b/c');
+            expect(output.created).toBe(true);
+        });
+
+        it('should create a root-level category', async () => {
+            const input: CreateCategoryInput = { store: 'default', path: 'toplevel' };
+
+            const result = await createCategoryHandler(ctx, input);
+            const output = JSON.parse(result.content[0]!.text);
+
+            expect(output.path).toBe('toplevel');
+            expect(output.created).toBe(true);
+        });
     });
 });
 
-describe('cortex_set_category_description tool', () => {
-    let testDir: string;
-    let ctx: CortexContext;
+// =============================================================================
+// setCategoryDescriptionHandler
+// =============================================================================
 
-    beforeEach(async () => {
-        testDir = await createTestDir();
-        ctx = createTestContext(testDir);
+describe('setCategoryDescriptionHandler', () => {
+    describe('store resolution failure', () => {
+        it('should throw McpError(InvalidParams) when store does not exist', async () => {
+            const ctx = createMockCortexContext({
+                cortex: createMockCortex({
+                    getStore: mock(() => errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' })) as any,
+                }) as unknown as CortexContext['cortex'],
+            });
+
+            await expectMcpInvalidParams(
+                () =>
+                    setCategoryDescriptionHandler(ctx, {
+                        store: 'missing',
+                        path: 'foo',
+                        description: 'hello',
+                    }),
+                'not found',
+            );
+        });
     });
 
-    afterEach(async () => {
-        await rm(testDir, { recursive: true, force: true });
-    });
+    describe('with real filesystem', () => {
+        let testDir: string;
+        let ctx: CortexContext;
 
-    it('should set description and auto-create category', async () => {
-        const input: SetCategoryDescriptionInput = {
-            store: 'default',
-            path: 'project/cortex',
-            description: 'Cortex memory system',
-        };
-
-        const result = await setCategoryDescriptionHandler(ctx, input);
-        const output = JSON.parse(result.content[0]!.text);
-
-        expect(output.description).toBe('Cortex memory system');
-    });
-
-    it('should set description on root category', async () => {
-        const input: SetCategoryDescriptionInput = {
-            store: 'default',
-            path: 'project',
-            description: 'Root category description',
-        };
-
-        const result = await setCategoryDescriptionHandler(ctx, input);
-        const output = JSON.parse(result.content[0]!.text);
-
-        expect(output.description).toBe('Root category description');
-    });
-
-    it('should clear description with empty string', async () => {
-        // First set a description
-        await setCategoryDescriptionHandler(ctx, {
-            store: 'default',
-            path: 'project/cortex',
-            description: 'Initial',
+        beforeEach(async () => {
+            testDir = await createTestDir();
+            ctx = createTestContext(testDir);
         });
 
-        // Then clear it
-        const result = await setCategoryDescriptionHandler(ctx, {
-            store: 'default',
-            path: 'project/cortex',
-            description: '',
+        afterEach(async () => {
+            await rm(testDir, { recursive: true, force: true });
         });
-        const output = JSON.parse(result.content[0]!.text);
 
-        expect(output.description).toBeNull();
-    });
+        it('should set description and return path + description', async () => {
+            const input: SetCategoryDescriptionInput = {
+                store: 'default',
+                path: 'project/cortex',
+                description: 'My desc',
+            };
 
-    it('should persist description to index.yaml file', async () => {
-        const input: SetCategoryDescriptionInput = {
-            store: 'default',
-            path: 'test/categories/level1',
-            description: 'Test category for runbook validation',
-        };
+            const result = await setCategoryDescriptionHandler(ctx, input);
+            const output = JSON.parse(result.content[0]!.text);
 
-        const result = await setCategoryDescriptionHandler(ctx, input);
-        const output = JSON.parse(result.content[0]!.text);
+            expect(output.path).toBe('project/cortex');
+            expect(output.description).toBe('My desc');
+        });
 
-        expect(output.description).toBe('Test category for runbook validation');
+        it('should auto-create the category when it does not already exist', async () => {
+            const input: SetCategoryDescriptionInput = {
+                store: 'default',
+                path: 'newcat/sub',
+                description: 'Auto-created',
+            };
 
-        // Read the parent index file to verify persistence
-        const { readFile } = await import('node:fs/promises');
-        const memoryDir = join(testDir, MEMORY_SUBDIR);
-        const parentIndexPath = join(memoryDir, 'test', 'categories', 'index.yaml');
-        const indexContent = await readFile(parentIndexPath, 'utf8');
+            const result = await setCategoryDescriptionHandler(ctx, input);
+            const output = JSON.parse(result.content[0]!.text);
 
-        // Verify the description is actually in the file
-        expect(indexContent).toContain('Test category for runbook validation');
-        expect(indexContent).toContain('description:');
-        expect(indexContent).toContain('test/categories/level1');
+            expect(output.description).toBe('Auto-created');
+        });
+
+        it('should set description on a root category', async () => {
+            const input: SetCategoryDescriptionInput = {
+                store: 'default',
+                path: 'project',
+                description: 'Root category description',
+            };
+
+            const result = await setCategoryDescriptionHandler(ctx, input);
+            const output = JSON.parse(result.content[0]!.text);
+
+            expect(output.path).toBe('project');
+            expect(output.description).toBe('Root category description');
+        });
+
+        it('should clear description when given empty string, returning null', async () => {
+            // First set a description
+            await setCategoryDescriptionHandler(ctx, {
+                store: 'default',
+                path: 'project/cortex',
+                description: 'Initial description',
+            });
+
+            // Then clear it
+            const result = await setCategoryDescriptionHandler(ctx, {
+                store: 'default',
+                path: 'project/cortex',
+                description: '',
+            });
+            const output = JSON.parse(result.content[0]!.text);
+
+            expect(output.path).toBe('project/cortex');
+            expect(output.description).toBeNull();
+        });
+
+        it('should persist description to parent index.yaml file', async () => {
+            const input: SetCategoryDescriptionInput = {
+                store: 'default',
+                path: 'test/categories/level1',
+                description: 'Test category for runbook validation',
+            };
+
+            const result = await setCategoryDescriptionHandler(ctx, input);
+            const output = JSON.parse(result.content[0]!.text);
+
+            expect(output.description).toBe('Test category for runbook validation');
+
+            // Verify the description is written to the parent index file on disk
+            const { readFile } = await import('node:fs/promises');
+            const memoryDir = join(testDir, MEMORY_SUBDIR);
+            const parentIndexPath = join(memoryDir, 'test', 'categories', 'index.yaml');
+            const indexContent = await readFile(parentIndexPath, 'utf8');
+
+            expect(indexContent).toContain('Test category for runbook validation');
+            expect(indexContent).toContain('description:');
+            expect(indexContent).toContain('test/categories/level1');
+        });
     });
 });
 
-describe('cortex_delete_category tool', () => {
-    let testDir: string;
+// =============================================================================
+// deleteCategoryHandler
+// =============================================================================
+
+describe('deleteCategoryHandler', () => {
+    describe('store resolution failure', () => {
+        it('should throw McpError(InvalidParams) when store does not exist', async () => {
+            const ctx = createMockCortexContext({
+                cortex: createMockCortex({
+                    getStore: mock(() => errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' })) as any,
+                }) as unknown as CortexContext['cortex'],
+            });
+
+            await expectMcpInvalidParams(
+                () => deleteCategoryHandler(ctx, { store: 'missing', path: 'foo' }),
+                'not found',
+            );
+        });
+    });
+
+    describe('with real filesystem', () => {
+        let testDir: string;
+        let ctx: CortexContext;
+
+        beforeEach(async () => {
+            testDir = await createTestDir();
+            ctx = createTestContext(testDir);
+
+            // Create a category so we have something to delete in tests
+            await createCategoryHandler(ctx, { store: 'default', path: 'project/deleteme' });
+        });
+
+        afterEach(async () => {
+            await rm(testDir, { recursive: true, force: true });
+        });
+
+        it('should delete an existing category and return deleted: true', async () => {
+            const input: DeleteCategoryInput = {
+                store: 'default',
+                path: 'project/deleteme',
+            };
+
+            const result = await deleteCategoryHandler(ctx, input);
+            const output = JSON.parse(result.content[0]!.text);
+
+            expect(output.path).toBe('project/deleteme');
+            expect(output.deleted).toBe(true);
+        });
+
+        it('should throw McpError(InvalidParams) when deleting a root (single-segment) category', async () => {
+            // Root categories (single segment, e.g. "project") cannot be deleted —
+            // the core operation returns ROOT_CATEGORY_REJECTED.
+            const input: DeleteCategoryInput = { store: 'default', path: 'project' };
+
+            await expectMcpInvalidParams(
+                () => deleteCategoryHandler(ctx, input),
+            );
+        });
+
+        it('should throw McpError(InvalidParams) when category does not exist', async () => {
+            const input: DeleteCategoryInput = {
+                store: 'default',
+                path: 'project/nonexistent',
+            };
+
+            await expectMcpInvalidParams(
+                () => deleteCategoryHandler(ctx, input),
+            );
+        });
+    });
+});
+
+// =============================================================================
+// registerCategoryTools
+// =============================================================================
+
+describe('registerCategoryTools', () => {
     let ctx: CortexContext;
 
-    beforeEach(async () => {
-        testDir = await createTestDir();
-        ctx = createTestContext(testDir);
-
-        // Create a category to delete
-        await createCategoryHandler(ctx, { store: 'default', path: 'project/deleteme' });
+    beforeEach(() => {
+        ctx = createMockCortexContext();
     });
 
-    afterEach(async () => {
-        await rm(testDir, { recursive: true, force: true });
+    it('should register all three tools when no options are provided (defaults to free)', () => {
+        const { registeredTools, server } = createMockMcpServer();
+
+        registerCategoryTools(server as any, ctx);
+
+        expect(registeredTools.has('cortex_create_category')).toBe(true);
+        expect(registeredTools.has('cortex_set_category_description')).toBe(true);
+        expect(registeredTools.has('cortex_delete_category')).toBe(true);
     });
 
-    it('should delete existing category', async () => {
-        const input: DeleteCategoryInput = {
-            store: 'default',
-            path: 'project/deleteme',
-        };
+    it('should register all three tools in free mode', () => {
+        const { registeredTools, server } = createMockMcpServer();
 
-        const result = await deleteCategoryHandler(ctx, input);
-        const output = JSON.parse(result.content[0]!.text);
+        registerCategoryTools(server as any, ctx, { mode: 'free' });
 
-        expect(output.deleted).toBe(true);
+        expect(registeredTools.has('cortex_create_category')).toBe(true);
+        expect(registeredTools.has('cortex_set_category_description')).toBe(true);
+        expect(registeredTools.has('cortex_delete_category')).toBe(true);
+        expect(registeredTools.size).toBe(3);
     });
 
-    it('should reject root category deletion', async () => {
-        const input: DeleteCategoryInput = {
-            store: 'default',
-            path: 'project',
-        };
+    it('should register all three tools in subcategories mode', () => {
+        const { registeredTools, server } = createMockMcpServer();
 
-        await expect(deleteCategoryHandler(ctx, input)).rejects.toThrow(/root category/i);
+        registerCategoryTools(server as any, ctx, {
+            mode: 'subcategories',
+            configCategories: { standards: {}, projects: {} },
+        });
+
+        expect(registeredTools.has('cortex_create_category')).toBe(true);
+        expect(registeredTools.has('cortex_set_category_description')).toBe(true);
+        expect(registeredTools.has('cortex_delete_category')).toBe(true);
+        expect(registeredTools.size).toBe(3);
     });
 
-    it('should reject non-existent category', async () => {
-        const input: DeleteCategoryInput = {
-            store: 'default',
-            path: 'project/nonexistent',
-        };
+    it('should register only cortex_set_category_description in strict mode', () => {
+        const { registeredTools, server } = createMockMcpServer();
 
-        await expect(deleteCategoryHandler(ctx, input)).rejects.toThrow(/not found/i);
+        registerCategoryTools(server as any, ctx, {
+            mode: 'strict',
+            configCategories: { standards: {}, projects: {} },
+        });
+
+        expect(registeredTools.has('cortex_set_category_description')).toBe(true);
+        expect(registeredTools.has('cortex_create_category')).toBe(false);
+        expect(registeredTools.has('cortex_delete_category')).toBe(false);
+        expect(registeredTools.size).toBe(1);
+    });
+
+    it('should attach non-empty descriptions to all registered tools', () => {
+        const { registeredTools, server } = createMockMcpServer();
+
+        registerCategoryTools(server as any, ctx);
+
+        const createTool = registeredTools.get('cortex_create_category');
+        const deleteTool = registeredTools.get('cortex_delete_category');
+        const descTool = registeredTools.get('cortex_set_category_description');
+
+        expect(createTool?.description).toBeTruthy();
+        expect(deleteTool?.description).toBeTruthy();
+        expect(descTool?.description).toBeTruthy();
     });
 });

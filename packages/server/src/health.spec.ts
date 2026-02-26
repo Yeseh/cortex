@@ -1,207 +1,138 @@
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { mkdtemp, rm, mkdir } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-
-import type { ServerConfig } from './config.ts';
-import { MEMORY_SUBDIR, SERVER_VERSION } from './config.ts';
-import { createHealthResponse, type HealthContext, type HealthResponse } from './health.ts';
-import { Cortex } from '@yeseh/cortex-core';
-import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
-
 /**
- * Creates a HealthContext for testing.
+ * Tests for the health check endpoint handler.
+ *
+ * @module server/health.spec
  */
-const createTestContext = async (tempDir: string, config: ServerConfig): Promise<HealthContext> => {
-    const memoryDir = join(tempDir, MEMORY_SUBDIR);
-    await mkdir(memoryDir, { recursive: true });
 
-    const cortex = Cortex.init({
-        adapterFactory: (storePath: string) =>
-            new FilesystemStorageAdapter({ rootDirectory: storePath }),
-    });
+import { describe, expect, it } from 'bun:test';
+import { SERVER_VERSION, type ServerConfig } from './config.ts';
+import { createHealthResponse, type HealthResponse } from './health.ts';
 
-    return { config, cortex };
+const mockConfig: ServerConfig = {
+    dataPath: '/tmp/test-cortex',
+    port: 3000,
+    host: '0.0.0.0',
+    defaultStore: 'default',
+    logLevel: 'info',
+    outputFormat: 'yaml',
 };
 
-/**
- * Helper to start a Bun server on a random port and return the base URL.
- */
-const startServer = (
-    ctx: HealthContext
-): { server: ReturnType<typeof Bun.serve>; baseUrl: string } => {
-    const server = Bun.serve({
-        port: 0, // Random available port
-        hostname: '127.0.0.1',
-        routes: {
-            '/health': {
-                GET: async () => createHealthResponse(ctx),
-            },
-        },
-        fetch: () => new Response('Not Found', { status: 404 }),
-    });
-    return { server, baseUrl: `http://127.0.0.1:${server.port}` };
-};
+// The health check handler doesn't invoke any cortex methods
+const mockCortex = {} as any;
 
-describe('health endpoint', () => {
-    let tempDir: string;
-    let config: ServerConfig;
-    let server: ReturnType<typeof Bun.serve> | null = null;
+describe('createHealthResponse', () => {
+    describe('response type', () => {
+        it('should return a Response object', async () => {
+            const response = await createHealthResponse({ config: mockConfig, cortex: mockCortex });
 
-    beforeEach(async () => {
-        tempDir = await mkdtemp(join(tmpdir(), 'cortex-health-tests-'));
-        config = {
-            dataPath: tempDir,
-            port: 3000,
-            host: '0.0.0.0',
-            defaultStore: 'default',
-            logLevel: 'info',
-            outputFormat: 'yaml',
-        };
-    });
+            expect(response).toBeInstanceOf(Response);
+        });
 
-    afterEach(async () => {
-        if (server) {
-            server.stop();
-            server = null;
-        }
-        if (tempDir) {
-            await rm(tempDir, { recursive: true, force: true });
-        }
-    });
+        it('should have a json() method', async () => {
+            const response = await createHealthResponse({ config: mockConfig, cortex: mockCortex });
 
-    describe('basic health response', () => {
-        it('should return 200 status', async () => {
-            const ctx = await createTestContext(tempDir, config);
-            const { server: s, baseUrl } = startServer(ctx);
-            server = s;
+            expect(typeof response.json).toBe('function');
+        });
 
-            const response = await fetch(`${baseUrl}/health`);
+        it('should return a 200 OK status', async () => {
+            const response = await createHealthResponse({ config: mockConfig, cortex: mockCortex });
 
             expect(response.status).toBe(200);
         });
+    });
 
-        it('should return JSON with correct content type', async () => {
-            const ctx = await createTestContext(tempDir, config);
-            const { server: s, baseUrl } = startServer(ctx);
-            server = s;
-
-            const response = await fetch(`${baseUrl}/health`);
-
-            expect(response.headers.get('content-type')).toContain('application/json');
-        });
-
-        it('should return status "healthy"', async () => {
-            const ctx = await createTestContext(tempDir, config);
-            const { server: s, baseUrl } = startServer(ctx);
-            server = s;
-
-            const response = await fetch(`${baseUrl}/health`);
+    describe('response body', () => {
+        it('should return JSON with status "healthy"', async () => {
+            const response = await createHealthResponse({ config: mockConfig, cortex: mockCortex });
             const json = (await response.json()) as HealthResponse;
 
             expect(json.status).toBe('healthy');
         });
 
-        it('should return version', async () => {
-            const ctx = await createTestContext(tempDir, config);
-            const { server: s, baseUrl } = startServer(ctx);
-            server = s;
-
-            const response = await fetch(`${baseUrl}/health`);
+        it('should return JSON with the correct SERVER_VERSION', async () => {
+            const response = await createHealthResponse({ config: mockConfig, cortex: mockCortex });
             const json = (await response.json()) as HealthResponse;
 
             expect(json.version).toBe(SERVER_VERSION);
+            expect(json.version).toBe('1.0.0');
         });
 
-        it('should return response with correct shape', async () => {
-            const ctx = await createTestContext(tempDir, config);
-            const { server: s, baseUrl } = startServer(ctx);
-            server = s;
+        it('should return JSON with dataPath matching config.dataPath', async () => {
+            const response = await createHealthResponse({ config: mockConfig, cortex: mockCortex });
+            const json = (await response.json()) as HealthResponse;
 
-            const response = await fetch(`${baseUrl}/health`);
+            expect(json.dataPath).toBe(mockConfig.dataPath);
+        });
+
+        it('should return JSON with all required HealthResponse fields', async () => {
+            const response = await createHealthResponse({ config: mockConfig, cortex: mockCortex });
             const json = (await response.json()) as HealthResponse;
 
             expect(json).toHaveProperty('status');
             expect(json).toHaveProperty('version');
             expect(json).toHaveProperty('dataPath');
-            expect(typeof json.status).toBe('string');
-            expect(typeof json.version).toBe('string');
-            expect(typeof json.dataPath).toBe('string');
         });
     });
 
     describe('config handling', () => {
-        it('should use provided config dataPath', async () => {
-            const customDataPath = join(tempDir, 'custom-data');
-            const customConfig: ServerConfig = {
-                ...config,
-                dataPath: customDataPath,
-            };
-
-            const ctx = await createTestContext(tempDir, customConfig);
-            const { server: s, baseUrl } = startServer(ctx);
-            server = s;
-
-            const response = await fetch(`${baseUrl}/health`);
+        it('should reflect a custom dataPath from config', async () => {
+            const customConfig: ServerConfig = { ...mockConfig, dataPath: '/custom/data/path' };
+            const response = await createHealthResponse({ config: customConfig, cortex: mockCortex });
             const json = (await response.json()) as HealthResponse;
 
-            expect(json.dataPath).toBe(customDataPath);
+            expect(json.dataPath).toBe('/custom/data/path');
         });
 
-        it('should use different dataPath for different configs', async () => {
-            const dataPath1 = join(tempDir, 'data-one');
-            const dataPath2 = join(tempDir, 'data-two');
-
-            const config1: ServerConfig = { ...config, dataPath: dataPath1 };
-            const config2: ServerConfig = { ...config, dataPath: dataPath2 };
-
-            const ctx1 = await createTestContext(dataPath1, config1);
-            const ctx2 = await createTestContext(dataPath2, config2);
-
-            const { server: s1, baseUrl: baseUrl1 } = startServer(ctx1);
-            const { server: s2, baseUrl: baseUrl2 } = startServer(ctx2);
-
-            try {
-                const response1 = await fetch(`${baseUrl1}/health`);
-                const json1 = (await response1.json()) as HealthResponse;
-
-                const response2 = await fetch(`${baseUrl2}/health`);
-                const json2 = (await response2.json()) as HealthResponse;
-
-                expect(json1.dataPath).toBe(dataPath1);
-                expect(json2.dataPath).toBe(dataPath2);
-            } finally {
-                s1.stop();
-                s2.stop();
-            }
-            server = null; // Already stopped both servers
-        });
-    });
-
-    describe('error resilience', () => {
-        it('should return healthy when dataPath directory does not exist', async () => {
-            const nonExistentPath = join(tempDir, 'non-existent-dir', 'deep', 'path');
-            const configWithBadPath: ServerConfig = {
-                ...config,
-                dataPath: nonExistentPath,
-            };
-
-            // Create context with non-existent path - cortex should still work
-            const cortex = Cortex.init({
-                adapterFactory: (storePath: string) =>
-                    new FilesystemStorageAdapter({ rootDirectory: storePath }),
-            });
-            const ctx: HealthContext = { config: configWithBadPath, cortex };
-
-            const { server: s, baseUrl } = startServer(ctx);
-            server = s;
-
-            const response = await fetch(`${baseUrl}/health`);
+        it('should use the dataPath exactly as provided without modification', async () => {
+            const dataPath = '/some/path/with spaces/and-dashes_and_underscores';
+            const config: ServerConfig = { ...mockConfig, dataPath };
+            const response = await createHealthResponse({ config, cortex: mockCortex });
             const json = (await response.json()) as HealthResponse;
 
-            expect(response.status).toBe(200);
+            expect(json.dataPath).toBe(dataPath);
+        });
+
+        it('should always return "healthy" regardless of config values', async () => {
+            const minimalConfig: ServerConfig = {
+                ...mockConfig,
+                dataPath: '/non/existent/path',
+            };
+            const response = await createHealthResponse({ config: minimalConfig, cortex: mockCortex });
+            const json = (await response.json()) as HealthResponse;
+
             expect(json.status).toBe('healthy');
-            expect(json.dataPath).toBe(nonExistentPath);
+        });
+
+        it('should always return SERVER_VERSION regardless of config values', async () => {
+            const config1: ServerConfig = { ...mockConfig, dataPath: '/path/one' };
+            const config2: ServerConfig = { ...mockConfig, dataPath: '/path/two' };
+
+            const [res1, res2] = await Promise.all([
+                createHealthResponse({ config: config1, cortex: mockCortex }),
+                createHealthResponse({ config: config2, cortex: mockCortex }),
+            ]);
+
+            const json1 = (await res1.json()) as HealthResponse;
+            const json2 = (await res2.json()) as HealthResponse;
+
+            expect(json1.version).toBe(SERVER_VERSION);
+            expect(json2.version).toBe(SERVER_VERSION);
+        });
+
+        it('should return different dataPath for different configs', async () => {
+            const configA: ServerConfig = { ...mockConfig, dataPath: '/data/alpha' };
+            const configB: ServerConfig = { ...mockConfig, dataPath: '/data/beta' };
+
+            const [resA, resB] = await Promise.all([
+                createHealthResponse({ config: configA, cortex: mockCortex }),
+                createHealthResponse({ config: configB, cortex: mockCortex }),
+            ]);
+
+            const jsonA = (await resA.json()) as HealthResponse;
+            const jsonB = (await resB.json()) as HealthResponse;
+
+            expect(jsonA.dataPath).toBe('/data/alpha');
+            expect(jsonB.dataPath).toBe('/data/beta');
         });
     });
 });

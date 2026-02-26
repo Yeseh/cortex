@@ -2,17 +2,26 @@
  * Unit tests for cortex_get_recent_memories tool.
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { MEMORY_SUBDIR } from '../../config.ts';
 import { createMemoryFile, createTestContext, createTestDir } from './test-utils.ts';
 import type { CortexContext } from '@yeseh/cortex-core';
+import { ok, err } from '@yeseh/cortex-core';
 import {
     getRecentMemoriesHandler,
     getRecentMemoriesInputSchema,
     type GetRecentMemoriesInput,
 } from './get-recent-memories.ts';
+import {
+    createMockCortexContext,
+    createMockCortex,
+    createMockStoreClient,
+    createMockCategoryClient,
+    expectMcpInvalidParams,
+    expectMcpInternalError,
+} from '../../test-helpers.spec.ts';
 
 describe('cortex_get_recent_memories tool', () => {
     let testDir: string;
@@ -321,5 +330,82 @@ describe('cortex_get_recent_memories tool', () => {
         if (!result.success) {
             expect(result.error.issues.some((i) => i.path.includes('store'))).toBe(true);
         }
+    });
+});
+
+// =============================================================================
+// Unit tests — mock-based, no filesystem
+// =============================================================================
+
+describe('getRecentMemoriesHandler (unit)', () => {
+    it('should throw McpError(InvalidParams) when store resolution fails', async () => {
+        const ctx = createMockCortexContext({
+            cortex: createMockCortex({
+                getStore: mock(() => err({ code: 'STORE_NOT_FOUND', message: 'Store not found' }) as any),
+            }) as any,
+        });
+
+        await expectMcpInvalidParams(() =>
+            getRecentMemoriesHandler(ctx, { store: 'missing', limit: 5 }),
+        );
+    });
+
+    it('should throw McpError(InvalidParams) when provided category fails validation', async () => {
+        const storeClient = createMockStoreClient({
+            getCategory: mock(() => err({ code: 'CATEGORY_NOT_FOUND', message: 'Category not found' }) as any),
+        });
+        const ctx = createMockCortexContext({
+            cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
+        });
+
+        await expectMcpInvalidParams(() =>
+            getRecentMemoriesHandler(ctx, { store: 'default', category: 'nonexistent', limit: 5 }),
+        );
+    });
+
+    it('should throw McpError(InternalError) when getRecentMemories core operation fails', async () => {
+        // Provide an adapter stub whose indexes.load() returns err() so the core
+        // operation returns Err and the handler converts it to McpError(InternalError).
+        const failingAdapter = {
+            indexes: {
+                load: mock(async () => err({ code: 'IO_READ_ERROR', message: 'Index read failed' }) as any),
+            },
+            memories: {},
+            categories: {},
+            stores: {},
+        };
+        const storeClient = createMockStoreClient({ adapter: failingAdapter as any });
+        const ctx = createMockCortexContext({
+            cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
+        });
+
+        await expectMcpInternalError(() =>
+            getRecentMemoriesHandler(ctx, { store: 'default', limit: 5 }),
+        );
+    });
+
+    it('should throw McpError(InternalError) when category-scoped core operation returns an error', async () => {
+        // For a specific category, the handler calls store.getCategory first (passes)
+        // then delegates to getRecentMemories with the failing adapter.
+        const failingAdapter = {
+            indexes: {
+                load: mock(async () => err({ code: 'IO_READ_ERROR', message: 'Category index read failed' }) as any),
+            },
+            memories: {},
+            categories: {},
+            stores: {},
+        };
+        const storeClient = createMockStoreClient({
+            adapter: failingAdapter as any,
+            // category validation passes
+            getCategory: mock(() => ok(createMockCategoryClient()) as any),
+        });
+        const ctx = createMockCortexContext({
+            cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
+        });
+
+        await expectMcpInternalError(() =>
+            getRecentMemoriesHandler(ctx, { store: 'default', category: 'project', limit: 3 }),
+        );
     });
 });

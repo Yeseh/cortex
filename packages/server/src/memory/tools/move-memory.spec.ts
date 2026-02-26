@@ -2,7 +2,7 @@
  * Unit tests for cortex_move_memory tool.
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { MEMORY_SUBDIR } from '../../config.ts';
@@ -10,6 +10,16 @@ import { createMemoryFile, createTestContext, createTestDir } from './test-utils
 import type { CortexContext } from '@yeseh/cortex-core';
 import { getMemoryHandler } from './get-memory.ts';
 import { moveMemoryHandler, type MoveMemoryInput } from './move-memory.ts';
+import {
+    createMockCortexContext,
+    createMockCortex,
+    createMockStoreClient,
+    createMockMemoryClient,
+    errResult,
+    okResult,
+    expectMcpInvalidParams,
+    expectTextResponseContains,
+} from '../../test-helpers.spec.ts';
 
 describe('cortex_move_memory tool', () => {
     let testDir: string;
@@ -89,5 +99,55 @@ describe('cortex_move_memory tool', () => {
         };
 
         await expect(moveMemoryHandler(ctx, input)).rejects.toThrow('already exists');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// moveMemoryHandler — unit tests using mocks
+// ---------------------------------------------------------------------------
+
+describe('moveMemoryHandler (unit)', () => {
+    it('should throw McpError InvalidParams when store resolution fails', async () => {
+        const ctx = createMockCortexContext({
+            cortex: createMockCortex({
+                getStore: mock(() => errResult({ code: 'STORE_NOT_FOUND', message: 'Store not found' })) as any,
+            }) as unknown as CortexContext['cortex'],
+        });
+
+        await expectMcpInvalidParams(
+            () => moveMemoryHandler(ctx, { store: 'missing', fromPath: 'cat/old', toPath: 'cat/new' }),
+        );
+    });
+
+    it('should throw via translateMemoryError when move returns DESTINATION_EXISTS', async () => {
+        const memClient = createMockMemoryClient({
+            move: mock(async () =>
+                errResult({ code: 'DESTINATION_EXISTS', message: 'Already exists', path: 'cat/new' }),
+            ) as any,
+        });
+        const storeClient = createMockStoreClient({
+            getMemory: mock(() => memClient),
+        });
+        const ctx = createMockCortexContext({
+            cortex: createMockCortex({
+                getStore: mock(() => okResult(storeClient)) as any,
+            }) as unknown as CortexContext['cortex'],
+        });
+
+        await expectMcpInvalidParams(
+            () => moveMemoryHandler(ctx, { store: 'default', fromPath: 'cat/old', toPath: 'cat/new' }),
+        );
+    });
+
+    it('should return text response containing "Memory moved from ... to ..." on success', async () => {
+        const ctx = createMockCortexContext();
+        const result = await moveMemoryHandler(ctx, {
+            store: 'default',
+            fromPath: 'cat/old',
+            toPath: 'cat/new',
+        });
+        expectTextResponseContains(result, 'Memory moved from');
+        expectTextResponseContains(result, 'cat/old');
+        expectTextResponseContains(result, 'cat/new');
     });
 });
