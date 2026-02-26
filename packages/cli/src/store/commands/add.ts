@@ -18,6 +18,8 @@
  * ```
  */
 
+import { mkdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import { Command } from '@commander-js/extra-typings';
 import { throwCliError } from '../../errors.ts';
 import { getDefaultConfigPath } from '../../context.ts';
@@ -141,10 +143,7 @@ export async function handleAdd(
 
     // 3. Read current config file (or start with empty config if it doesn't exist)
     const configFile = Bun.file(configPath);
-    let configResult: {
-        value: { settings?: unknown; stores: Record<string, unknown> };
-        ok: () => boolean;
-    };
+    let parsedConfig: { settings?: unknown; stores: Record<string, unknown> };
 
     if (await configFile.exists()) {
         let configContents: string;
@@ -158,18 +157,16 @@ export async function handleAdd(
             });
         }
 
-        const parsed = parseConfig(configContents);
+        const parsed = parseConfig(configContents!);
         if (!parsed.ok()) {
             throwCliError(parsed.error);
         }
-        configResult = parsed;
+        parsedConfig = parsed.value;
     }
     else {
         // Config doesn't exist yet — start with empty config
-        configResult = { value: { settings: undefined, stores: {} }, ok: () => true };
+        parsedConfig = { settings: undefined, stores: {} };
         // Ensure config directory exists
-        const { mkdir } = await import('node:fs/promises');
-        const { dirname } = await import('node:path');
         await mkdir(dirname(configPath), { recursive: true });
     }
 
@@ -182,9 +179,9 @@ export async function handleAdd(
     };
 
     const updatedConfig = {
-        ...configResult.value,
+        ...parsedConfig,
         stores: {
-            ...configResult.value.stores,
+            ...parsedConfig.stores,
             [trimmedName]: newStore,
         },
     };

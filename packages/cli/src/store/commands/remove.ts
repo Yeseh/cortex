@@ -45,7 +45,10 @@ export interface RemoveHandlerDeps {
 function validateStoreName(name: string): string {
     const slugResult = Slug.from(name);
     if (!slugResult.ok()) {
-        throwCliError({ code: 'INVALID_STORE_NAME', message: 'Store name must be a lowercase slug (letters, numbers, hyphens).' });
+        throwCliError({
+            code: 'INVALID_STORE_NAME',
+            message: 'Store name must be a lowercase slug (letters, numbers, hyphens).',
+        });
     }
 
     return slugResult.value.toString();
@@ -102,9 +105,9 @@ export async function handleRemove(
     // 2. Check if store exists in context
     const existingStore = ctx.stores[trimmedName];
     if (!existingStore) {
-        throwCliError({ 
-            code: 'STORE_NOT_FOUND', 
-            message: `Store '${trimmedName}' is not registered.`, 
+        throwCliError({
+            code: 'STORE_NOT_FOUND',
+            message: `Store '${trimmedName}' is not registered.`,
         });
     }
 
@@ -113,14 +116,20 @@ export async function handleRemove(
 
     // 3. Read current config file
     const configFile = Bun.file(configPath);
+    if (!(await configFile.exists())) {
+        throwCliError({
+            code: 'CONFIG_NOT_FOUND',
+            message: `Config file not found at ${configPath}. Cannot remove store.`,
+        });
+    }
     let configContents: string;
     try {
         configContents = await configFile.text();
     }
     catch {
-        throwCliError({ 
-            code: 'CONFIG_READ_FAILED', 
-            message: `Failed to read config at ${configPath}`, 
+        throwCliError({
+            code: 'CONFIG_READ_FAILED',
+            message: `Failed to read config at ${configPath}`,
         });
     }
 
@@ -143,9 +152,9 @@ export async function handleRemove(
         await Bun.write(configPath, serialized);
     }
     catch {
-        throwCliError({ 
-            code: 'CONFIG_WRITE_FAILED', 
-            message: `Failed to write config at ${configPath}`, 
+        throwCliError({
+            code: 'CONFIG_WRITE_FAILED',
+            message: `Failed to write config at ${configPath}`,
         });
     }
 
