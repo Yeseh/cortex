@@ -13,11 +13,9 @@ import { CategoryClient } from '../category/category-client.ts';
 import { err, ok, type Result } from '@/result.ts';
 import { MemoryClient } from '../memory/memory-client.ts';
 import type { CategoryResult } from '@/category/types.ts';
-import type { Store, StoreData, StoreName } from './store.ts';
+import type { StoreData } from './store.ts';
 import type { StoreError, StoreResult } from './result.ts';
 import { Slug } from '@/slug.ts';
-import type { ConfigStore } from '@/config/types.ts';
-import type { MemoryPath } from '@/memory/memory-path.ts';
 import { initializeStore } from './operations/initialize.ts';
 
 
@@ -26,21 +24,28 @@ import { initializeStore } from './operations/initialize.ts';
  *
  * Provides fluent API for accessing store metadata and navigating
  * to the category tree. Uses lazy validation: the client is always returned
- * synchronously, but operations will throw if the store doesn't exist.
+ * synchronously, but operations return `Result<T, E>` rather than throwing.
  *
  * @example
  * ```typescript
  * // Always returns a StoreClient (lazy validation)
- * const store = cortex.getStore('my-project');
- * console.log(store.name);        // 'my-project'
- *
- * // Operations throw if store doesn't exist
- * try {
- *     const root = store.rootCategory();
- *     const standards = root.getCategory('standards');
- * } catch (e) {
- *     console.error('Store not found:', e.message);
+ * const storeResult = cortex.getStore('my-project');
+ * if (!storeResult.ok()) {
+ *     console.error('Store not found:', storeResult.error.message);
+ *     return;
  * }
+ * const store = storeResult.value;
+ *
+ * // Load store metadata
+ * const loadResult = await store.load();
+ * if (!loadResult.ok()) {
+ *     // STORE_NOT_INITIALIZED: store configured but not yet init'd
+ *     // STORE_NOT_FOUND: storage read failed
+ *     console.error(loadResult.error.message);
+ *     return;
+ * }
+ *
+ * console.log('Category mode:', loadResult.value.categoryMode);
  * ```
  */
 export class StoreClient {
@@ -85,19 +90,38 @@ export class StoreClient {
         // TODO: This should not be necessary, remove Result<> wrapper and lazily load adapter in operations instead. 
         if (!adapter) {
             return err({
-               code: 'STORE_CREATE_FAILED',
-               message: `Adapter was null or undefined for store '${name}'`,
-               store: name,
-            })
+                code: 'STORE_CREATE_FAILED',
+                message: `Adapter was null or undefined for store '${name}'`,
+                store: name,
+            });
         }
 
         return ok(new StoreClient(name, adapter));
     }
 
     /**
-     * Loads store metadata from storage. 
-     * 
-     * @returns {@link StoreData}
+     * Loads store metadata from storage.
+     *
+     * Returns `ok(StoreData)` on success. Returns an error if:
+     * - `STORE_NAME_INVALID` — store name is not a valid slug
+     * - `STORE_NOT_INITIALIZED` — store directory exists but `store.yaml` is absent;
+     *   run `cortex store init <name>` to initialize it
+     * - `STORE_NOT_FOUND` — underlying storage read failed (permissions, disk error, etc.)
+     *
+     * @returns Result containing {@link StoreData} or a {@link StoreError}
+     *
+     * @example
+     * ```typescript
+     * const result = await storeClient.load();
+     * if (!result.ok()) {
+     *     if (result.error.code === 'STORE_NOT_INITIALIZED') {
+     *         // Initialize with defaults
+     *         await storeClient.initialize({ kind: 'filesystem', categoryMode: 'free', categories: [], properties: {} });
+     *     }
+     *     return;
+     * }
+     * console.log('Store loaded:', result.value.categoryMode);
+     * ```
      */
     async load(): Promise<Result<StoreData, StoreError>> {
         const parse = Slug.from(this.name);
@@ -114,14 +138,23 @@ export class StoreClient {
         if (!storeData.ok()) {
             return err({
                 code: 'STORE_NOT_FOUND',
-                message: `Store '${this.name}' not found in registry.`,
+                message: `Failed to load store '${this.name}': ${storeData.error.message}`,
                 store: this.name.toString(),
                 cause: storeData.error,
             });
         }
 
+        // Handle null result: store is registered but has no store.yaml yet
+        if (storeData.value === null) {
+            return err({
+                code: 'STORE_NOT_INITIALIZED',
+                message: `Store '${this.name}' has no configuration file. Run 'cortex store init ${this.name}' to initialize it.`,
+                store: this.name.toString(),
+            });
+        }
+
         this.data = storeData.value;
-        return ok(storeData.value as StoreData);
+        return ok(storeData.value);
     }
 
     /**
@@ -156,6 +189,29 @@ export class StoreClient {
         return ok(undefined);
     }
 
+    /**
+     * Initializes the store with the provided metadata, creating `store.yaml` in storage.
+     *
+     * Idempotent if the store already exists (overwrites existing data). Returns an error if:
+     * - `STORE_NAME_INVALID` — store name is not a valid slug
+     * - Any underlying storage write error
+     *
+     * @param data - Store configuration to persist
+     * @returns Result indicating success or a {@link StoreError}
+     *
+     * @example
+     * ```typescript
+     * const result = await storeClient.initialize({
+     *     kind: 'filesystem',
+     *     categoryMode: 'free',
+     *     categories: [],
+     *     properties: {},
+     * });
+     * if (!result.ok()) {
+     *     console.error('Failed to initialize store:', result.error.message);
+     * }
+     * ```
+     */
     async initialize(data: StoreData): Promise<StoreResult<void>> {
         const parse = Slug.from(this.name);
         if (!parse.ok()) {
@@ -167,7 +223,10 @@ export class StoreClient {
             });
         }
 
-        await initializeStore(this.adapter, this.name, data);
+        const result = await initializeStore(this.adapter, this.name, data);
+        if (!result.ok()) {
+            return result;
+        }
 
         this.data = data;
 

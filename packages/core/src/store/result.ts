@@ -8,6 +8,7 @@ import { err, type ErrorDetails, type Result } from '@/result.ts';
 
 export type StoreErrorCode =
     | 'STORE_NOT_FOUND'
+    | 'STORE_NOT_INITIALIZED'
     | 'STORE_ALREADY_EXISTS'
     | 'STORE_CREATE_FAILED'
     | 'STORE_READ_FAILED'

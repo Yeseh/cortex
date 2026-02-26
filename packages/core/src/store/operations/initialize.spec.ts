@@ -61,7 +61,7 @@ describe('initializeStore', () => {
             stores: {
                 load: async () =>
                     err({
-                        code: 'REGISTRY_READ_FAILED',
+                        code: 'STORE_READ_FAILED',
                         message: 'Cannot read registry',
                     }),
             },
@@ -73,7 +73,7 @@ describe('initializeStore', () => {
 
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
-            expect(result.error.code).toBe('REGISTRY_READ_FAILED');
+            expect(result.error.code).toBe('STORE_READ_FAILED');
         }
     });
 
@@ -112,11 +112,11 @@ describe('initializeStore', () => {
             categories: [
                 { 
                     path: CategoryPath.fromString('standards').unwrap(),
-                    subcategories: [] 
+                    subcategories: [], 
                 },
                 { 
                     path: CategoryPath.fromString('projects').unwrap(), 
-                    subcategories: [] 
+                    subcategories: [], 
                 },
             ],
         };
@@ -165,12 +165,10 @@ describe('initializeStore', () => {
             properties: {
                 path: '/path/to/store',
             },
-            categories: [
-                {
-                    path: CategoryPath.fromString('standards').unwrap(),
-                    subcategories: [],
-                }
-            ]
+            categories: [{
+                path: CategoryPath.fromString('standards').unwrap(),
+                subcategories: [],
+            }],
         });
 
         expect(result.ok()).toBe(false);
