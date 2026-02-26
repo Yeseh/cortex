@@ -34,7 +34,7 @@ import { throwCliError } from '../../errors.ts';
 import { CategoryPath, type CategoryClient } from '@yeseh/cortex-core/category';
 import { serialize, type CortexContext } from '@yeseh/cortex-core';
 import type { SubcategoryEntry } from '@yeseh/cortex-core/category';
-import { serializeOutput, type OutputFormat } from '../../output.ts';
+import { type OutputFormat } from '../../output.ts';
 import { createCliCommandContext } from '../../create-cli-command.ts';
 
 /**
@@ -87,38 +87,6 @@ export interface ListResult {
     memories: ListMemoryEntry[];
     subcategories: ListSubcategoryEntry[];
 }
-
-/**
- * Formats the output based on the specified format.
- */
-const formatOutput = (result: ListResult, format: OutputFormat): string => {
-    const outputMemories = result.memories.map((memory) => ({
-        path: memory.path,
-        token_estimate: memory.tokenEstimate,
-        summary: memory.summary,
-        expires_at: memory.expiresAt?.toISOString(),
-        expired: memory.isExpired || undefined,
-    }));
-
-    const outputSubcategories = result.subcategories.map((subcategory) => ({
-        path: subcategory.path,
-        memory_count: subcategory.memoryCount,
-        description: subcategory.description,
-    }));
-
-    const data = {
-        memories: outputMemories,
-        subcategories: outputSubcategories,
-    };
-
-    const serialized = serializeOutput({ kind: 'memory', value: data }, format);
-
-    if (!serialized.ok()) {
-        throwCliError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
-    }
-
-    return serialized.value;
-};
 
 /**
  * Handles the list command execution.

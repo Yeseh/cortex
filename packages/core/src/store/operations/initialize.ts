@@ -7,9 +7,8 @@
 import { err, ok } from '@/result.ts';
 import { storeError, type StoreResult } from '@/store/result.ts';
 import { Slug } from '@/slug.ts';
-import type { Store, StoreData } from '../store.ts';
+import type { StoreData } from '../store.ts';
 import type { StorageAdapter } from '@/storage/index.ts';
-import { CategoryPath } from '@/category/category-path.ts';
 
 /**
  * Initializes a new store with proper directory structure and registry entry.

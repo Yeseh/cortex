@@ -8,6 +8,7 @@ import { describe, expect, it, mock } from 'bun:test';
 import { err, ok } from '@/result.ts';
 import { initializeStore } from './initialize.ts';
 import type { Store, StoreData } from '../store.ts';
+import { Slug } from '@/slug.ts';
 import { CategoryPath } from '@/category/category-path.ts';
 import { createMockStorageAdapter } from '@/testing/mock-storage-adapter.ts';
 
@@ -15,7 +16,7 @@ describe('initializeStore', () => {
     it('should reject invalid store names', async () => {
         const load = mock(async () =>
             err({
-                code: 'STORE_NOT_FOUND',
+                code: 'STORE_NOT_FOUND' as const,
                 message: 'Store not found',
             }),
         );
@@ -25,6 +26,9 @@ describe('initializeStore', () => {
 
         const result = await initializeStore(adapter, '   ', {
             kind: 'local',
+            categoryMode: 'free' as const,
+            categories: [],
+            properties: {},
         });
 
         expect(result.ok()).toBe(false);
@@ -36,8 +40,11 @@ describe('initializeStore', () => {
 
     it('should reject duplicate store names', async () => {
         const existingStore: Store = {
-            name: 'my-store' as Store['name'],
+            name: Slug.fromUnsafe('my-store'),
             kind: 'local',
+            categoryMode: 'free' as const,
+            categories: [],
+            properties: {},
         };
 
         const adapter = createMockStorageAdapter({
@@ -48,6 +55,9 @@ describe('initializeStore', () => {
 
         const result = await initializeStore(adapter, 'my-store', {
             kind: 'local',
+            categoryMode: 'free' as const,
+            categories: [],
+            properties: {},
         });
 
         expect(result.ok()).toBe(false);
@@ -61,7 +71,7 @@ describe('initializeStore', () => {
             stores: {
                 load: async () =>
                     err({
-                        code: 'STORE_READ_FAILED',
+                        code: 'STORE_READ_FAILED' as const,
                         message: 'Cannot read registry',
                     }),
             },
@@ -69,6 +79,9 @@ describe('initializeStore', () => {
 
         const result = await initializeStore(adapter, 'my-store', {
             kind: 'local',
+            categoryMode: 'free' as const,
+            categories: [],
+            properties: {},
         });
 
         expect(result.ok()).toBe(false);
@@ -88,6 +101,9 @@ describe('initializeStore', () => {
         const data: StoreData = {
             kind: 'local',
             description: 'Test store',
+            categoryMode: 'free' as const,
+            categories: [],
+            properties: {},
         };
 
         const result = await initializeStore(adapter, 'my-store', data);
@@ -110,13 +126,13 @@ describe('initializeStore', () => {
                 path: '/path/to/store',
             },
             categories: [
-                { 
+                {
                     path: CategoryPath.fromString('standards').unwrap(),
-                    subcategories: [], 
+                    subcategories: [],
                 },
-                { 
-                    path: CategoryPath.fromString('projects').unwrap(), 
-                    subcategories: [], 
+                {
+                    path: CategoryPath.fromString('projects').unwrap(),
+                    subcategories: [],
                 },
             ],
         };
@@ -132,7 +148,7 @@ describe('initializeStore', () => {
             stores: {
                 save: async () =>
                     err({
-                        code: 'STORE_CREATE_FAILED',
+                        code: 'STORE_CREATE_FAILED' as const,
                         message: 'Failed to create store',
                     }),
             },
@@ -140,6 +156,9 @@ describe('initializeStore', () => {
 
         const result = await initializeStore(adapter, 'my-store', {
             kind: 'local',
+            categoryMode: 'free' as const,
+            categories: [],
+            properties: {},
         });
 
         expect(result.ok()).toBe(false);
@@ -153,7 +172,7 @@ describe('initializeStore', () => {
             categories: {
                 ensure: async () =>
                     err({
-                        code: 'INVALID_PATH',
+                        code: 'INVALID_PATH' as const,
                         message: 'Invalid category path',
                     }),
             },

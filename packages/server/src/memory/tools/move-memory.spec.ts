@@ -50,8 +50,8 @@ describe('cortex_move_memory tool', () => {
     it('should move a memory', async () => {
         const input: MoveMemoryInput = {
             store: 'default',
-            fromPath: 'project/move-source',
-            toPath: 'project/move-destination',
+            from_path: 'project/move-source',
+            to_path: 'project/move-destination',
         };
 
         const result = await moveMemoryHandler(ctx, input);
@@ -61,10 +61,10 @@ describe('cortex_move_memory tool', () => {
             getMemoryHandler(ctx, { store: 'default', path: 'project/move-source' }),
         ).rejects.toThrow('not found');
 
-        const getResult = await getMemoryHandler(
-            ctx,
-            { store: 'default', path: 'project/move-destination' },
-        );
+        const getResult = await getMemoryHandler(ctx, {
+            store: 'default',
+            path: 'project/move-destination',
+        });
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.content).toBe('Content to move');
     });
@@ -72,8 +72,8 @@ describe('cortex_move_memory tool', () => {
     it('should return error for non-existent source', async () => {
         const input: MoveMemoryInput = {
             store: 'default',
-            fromPath: 'project/non-existent',
-            toPath: 'project/destination',
+            from_path: 'project/non-existent',
+            to_path: 'project/destination',
         };
 
         await expect(moveMemoryHandler(ctx, input)).rejects.toThrow('not found');
@@ -94,8 +94,8 @@ describe('cortex_move_memory tool', () => {
 
         const input: MoveMemoryInput = {
             store: 'default',
-            fromPath: 'project/move-source',
-            toPath: 'project/existing-destination',
+            from_path: 'project/move-source',
+            to_path: 'project/existing-destination',
         };
 
         await expect(moveMemoryHandler(ctx, input)).rejects.toThrow('already exists');
@@ -110,19 +110,25 @@ describe('moveMemoryHandler (unit)', () => {
     it('should throw McpError InvalidParams when store resolution fails', async () => {
         const ctx = createMockCortexContext({
             cortex: createMockCortex({
-                getStore: mock(() => errResult({ code: 'STORE_NOT_FOUND', message: 'Store not found' })) as any,
+                getStore: mock(() =>
+                    errResult({ code: 'STORE_NOT_FOUND', message: 'Store not found' }),
+                ) as any,
             }) as unknown as CortexContext['cortex'],
         });
 
-        await expectMcpInvalidParams(
-            () => moveMemoryHandler(ctx, { store: 'missing', fromPath: 'cat/old', toPath: 'cat/new' }),
+        await expectMcpInvalidParams(() =>
+            moveMemoryHandler(ctx, { store: 'missing', from_path: 'cat/old', to_path: 'cat/new' }),
         );
     });
 
     it('should throw via translateMemoryError when move returns DESTINATION_EXISTS', async () => {
         const memClient = createMockMemoryClient({
             move: mock(async () =>
-                errResult({ code: 'DESTINATION_EXISTS', message: 'Already exists', path: 'cat/new' }),
+                errResult({
+                    code: 'DESTINATION_EXISTS',
+                    message: 'Already exists',
+                    path: 'cat/new',
+                }),
             ) as any,
         });
         const storeClient = createMockStoreClient({
@@ -134,8 +140,8 @@ describe('moveMemoryHandler (unit)', () => {
             }) as unknown as CortexContext['cortex'],
         });
 
-        await expectMcpInvalidParams(
-            () => moveMemoryHandler(ctx, { store: 'default', fromPath: 'cat/old', toPath: 'cat/new' }),
+        await expectMcpInvalidParams(() =>
+            moveMemoryHandler(ctx, { store: 'default', from_path: 'cat/old', to_path: 'cat/new' }),
         );
     });
 
@@ -143,8 +149,8 @@ describe('moveMemoryHandler (unit)', () => {
         const ctx = createMockCortexContext();
         const result = await moveMemoryHandler(ctx, {
             store: 'default',
-            fromPath: 'cat/old',
-            toPath: 'cat/new',
+            from_path: 'cat/old',
+            to_path: 'cat/new',
         });
         expectTextResponseContains(result, 'Memory moved from');
         expectTextResponseContains(result, 'cat/old');

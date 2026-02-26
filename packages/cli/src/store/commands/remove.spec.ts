@@ -78,20 +78,14 @@ describe('handleRemove', () => {
             });
 
             // 'work' is a valid slug but not registered in this context
-            await expectCommanderError(
-                () => handleRemove(ctx, 'work'),
-                'STORE_NOT_FOUND',
-            );
+            await expectCommanderError(() => handleRemove(ctx, 'work'), 'STORE_NOT_FOUND');
         });
 
         it('should normalize the name before checking for store existence', async () => {
             // Slug.from('WORK') → 'work'; if 'work' is not in stores, STORE_NOT_FOUND
             const { ctx } = createMockContext({ stores: {} });
 
-            await expectCommanderError(
-                () => handleRemove(ctx, 'WORK'),
-                'STORE_NOT_FOUND',
-            );
+            await expectCommanderError(() => handleRemove(ctx, 'WORK'), 'STORE_NOT_FOUND');
         });
     });
 

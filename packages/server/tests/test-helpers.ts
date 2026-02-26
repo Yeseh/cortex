@@ -49,9 +49,7 @@ const TEST_CLIENT_INFO = {
     version: '1.0.0',
 };
 
-export const createServerSandbox = async (
-    defaultStore = 'default',
-): Promise<ServerSandbox> => {
+export const createServerSandbox = async (defaultStore = 'default'): Promise<ServerSandbox> => {
     const rootDir = await mkdtemp(join(tmpdir(), 'cortex-server-int-'));
     const homeDir = join(rootDir, 'home');
     const dataPath = join(rootDir, 'data');
@@ -77,7 +75,9 @@ export const registerSandboxCleanup = (sandbox: ServerSandbox): void => {
 
 export const startServer = async (sandbox: ServerSandbox): Promise<StartedServer> => {
     const serverRoot = fileURLToPath(new URL('..', import.meta.url));
-    const child = spawn('bun', ['run', 'src/index.ts'], {
+    const child = spawn('bun', [
+        'run', 'src/index.ts',
+    ], {
         cwd: serverRoot,
         env: {
             ...process.env,
@@ -210,10 +210,15 @@ export const callTool = async (
     args: Record<string, unknown>,
     id: string | number = 3,
 ): Promise<McpHttpResponse> => {
-    return postMcp(baseUrl, 'tools/call', {
-        name,
-        arguments: args,
-    }, id);
+    return postMcp(
+        baseUrl,
+        'tools/call',
+        {
+            name,
+            arguments: args,
+        },
+        id,
+    );
 };
 
 export const expectMcpSuccess = <T = unknown>(response: McpHttpResponse): JsonRpcSuccess<T> => {
@@ -223,7 +228,10 @@ export const expectMcpSuccess = <T = unknown>(response: McpHttpResponse): JsonRp
     return response.body as JsonRpcSuccess<T>;
 };
 
-export const expectMcpError = (response: McpHttpResponse, messageContains?: string): JsonRpcError => {
+export const expectMcpError = (
+    response: McpHttpResponse,
+    messageContains?: string,
+): JsonRpcError => {
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty('jsonrpc', '2.0');
     expect(response.body).toHaveProperty('error');
@@ -236,7 +244,10 @@ export const expectMcpError = (response: McpHttpResponse, messageContains?: stri
     return body;
 };
 
-export const expectMcpToolError = (response: McpHttpResponse, messageContains?: string): JsonRpcSuccess => {
+export const expectMcpToolError = (
+    response: McpHttpResponse,
+    messageContains?: string,
+): JsonRpcSuccess => {
     const body = expectMcpSuccess(response);
     const result = body.result as { isError?: boolean };
     expect(result.isError).toBe(true);
@@ -251,7 +262,7 @@ export const expectMcpToolError = (response: McpHttpResponse, messageContains?: 
 
 export const readTextContent = (response: JsonRpcSuccess): string => {
     const result = response.result as {
-        content?: Array<{ type: string; text: string }>;
+        content?: { type: string; text: string }[];
     };
 
     if (!result.content?.length) {
@@ -309,7 +320,7 @@ const parseMcpBody = (body: string): JsonRpcSuccess | JsonRpcError | Record<stri
             throw new Error(`Failed to parse MCP response body: ${trimmed.slice(0, 300)}`);
         }
 
-        const payload = dataLines[dataLines.length - 1].slice('data:'.length).trim();
+        const payload = dataLines[dataLines.length - 1]!.slice('data:'.length).trim();
         return JSON.parse(payload) as JsonRpcSuccess | JsonRpcError;
     }
 };

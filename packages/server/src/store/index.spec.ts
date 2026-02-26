@@ -3,7 +3,6 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { Cortex } from '@yeseh/cortex-core';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 import type { ConfigStores } from '@yeseh/cortex-core';
 import { testContext } from '../../../core/src/testing/createContext.ts';

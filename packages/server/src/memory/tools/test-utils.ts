@@ -7,20 +7,18 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import type { ServerConfig } from '../../config.ts';
 import { MEMORY_SUBDIR } from '../../config.ts';
 import { type Memory, Cortex } from '@yeseh/cortex-core';
 import { createMemory } from '@yeseh/cortex-core/memory';
 import { createCategory } from '@yeseh/cortex-core/category';
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 import type { ConfigStores, CortexConfig, CortexContext } from '@yeseh/cortex-core';
-import { testContext } from '@yeseh/cortex-core';
 import { PassThrough } from 'node:stream';
 
 export const TestDate = new Date('2024-01-01T00:00:00Z'); // Fixed date for test determinism
 
 // Test configuration
-export const createTestConfig = (dataPath: string): CortexConfig => ({
+export const createTestConfig = (_dataPath: string): CortexConfig => ({
     settings: {
         defaultStore: 'default',
         outputFormat: 'yaml',
@@ -35,9 +33,6 @@ export const createTestConfig = (dataPath: string): CortexConfig => ({
  * @returns A CortexContext ready for use in test handlers
  */
 export const createTestContext = (testDir: string): CortexContext => {
-    const context = testContext;
-    const adapter = new FilesystemStorageAdapter({ rootDirectory: testDir });
-
     const config = createTestConfig(testDir);
     const memoryDir = join(testDir, MEMORY_SUBDIR);
 
@@ -61,7 +56,7 @@ export const createTestContext = (testDir: string): CortexContext => {
             const store = storeConfig[storeName];
             if (!store) {
                 throw new Error(
-                    `Store '${storeName}' is not registered. Available stores: ${Object.keys(storeConfig).join(', ')}`
+                    `Store '${storeName}' is not registered. Available stores: ${Object.keys(storeConfig).join(', ')}`,
                 );
             }
             const storePath = store.properties.path as string;
@@ -88,7 +83,7 @@ export const createTestContext = (testDir: string): CortexContext => {
  */
 export const createTestContextWithStores = (
     testDir: string,
-    additionalStores: Record<string, string>
+    additionalStores: Record<string, string>,
 ): CortexContext => {
     const config = createTestConfig(testDir);
     const memoryDir = join(testDir, MEMORY_SUBDIR);
@@ -102,7 +97,9 @@ export const createTestContextWithStores = (
         },
     };
 
-    for (const [name, path] of Object.entries(additionalStores)) {
+    for (const [
+        name, path,
+    ] of Object.entries(additionalStores)) {
         storeConfig[name] = {
             kind: 'filesystem',
             properties: { path },
@@ -118,7 +115,7 @@ export const createTestContextWithStores = (
             const store = storeConfig[storeName];
             if (!store) {
                 throw new Error(
-                    `Store '${storeName}' is not registered. Available stores: ${Object.keys(storeConfig).join(', ')}`
+                    `Store '${storeName}' is not registered. Available stores: ${Object.keys(storeConfig).join(', ')}`,
                 );
             }
             const storePath = store.properties.path as string;
@@ -154,7 +151,7 @@ export const createTestContextWithStores = (
 export const createTestDir = async (): Promise<string> => {
     const testDir = join(
         tmpdir(),
-        `cortex-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
+        `cortex-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     );
     await mkdir(testDir, { recursive: true });
 
@@ -197,7 +194,7 @@ export const createTestDir = async (): Promise<string> => {
  */
 export const createTestCategory = async (
     storeRoot: string,
-    categoryPath: string
+    categoryPath: string,
 ): Promise<void> => {
     const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
     const result = await createCategory(adapter.categories, categoryPath);
@@ -210,7 +207,7 @@ export const createTestCategory = async (
 export const createMemoryFile = async (
     storeRoot: string,
     slugPath: string,
-    contents: Partial<Memory>
+    contents: Partial<Memory>,
 ): Promise<void> => {
     const adapter = new FilesystemStorageAdapter({ rootDirectory: storeRoot });
 
@@ -222,7 +219,7 @@ export const createMemoryFile = async (
         const categoryResult = await createCategory(adapter.categories, categoryPath);
         if (!categoryResult.ok()) {
             throw new Error(
-                `Failed to create category '${categoryPath}': ${categoryResult.error.message}`
+                `Failed to create category '${categoryPath}': ${categoryResult.error.message}`,
             );
         }
     }
@@ -241,7 +238,7 @@ export const createMemoryFile = async (
                 updatedAt: contents.metadata?.updatedAt ?? new Date(),
             },
         },
-        contents.metadata?.createdAt // Pass timestamp for test determinism
+        contents.metadata?.createdAt, // Pass timestamp for test determinism
     );
 
     if (!result.ok()) {

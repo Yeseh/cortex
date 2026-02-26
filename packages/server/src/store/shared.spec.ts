@@ -137,7 +137,11 @@ describe('convertToCategories', () => {
 
             const result = convertToCategories(defs);
 
-            expect(result.map((c) => c.path)).toEqual(['apple', 'mango', 'zebra']);
+            expect(result.map((c) => c.path)).toEqual([
+                'apple',
+                'mango',
+                'zebra',
+            ]);
         });
 
         it('should sort a later-alphabet key after an earlier-alphabet key', () => {

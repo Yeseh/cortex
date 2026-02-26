@@ -1,5 +1,5 @@
-import { spawn } from "node:child_process";
-import { basename } from "node:path";
+import { spawn } from 'node:child_process';
+import { basename } from 'node:path';
 
 /**
  * Executes a git command and returns the trimmed stdout.

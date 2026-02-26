@@ -8,13 +8,8 @@ import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { storeNameSchema } from '../../store/tools.ts';
 import { type CortexContext } from '@yeseh/cortex-core';
-import {
-    isoDateSchema,
-    memoryPathSchema,
-    tagsSchema,
-    type McpToolResponse,
-    translateMemoryError,
-} from './shared.ts';
+import { isoDateSchema, memoryPathSchema, tagsSchema, translateMemoryError } from './shared.ts';
+import { type McpToolResponse } from '../../response.ts';
 
 /** Schema for update_memory tool input */
 export const updateMemoryInputSchema = z.object({
@@ -22,12 +17,16 @@ export const updateMemoryInputSchema = z.object({
     path: memoryPathSchema.describe('Memory path in category/slug format'),
     content: z.string().optional().describe('New memory content'),
     tags: tagsSchema.describe('New tags (replaces existing)'),
-    expires_at: isoDateSchema.optional().nullable().describe(
-        'New expiration date (ISO 8601). Pass null to clear the expiration. Omit to keep existing value.',
-    ),
-    citations: z.array(z.string().min(1)).optional().describe(
-        'New citations (replaces existing). Omit to keep existing citations.',
-    ),
+    expires_at: isoDateSchema
+        .optional()
+        .nullable()
+        .describe(
+            'New expiration date (ISO 8601). Pass null to clear the expiration. Omit to keep existing value.',
+        ),
+    citations: z
+        .array(z.string().min(1))
+        .optional()
+        .describe('New citations (replaces existing). Omit to keep existing citations.'),
 });
 
 /**
@@ -88,8 +87,12 @@ export const updateMemoryHandler = async (
     input: UpdateMemoryInput,
 ): Promise<McpToolResponse> => {
     // Validate that at least one update field is provided
-    if (input.content === undefined && input.tags === undefined &&
-        input.expires_at === undefined && input.citations === undefined) {
+    if (
+        input.content === undefined &&
+        input.tags === undefined &&
+        input.expires_at === undefined &&
+        input.citations === undefined
+    ) {
         throw new McpError(
             ErrorCode.InvalidParams,
             'No updates provided. Specify content, tags, expires_at, or citations.',
@@ -106,11 +109,12 @@ export const updateMemoryHandler = async (
     const result = await memoryClient.update({
         content: input.content,
         tags: input.tags,
-        expiresAt: input.expires_at === null
-            ? null
-            : input.expires_at
-                ? new Date(input.expires_at)
-                : undefined,
+        expiresAt:
+            input.expires_at === null
+                ? null
+                : input.expires_at
+                    ? new Date(input.expires_at)
+                    : undefined,
         citations: input.citations,
     });
 

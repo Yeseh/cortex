@@ -40,17 +40,16 @@
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { ok, err, storeCategoriesToConfigCategories, configFileSchema, configStoreToStore } from '@yeseh/cortex-core';
+import { ok, err, storeCategoriesToConfigCategories, configFileSchema } from '@yeseh/cortex-core';
 import type { ConfigAdapter } from '@yeseh/cortex-core/storage';
 import type {
-    ConfigError,
     ConfigResult,
+    ConfigStore,
     ConfigStores,
     CortexConfig,
     CortexSettings,
     StoreData,
 } from '@yeseh/cortex-core';
-import type { StoreName } from '../../core/src/store/store';
 
 /**
  * Internal structure of the parsed config file.
@@ -116,6 +115,10 @@ export class FilesystemConfigAdapter implements ConfigAdapter {
         this.path = configPath;
     }
 
+    async initialize(): Promise<ConfigResult<void>> {
+        return this.initializeConfig();
+    }
+
     // Returns the raw config data or null if not loaded
     get data(): CortexConfig | null {
         return this.#config;
@@ -134,8 +137,8 @@ export class FilesystemConfigAdapter implements ConfigAdapter {
     /**
      * Initializes the configuration file.
      *
-     * If the config file already exists, loads the file from storage and returns that 
-     * If the config file does not exist, creates it with default 
+     * If the config file already exists, loads the file from storage and returns that
+     * If the config file does not exist, creates it with default
      * settings and stores. Creates parent directories as needed.
      *
      * @returns Result indicating success or failure
@@ -181,12 +184,12 @@ export class FilesystemConfigAdapter implements ConfigAdapter {
         return ok(undefined);
     }
 
-    async saveStore(storeName: StoreName, data: StoreData): Promise<ConfigResult<void>> {
+    async saveStore(storeName: string, data: StoreData): Promise<ConfigResult<void>> {
         if (!data.properties.path) {
             return err({
                 code: 'CONFIG_VALIDATION_FAILED',
                 message: `Store '${storeName}' is missing required 'path' property.`,
-                store: storeName.toString(),
+                store: storeName,
             });
         }
 
@@ -194,7 +197,7 @@ export class FilesystemConfigAdapter implements ConfigAdapter {
             return err({
                 code: 'CONFIG_VALIDATION_FAILED',
                 message: `Store '${storeName}' has unsupported kind '${data.kind}'. Only 'filesystem' is supported by FilesystemConfigAdapter.`,
-                store: storeName.toString(),
+                store: storeName,
                 kind: data.kind,
             });
         }
@@ -206,8 +209,8 @@ export class FilesystemConfigAdapter implements ConfigAdapter {
 
         const stores = this.#config?.stores ?? {};
 
-        stores[storeName.toString()] = {
-            kind: data.kind, 
+        stores[storeName] = {
+            kind: data.kind,
             categoryMode: data.categoryMode,
             description: data.description,
             categories: storeCategoriesToConfigCategories(data.categories),
@@ -309,29 +312,19 @@ export class FilesystemConfigAdapter implements ConfigAdapter {
      * }
      * ```
      */
-    async getStore(storeName: StoreName): Promise<ConfigResult<StoreData | null>> {
+    async getStore(storeName: string): Promise<ConfigResult<ConfigStore | null>> {
         const configResult = await this._readConfig();
         if (!configResult.ok()) {
             return err(configResult.error);
         }
 
         const stores = this.#config?.stores ?? DEFAULT_CONFIG.stores;
-        const store = stores[storeName.toString()];
+        const store = stores[storeName];
         if (!store) {
             return ok(null);
         }
 
-        const converted = configStoreToStore(storeName.toString(), store);
-        if (!converted.ok()) {
-            return err({
-                code: 'CONFIG_READ_FAILED',
-                message: `Store '${storeName}' has invalid configuration: ${converted.error.message}`,
-                store: storeName.toString(),
-                cause: converted.error,
-            });
-        }
-
-        return ok(converted.value ?? null);
+        return ok(store);
     }
 
     private async _writeConfig(config: CortexConfig): Promise<ConfigResult<void>> {
@@ -365,11 +358,7 @@ export class FilesystemConfigAdapter implements ConfigAdapter {
             content = await readFile(this.configPath, 'utf-8');
         }
         catch (error) {
-            if (
-                error instanceof Error &&
-                'code' in error &&
-                error.code === 'ENOENT'
-            ) {
+            if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
                 return err({
                     code: 'CONFIG_NOT_FOUND',
                     message: `Config file not found at ${this.configPath}. Run initialize() first.`,
@@ -391,9 +380,9 @@ export class FilesystemConfigAdapter implements ConfigAdapter {
             if (!parsed.success) {
                 return err({
                     code: 'CONFIG_PARSE_FAILED',
-                    message: `Config file validation failed: ${parsed.error.message}`, 
+                    message: `Config file validation failed: ${parsed.error.message}`,
                 });
-            } 
+            }
 
             this.#config = parsed.data;
         }

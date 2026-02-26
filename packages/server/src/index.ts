@@ -34,9 +34,7 @@ import { createHealthResponse } from './health.ts';
 import { registerMemoryTools } from './memory/index.ts';
 import { registerStoreTools } from './store/index.ts';
 import { registerCategoryTools, type CategoryToolsOptions } from './category/index.ts';
-import { err, ok, type Result, Cortex, type CortexContext, storeCategoriesToConfigCategories } from '@yeseh/cortex-core';
-import type { StorageAdapter } from '@yeseh/cortex-core/storage';
-import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
+import { err, ok, type Result, storeCategoriesToConfigCategories } from '@yeseh/cortex-core';
 import { createCortexContext } from './context.ts';
 
 /**
@@ -231,7 +229,7 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
     // TODO: This is kinda meh, need to reconsider the category tools disabling.
     // Currently the default server config is authoritative for category mode, so if the default store is configured with 'free' mode then the category tools will be registered in free mode, even if the user wanted to run the server in 'strict' mode. We should either:
     // 1. Make category mode a top-level server config option that is independent of store configs, and pass it to the category tools registration.
-    // 2. Or make category mode a required property of each store, and require the default store to be configured with the desired category mode for the server. 
+    // 2. Or make category mode a required property of each store, and require the default store to be configured with the desired category mode for the server.
     registerCategoryTools(mcpServer, cortexContext, categoryToolsOptions);
 
     // Connect MCP server to transport
@@ -246,7 +244,10 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
                 POST: async (req) => {
                     try {
                         // Enforce 1MB body size limit (matching previous Express config)
-                        const contentLength = parseInt(req.headers.get('content-length') ?? '0', 10);
+                        const contentLength = parseInt(
+                            req.headers.get('content-length') ?? '0',
+                            10,
+                        );
                         if (contentLength > 1024 * 1024) {
                             return Response.json(
                                 { error: 'Request body too large. Maximum size is 1MB.' },

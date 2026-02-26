@@ -362,7 +362,11 @@ describe('listStoresFromContext', () => {
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             const names = result.value.stores.map((s) => s.name);
-            expect(names).toEqual(['alpha', 'mango', 'zebra']);
+            expect(names).toEqual([
+                'alpha',
+                'mango',
+                'zebra',
+            ]);
         }
     });
 
@@ -448,7 +452,9 @@ describe('listStoresHandler', () => {
 
         const data = parseResponseJson(response) as { stores: { name: string }[] };
         const names = data.stores.map((s) => s.name);
-        expect(names).toEqual(['alpha', 'zebra']);
+        expect(names).toEqual([
+            'alpha', 'zebra',
+        ]);
     });
 
     it('should not set isError on the response', async () => {

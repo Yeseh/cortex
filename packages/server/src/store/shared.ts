@@ -3,7 +3,7 @@
  * @module server/store/shared
  */
 
-import type { CategoryDefinition } from '@yeseh/cortex-core';
+import type { ConfigCategory } from '@yeseh/cortex-core';
 
 /**
  * Information about a category in the hierarchy for MCP responses.
@@ -35,7 +35,7 @@ export type CategoryInfo = {
  * ```
  */
 export const convertToCategories = (
-    definitions: Record<string, CategoryDefinition> | undefined,
+    definitions: Record<string, ConfigCategory> | undefined,
     prefix = '',
 ): CategoryInfo[] => {
     if (!definitions) {

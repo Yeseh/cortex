@@ -21,9 +21,20 @@ import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import { Command } from '@commander-js/extra-typings';
 import { throwCliError as throwCliError } from '../errors.ts';
-import { serializeOutput, type OutputFormat, type OutputInit, type OutputPayload } from '../output.ts';
-import { defaultGlobalStoreCategories } from '@yeseh/cortex-core/category'; 
-import { configCategoriesToStoreCategories, getDefaultSettings,  type CortexConfig, type CortexContext, type CortexSettings, type StoreData } from '@yeseh/cortex-core';
+import {
+    serializeOutput,
+    type OutputFormat,
+    type OutputInit,
+    type OutputPayload,
+} from '../output.ts';
+import { defaultGlobalStoreCategories } from '@yeseh/cortex-core/category';
+import {
+    configCategoriesToStoreCategories,
+    getDefaultSettings,
+    type CortexConfig,
+    type CortexContext,
+    type StoreData,
+} from '@yeseh/cortex-core';
 import { createCliCommandContext } from '../create-cli-command.ts';
 
 /**
@@ -63,7 +74,6 @@ export const initCommand = new Command('init')
         await handleInit(context.value, options);
     });
 
-
 /**
  * Handles the init command execution.
  *
@@ -77,8 +87,8 @@ export const initCommand = new Command('init')
  * @throws {CommanderError} When initialization fails
  */
 
-// TODO: We should move this logic into the core package as a helper function, and just call it from the CLI command handler. 
-//       Use the ConfigAdapter to initialize the config store and write the default config, instead of manually writing files here. This way we can reuse the same initialization logic in other contexts (e.g. programmatic setup, tests). 
+// TODO: We should move this logic into the core package as a helper function, and just call it from the CLI command handler.
+//       Use the ConfigAdapter to initialize the config store and write the default config, instead of manually writing files here. This way we can reuse the same initialization logic in other contexts (e.g. programmatic setup, tests).
 export async function handleInit(
     ctx: CortexContext,
     options: InitCommandOptions = {},
@@ -88,8 +98,8 @@ export async function handleInit(
     const configPath = resolve(cortexConfigDir, 'config.yaml');
 
     // Check if already initialized (unless --force is specified)
-    // TODO: Validate existing config structure instead of just checking existence? 
-    if (await pathExists(configPath) && !options.force) {
+    // TODO: Validate existing config structure instead of just checking existence?
+    if ((await pathExists(configPath)) && !options.force) {
         throwCliError({
             code: 'ALREADY_INITIALIZED',
             message: `Global config store already exists at ${globalStorePath}. Use --force to reinitialize.`,
@@ -103,7 +113,7 @@ export async function handleInit(
             stores: {},
         };
 
-        // Write config.yaml without store 
+        // Write config.yaml without store
         const yamlConfig = serializeOutput(config, 'yaml');
         if (!yamlConfig.ok()) {
             throwCliError(yamlConfig.error);
@@ -128,9 +138,7 @@ export async function handleInit(
     // Build output
     const output: OutputPayload = {
         kind: 'init',
-        value: formatInit(
-            globalStorePath, 
-            Object.keys(defaultGlobalStoreCategories)),
+        value: formatInit(globalStorePath, Object.keys(defaultGlobalStoreCategories)),
     };
 
     // Output result
@@ -151,13 +159,15 @@ const createGlobalStore = async (ctx: CortexContext, globalStorePath: string) =>
     }
 
     // TODO: Custom templates
-    const templateCategories = configCategoriesToStoreCategories(defaultGlobalStoreCategories)
-        .unwrap(); // defaultGlobalStoreCategories is valid, unwrap is safe here
+    const templateCategories = configCategoriesToStoreCategories(
+        defaultGlobalStoreCategories,
+    ).unwrap(); // defaultGlobalStoreCategories is valid, unwrap is safe here
 
     const globalStoreData: StoreData = {
         kind: 'filesystem',
         categoryMode: 'free',
-        description: 'Global memory store for Cortex. Use for cross-project memories and configurations.',
+        description:
+            'Global memory store for Cortex. Use for cross-project memories and configurations.',
         categories: templateCategories,
         properties: {
             path: globalStorePath,
@@ -168,7 +178,7 @@ const createGlobalStore = async (ctx: CortexContext, globalStorePath: string) =>
     const initResult = await store.initialize(globalStoreData);
 
     return initResult;
-}
+};
 
 const formatInit = (path: string, categories: readonly string[]): OutputInit => ({
     path,
@@ -184,10 +194,3 @@ const pathExists = async (path: string): Promise<boolean> => {
         return false;
     }
 };
-
-const initializeConfig = async (
-    configDir: string,
-    settings: CortexSettings = getDefaultSettings(),
-) => {
-
-}

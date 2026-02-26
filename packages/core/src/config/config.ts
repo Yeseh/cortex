@@ -14,20 +14,28 @@ import { CategoryPath } from '../category/category-path.ts';
  * - `subcategories` - Only subcategories of config-defined categories allowed
  * - `strict` - Only config-defined categories allowed
  */
-export const categoryMode = z.enum(['free', 'subcategories', 'strict']);
+export const categoryMode = z.enum([
+    'free',
+    'subcategories',
+    'strict',
+]);
 export type CategoryMode = z.infer<typeof categoryMode>;
 
 export const category: z.ZodType<ConfigCategory> = z.lazy(() =>
     z.object({
         description: z.string().optional(),
         subcategories: z.record(z.string(), category).optional(),
-    })
+    }),
 );
 
 /**
  * Output formats for handlers that support multiple formats.
  */
-export const outputFormat = z.enum(['yaml', 'json', 'toon']);
+export const outputFormat = z.enum([
+    'yaml',
+    'json',
+    'toon',
+]);
 export type OutputFormat = z.infer<typeof outputFormat>;
 
 /**
@@ -65,7 +73,7 @@ const storeDefinitionSchema = z.object({
  */
 const storesSchema = z.record(
     z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Store name must be a lowercase slug'),
-    storeDefinitionSchema
+    storeDefinitionSchema,
 );
 
 /**
@@ -118,7 +126,7 @@ export type CortexConfig = z.infer<typeof configFileSchema>;
  */
 export const flattenCategoryPaths = (
     categories: ConfigCategories | undefined,
-    prefix = ''
+    prefix = '',
 ): string[] => {
     if (!categories) {
         return [];
@@ -127,7 +135,9 @@ export const flattenCategoryPaths = (
     const paths: string[] = [];
     const entries = Object.entries(categories) as [string, ConfigCategory][];
 
-    for (const [name, def] of entries) {
+    for (const [
+        name, def,
+    ] of entries) {
         const path = prefix ? `${prefix}/${name}` : name;
         paths.push(path);
 
@@ -176,7 +186,7 @@ export const flattenCategoryPaths = (
  */
 export const configCategoriesToStoreCategories = (
     categories: ConfigCategories | undefined,
-    prefix = ''
+    prefix = '',
 ): Result<StoreCategories, ConfigValidationError> => {
     if (!categories) {
         return ok([]);
@@ -185,7 +195,9 @@ export const configCategoriesToStoreCategories = (
     const output: StoreCategories = [];
     const entries = Object.entries(categories) as [string, ConfigCategory][];
 
-    for (const [name, category] of entries) {
+    for (const [
+        name, category,
+    ] of entries) {
         const categoryPath = prefix ? `${prefix}/${name}` : name;
         const pathResult = CategoryPath.fromString(categoryPath);
         if (!pathResult.ok()) {
@@ -207,7 +219,7 @@ export const configCategoriesToStoreCategories = (
 
         const subcategoriesResult = configCategoriesToStoreCategories(
             category.subcategories ?? {},
-            categoryPath
+            categoryPath,
         );
         if (!subcategoriesResult.ok()) {
             return subcategoriesResult;
@@ -250,7 +262,7 @@ export const configCategoriesToStoreCategories = (
  * - Preserves nested subcategory structure
  */
 export const storeCategoriesToConfigCategories = (
-    categories: StoreCategories | undefined
+    categories: StoreCategories | undefined,
 ): ConfigCategories => {
     if (!categories) {
         return {};
@@ -320,7 +332,7 @@ export const storeCategoriesToConfigCategories = (
  */
 export const isConfigDefined = (
     path: string,
-    categories: ConfigCategories | undefined
+    categories: ConfigCategories | undefined,
 ): boolean => {
     if (!categories || !path) {
         return false;
@@ -386,7 +398,7 @@ export interface ConfigLoadError {
 const validateCategoryDefinition = (
     def: unknown,
     categoryPath: string,
-    storeName: string
+    storeName: string,
 ): Result<ConfigCategory, ConfigValidationError> => {
     // Empty object or null/undefined is valid (no description, no subcategories)
     if (
@@ -442,9 +454,11 @@ const validateCategoryDefinition = (
         }
 
         const subcategories: Record<string, ConfigCategory> = {};
-        for (const [name, subDef] of Object.entries(
-            defObj.subcategories as Record<string, unknown>
-        )) {
+        for (const [
+            name, subDef,
+        ] of Object.entries(
+                defObj.subcategories as Record<string, unknown>,
+            )) {
             const subPath = categoryPath ? `${categoryPath}/${name}` : name;
             const subResult = validateCategoryDefinition(subDef, subPath, storeName);
             if (!subResult.ok()) {
@@ -467,7 +481,7 @@ const validateCategoryDefinition = (
  */
 const validateCategoryHierarchy = (
     categories: unknown,
-    storeName: string
+    storeName: string,
 ): Result<Record<string, ConfigCategory>, ConfigValidationError> => {
     if (categories === null || categories === undefined) {
         return ok({});
@@ -483,7 +497,9 @@ const validateCategoryHierarchy = (
     }
 
     const result: Record<string, ConfigCategory> = {};
-    for (const [name, def] of Object.entries(categories as Record<string, unknown>)) {
+    for (const [
+        name, def,
+    ] of Object.entries(categories as Record<string, unknown>)) {
         const defResult = validateCategoryDefinition(def, name, storeName);
         if (!defResult.ok()) {
             return defResult;
@@ -517,7 +533,8 @@ export const parseConfig = (raw: string): Result<CortexConfig, ConfigValidationE
     try {
         const yamlParse = Bun.YAML.parse(raw) ?? {};
         config = configFileSchema.parse(yamlParse) as CortexConfig;
-    } catch (error) {
+    }
+    catch (error) {
         if (error instanceof z.ZodError) {
             return err({
                 code: 'CONFIG_VALIDATION_FAILED',

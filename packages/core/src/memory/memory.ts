@@ -66,7 +66,7 @@ export type MemoryData = {
     content: string;
     /** Metadata for the memory */
     metadata: MemoryMetadata;
-}
+};
 
 
 /**

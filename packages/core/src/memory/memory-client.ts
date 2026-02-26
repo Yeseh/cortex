@@ -96,8 +96,8 @@ export class MemoryClient {
      * @example "/standards/javascript/style"
      */
     get path(): MemoryPath {
-        // Safe to unwrap - factory validates 
-        return MemoryPath.fromString(this.#rawPath).unwrap(); 
+        // Safe to unwrap - factory validates
+        return MemoryPath.fromString(this.#rawPath).unwrap();
     }
 
     /**
@@ -329,10 +329,7 @@ export class MemoryClient {
             return pathResult;
         }
 
-        return createMemory(
-            this.adapter, 
-            this.getPathWithoutLeadingSlash(), 
-            input);
+        return createMemory(this.adapter, this.getPathWithoutLeadingSlash(), input);
     }
 
     /**
@@ -481,10 +478,14 @@ export class MemoryClient {
 
         const readResult = await this.adapter.memories.load(pathResult.value);
         if (!readResult.ok()) {
-            return memoryError('STORAGE_ERROR', `Failed to check memory existence: ${this.#rawPath}`, {
-                path: this.#rawPath,
-                cause: readResult.error,
-            });
+            return memoryError(
+                'STORAGE_ERROR',
+                `Failed to check memory existence: ${this.#rawPath}`,
+                {
+                    path: this.#rawPath,
+                    cause: readResult.error,
+                },
+            );
         }
 
         return ok(readResult.value !== null);
@@ -540,7 +541,6 @@ export class MemoryClient {
 
         // Get destination path string
         let destPathString: string;
-        let destSlug: string;
 
         if (destination instanceof MemoryClient) {
             // Validate destination client's path
@@ -549,12 +549,10 @@ export class MemoryClient {
                 return destPathResult;
             }
             destPathString = destination.getPathWithoutLeadingSlash();
-            destSlug = destination.#rawSlug;
         }
         else {
             // MemoryPath - use toString()
             destPathString = destination.toString();
-            destSlug = destination.slug.toString();
         }
 
         // Perform the move

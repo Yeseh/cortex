@@ -54,18 +54,14 @@ describe('config/store category conversions', () => {
         expect(architecturePath.ok()).toBe(true);
         if (!standardsPath.ok() || !architecturePath.ok()) return;
 
-        const input = [
-            {
-                path: standardsPath.value,
-                description: 'Standards',
-                subcategories: [
-                    {
-                        path: architecturePath.value,
-                        description: 'Architecture docs',
-                    },
-                ],
-            },
-        ];
+        const input = [{
+            path: standardsPath.value,
+            description: 'Standards',
+            subcategories: [{
+                path: architecturePath.value,
+                description: 'Architecture docs',
+            }],
+        }];
 
         const result = storeCategoriesToConfigCategories(input);
         expect(result).toEqual({

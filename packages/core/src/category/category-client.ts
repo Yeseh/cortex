@@ -23,7 +23,11 @@ import type {
 import { createCategory, deleteCategory, setDescription } from '@/category/operations/index.ts';
 import type { PruneOptions, PruneResult } from '@/memory/operations/prune.ts';
 import { pruneExpiredMemories } from '@/memory/operations/prune.ts';
-import { getRecentMemories, type GetRecentMemoriesOptions, type GetRecentMemoriesResult } from '@/memory/operations/recent.ts';
+import {
+    getRecentMemories,
+    type GetRecentMemoriesOptions,
+    type GetRecentMemoriesResult,
+} from '@/memory/operations/recent.ts';
 import { MemoryClient } from '../memory/memory-client.ts';
 
 /**
@@ -95,11 +99,12 @@ export class CategoryClient {
      * @param adapter - The storage adapter for the store
      * @returns A CategoryResult with a CategoryClient for the specified path
      */
-    static init(path: string | CategoryPath, adapter: StorageAdapter): CategoryResult<CategoryClient> {
+    static init(
+        path: string | CategoryPath,
+        adapter: StorageAdapter,
+    ): CategoryResult<CategoryClient> {
         const normalizedPath = CategoryClient.normalizePath(path.toString());
-        const pathPayload = normalizedPath === '/' 
-            ? '' 
-            : normalizedPath.slice(1);
+        const pathPayload = normalizedPath === '/' ? '' : normalizedPath.slice(1);
 
         const pathResult = CategoryPath.fromString(pathPayload);
         if (!pathResult.ok()) {
@@ -251,9 +256,8 @@ export class CategoryClient {
         }
 
         // Concatenate with current path
-        const newPath = this.rawPath === '/'
-            ? '/' + relativePath
-            : this.rawPath + '/' + relativePath;
+        const newPath =
+            this.rawPath === '/' ? '/' + relativePath : this.rawPath + '/' + relativePath;
 
         return CategoryClient.init(newPath, this.adapter);
     }
@@ -288,13 +292,9 @@ export class CategoryClient {
      * ```
      */
     getMemory(slug: string): MemoryClient {
-        const memoryPath = this.rawPath === '/'
-            ? '/' + slug
-            : this.rawPath + '/' + slug;
+        const memoryPath = this.rawPath === '/' ? '/' + slug : this.rawPath + '/' + slug;
 
-        const client = MemoryClient.pointTo(
-            memoryPath, 
-            this.adapter);
+        const client = MemoryClient.pointTo(memoryPath, this.adapter);
 
         return client;
     }
@@ -374,10 +374,7 @@ export class CategoryClient {
             return pathResult;
         }
 
-        return createCategory(
-            this.adapter.categories, 
-            pathResult.value.toString()
-        );
+        return createCategory(this.adapter.categories, pathResult.value.toString());
     }
 
     /**
@@ -412,10 +409,7 @@ export class CategoryClient {
             return pathResult;
         }
 
-        return deleteCategory(
-            this.adapter.categories, 
-            pathResult.value.toString()
-        );
+        return deleteCategory(this.adapter.categories, pathResult.value.toString());
     }
 
     /**
@@ -523,9 +517,9 @@ export class CategoryClient {
      * - Returns empty array if category has no memories
      * - Returns empty array if category index doesn't exist
      */
-    async listMemories(
-        _options?: { includeExpired?: boolean },
-    ): Promise<Result<CategoryMemoryEntry[], CategoryError>> {
+    async listMemories(_options?: {
+        includeExpired?: boolean;
+    }): Promise<Result<CategoryMemoryEntry[], CategoryError>> {
         const pathResult = this.parsePath();
         if (!pathResult.ok()) {
             return pathResult;
@@ -729,7 +723,9 @@ export class CategoryClient {
      * - Returns empty memories array if no memories exist in the subtree
      * - Expired memories are excluded unless includeExpired is true
      */
-    async getRecent(options?: Omit<GetRecentMemoriesOptions, 'category'>): Promise<Result<GetRecentMemoriesResult, CategoryError>> {
+    async getRecent(
+        options?: Omit<GetRecentMemoriesOptions, 'category'>,
+    ): Promise<Result<GetRecentMemoriesResult, CategoryError>> {
         const pathResult = this.parsePath();
         if (!pathResult.ok()) {
             return pathResult;

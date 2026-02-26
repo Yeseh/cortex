@@ -1,8 +1,8 @@
-import type { ConfigStores, CortexSettings } from "@/config/types";
-import { Cortex } from "@/cortex";
-import type { StorageAdapter } from "@/storage";
-import type { CortexContext } from "@/types";
-import {PassThrough} from "node:stream";
+import type { ConfigStores, CortexSettings } from '@/config/types';
+import { Cortex } from '@/cortex';
+import type { StorageAdapter } from '@/storage';
+import type { CortexContext } from '@/types';
+import {PassThrough} from 'node:stream';
 
 export const testContext = (options: {
     adapter: StorageAdapter;

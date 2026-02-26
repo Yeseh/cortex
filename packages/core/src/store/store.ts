@@ -1,6 +1,6 @@
-import type { CategoryPath } from "@/category";
-import type { CategoryMode } from "@/config/config";
-import type { Slug } from "@/slug";
+import type { CategoryPath } from '@/category';
+import type { CategoryMode } from '@/config/config';
+import type { Slug } from '@/slug';
 
 export type StoreName = Slug;
 
@@ -19,6 +19,6 @@ export type Store = {
     categories: StoreCategories;
     properties: Record<string, unknown>;
     description?: string | undefined;
-}
+};
 
 export type StoreData = Omit<Store, 'name'>;

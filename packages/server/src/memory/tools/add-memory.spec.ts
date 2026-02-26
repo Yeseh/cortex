@@ -10,7 +10,6 @@ import { createTestCategory, createTestContext, createTestDir } from './test-uti
 import type { CortexContext } from '@yeseh/cortex-core';
 import { addMemoryHandler, type AddMemoryInput } from './add-memory.ts';
 import { getMemoryHandler } from './get-memory.ts';
-import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 import {
     createMockCortexContext,
     createMockCortex,
@@ -69,13 +68,10 @@ describe('cortex_add_memory tool', () => {
         expect(result.content[0]!.text).toContain('Memory created');
 
         // Verify by reading back
-        const getResult = await getMemoryHandler(
-            ctx,
-            {
-                store: 'default',
-                path: 'project/tagged-memory',
-            },
-        );
+        const getResult = await getMemoryHandler(ctx, {
+            store: 'default',
+            path: 'project/tagged-memory',
+        });
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.tags).toEqual([
             'test', 'example',
@@ -98,13 +94,10 @@ describe('cortex_add_memory tool', () => {
         expect(result.content[0]!.text).toContain('Memory created');
 
         // Verify by reading back
-        const getResult = await getMemoryHandler(
-            ctx,
-            {
-                store: 'default',
-                path: 'project/expiring-memory',
-            },
-        );
+        const getResult = await getMemoryHandler(ctx, {
+            store: 'default',
+            path: 'project/expiring-memory',
+        });
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.expires_at).toBeDefined();
     });
@@ -138,12 +131,14 @@ describe('addMemoryHandler (unit)', () => {
     it('should throw McpError InvalidParams when store resolution fails', async () => {
         const ctx = createMockCortexContext({
             cortex: createMockCortex({
-                getStore: mock(() => errResult({ code: 'STORE_NOT_FOUND', message: 'Store not found' })) as any,
+                getStore: mock(() =>
+                    errResult({ code: 'STORE_NOT_FOUND', message: 'Store not found' }),
+                ) as any,
             }) as unknown as CortexContext['cortex'],
         });
 
-        await expectMcpInvalidParams(
-            () => addMemoryHandler(ctx, { store: 'missing', path: 'cat/slug', content: 'x' }),
+        await expectMcpInvalidParams(() =>
+            addMemoryHandler(ctx, { store: 'missing', path: 'cat/slug', content: 'x' }),
         );
     });
 
@@ -172,8 +167,8 @@ describe('addMemoryHandler (unit)', () => {
             }) as unknown as CortexContext['cortex'],
         });
 
-        await expectMcpInvalidParams(
-            () => addMemoryHandler(ctx, { store: 'default', path: 'cat/slug', content: 'x' }),
+        await expectMcpInvalidParams(() =>
+            addMemoryHandler(ctx, { store: 'default', path: 'cat/slug', content: 'x' }),
         );
     });
 
@@ -197,7 +192,9 @@ describe('addMemoryHandler (unit)', () => {
         });
 
         // Access mock calls via unknown cast to bypass strict empty-tuple typing
-        const calls = memClient.create.mock.calls as unknown as [{ metadata: { expiresAt: Date } }][];
+        const calls = memClient.create.mock.calls as unknown as [
+            { metadata: { expiresAt: Date } },
+        ][];
         const createArgs = calls[0]![0];
         expect(createArgs.metadata.expiresAt).toBeInstanceOf(Date);
         expect(createArgs.metadata.expiresAt.toISOString()).toBe(expiresAt);
@@ -218,12 +215,18 @@ describe('addMemoryHandler (unit)', () => {
             store: 'default',
             path: 'cat/slug',
             content: 'x',
-            tags: ['alpha', 'beta'],
+            tags: [
+                'alpha', 'beta',
+            ],
         });
 
-        const calls = memClient.create.mock.calls as unknown as [{ metadata: { tags: string[] } }][];
+        const calls = memClient.create.mock.calls as unknown as [
+            { metadata: { tags: string[] } },
+        ][];
         const createArgs = calls[0]![0];
-        expect(createArgs.metadata.tags).toEqual(['alpha', 'beta']);
+        expect(createArgs.metadata.tags).toEqual([
+            'alpha', 'beta',
+        ]);
     });
 
     it('should pass citations through to create', async () => {
@@ -241,11 +244,17 @@ describe('addMemoryHandler (unit)', () => {
             store: 'default',
             path: 'cat/slug',
             content: 'x',
-            citations: ['docs/spec.md', 'https://example.com'],
+            citations: [
+                'docs/spec.md', 'https://example.com',
+            ],
         });
 
-        const calls = memClient.create.mock.calls as unknown as [{ metadata: { citations: string[] } }][];
+        const calls = memClient.create.mock.calls as unknown as [
+            { metadata: { citations: string[] } },
+        ][];
         const createArgs = calls[0]![0];
-        expect(createArgs.metadata.citations).toEqual(['docs/spec.md', 'https://example.com']);
+        expect(createArgs.metadata.citations).toEqual([
+            'docs/spec.md', 'https://example.com',
+        ]);
     });
 });

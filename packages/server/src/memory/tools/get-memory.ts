@@ -9,7 +9,7 @@ import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { storeNameSchema } from '../../store/tools.ts';
 import { type CortexContext } from '@yeseh/cortex-core';
 import { memoryPathSchema, translateMemoryError } from './shared.ts';
-import { type McpToolResponse, textResponse, errorResponse } from '../../response.ts';
+import { type McpToolResponse, textResponse } from '../../response.ts';
 
 /** Schema for get_memory tool input */
 export const getMemoryInputSchema = z.object({

@@ -17,7 +17,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import type { CategoryModeContext } from '@yeseh/cortex-core/category';
-import type { CategoryMode, ConfigCategories, ConfigCategory } from '@yeseh/cortex-core';
+import type { CategoryMode, ConfigCategories } from '@yeseh/cortex-core';
 import { MAX_DESCRIPTION_LENGTH } from '@yeseh/cortex-core/category';
 import { storeNameSchema } from '../store/tools.ts';
 import { type CortexContext } from '@yeseh/cortex-core';
@@ -248,7 +248,10 @@ export const createCategoryHandler = async (
         if (result.error.code === 'INVALID_PATH') {
             throw new McpError(ErrorCode.InvalidParams, result.error.message);
         }
-        if (result.error.code === 'ROOT_CATEGORY_NOT_ALLOWED' || result.error.code === 'CATEGORY_PROTECTED') {
+        if (
+            result.error.code === 'ROOT_CATEGORY_NOT_ALLOWED' ||
+            result.error.code === 'CATEGORY_PROTECTED'
+        ) {
             throw new McpError(ErrorCode.InvalidParams, result.error.message);
         }
         throw new McpError(ErrorCode.InternalError, result.error.message);
@@ -314,7 +317,10 @@ export const setCategoryDescriptionHandler = async (
     // MCP convenience: auto-create category if it doesn't exist
     const createResult = await createCategory(adapter.categories, input.path, modeContext);
     if (!createResult.ok() && createResult.error.code !== 'INVALID_PATH') {
-        if (createResult.error.code === 'ROOT_CATEGORY_NOT_ALLOWED' || createResult.error.code === 'CATEGORY_PROTECTED') {
+        if (
+            createResult.error.code === 'ROOT_CATEGORY_NOT_ALLOWED' ||
+            createResult.error.code === 'CATEGORY_PROTECTED'
+        ) {
             throw new McpError(ErrorCode.InvalidParams, createResult.error.message);
         }
         throw new McpError(ErrorCode.InternalError, createResult.error.message);
@@ -460,10 +466,12 @@ export const registerCategoryTools = (
     categoryConfig?: CategoryToolsOptions,
 ): void => {
     const mode = categoryConfig?.mode ?? 'free';
-    const modeContext: CategoryModeContext | undefined = categoryConfig ? {
-        mode,
-        configCategories: categoryConfig.configCategories,
-    } : undefined;
+    const modeContext: CategoryModeContext | undefined = categoryConfig
+        ? {
+            mode,
+            configCategories: categoryConfig.configCategories,
+        }
+        : undefined;
 
     // In strict mode, don't register create/delete tools
     if (mode !== 'strict') {

@@ -203,9 +203,9 @@ describe('handleAdd', () => {
             stdin,
         });
 
-        await expect(
-            handleAdd(ctx, undefined, 'project/notes', {}),
-        ).rejects.toThrow(InvalidArgumentError);
+        await expect(handleAdd(ctx, undefined, 'project/notes', {})).rejects.toThrow(
+            InvalidArgumentError,
+        );
     });
 
     it('should throw CommanderError when memory create fails due to missing category', async () => {

@@ -14,5 +14,5 @@ export {
 
 export {
     type Store,
-    type StoreData
+    type StoreData,
 } from './store.ts';

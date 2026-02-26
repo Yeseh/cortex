@@ -18,8 +18,8 @@ import { z } from 'zod';
 import { err, ok, type Result } from '@yeseh/cortex-core';
 import type { CategoryMode, CortexContext, StoreData } from '@yeseh/cortex-core';
 import { convertToCategories, type CategoryInfo } from './shared.ts';
-import { errorResponse, jsonResponse, textResponse, type McpToolResponse } from '../response.ts';
-import path, { resolve } from 'node:path';
+import { errorResponse, textResponse, type McpToolResponse } from '../response.ts';
+import { resolve } from 'node:path';
 
 /**
  * Error codes for store tool operations.

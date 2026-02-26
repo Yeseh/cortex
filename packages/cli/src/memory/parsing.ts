@@ -1,4 +1,4 @@
-import { throwCliError } from "../errors";
+import { throwCliError } from '../errors';
 
 export const parseTags = (raw?: string[]): string[] =>
     raw

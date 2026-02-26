@@ -5,17 +5,10 @@
  */
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { parseInput, type CortexContext } from './shared.ts';
-import {
-    addMemoryHandler,
-    addMemoryInputSchema,
-    type AddMemoryInput,
-} from './add-memory.ts';
-import {
-    getMemoryHandler,
-    getMemoryInputSchema,
-    type GetMemoryInput,
-} from './get-memory.ts';
+import { parseInput } from './shared.ts';
+import type { CortexContext } from '@yeseh/cortex-core';
+import { addMemoryHandler, addMemoryInputSchema, type AddMemoryInput } from './add-memory.ts';
+import { getMemoryHandler, getMemoryInputSchema, type GetMemoryInput } from './get-memory.ts';
 import {
     updateMemoryHandler,
     updateMemoryInputSchema,
@@ -26,11 +19,7 @@ import {
     removeMemoryInputSchema,
     type RemoveMemoryInput,
 } from './remove-memory.ts';
-import {
-    moveMemoryHandler,
-    moveMemoryInputSchema,
-    type MoveMemoryInput,
-} from './move-memory.ts';
+import { moveMemoryHandler, moveMemoryInputSchema, type MoveMemoryInput } from './move-memory.ts';
 import {
     listMemoriesHandler,
     listMemoriesInputSchema,

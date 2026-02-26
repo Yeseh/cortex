@@ -23,7 +23,7 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCliError } from '../../errors.ts';
-import { MemoryPath, type CortexContext } from '@yeseh/cortex-core';
+import { type CortexContext } from '@yeseh/cortex-core';
 import { resolveInput as resolveCliContent } from '../../input.ts';
 import { parseExpiresAt, parseTags } from '../parsing.ts';
 import { createCliCommandContext } from '../../create-cli-command.ts';
@@ -49,7 +49,7 @@ export async function handleAdd(
     ctx: CortexContext,
     storeName: string | undefined,
     path: string,
-    options: AddCommandOptions
+    options: AddCommandOptions,
 ): Promise<void> {
     const content = await resolveCliContent({
         content: options.content,
