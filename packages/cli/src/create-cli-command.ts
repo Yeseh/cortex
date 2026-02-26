@@ -3,7 +3,6 @@ import {
     err,
     getDefaultSettings,
     ok,
-    parseConfig,
     type ConfigValidationError,
     type CortexContext,
     type Result,
@@ -11,7 +10,7 @@ import {
 import { homedir } from 'os';
 import { isAbsolute, resolve } from 'path';
 import { resolve as resolvePath } from 'node:path';
-import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
+import { FilesystemStorageAdapter, FilesystemConfigAdapter } from '@yeseh/cortex-storage-fs';
 import { stdin, stdout } from 'process';
 
 // TODO: Much of this module should move to the FS adapter, since it's all about loading config from the filesystem. The CLI command handlers should just call into the core module to load config and create a context, rather than having all the logic here.
@@ -25,7 +24,7 @@ const makeAbsolute = (pathStr: string): string => {
 
 export const validateStorePath = (
     storePath: string,
-    storeName: string
+    storeName: string,
 ): Result<void, ConfigValidationError> => {
     if (!isAbsolute(storePath)) {
         return err({
@@ -49,7 +48,7 @@ export interface ConfigLoadOptions {
  * This function is used to create a context object that can be injected into command handlers for consistent access to the Cortex client and other utilities.
  */
 export const createCliCommandContext = async (
-    configDir?: string
+    configDir?: string,
 ): Promise<Result<CortexContext, any>> => {
     try {
         // Allow test harnesses / subprocesses to isolate config resolution.
@@ -63,39 +62,32 @@ export const createCliCommandContext = async (
                 ? configFileCwd
                 : process.cwd();
 
-        // Read config file using Bun.file()
-        const configFile = Bun.file(configPath);
-        let contents: string;
-        try {
-            if (!(await configFile.exists())) {
-                return err({
-                    code: 'CONFIG_NOT_FOUND',
-                    message: `Config file not found at ${configPath}. Run 'cortex init' to create one.`,
-                    path: configPath,
-                });
-            }
-            contents = await configFile.text();
-        } catch (error) {
-            return err({
-                code: 'CONFIG_READ_FAILED',
-                message: `Failed to read config file at ${configPath}.`,
-                path: configPath,
-                cause: error,
-            });
+        // Use FilesystemConfigAdapter to auto-initialize config if it doesn't exist
+        const configAdapter = new FilesystemConfigAdapter(configPath);
+        const initResult = await configAdapter.initialize();
+        if (!initResult.ok()) {
+            return initResult;
         }
 
-        // Parse and validate config file
-        const parseResult = parseConfig(contents);
-        if (!parseResult.ok()) {
-            return parseResult;
+        const settingsResult = await configAdapter.getSettings();
+        if (!settingsResult.ok()) {
+            return settingsResult;
         }
+
+        const storesResult = await configAdapter.getStores();
+        if (!storesResult.ok()) {
+            return storesResult;
+        }
+
+        const settings = settingsResult.value;
+        const stores = storesResult.value;
 
         const adapterFactory = (storeName: string) => {
             // Look up the store's configured path from parsed config
-            const storeEntry = config.stores?.[storeName];
+            const storeEntry = stores[storeName];
             if (!storeEntry) {
                 throw new Error(
-                    `Store '${storeName}' is not configured. Available stores: ${Object.keys(config.stores ?? {}).join(', ')}`
+                    `Store '${storeName}' not found. Available stores: ${Object.keys(stores).join(', ')}`,
                 );
             }
             const storePath = storeEntry.properties?.path as string | undefined;
@@ -111,16 +103,15 @@ export const createCliCommandContext = async (
         };
 
         const now = () => new Date();
-        const config = parseResult.value;
         const cortex = Cortex.init({
-            settings: config.settings,
-            stores: config.stores,
-            adapterFactory: adapterFactory,
+            settings,
+            stores,
+            adapterFactory,
         });
 
         const context: CortexContext = {
-            settings: config.settings ?? getDefaultSettings(),
-            stores: config.stores ?? {},
+            settings: settings ?? getDefaultSettings(),
+            stores: stores ?? {},
             cortex,
             now,
             stdin,
@@ -128,9 +119,10 @@ export const createCliCommandContext = async (
         };
 
         return ok(context);
-    } catch (error) {
+    }
+    catch (error) {
         throw new Error(
-            `Unexpected error creating CLI command context: ${error instanceof Error ? error.message : String(error)}`
+            `Unexpected error creating CLI command context: ${error instanceof Error ? error.message : String(error)}`,
         );
     }
 };

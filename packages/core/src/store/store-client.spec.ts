@@ -7,9 +7,8 @@
 import { describe, expect, it } from 'bun:test';
 import { StoreClient } from './store-client.ts';
 import type { StorageAdapter } from '@/storage/index.ts';
-import { ok } from '@/result.ts';
+import { err, ok } from '@/result.ts';
 import { createMockStorageAdapter } from '@/testing/mock-storage-adapter.ts';
-import { Slug } from '@/slug.ts';
 
 describe('StoreClient.init()', () => {
     it('should create a store client for valid adapter input', () => {
@@ -67,5 +66,37 @@ describe('StoreClient.root()', () => {
         if (!existsResult.ok()) return;
         expect(existsResult.value).toBe(true);
         expect(existsCalled).toBe(true);
+    });
+});
+
+describe('StoreClient.load()', () => {
+    it('should return STORE_NOT_INITIALIZED when store.yaml does not exist', async () => {
+        // Mock adapter that returns ok(null) — simulating missing store.yaml
+        const adapter = createMockStorageAdapter({
+            stores: { load: async () => ok(null) },
+        });
+        const client = StoreClient.init('my-store', adapter);
+        expect(client.ok()).toBe(true);
+        if (!client.ok()) return;
+
+        const result = await client.value.load();
+        expect(result.ok()).toBe(false);
+        if (result.ok()) return;
+        expect(result.error.code).toBe('STORE_NOT_INITIALIZED');
+    });
+
+    it('should return STORE_NOT_FOUND when storage read fails', async () => {
+        // Mock adapter that returns a storage error
+        const adapter = createMockStorageAdapter({
+            stores: { load: async () => err({ code: 'STORE_READ_FAILED', message: 'disk error', store: 'my-store' }) },
+        });
+        const client = StoreClient.init('my-store', adapter);
+        expect(client.ok()).toBe(true);
+        if (!client.ok()) return;
+
+        const result = await client.value.load();
+        expect(result.ok()).toBe(false);
+        if (result.ok()) return;
+        expect(result.error.code).toBe('STORE_NOT_FOUND');
     });
 });

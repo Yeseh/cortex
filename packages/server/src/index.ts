@@ -178,23 +178,50 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
         return err({
             code: 'SERVER_START_FAILED',
             message: `Failed to create store client for default store '${config.defaultStore}'.`,
-            cause: new Error(`Adapter null or undefined`),
+            cause: new Error('Adapter null or undefined'),
         });
     }
 
     const defaultStoreClient = storeResult.value;
-    const store = await defaultStoreClient.load();
-    if (!store.ok()) {
-        return err({
-            code: 'SERVER_START_FAILED',
-            message: `Failed to load default store '${config.defaultStore}'.`,
-            cause: new Error(`Store load failed`),
-        });
+    let storeData = await defaultStoreClient.load();
+    if (!storeData.ok()) {
+        if (storeData.error.code === 'STORE_NOT_INITIALIZED') {
+            // Fresh install — initialize the default store with defaults
+            const initResult = await defaultStoreClient.initialize({
+                kind: 'filesystem',
+                categoryMode: 'free',
+                categories: [],
+                properties: {},
+            });
+            if (!initResult.ok()) {
+                return err({
+                    code: 'SERVER_START_FAILED',
+                    message: `Failed to initialize default store '${config.defaultStore}'.`,
+                    cause: new Error(initResult.error.message),
+                });
+            }
+            // Re-load after initialize
+            storeData = await defaultStoreClient.load();
+            if (!storeData.ok()) {
+                return err({
+                    code: 'SERVER_START_FAILED',
+                    message: `Failed to load default store '${config.defaultStore}' after initialization.`,
+                    cause: new Error(storeData.error.message),
+                });
+            }
+        }
+        else {
+            return err({
+                code: 'SERVER_START_FAILED',
+                message: `Failed to load default store '${config.defaultStore}'.`,
+                cause: new Error(storeData.error.message),
+            });
+        }
     }
 
     const categoryToolsOptions: CategoryToolsOptions = {
-        mode: store?.value.categoryMode ?? 'free',
-        configCategories: storeCategoriesToConfigCategories(store?.value.categories),
+        mode: storeData.value.categoryMode ?? 'free',
+        configCategories: storeCategoriesToConfigCategories(storeData.value.categories),
     };
 
     // Register MCP tools
