@@ -30,6 +30,7 @@ export {
     moveMemoryInputSchema,
     listMemoriesInputSchema,
     pruneMemoriesInputSchema,
+    reindexStoreInputSchema,
     getRecentMemoriesInputSchema,
     // Types
     type AddMemoryInput,
@@ -39,6 +40,7 @@ export {
     type MoveMemoryInput,
     type ListMemoriesInput,
     type PruneMemoriesInput,
+    type ReindexStoreInput,
     type GetRecentMemoriesInput,
     // Handlers for testing
     addMemoryHandler,
@@ -48,6 +50,7 @@ export {
     moveMemoryHandler,
     listMemoriesHandler,
     pruneMemoriesHandler,
+    reindexStoreHandler,
     getRecentMemoriesHandler,
 } from './tools/index.ts';
 

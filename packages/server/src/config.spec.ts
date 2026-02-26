@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { loadServerConfig, serverConfigSchema, getDefaultDataPath } from './config.ts';
+import { loadServerConfig, serverConfigSchema, getDefaultDataPath, getMemoryPath, MEMORY_SUBDIR, SERVER_NAME, SERVER_VERSION } from './config.ts';
 
 // Expected default data path based on user's home directory
 const expectedDefaultDataPath = join(homedir(), '.config', 'cortex');
@@ -409,5 +409,91 @@ describe('getDefaultDataPath', () => {
 
         expect(result).toContain('cortex');
         // Note: memory is a subdirectory accessed via getMemoryPath()
+    });
+
+    it('should end with .config/cortex', () => {
+        const result = getDefaultDataPath();
+
+        // Platform-agnostic: last two path segments should be .config and cortex
+        expect(result).toMatch(/[/\\]\.config[/\\]cortex$/);
+    });
+});
+
+describe('getMemoryPath', () => {
+    it('should append the memory subdirectory to dataPath', () => {
+        const config = {
+            dataPath: '/home/user/.config/cortex',
+            port: 3000,
+            host: '0.0.0.0',
+            defaultStore: 'default',
+            logLevel: 'info' as const,
+            outputFormat: 'yaml' as const,
+        };
+
+        const result = getMemoryPath(config);
+
+        expect(result).toBe(join('/home/user/.config/cortex', MEMORY_SUBDIR));
+    });
+
+    it('should join dataPath with "memory"', () => {
+        const config = {
+            dataPath: '/custom/path',
+            port: 3000,
+            host: '0.0.0.0',
+            defaultStore: 'default',
+            logLevel: 'info' as const,
+            outputFormat: 'yaml' as const,
+        };
+
+        const result = getMemoryPath(config);
+
+        expect(result).toContain('memory');
+        expect(result).toBe('/custom/path/memory');
+    });
+
+    it('should use MEMORY_SUBDIR constant as the subdirectory name', () => {
+        const dataPath = '/data/cortex';
+        const config = {
+            dataPath,
+            port: 3000,
+            host: '0.0.0.0',
+            defaultStore: 'default',
+            logLevel: 'info' as const,
+            outputFormat: 'yaml' as const,
+        };
+
+        const result = getMemoryPath(config);
+
+        expect(result).toBe(join(dataPath, MEMORY_SUBDIR));
+        expect(MEMORY_SUBDIR).toBe('memory');
+    });
+
+    it('should produce a path ending with /memory', () => {
+        const config = {
+            dataPath: '/any/base/path',
+            port: 3000,
+            host: '0.0.0.0',
+            defaultStore: 'default',
+            logLevel: 'info' as const,
+            outputFormat: 'yaml' as const,
+        };
+
+        const result = getMemoryPath(config);
+
+        expect(result).toMatch(/[/\\]memory$/);
+    });
+});
+
+describe('constants', () => {
+    it('MEMORY_SUBDIR should be "memory"', () => {
+        expect(MEMORY_SUBDIR).toBe('memory');
+    });
+
+    it('SERVER_NAME should be "cortex-memory"', () => {
+        expect(SERVER_NAME).toBe('cortex-memory');
+    });
+
+    it('SERVER_VERSION should be a semver string', () => {
+        expect(SERVER_VERSION).toMatch(/^\d+\.\d+\.\d+$/);
     });
 });
