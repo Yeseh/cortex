@@ -1,1 +1,27 @@
-{memories: [{path: standup/2026-02-11-1738,token_estimate: 268,updated_at: 2026-02-11T16:38:13.203Z},{path: standup/2026-02-13-1907,token_estimate: 393,updated_at: 2026-02-13T18:07:34.649Z},{path: standup/2026-02-21-mcp-refactor-start,token_estimate: 259,updated_at: 2026-02-21T15:44:20.982Z},{path: standup/2026-02-21-store-commands-refactor,token_estimate: 630,updated_at: 2026-02-21T15:34:59.638Z},{path: standup/align-storage-fs-phase1-5,token_estimate: 185,updated_at: 2026-02-21T15:29:31.122Z},{path: standup/align-storage-fs-phase2,token_estimate: 191,updated_at: 2026-02-21T15:29:34.630Z}],subcategories: []}
+memories: 
+  - path: standup/2026-02-11-1738
+    token_estimate: 268
+    updated_at: 2026-02-11T16:38:13.203Z
+  - path: standup/2026-02-13-1907
+    token_estimate: 393
+    updated_at: 2026-02-13T18:07:34.649Z
+  - path: standup/2026-02-21-mcp-refactor-start
+    token_estimate: 259
+    updated_at: 2026-02-21T15:44:20.982Z
+  - path: standup/2026-02-21-store-commands-refactor
+    token_estimate: 630
+    updated_at: 2026-02-21T15:34:59.638Z
+  - path: standup/align-storage-fs-phase1-5
+    token_estimate: 185
+    updated_at: 2026-02-21T15:29:31.122Z
+  - path: standup/align-storage-fs-phase2
+    token_estimate: 191
+    updated_at: 2026-02-21T15:29:34.630Z
+  - path: standup/mcp-refactor-handlers-1-7
+    token_estimate: 188
+    updated_at: 2026-02-21T15:56:41.862Z
+  - path: standup/mcp-refactor-phase1-complete
+    token_estimate: 135
+    updated_at: 2026-02-21T15:51:49.521Z
+subcategories: 
+  []

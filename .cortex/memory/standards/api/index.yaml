@@ -1,1 +1,6 @@
-{memories: [{path: standards/api/update-semantics,token_estimate: 203,updated_at: 2026-02-11T20:21:29.304Z}],subcategories: []}
+memories: 
+  - path: standards/api/update-semantics
+    token_estimate: 203
+    updated_at: 2026-02-11T20:21:29.304Z
+subcategories: 
+  []

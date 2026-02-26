@@ -1,1 +1,9 @@
-{memories: [{path: map/server/concepts,token_estimate: 306,updated_at: 2026-02-05T19:16:07.608Z},{path: map/server/files,token_estimate: 277,updated_at: 2026-02-05T19:15:35.674Z}],subcategories: []}
+memories: 
+  - path: map/server/concepts
+    token_estimate: 306
+    updated_at: 2026-02-05T19:16:07.608Z
+  - path: map/server/files
+    token_estimate: 277
+    updated_at: 2026-02-05T19:15:35.674Z
+subcategories: 
+  []

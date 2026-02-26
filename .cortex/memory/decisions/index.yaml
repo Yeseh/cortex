@@ -1,1 +1,34 @@
-{memories: [{path: decisions/bun-yaml-migration,token_estimate: 366,updated_at: 2026-02-15T12:48:24.185Z},{path: decisions/mcp-server-express-to-bun,token_estimate: 324,updated_at: 2026-02-15T11:57:56.423Z},{path: decisions/store-init-categorypath-fix,token_estimate: 450,updated_at: 2026-02-15T11:49:05.254Z},{path: decisions/todo-status-review-2026-02-14,token_estimate: 1090,updated_at: 2026-02-14T21:20:44.753Z}],subcategories: [{path: decisions/architecture,memory_count: 3},{path: decisions/category,memory_count: 1},{path: decisions/cli,memory_count: 4},{path: decisions/config,memory_count: 1},{path: decisions/index,memory_count: 3},{path: decisions/mcp,memory_count: 1},{path: decisions/performance,memory_count: 1},{path: decisions/registry,memory_count: 1},{path: decisions/storage,memory_count: 1},{path: decisions/testing,memory_count: 1}]}
+memories: 
+  - path: decisions/bun-yaml-migration
+    token_estimate: 366
+    updated_at: 2026-02-15T12:48:24.185Z
+  - path: decisions/mcp-server-express-to-bun
+    token_estimate: 324
+    updated_at: 2026-02-15T11:57:56.423Z
+  - path: decisions/store-init-categorypath-fix
+    token_estimate: 450
+    updated_at: 2026-02-15T11:49:05.254Z
+  - path: decisions/todo-status-review-2026-02-14
+    token_estimate: 1090
+    updated_at: 2026-02-14T21:20:44.753Z
+subcategories: 
+  - path: decisions/architecture
+    memory_count: 3
+  - path: decisions/category
+    memory_count: 1
+  - path: decisions/cli
+    memory_count: 4
+  - path: decisions/config
+    memory_count: 1
+  - path: decisions/index
+    memory_count: 3
+  - path: decisions/mcp
+    memory_count: 1
+  - path: decisions/performance
+    memory_count: 1
+  - path: decisions/registry
+    memory_count: 1
+  - path: decisions/storage
+    memory_count: 1
+  - path: decisions/testing
+    memory_count: 1

@@ -1,1 +1,23 @@
-{memories: [{path: todo/add-concurrent-write-protection,token_estimate: 564,updated_at: 2026-02-14T21:33:43.075Z},{path: todo/add-cortex-mutation-methods,token_estimate: 389,updated_at: 2026-02-17T20:37:32.301Z},{path: todo/categorypath-error-coupling,token_estimate: 467,updated_at: 2026-02-14T21:36:08.951Z},{path: todo/decrease-mcp-fs-coupling,token_estimate: 304,updated_at: 2026-02-14T21:36:39.163Z},{path: todo/merge-categories-indexes,token_estimate: 314,updated_at: 2026-02-14T21:36:40.287Z},{path: todo/remove-unused-config-options,token_estimate: 258,updated_at: 2026-02-17T20:13:05.405Z}],subcategories: []}
+memories: 
+  - path: todo/add-concurrent-write-protection
+    token_estimate: 564
+    updated_at: 2026-02-14T21:33:43.075Z
+  - path: todo/fix-context-adapter-factory-bug
+    token_estimate: 229
+    updated_at: 2026-02-26T20:02:52.861Z
+  - path: todo/fix-mcp-integration-test-failures
+    token_estimate: 500
+    updated_at: 2026-02-26T20:03:11.810Z
+  - path: todo/fix-mcp-server-self-bootstrap
+    token_estimate: 347
+    updated_at: 2026-02-26T20:02:57.635Z
+  - path: todo/manual-client-validation
+    token_estimate: 404
+  - path: todo/merge-categories-indexes
+    token_estimate: 314
+    updated_at: 2026-02-14T21:36:40.287Z
+  - path: todo/restructure-readme-for-beta
+    token_estimate: 289
+    updated_at: 2026-02-26T20:01:24.862Z
+subcategories: 
+  []

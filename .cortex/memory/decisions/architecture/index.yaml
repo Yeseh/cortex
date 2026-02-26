@@ -1,1 +1,12 @@
-{memories: [{path: decisions/architecture/category-aggregate-root,token_estimate: 291,updated_at: 2026-02-17T20:44:37.255Z},{path: decisions/architecture/lazy-validation-pattern,token_estimate: 421,updated_at: 2026-02-17T20:44:46.043Z},{path: decisions/architecture/storage-abstraction-cli-server,token_estimate: 355,updated_at: 2026-01-31T14:47:40.100Z}],subcategories: []}
+memories: 
+  - path: decisions/architecture/category-aggregate-root
+    token_estimate: 291
+    updated_at: 2026-02-17T20:44:37.255Z
+  - path: decisions/architecture/lazy-validation-pattern
+    token_estimate: 421
+    updated_at: 2026-02-17T20:44:46.043Z
+  - path: decisions/architecture/storage-abstraction-cli-server
+    token_estimate: 355
+    updated_at: 2026-01-31T14:47:40.100Z
+subcategories: 
+  []

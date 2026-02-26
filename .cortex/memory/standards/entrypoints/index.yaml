@@ -1,1 +1,12 @@
-{memories: [{path: standards/entrypoints/mcp-thin-wrapper,token_estimate: 134,updated_at: 2026-02-17T19:14:40.635Z},{path: standards/entrypoints/mcp-tool-pattern,token_estimate: 152,updated_at: 2026-02-17T19:14:33.427Z}],subcategories: [{path: standards/entrypoints/cli-command,memory_count: 1},{path: standards/entrypoints/server,memory_count: 1}]}
+memories: 
+  - path: standards/entrypoints/mcp-thin-wrapper
+    token_estimate: 134
+    updated_at: 2026-02-17T19:14:40.635Z
+  - path: standards/entrypoints/mcp-tool-pattern
+    token_estimate: 152
+    updated_at: 2026-02-17T19:14:33.427Z
+subcategories: 
+  - path: standards/entrypoints/cli-command
+    memory_count: 1
+  - path: standards/entrypoints/server
+    memory_count: 1

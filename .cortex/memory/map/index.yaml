@@ -1,1 +1,13 @@
-{memories: [{path: map/overview,token_estimate: 227,updated_at: 2026-02-05T19:12:56.276Z}],subcategories: [{path: map/cli,memory_count: 2},{path: map/core,memory_count: 2},{path: map/server,memory_count: 2},{path: map/storage-fs,memory_count: 2}]}
+memories: 
+  - path: map/overview
+    token_estimate: 227
+    updated_at: 2026-02-05T19:12:56.276Z
+subcategories: 
+  - path: map/cli
+    memory_count: 2
+  - path: map/core
+    memory_count: 2
+  - path: map/server
+    memory_count: 2
+  - path: map/storage-fs
+    memory_count: 2

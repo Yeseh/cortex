@@ -15,11 +15,9 @@ subcategories:
     memory_count: 1
   - path: roadmap
     memory_count: 1
-  - path: runbooks
-    memory_count: 4
   - path: standards
     memory_count: 10
   - path: standup
-    memory_count: 6
+    memory_count: 8
   - path: todo
-    memory_count: 6
+    memory_count: 7

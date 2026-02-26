@@ -1,1 +1,6 @@
-{memories: [{path: decisions/registry/architecture,token_estimate: 538,updated_at: 2026-02-17T19:14:59.271Z}],subcategories: []}
+memories: 
+  - path: decisions/registry/architecture
+    token_estimate: 538
+    updated_at: 2026-02-17T19:14:59.271Z
+subcategories: 
+  []

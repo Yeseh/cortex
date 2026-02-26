@@ -1,1 +1,6 @@
-{memories: [{path: standards/cli/production-readiness,token_estimate: 839,updated_at: 2026-02-15T11:48:33.335Z}],subcategories: []}
+memories: 
+  - path: standards/cli/production-readiness
+    token_estimate: 839
+    updated_at: 2026-02-15T11:48:33.335Z
+subcategories: 
+  []

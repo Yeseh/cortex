@@ -1,1 +1,6 @@
-{memories: [{path: decisions/storage/scoped-storage-adapter,token_estimate: 288,updated_at: 2026-01-29T19:54:08.932Z}],subcategories: []}
+memories: 
+  - path: decisions/storage/scoped-storage-adapter
+    token_estimate: 288
+    updated_at: 2026-01-29T19:54:08.932Z
+subcategories: 
+  []

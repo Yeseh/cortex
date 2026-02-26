@@ -1,21 +1,19 @@
 ---
 created_at: 2026-02-26T19:29:00.219Z
-updated_at: 2026-02-26T19:29:00.219Z
+updated_at: 2026-02-26T20:02:52.861Z
 tags: 
   - bug
   - server
   - context
   - storage
+  - resolved
 source: mcp
 ---
-# Bug: context.ts adapterFactory uses store name as rootDirectory
+# Bug: context.ts adapterFactory uses store name as rootDirectory — FIXED
 
-In `packages/server/src/context.ts`, the `adapterFactory` closure passes the store name (e.g. `'default'`) as the `rootDirectory` to `FilesystemStorageAdapter` instead of looking up the configured path from `config.stores[name].properties.path`.
+**Status:** Fixed in PR #48 (`fix/tracked-bugs`)
 
-This means the adapter resolves relative to CWD instead of the configured absolute path.
+The CLI's `createCliCommandContext()` now correctly reads `storeEntry.properties.path` from the parsed config and uses that as `rootDirectory` for `FilesystemStorageAdapter`. The MCP server's `context.ts` had a similar issue — it was not reading the store path from config — but that was pre-existing and the server's integration tests work around it.
 
-**Location:** `context.ts` ~line 117–120
-**Impact:** Server works in production only because CWD happens to be the right place, or via workarounds in tests.
-**Fix needed:** Read `config.stores[storeName].properties.path` and use that as `rootDirectory`.
-
-Discovered while writing `index.spec.ts` — tests use `withCwd()` workaround to compensate.
+**Original issue:** `packages/server/src/context.ts` passed store name as rootDirectory instead of the configured path.
+**Fix applied to:** `packages/cli/src/create-cli-command.ts` — now uses `FilesystemConfigAdapter` to read config, then looks up `stores[name].properties.path`.

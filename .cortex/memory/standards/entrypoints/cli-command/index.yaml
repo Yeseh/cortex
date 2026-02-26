@@ -1,1 +1,6 @@
-{memories: [{path: standards/entrypoints/cli-command/pattern,token_estimate: 486,updated_at: 2026-02-05T19:20:57.879Z}],subcategories: []}
+memories: 
+  - path: standards/entrypoints/cli-command/pattern
+    token_estimate: 486
+    updated_at: 2026-02-05T19:20:57.879Z
+subcategories: 
+  []

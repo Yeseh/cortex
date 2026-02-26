@@ -1,1 +1,5 @@
-{memories: [],subcategories: [{path: history/completed,memory_count: 8}]}
+memories: 
+  []
+subcategories: 
+  - path: history/completed
+    memory_count: 10
