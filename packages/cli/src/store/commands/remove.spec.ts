@@ -14,7 +14,7 @@
  * @module cli/store/commands/remove.spec
  */
 
-import { describe, it, expect } from 'bun:test';
+import { describe, it } from 'bun:test';
 import { handleRemove } from './remove.ts';
 import {
     createMockContext,

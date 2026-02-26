@@ -12,14 +12,11 @@ import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import {
     Cortex,
-    Memory,
-    err,
     ok,
     type AdapterFactory,
     type ConfigStores,
     type CortexContext,
     type CortexSettings,
-    type MemoryMetadata,
     type StorageAdapter,
 } from '@yeseh/cortex-core';
 import { handleAdd } from './add.ts';
@@ -140,7 +137,9 @@ describe('handleAdd', () => {
 
         await handleAdd(ctx, undefined, 'project/tagged', {
             content: 'Tagged memory',
-            tags: ['foo', 'bar'],
+            tags: [
+                'foo', 'bar',
+            ],
         });
 
         expect(capture.getOutput()).toContain('Added memory');

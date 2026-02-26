@@ -3,7 +3,7 @@ import { CommanderError, InvalidArgumentError } from '@commander-js/extra-typing
 
 import { throwCliError, type CoreError } from './errors.ts';
 
-describe('mapCoreError', () => {
+describe('throwCliError', () => {
     describe('argument error codes', () => {
         const argumentErrorCodes = [
             'INVALID_PATH',

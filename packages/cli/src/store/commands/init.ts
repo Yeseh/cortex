@@ -24,7 +24,7 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { resolve } from 'node:path';
-import { resolveStoreName } from '../index.ts';
+import { resolveStoreName } from '../utils/resolve-store-name.ts';
 import { throwCliError } from '../../errors.ts';
 import { type StoreData } from '@yeseh/cortex-core/store';
 import { type CategoryMode, type CortexContext } from '@yeseh/cortex-core';

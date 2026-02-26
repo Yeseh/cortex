@@ -18,9 +18,13 @@
 import { describe, it, expect, afterEach } from 'bun:test';
 import { mkdtemp, mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
 
 import { storeCommand, resolveStoreName } from './index.ts';
+
+// This spec file lives inside a git worktree — use its own directory as a
+// real git repo when tests need one.
+const THIS_DIR = import.meta.dir;
 
 // ── storeCommand wiring ──────────────────────────────────────────────────────
 
@@ -98,11 +102,32 @@ describe('resolveStoreName', () => {
         expect(name).toBe('my-project-store');
     });
 
-    it('should detect git repo name as a valid slug', async () => {
-        // The worktree IS a git repo; its toplevel basename is "cli-unit-tests"
-        const cwd = '/home/jesse/repo/cortex/.worktrees/cli-unit-tests';
-        const name = await resolveStoreName(cwd);
-        expect(name).toBe('cli-unit-tests');
+    it('should detect git repo name for a directory inside a git repo', async () => {
+        // THIS_DIR is inside a git worktree; the resolved name must be a non-empty slug
+        const name = await resolveStoreName(THIS_DIR);
+        expect(typeof name).toBe('string');
+        expect(name.length).toBeGreaterThan(0);
+        // The name should only contain lowercase alphanumeric characters and hyphens
+        expect(name).toMatch(/^[a-z0-9][a-z0-9-]*$/);
+    });
+
+    it('should derive store name from the git toplevel directory basename', async () => {
+        // detectGitRepoName returns the basename of the git toplevel; resolveStoreName
+        // normalizes it to a slug. Compute the expected value independently.
+        const { runGitCommand } = await import('../utils/git.ts');
+        const toplevelResult = await runGitCommand([
+            'rev-parse', '--show-toplevel',
+        ], THIS_DIR);
+        if (!toplevelResult.ok) {
+            // Skip if git isn't available in this environment
+            return;
+        }
+        const expectedName = basename(toplevelResult.value)
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '');
+        const name = await resolveStoreName(THIS_DIR);
+        expect(name).toBe(expectedName);
     });
 
     it('should fall back to folder name when not in git repo', async () => {

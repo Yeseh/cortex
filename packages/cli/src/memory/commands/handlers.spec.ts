@@ -15,6 +15,7 @@ import {
     type CortexContext,
     type CortexSettings,
     type MemoryMetadata,
+    type AdapterFactory,
     type StorageAdapter,
 } from '@yeseh/cortex-core';
 
@@ -24,7 +25,7 @@ import { handleRemove } from './remove.ts';
 import { handleShow } from './show.ts';
 import { handleUpdate } from './update.ts';
 
-const createMockAdapter = (overrides: any = {}): StorageAdapter =>
+const createMockAdapter = (overrides: Record<string, unknown> = {}): StorageAdapter =>
     ({
         memories: {
             load: async () => ok(null),
@@ -32,29 +33,28 @@ const createMockAdapter = (overrides: any = {}): StorageAdapter =>
             add: async () => ok(undefined),
             remove: async () => ok(undefined),
             move: async () => ok(undefined),
-            ...overrides.memories,
+            ...(overrides.memories as object | undefined),
         },
         indexes: {
             load: async () => ok(null),
             write: async () => ok(undefined),
             reindex: async () => ok({ warnings: [] }),
             updateAfterMemoryWrite: async () => ok(undefined),
-            ...overrides.indexes,
+            ...(overrides.indexes as object | undefined),
         },
         categories: {
             exists: async () => ok(true),
             ensure: async () => ok(undefined),
             delete: async () => ok(undefined),
-            updateSubcategoryDescription: async () => ok(undefined),
-            removeSubcategoryEntry: async () => ok(undefined),
-            ...overrides.categories,
+            setDescription: async () => ok(undefined),
+            ...(overrides.categories as object | undefined),
         },
     }) as unknown as StorageAdapter;
 
 const createMemoryFixture = (
     path: string,
     overrides: Partial<MemoryMetadata> = {},
-    content = 'Memory content'
+    content = 'Memory content',
 ): Memory => {
     const timestamp = new Date('2025-01-01T00:00:00.000Z');
     const metadata: MemoryMetadata = {
@@ -77,16 +77,22 @@ const createMemoryFixture = (
 const createCaptureStream = (): { stream: PassThrough; getOutput: () => string } => {
     let output = '';
 
-    // PassThrough is both readable and writable; provide our own synchronous writable side
-    // so `out.write()` is captured immediately.
     const stream = new PassThrough();
     const originalWrite = stream.write.bind(stream);
-    stream.write = ((chunk: any, encoding?: any, cb?: any) => {
-        output += Buffer.from(chunk).toString(
-            typeof encoding === 'string' ? (encoding as BufferEncoding) : undefined
+    stream.write = ((
+        chunk: Buffer | string,
+        encoding?: BufferEncoding | ((error: Error | null | undefined) => void),
+        cb?: (error: Error | null | undefined) => void,
+    ) => {
+        output += Buffer.from(chunk as Buffer).toString(
+            typeof encoding === 'string' ? (encoding as BufferEncoding) : undefined,
         );
-        return originalWrite(chunk, encoding, cb);
-    }) as any;
+        return originalWrite(
+            chunk as Buffer,
+            encoding as BufferEncoding,
+            cb as () => void,
+        );
+    }) as typeof stream.write;
 
     return {
         stream,
@@ -149,18 +155,35 @@ describe('memory command handlers', () => {
             const ctx = createContext({ adapter: createMockAdapter(), storePath: tempDir });
 
             await expect(handleList(ctx, undefined, '/ /', { format: 'yaml' })).rejects.toThrow(
-                InvalidArgumentError
+                InvalidArgumentError,
             );
         });
 
-        it('should throw CommanderError when store is missing', async () => {
-            const ctx = createContext({
-                adapter: createMockAdapter(),
-                storePath: tempDir,
-                stores: undefined,
+        it('should throw CommanderError when the adapter factory returns nothing', async () => {
+            // Force StoreClient.init to fail by providing a factory that returns undefined/null
+            const nullFactory = (() => undefined) as unknown as AdapterFactory;
+            const cortex = Cortex.init({
+                stores: {
+                    default: {
+                        kind: 'filesystem',
+                        properties: { path: tempDir },
+                        categories: {},
+                    },
+                },
+                adapterFactory: nullFactory,
             });
+            const ctx: CortexContext = {
+                cortex,
+                settings: {} as CortexSettings,
+                stores: {} as ConfigStores,
+                now: () => new Date(),
+                stdin: new PassThrough() as unknown as NodeJS.ReadStream,
+                stdout: new PassThrough() as unknown as NodeJS.WriteStream,
+            };
 
-            await expect(handleList(ctx, 'missing-store', undefined, {})).resolves.toBeUndefined();
+            await expect(
+                handleList(ctx, 'missing-store', undefined, {}),
+            ).rejects.toThrow(CommanderError);
         });
 
         it('should write serialized list output', async () => {
@@ -172,22 +195,18 @@ describe('memory command handlers', () => {
 
             const rootCategory: Category = {
                 memories: [],
-                subcategories: [
-                    {
-                        path: CategoryPath.fromString('project').unwrap(),
-                        memoryCount: 1,
-                        description: 'Project memories',
-                    },
-                ],
+                subcategories: [{
+                    path: CategoryPath.fromString('project').unwrap(),
+                    memoryCount: 1,
+                    description: 'Project memories',
+                }],
             };
 
             const projectCategory: Category = {
-                memories: [
-                    {
-                        path: memoryPath.value,
-                        tokenEstimate: 42,
-                    },
-                ],
+                memories: [{
+                    path: memoryPath.value,
+                    tokenEstimate: 42,
+                }],
                 subcategories: [],
             };
 
@@ -229,7 +248,7 @@ describe('memory command handlers', () => {
             const ctx = createContext({ adapter: createMockAdapter(), storePath: tempDir });
 
             await expect(handleShow(ctx, undefined, 'invalid', { format: 'yaml' })).rejects.toThrow(
-                InvalidArgumentError
+                InvalidArgumentError,
             );
         });
 
@@ -241,7 +260,7 @@ describe('memory command handlers', () => {
             });
 
             await expect(
-                handleShow(ctx, 'missing-store', 'project/one', { format: 'yaml' })
+                handleShow(ctx, 'missing-store', 'project/one', { format: 'yaml' }),
             ).rejects.toThrow(CommanderError);
         });
 
@@ -273,7 +292,7 @@ describe('memory command handlers', () => {
             const ctx = createContext({ adapter: createMockAdapter(), storePath: tempDir });
 
             await expect(handleMove(ctx, undefined, 'invalid', 'project/two')).rejects.toThrow(
-                InvalidArgumentError
+                InvalidArgumentError,
             );
         });
 
@@ -285,7 +304,7 @@ describe('memory command handlers', () => {
             });
 
             await expect(
-                handleMove(ctx, 'missing-store', 'project/one', 'project/two')
+                handleMove(ctx, 'missing-store', 'project/one', 'project/two'),
             ).rejects.toThrow(CommanderError);
         });
 
@@ -331,7 +350,7 @@ describe('memory command handlers', () => {
             const ctx = createContext({ adapter: createMockAdapter(), storePath: tempDir });
 
             await expect(handleRemove(ctx, undefined, 'invalid')).rejects.toThrow(
-                InvalidArgumentError
+                InvalidArgumentError,
             );
         });
 
@@ -343,7 +362,7 @@ describe('memory command handlers', () => {
             });
 
             await expect(handleRemove(ctx, 'missing-store', 'project/one')).rejects.toThrow(
-                CommanderError
+                CommanderError,
             );
         });
 
@@ -383,7 +402,7 @@ describe('memory command handlers', () => {
             const ctx = createContext({ adapter: createMockAdapter(), storePath: tempDir });
 
             await expect(
-                handleUpdate(ctx, undefined, 'invalid', { content: 'Next' })
+                handleUpdate(ctx, undefined, 'invalid', { content: 'Next' }),
             ).rejects.toThrow(InvalidArgumentError);
         });
 
@@ -395,7 +414,7 @@ describe('memory command handlers', () => {
             });
 
             await expect(
-                handleUpdate(ctx, 'missing-store', 'project/one', { content: 'Next' })
+                handleUpdate(ctx, 'missing-store', 'project/one', { content: 'Next' }),
             ).rejects.toThrow(CommanderError);
         });
 

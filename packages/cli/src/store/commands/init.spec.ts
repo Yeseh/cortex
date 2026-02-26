@@ -1,48 +1,133 @@
 /**
  * Unit tests for the store init command handler.
  *
- * NOTE: This spec file cannot be run as a standalone unit test due to a
- * circular module dependency:
- *
- *   init.spec.ts → init.ts → ../index.ts → ./commands/init.ts (circular)
- *
- * The circular reference occurs because `init.ts` imports `resolveStoreName`
- * from `../index.ts`, while `../index.ts` imports `initCommand` (a `const`
- * export) from `./commands/init.ts`. At module evaluation time, Bun detects
- * the TDZ (temporal dead zone) violation: `initCommand` has not yet been
- * assigned when `index.ts` tries to call `storeCommand.addCommand(initCommand)`.
- *
- * Resolution: Move `resolveStoreName` to a separate utility module (e.g.,
- * `../utils/store-name.ts`) so `init.ts` no longer needs to import from
- * `../index.ts`, breaking the cycle.
- *
- * Until the circular dependency is resolved, the tests below are defined for
- * documentation and future use but will fail at import time.
- *
  * @module cli/store/commands/init.spec
  */
 
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect, afterEach, beforeEach } from 'bun:test';
+import { InvalidArgumentError } from '@commander-js/extra-typings';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
-// Describe what handleInit should do once the circular dep is fixed.
-// These tests serve as a specification and will pass once `resolveStoreName`
-// is moved out of `../index.ts`.
+import { ok, err } from '@yeseh/cortex-core';
+import { handleInit } from './init.ts';
+import {
+    createMockContext,
+    createMockStorageAdapter,
+    captureOutput,
+} from '../../test-helpers.spec.ts';
+
+// Produce a store adapter whose `stores.load` reports NOT_FOUND (so the new
+// store can be created) and `stores.save` succeeds.
+function createInitAdapter() {
+    return createMockStorageAdapter({
+        stores: {
+            load: async () => err({ code: 'STORE_NOT_FOUND' as const, message: 'not found', store: 'unknown' }),
+            save: async () => ok(undefined),
+            remove: async () => ok(undefined),
+        },
+    });
+}
 
 describe('handleInit', () => {
-    it('TODO: fix circular dependency — init.ts → ../index.ts → ./commands/init.ts', () => {
-        // This test documents the circular import issue.
-        // When fixed, replace with real tests.
-        expect(true).toBe(true);
+    let tempDir: string;
+
+    beforeEach(async () => {
+        tempDir = await mkdtemp(join(tmpdir(), 'cortex-init-'));
     });
 
-    // When the circular dependency is fixed, restore these test cases:
-    //
-    // it('should initialize store and write success message')
-    // it('should use cwd from context as default .cortex path')
-    // it('should use explicit target path when provided')
-    // it('should resolve tilde in target path')
-    // it('should throw InvalidArgumentError for an invalid store name')
-    // it('should output in JSON format when format option is json')
-    // it('should throw CommanderError when store.initialize fails (stores.save returns error)')
-    // it('should include the store name in the success output')
+    afterEach(async () => {
+        await rm(tempDir, { recursive: true, force: true });
+    });
+
+    it('should initialize a store and write success message to stdout', async () => {
+        const { ctx, stdout } = createMockContext({
+            adapter: createInitAdapter(),
+            cwd: tempDir,
+        });
+
+        await handleInit(ctx, undefined, { name: 'my-project', format: 'yaml' });
+
+        const out = captureOutput(stdout);
+        expect(out).toContain('my-project');
+    });
+
+    it('should use the provided target path as the store path', async () => {
+        const customPath = join(tempDir, 'custom-store');
+        const { ctx, stdout } = createMockContext({
+            adapter: createInitAdapter(),
+            cwd: tempDir,
+        });
+
+        await handleInit(ctx, customPath, { name: 'my-project', format: 'yaml' });
+
+        const out = captureOutput(stdout);
+        expect(out).toContain('custom-store');
+    });
+
+    it('should default to .cortex under cwd when no target path is given', async () => {
+        const { ctx, stdout } = createMockContext({
+            adapter: createInitAdapter(),
+            cwd: tempDir,
+        });
+
+        await handleInit(ctx, undefined, { name: 'my-project', format: 'yaml' });
+
+        const out = captureOutput(stdout);
+        // Default path is <cwd>/.cortex
+        expect(out).toContain('.cortex');
+    });
+
+    it('should throw InvalidArgumentError for an invalid store name', async () => {
+        const { ctx } = createMockContext({
+            adapter: createInitAdapter(),
+            cwd: tempDir,
+        });
+
+        await expect(
+            handleInit(ctx, undefined, { name: '   ', format: 'yaml' }),
+        ).rejects.toThrow(InvalidArgumentError);
+    });
+
+    it('should output in JSON format when format option is json', async () => {
+        const { ctx, stdout } = createMockContext({
+            adapter: createInitAdapter(),
+            cwd: tempDir,
+        });
+
+        await handleInit(ctx, undefined, { name: 'my-project', format: 'json' });
+
+        const out = captureOutput(stdout);
+        const parsed = JSON.parse(out) as { value: Record<string, unknown> };
+        expect(typeof parsed.value.name).toBe('string');
+        expect(typeof parsed.value.path).toBe('string');
+    });
+
+    it('should include the store name in the success output', async () => {
+        const { ctx, stdout } = createMockContext({
+            adapter: createInitAdapter(),
+            cwd: tempDir,
+        });
+
+        await handleInit(ctx, undefined, { name: 'hello-world', format: 'json' });
+
+        const out = captureOutput(stdout);
+        const parsed = JSON.parse(out) as { value: { name: string } };
+        expect(parsed.value.name).toBe('hello-world');
+    });
+
+    it('should expand tilde in target path', async () => {
+        const { ctx, stdout } = createMockContext({
+            adapter: createInitAdapter(),
+            cwd: tempDir,
+        });
+
+        // resolveUserPath expands ~ — we just verify it doesn't throw and
+        // produces output with a home-like absolute path
+        await handleInit(ctx, '~/my-store', { name: 'my-project', format: 'yaml' });
+
+        const out = captureOutput(stdout);
+        expect(out).toContain('my-store');
+    });
 });
