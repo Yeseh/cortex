@@ -53,6 +53,8 @@ export const createTestContext = (testDir: string): CortexContext => {
 
     config.stores = storeConfig;
 
+    const configAdapter = new FilesystemConfigAdapter(join(testDir, '.config.yaml'));
+
     const cortex = Cortex.init({
         // Type compatibility - will be fixed in core migration
         stores: storeConfig as any,
@@ -61,7 +63,7 @@ export const createTestContext = (testDir: string): CortexContext => {
             const store = storeConfig[storeName];
             if (!store) {
                 throw new Error(
-                    `Store '${storeName}' is not registered. Available stores: ${Object.keys(storeConfig).join(', ')}`,
+                    `Store '${storeName}' is not registered. Available stores: ${Object.keys(storeConfig).join(', ')}`
                 );
             }
             const storePath = store.properties.path as string;
@@ -70,6 +72,7 @@ export const createTestContext = (testDir: string): CortexContext => {
     });
 
     return {
+        config: configAdapter,
         settings: config.settings!,
         stores: config.stores,
         cortex,
@@ -88,7 +91,7 @@ export const createTestContext = (testDir: string): CortexContext => {
  */
 export const createTestContextWithStores = (
     testDir: string,
-    additionalStores: Record<string, string>,
+    additionalStores: Record<string, string>
 ): CortexContext => {
     const config = createTestConfig(testDir);
     const memoryDir = join(testDir, MEMORY_SUBDIR);
@@ -102,15 +105,15 @@ export const createTestContextWithStores = (
         },
     };
 
-    for (const [
-        name, path,
-    ] of Object.entries(additionalStores)) {
+    for (const [name, path] of Object.entries(additionalStores)) {
         storeConfig[name] = {
             kind: 'filesystem',
             properties: { path },
             categories: {},
         };
     }
+
+    const configAdapter = new FilesystemConfigAdapter(join(testDir, '.config.yaml'));
 
     const cortex = Cortex.init({
         // Type compatibility - will be fixed in core migration
@@ -120,7 +123,7 @@ export const createTestContextWithStores = (
             const store = storeConfig[storeName];
             if (!store) {
                 throw new Error(
-                    `Store '${storeName}' is not registered. Available stores: ${Object.keys(storeConfig).join(', ')}`,
+                    `Store '${storeName}' is not registered. Available stores: ${Object.keys(storeConfig).join(', ')}`
                 );
             }
             const storePath = store.properties.path as string;
@@ -129,6 +132,7 @@ export const createTestContextWithStores = (
     });
 
     return {
+        config: configAdapter,
         settings: config.settings!,
         stores: config.stores,
         cortex,
@@ -156,7 +160,7 @@ export const createTestContextWithStores = (
 export const createTestDir = async (): Promise<string> => {
     const testDir = join(
         tmpdir(),
-        `cortex-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        `cortex-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
     );
     await mkdir(testDir, { recursive: true });
 
@@ -199,7 +203,7 @@ export const createTestDir = async (): Promise<string> => {
  */
 export const createTestCategory = async (
     storeRoot: string,
-    categoryPath: string,
+    categoryPath: string
 ): Promise<void> => {
     const adapter = createFilesystemStorageAdapter(storeRoot);
     const result = await createCategory(adapter.categories, categoryPath);
@@ -212,7 +216,7 @@ export const createTestCategory = async (
 export const createMemoryFile = async (
     storeRoot: string,
     slugPath: string,
-    contents: Partial<Memory>,
+    contents: Partial<Memory>
 ): Promise<void> => {
     const adapter = createFilesystemStorageAdapter(storeRoot);
 
@@ -224,7 +228,7 @@ export const createMemoryFile = async (
         const categoryResult = await createCategory(adapter.categories, categoryPath);
         if (!categoryResult.ok()) {
             throw new Error(
-                `Failed to create category '${categoryPath}': ${categoryResult.error.message}`,
+                `Failed to create category '${categoryPath}': ${categoryResult.error.message}`
             );
         }
     }
@@ -243,7 +247,7 @@ export const createMemoryFile = async (
                 updatedAt: contents.metadata?.updatedAt ?? new Date(),
             },
         },
-        contents.metadata?.createdAt, // Pass timestamp for test determinism
+        contents.metadata?.createdAt // Pass timestamp for test determinism
     );
 
     if (!result.ok()) {

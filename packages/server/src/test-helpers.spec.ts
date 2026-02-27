@@ -11,7 +11,12 @@
 import { mock } from 'bun:test';
 import type { Mock } from 'bun:test';
 import { ok, err } from '@yeseh/cortex-core';
-import type { CortexContext, CortexSettings, ConfigStores } from '@yeseh/cortex-core';
+import type {
+    CortexContext,
+    CortexSettings,
+    ConfigStores,
+    ConfigAdapter,
+} from '@yeseh/cortex-core';
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 import type { McpToolResponse } from './response.ts';
 
@@ -59,7 +64,7 @@ export function errResult<E>(error: E) {
  */
 export async function expectMcpInvalidParams(
     fn: () => Promise<unknown>,
-    messagePart?: string,
+    messagePart?: string
 ): Promise<void> {
     let threw = false;
     try {
@@ -71,12 +76,12 @@ export async function expectMcpInvalidParams(
         }
         if (e.code !== ErrorCode.InvalidParams) {
             throw new Error(
-                `Expected McpError with code InvalidParams (${ErrorCode.InvalidParams}), got ${e.code}`,
+                `Expected McpError with code InvalidParams (${ErrorCode.InvalidParams}), got ${e.code}`
             );
         }
         if (messagePart !== undefined && !e.message.includes(messagePart)) {
             throw new Error(
-                `Expected error message to contain "${messagePart}", got: "${e.message}"`,
+                `Expected error message to contain "${messagePart}", got: "${e.message}"`
             );
         }
     }
@@ -100,7 +105,7 @@ export async function expectMcpInvalidParams(
  */
 export async function expectMcpInternalError(
     fn: () => Promise<unknown>,
-    messagePart?: string,
+    messagePart?: string
 ): Promise<void> {
     let threw = false;
     try {
@@ -112,12 +117,12 @@ export async function expectMcpInternalError(
         }
         if (e.code !== ErrorCode.InternalError) {
             throw new Error(
-                `Expected McpError with code InternalError (${ErrorCode.InternalError}), got ${e.code}`,
+                `Expected McpError with code InternalError (${ErrorCode.InternalError}), got ${e.code}`
             );
         }
         if (messagePart !== undefined && !e.message.includes(messagePart)) {
             throw new Error(
-                `Expected error message to contain "${messagePart}", got: "${e.message}"`,
+                `Expected error message to contain "${messagePart}", got: "${e.message}"`
             );
         }
     }
@@ -139,18 +144,13 @@ export async function expectMcpInternalError(
  * expectTextResponseContains(result, 'Memory created');
  * ```
  */
-export function expectTextResponseContains(
-    response: McpToolResponse,
-    text: string,
-): void {
+export function expectTextResponseContains(response: McpToolResponse, text: string): void {
     const content = response.content[0];
     if (!content) {
         throw new Error('Response has no content items');
     }
     if (!content.text.includes(text)) {
-        throw new Error(
-            `Expected response text to contain "${text}", got: "${content.text}"`,
-        );
+        throw new Error(`Expected response text to contain "${text}", got: "${content.text}"`);
     }
 }
 
@@ -236,14 +236,12 @@ export type MockMemoryClient = {
  * ```
  */
 export const createMockMemoryClient = (
-    overrides: Partial<MockMemoryClient> = {},
+    overrides: Partial<MockMemoryClient> = {}
 ): MockMemoryClient => {
     const defaults: MockMemoryClient = {
         create: mock(async () => ok(makeMockMemory())),
         get: mock(async () => ok(makeMockMemory())),
-        update: mock(async () =>
-            ok({ ...makeMockMemory(), content: 'updated' }),
-        ),
+        update: mock(async () => ok({ ...makeMockMemory(), content: 'updated' })),
         delete: mock(async () => ok(undefined)),
         move: mock(async () => ok(undefined)),
     };
@@ -257,12 +255,8 @@ export type MockCategoryClient = {
     listSubcategories: Mock<() => Promise<ReturnType<typeof ok<unknown[]>>>>;
     getMemory: Mock<() => MockMemoryClient>;
     getCategory: Mock<() => ReturnType<typeof ok<MockCategoryClient>>>;
-    prune: Mock<
-        () => Promise<ReturnType<typeof ok<{ pruned: unknown[]; dryRun: boolean }>>>
-    >;
-    reindex: Mock<
-        () => Promise<ReturnType<typeof ok<{ warnings: unknown[] }>>>
-    >;
+    prune: Mock<() => Promise<ReturnType<typeof ok<{ pruned: unknown[]; dryRun: boolean }>>>>;
+    reindex: Mock<() => Promise<ReturnType<typeof ok<{ warnings: unknown[] }>>>>;
 };
 
 /**
@@ -280,7 +274,7 @@ export type MockCategoryClient = {
  * @returns A mock object implementing the CategoryClient interface
  */
 export const createMockCategoryClient = (
-    overrides: Partial<MockCategoryClient> = {},
+    overrides: Partial<MockCategoryClient> = {}
 ): MockCategoryClient => {
     // Build a shallow nested mock for getCategory results
     const nestedCategory: MockCategoryClient = {
@@ -340,7 +334,7 @@ export type MockStoreClient = {
  * @returns A mock object implementing the StoreClient interface
  */
 export const createMockStoreClient = (
-    overrides: Partial<MockStoreClient> = {},
+    overrides: Partial<MockStoreClient> = {}
 ): MockStoreClient => {
     const defaults: MockStoreClient = {
         name: 'default',
@@ -356,7 +350,7 @@ export const createMockStoreClient = (
                 categoryMode: 'free',
                 categories: [],
                 properties: {},
-            }),
+            })
         ),
     };
     return { ...defaults, ...overrides };
@@ -383,9 +377,7 @@ export type MockCortex = {
  * });
  * ```
  */
-export const createMockCortex = (
-    overrides: Partial<MockCortex> = {},
-): MockCortex => {
+export const createMockCortex = (overrides: Partial<MockCortex> = {}): MockCortex => {
     const defaults: MockCortex = {
         getStore: mock((_name: string) => ok(createMockStoreClient())),
     };
@@ -413,9 +405,7 @@ export const createMockCortex = (
  * });
  * ```
  */
-export const createMockCortexContext = (
-    overrides: Partial<CortexContext> = {},
-): CortexContext => {
+export const createMockCortexContext = (overrides: Partial<CortexContext> = {}): CortexContext => {
     const defaultSettings: CortexSettings = {
         defaultStore: 'default',
         outputFormat: 'json',
@@ -441,16 +431,43 @@ export const createMockCortexContext = (
         emit: () => false,
     } as unknown as NodeJS.WriteStream;
 
-    return {
+    // Determine the effective stores (from override or default) so mock config reflects them
+    const effectiveStores = (overrides.stores ?? defaultStores) as ConfigStores;
+
+    // Create a minimal mock ConfigAdapter whose `stores` reflects the effective stores
+    const mockConfig: ConfigAdapter = {
+        path: '/tmp/cortex-test/config.yaml',
+        data: null,
+        get stores() {
+            return effectiveStores;
+        },
+        get settings() {
+            return defaultSettings;
+        },
+        initializeConfig: mock(async () => ok(undefined)),
+        getSettings: mock(async () => ok(defaultSettings)),
+        getStores: mock(async () => ok(effectiveStores)),
+        getStore: mock(async (name: string) => ok(effectiveStores[name] ?? null)),
+        saveStore: mock(async () => ok(undefined)),
+    };
+
+    const base: CortexContext = {
         cortex: createMockCortex() as unknown as CortexContext['cortex'],
+        config: mockConfig,
         settings: defaultSettings,
         stores: defaultStores,
         now: () => new Date(),
         globalDataPath: '/tmp/cortex-test',
         stdin: stdinStub,
         stdout: stdoutStub,
-        ...overrides,
     };
+
+    const merged = { ...base, ...overrides };
+    // If stores was overridden but config was not, keep the mockConfig (which already uses effectiveStores)
+    if (!overrides.config) {
+        merged.config = mockConfig;
+    }
+    return merged;
 };
 
 // =============================================================================
@@ -491,7 +508,7 @@ export const createMockMcpServer = () => {
         registerTool: (
             name: string,
             opts: { description?: string; inputSchema?: unknown },
-            handler: (...args: unknown[]) => unknown,
+            handler: (...args: unknown[]) => unknown
         ) => {
             registeredTools.set(name, {
                 description: opts.description ?? '',
@@ -507,7 +524,7 @@ export const createMockMcpServer = () => {
             name: string,
             description: string,
             schema: unknown,
-            handler: (...args: unknown[]) => unknown,
+            handler: (...args: unknown[]) => unknown
         ) => {
             registeredTools.set(name, {
                 description,
@@ -542,7 +559,7 @@ export const createMockMcpServer = () => {
  */
 export async function withEnv<T>(
     overrides: Record<string, string | undefined>,
-    fn: () => Promise<T>,
+    fn: () => Promise<T>
 ): Promise<T> {
     // Save current values (undefined means the key was absent)
     const saved: Record<string, string | undefined> = {};

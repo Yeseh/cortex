@@ -90,8 +90,7 @@ async function withCwd<T>(dir: string, fn: () => Promise<T>): Promise<T> {
     process.chdir(dir);
     try {
         return await fn();
-    }
-    finally {
+    } finally {
         process.chdir(orig);
     }
 }
@@ -101,13 +100,13 @@ async function withTempDir<T>(fn: (dir: string) => Promise<T>): Promise<T> {
     const dir = await mkdtemp(join(tmpdir(), 'cortex-server-test-'));
     try {
         return await fn(dir);
-    }
-    finally {
+    } finally {
         // Restore cwd first in case fn left it pointing inside dir
         try {
-            process.chdir(tmpdir()); 
+            process.chdir(tmpdir());
+        } catch {
+            /* ignore */
         }
-        catch { /* ignore */ }
         await rm(dir, { recursive: true, force: true });
     }
 }
@@ -133,17 +132,15 @@ describe('createServer', () => {
     afterEach(() => {
         // Restore cwd if any test changed it
         try {
-            process.chdir(savedCwd); 
+            process.chdir(savedCwd);
+        } catch {
+            /* ignore */
         }
-        catch { /* ignore */ }
 
-        for (const [
-            key, value,
-        ] of Object.entries(savedEnv)) {
+        for (const [key, value] of Object.entries(savedEnv)) {
             if (value === undefined) {
                 Reflect.deleteProperty(process.env, key);
-            }
-            else {
+            } else {
                 process.env[key] = value;
             }
         }
@@ -157,7 +154,7 @@ describe('createServer', () => {
         it('should return CONFIG_INVALID when CORTEX_LOG_LEVEL is invalid', async () => {
             const result = await withEnv(
                 { CORTEX_LOG_LEVEL: 'verbose' }, // not in enum [debug, info, warn, error]
-                () => createServer(),
+                () => createServer()
             );
 
             expect(result.ok()).toBe(false);
@@ -169,10 +166,7 @@ describe('createServer', () => {
         });
 
         it('should return CONFIG_INVALID when CORTEX_PORT is non-numeric', async () => {
-            const result = await withEnv(
-                { CORTEX_PORT: 'not-a-port' },
-                () => createServer(),
-            );
+            const result = await withEnv({ CORTEX_PORT: 'not-a-port' }, () => createServer());
 
             expect(result.ok()).toBe(false);
             if (!result.ok()) {
@@ -181,10 +175,7 @@ describe('createServer', () => {
         });
 
         it('should return CONFIG_INVALID when CORTEX_OUTPUT_FORMAT is invalid', async () => {
-            const result = await withEnv(
-                { CORTEX_OUTPUT_FORMAT: 'xml' },
-                () => createServer(),
-            );
+            const result = await withEnv({ CORTEX_OUTPUT_FORMAT: 'xml' }, () => createServer());
 
             expect(result.ok()).toBe(false);
             if (!result.ok()) {
@@ -193,10 +184,7 @@ describe('createServer', () => {
         });
 
         it('should include a cause Error in the CONFIG_INVALID result', async () => {
-            const result = await withEnv(
-                { CORTEX_LOG_LEVEL: 'trace' },
-                () => createServer(),
-            );
+            const result = await withEnv({ CORTEX_LOG_LEVEL: 'trace' }, () => createServer());
 
             expect(result.ok()).toBe(false);
             if (!result.ok()) {
@@ -207,37 +195,35 @@ describe('createServer', () => {
     });
 
     // -----------------------------------------------------------------------
-    // SERVER_START_FAILED — createCortexContext throws (impossible path)
+    // SERVER_START_FAILED — createCortexContext returns err (impossible path)
     //
-    // context.ts wraps filesystem errors in a plain throw rather than
-    // returning an err() result, so createServer propagates the throw.
+    // context.ts now returns err() for filesystem errors rather than throwing,
+    // so createServer returns err(SERVER_START_FAILED) rather than rejecting.
     // -----------------------------------------------------------------------
 
     describe('context creation failure on impossible path', () => {
-        it('should throw when CORTEX_DATA_PATH cannot be created', async () => {
+        it('should return err when CORTEX_DATA_PATH cannot be created', async () => {
             // /dev/null is a character device — mkdir inside it throws ENOTDIR.
-            await expect(
-                withEnv(
-                    {
-                        CORTEX_DATA_PATH: '/dev/null/impossible-nested-path',
-                        CORTEX_PORT: String(nextPort()),
-                    },
-                    () => createServer(),
-                ),
-            ).rejects.toThrow();
+            const result = await withEnv(
+                {
+                    CORTEX_DATA_PATH: '/dev/null/impossible-nested-path',
+                    CORTEX_PORT: String(nextPort()),
+                },
+                () => createServer()
+            );
+            expect(result.ok()).toBe(false);
         });
 
-        it('should throw when data path nests inside an existing file', async () => {
+        it('should return err when data path nests inside an existing file', async () => {
             // /etc/hostname is a regular file on Linux — mkdir inside it throws.
-            await expect(
-                withEnv(
-                    {
-                        CORTEX_DATA_PATH: '/etc/hostname/cortex-should-fail',
-                        CORTEX_PORT: String(nextPort()),
-                    },
-                    () => createServer(),
-                ),
-            ).rejects.toThrow();
+            const result = await withEnv(
+                {
+                    CORTEX_DATA_PATH: '/etc/hostname/cortex-should-fail',
+                    CORTEX_PORT: String(nextPort()),
+                },
+                () => createServer()
+            );
+            expect(result.ok()).toBe(false);
         });
     });
 
@@ -255,10 +241,9 @@ describe('createServer', () => {
                 const port = nextPort();
 
                 const result = await withCwd(testDir, () =>
-                    withEnv(
-                        { CORTEX_DATA_PATH: testDir, CORTEX_PORT: String(port) },
-                        () => createServer(),
-                    ),
+                    withEnv({ CORTEX_DATA_PATH: testDir, CORTEX_PORT: String(port) }, () =>
+                        createServer()
+                    )
                 );
 
                 expect(result.ok()).toBe(true);
@@ -287,8 +272,8 @@ describe('createServer', () => {
                             CORTEX_OUTPUT_FORMAT: 'json',
                             CORTEX_DEFAULT_STORE: 'default',
                         },
-                        () => createServer(),
-                    ),
+                        () => createServer()
+                    )
                 );
 
                 expect(result.ok()).toBe(true);
@@ -310,10 +295,9 @@ describe('createServer', () => {
                 const port = nextPort();
 
                 const result = await withCwd(testDir, () =>
-                    withEnv(
-                        { CORTEX_DATA_PATH: testDir, CORTEX_PORT: String(port) },
-                        () => createServer(),
-                    ),
+                    withEnv({ CORTEX_DATA_PATH: testDir, CORTEX_PORT: String(port) }, () =>
+                        createServer()
+                    )
                 );
 
                 expect(result.ok()).toBe(true);
@@ -332,10 +316,9 @@ describe('createServer', () => {
                 const port = nextPort();
 
                 const result = await withCwd(testDir, () =>
-                    withEnv(
-                        { CORTEX_DATA_PATH: testDir, CORTEX_PORT: String(port) },
-                        () => createServer(),
-                    ),
+                    withEnv({ CORTEX_DATA_PATH: testDir, CORTEX_PORT: String(port) }, () =>
+                        createServer()
+                    )
                 );
 
                 expect(result.ok()).toBe(true);
@@ -354,10 +337,9 @@ describe('createServer', () => {
                 const port = nextPort();
 
                 const result = await withCwd(testDir, () =>
-                    withEnv(
-                        { CORTEX_DATA_PATH: testDir, CORTEX_PORT: String(port) },
-                        () => createServer(),
-                    ),
+                    withEnv({ CORTEX_DATA_PATH: testDir, CORTEX_PORT: String(port) }, () =>
+                        createServer()
+                    )
                 );
 
                 expect(result.ok()).toBe(true);

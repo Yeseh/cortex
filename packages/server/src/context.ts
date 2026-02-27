@@ -3,7 +3,6 @@ import {
     err,
     getDefaultSettings,
     ok,
-    parseConfig,
     type ConfigAdapter,
     type ConfigValidationError,
     type CortexConfig,
@@ -58,11 +57,12 @@ const createAdapterFactory = (configAdapter: ConfigAdapter) => {
         }
 
         switch (store.kind) {
-            case 'filesystem':
+            case 'filesystem': {
                 const path = store.properties.path as string;
                 return new FilesystemStorageAdapter(configAdapter, {
                     rootDirectory: path,
                 });
+            }
             default:
                 throw new Error(`Unsupported store kind '${store.kind}' for store '${storeName}'.`);
         }
@@ -87,7 +87,6 @@ export const createCortexContext = async (
 
         if (!configPathExists) {
             const defaultSettings = getDefaultSettings();
-            const globalStorePath = resolve(storesDir, 'global');
             const config: CortexConfig = {
                 settings: {
                     outputFormat: options.outputFormat ?? defaultSettings.outputFormat,
@@ -101,7 +100,7 @@ export const createCortexContext = async (
                         categoryMode: 'free',
                         categories: {}, // TODO: category templates for MCP servers. ENV does not make sense
                         properties: {
-                            path: globalStorePath,
+                            path: resolve(storesDir, 'default'),
                         },
                     },
                 },
@@ -115,9 +114,17 @@ export const createCortexContext = async (
                     message: `Failed to initialize configuration at ${configPath}.`,
                 });
             }
-        }
-        else {
-            await configAdapter.reload();
+
+            // Create the default store directory on disk so it's ready to use.
+            await mkdir(resolve(storesDir, 'default'), { recursive: true });
+        } else {
+            const reloadResult = await configAdapter.reload();
+            if (!reloadResult.ok()) {
+                return err({
+                    code: 'CONFIG_READ_FAILED',
+                    message: `Failed to read configuration at ${configPath}: ${reloadResult.error.message}`,
+                });
+            }
         }
         const config = configAdapter.data!;
         const adapterFactory = createAdapterFactory(configAdapter);
@@ -130,6 +137,7 @@ export const createCortexContext = async (
         const now = () => new Date();
 
         const context: CortexContext = {
+            config: configAdapter,
             settings: config.settings ?? getDefaultSettings(),
             stores: config.stores ?? {},
             cortex,
@@ -141,8 +149,9 @@ export const createCortexContext = async (
 
         return ok(context);
     } catch (error) {
-        throw new Error(
-            `Unexpected error creating Cortex context: ${error instanceof Error ? error.message : String(error)}`
-        );
+        return err({
+            code: 'CONTEXT_CREATION_FAILED',
+            message: `Unexpected error creating Cortex context: ${error instanceof Error ? error.message : String(error)}`,
+        });
     }
 };

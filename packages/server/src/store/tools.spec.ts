@@ -1,22 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
-import type { Mock } from 'bun:test';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { ok, err } from '@yeseh/cortex-core';
-import type { CortexContext } from '@yeseh/cortex-core';
-import { storeNameSchema, listStores, listStoresFromContext, listStoresHandler, createStoreHandler } from './tools.ts';
+import { err } from '@yeseh/cortex-core';
 import {
-    createMockCortexContext,
-    createMockCortex,
-    createMockStoreClient,
-    parseResponseJson,
-} from '../test-helpers.spec.ts';
-
-// Convenience: cast a mock function to satisfy strict MockCortex / MockStoreClient typing
-// when the actual return type is functionally correct but TypeScript's variance check rejects it.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const anyMock = <T>(fn: () => T): Mock<any> => mock(fn) as unknown as Mock<any>;
+    storeNameSchema,
+    listStores,
+    listStoresFromContext,
+    listStoresHandler,
+    createStoreHandler,
+} from './tools.ts';
+import { createMockCortexContext, parseResponseJson } from '../test-helpers.spec.ts';
 
 describe('storeNameSchema', () => {
     describe('valid names', () => {
@@ -74,7 +68,7 @@ describe('storeNameSchema', () => {
             if (!result.success) {
                 expect(result.error.issues).toHaveLength(1);
                 expect(result.error.issues[0]?.message).toContain(
-                    'Store name must start with alphanumeric',
+                    'Store name must start with alphanumeric'
                 );
             }
         });
@@ -85,7 +79,7 @@ describe('storeNameSchema', () => {
             if (!result.success) {
                 expect(result.error.issues).toHaveLength(1);
                 expect(result.error.issues[0]?.message).toContain(
-                    'Store name must start with alphanumeric',
+                    'Store name must start with alphanumeric'
                 );
             }
         });
@@ -96,7 +90,7 @@ describe('storeNameSchema', () => {
             if (!result.success) {
                 expect(result.error.issues).toHaveLength(1);
                 expect(result.error.issues[0]?.message).toContain(
-                    'Store name must start with alphanumeric',
+                    'Store name must start with alphanumeric'
                 );
             }
         });
@@ -107,7 +101,7 @@ describe('storeNameSchema', () => {
             if (!result.success) {
                 expect(result.error.issues).toHaveLength(1);
                 expect(result.error.issues[0]?.message).toContain(
-                    'Store name must start with alphanumeric',
+                    'Store name must start with alphanumeric'
                 );
             }
         });
@@ -118,7 +112,7 @@ describe('storeNameSchema', () => {
             if (!result.success) {
                 expect(result.error.issues).toHaveLength(1);
                 expect(result.error.issues[0]?.message).toContain(
-                    'Store name must start with alphanumeric',
+                    'Store name must start with alphanumeric'
                 );
             }
         });
@@ -362,11 +356,7 @@ describe('listStoresFromContext', () => {
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             const names = result.value.stores.map((s) => s.name);
-            expect(names).toEqual([
-                'alpha',
-                'mango',
-                'zebra',
-            ]);
+            expect(names).toEqual(['alpha', 'mango', 'zebra']);
         }
     });
 
@@ -428,8 +418,16 @@ describe('listStoresHandler', () => {
     it('should return all registered stores', async () => {
         const ctx = createMockCortexContext({
             stores: {
-                'store-a': { kind: 'filesystem', properties: { path: '/data/store-a' }, categories: {} },
-                'store-b': { kind: 'filesystem', properties: { path: '/data/store-b' }, categories: {} },
+                'store-a': {
+                    kind: 'filesystem',
+                    properties: { path: '/data/store-a' },
+                    categories: {},
+                },
+                'store-b': {
+                    kind: 'filesystem',
+                    properties: { path: '/data/store-b' },
+                    categories: {},
+                },
             },
         });
         const response = await listStoresHandler(ctx);
@@ -452,9 +450,7 @@ describe('listStoresHandler', () => {
 
         const data = parseResponseJson(response) as { stores: { name: string }[] };
         const names = data.stores.map((s) => s.name);
-        expect(names).toEqual([
-            'alpha', 'zebra',
-        ]);
+        expect(names).toEqual(['alpha', 'zebra']);
     });
 
     it('should not set isError on the response', async () => {
@@ -529,31 +525,8 @@ describe('createStoreHandler', () => {
         expect(response.content[0]?.text).toContain('already exists');
     });
 
-    it('should return errorResponse when getStore fails', async () => {
-        const cortex = createMockCortex({
-            getStore: anyMock(() =>
-                err({ code: 'STORE_NOT_FOUND', message: 'Registry lookup failed' }),
-            ),
-        });
-        const ctx = createMockCortexContext({
-            cortex: cortex as unknown as CortexContext['cortex'],
-            stores: {},
-            globalDataPath: testDir,
-        });
-
-        const response = await createStoreHandler(ctx, { name: 'new-store' });
-
-        expect(response.isError).toBe(true);
-        expect(response.content[0]?.text).toContain('Failed to create store client');
-    });
-
     it('should return errorResponse when globalDataPath is undefined', async () => {
-        const storeClient = createMockStoreClient();
-        const cortex = createMockCortex({
-            getStore: anyMock(() => ok(storeClient)),
-        });
         const ctx = createMockCortexContext({
-            cortex: cortex as unknown as CortexContext['cortex'],
             stores: {},
             globalDataPath: undefined,
         });
@@ -564,34 +537,23 @@ describe('createStoreHandler', () => {
         expect(response.content[0]?.text).toContain('globalDataPath');
     });
 
-    it('should return errorResponse when store.initialize fails', async () => {
-        const storeClient = createMockStoreClient({
-            initialize: anyMock(async () =>
-                err({ code: 'STORE_INIT_FAILED', message: 'disk full' }),
-            ),
-        });
-        const cortex = createMockCortex({
-            getStore: anyMock(() => ok(storeClient)),
-        });
+    it('should return errorResponse when saveStore fails', async () => {
         const ctx = createMockCortexContext({
-            cortex: cortex as unknown as CortexContext['cortex'],
             stores: {},
             globalDataPath: testDir,
         });
+        (ctx.config.saveStore as ReturnType<typeof mock>).mockImplementation(async () =>
+            err({ code: 'CONFIG_WRITE_FAILED' as const, message: 'disk full' })
+        );
 
         const response = await createStoreHandler(ctx, { name: 'new-store' });
 
         expect(response.isError).toBe(true);
-        expect(response.content[0]?.text).toContain('Failed to initialize');
+        expect(response.content[0]?.text).toContain('Failed to register');
     });
 
     it('should return textResponse with created name on success', async () => {
-        const storeClient = createMockStoreClient();
-        const cortex = createMockCortex({
-            getStore: anyMock(() => ok(storeClient)),
-        });
         const ctx = createMockCortexContext({
-            cortex: cortex as unknown as CortexContext['cortex'],
             stores: {},
             globalDataPath: testDir,
         });
@@ -604,12 +566,7 @@ describe('createStoreHandler', () => {
     });
 
     it('should create the store directory on disk on success', async () => {
-        const storeClient = createMockStoreClient();
-        const cortex = createMockCortex({
-            getStore: anyMock(() => ok(storeClient)),
-        });
         const ctx = createMockCortexContext({
-            cortex: cortex as unknown as CortexContext['cortex'],
             stores: {},
             globalDataPath: testDir,
         });
@@ -620,22 +577,21 @@ describe('createStoreHandler', () => {
         expect(stat.isDirectory()).toBe(true);
     });
 
-    it('should call store.initialize with a StoreData containing the store path', async () => {
-        const storeClient = createMockStoreClient();
-        const cortex = createMockCortex({
-            getStore: anyMock(() => ok(storeClient)),
-        });
+    it('should call config.saveStore with the correct StoreData', async () => {
         const ctx = createMockCortexContext({
-            cortex: cortex as unknown as CortexContext['cortex'],
             stores: {},
             globalDataPath: testDir,
         });
 
         await createStoreHandler(ctx, { name: 'checked-store' });
 
-        expect(storeClient.initialize).toHaveBeenCalledTimes(1);
-        const callArgs = (storeClient.initialize as ReturnType<typeof mock>).mock.calls[0] as [{ properties: { path: string }; kind: string }];
-        const storeData = callArgs[0]!;
+        expect(ctx.config.saveStore).toHaveBeenCalledTimes(1);
+        const callArgs = (ctx.config.saveStore as ReturnType<typeof mock>).mock.calls[0] as [
+            string,
+            { properties: { path: string }; kind: string },
+        ];
+        expect(callArgs[0]).toBe('checked-store');
+        const storeData = callArgs[1]!;
         expect(storeData.kind).toBe('filesystem');
         expect(storeData.properties.path).toBe(path.join(testDir, 'checked-store'));
     });

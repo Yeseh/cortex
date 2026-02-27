@@ -72,7 +72,7 @@ const createTestContext = (testDir: string): CortexContext => {
             const store = storeConfig[storeName];
             if (!store) {
                 throw new Error(
-                    `Store '${storeName}' is not registered. Available stores: ${Object.keys(storeConfig).join(', ')}`,
+                    `Store '${storeName}' is not registered. Available stores: ${Object.keys(storeConfig).join(', ')}`
                 );
             }
             const storePath = store.properties.path as string;
@@ -85,6 +85,7 @@ const createTestContext = (testDir: string): CortexContext => {
         settings: { defaultStore: 'default', outputFormat: 'json' },
         stores: storeConfig,
         cortex,
+        config: new FilesystemConfigAdapter(join(testDir, 'config.yaml')),
         now: () => new Date('2024-01-01T00:00:00Z'),
         stdin: new PassThrough() as unknown as NodeJS.ReadStream,
         stdout: new PassThrough() as unknown as NodeJS.WriteStream,
@@ -100,13 +101,15 @@ describe('createCategoryHandler', () => {
         it('should throw McpError(InvalidParams) when store does not exist', async () => {
             const ctx = createMockCortexContext({
                 cortex: createMockCortex({
-                    getStore: mock(() => errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' })) as any,
+                    getStore: mock(() =>
+                        errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' })
+                    ) as any,
                 }) as unknown as CortexContext['cortex'],
             });
 
             await expectMcpInvalidParams(
                 () => createCategoryHandler(ctx, { store: 'missing', path: 'foo' }),
-                'not found',
+                'not found'
             );
         });
     });
@@ -117,16 +120,16 @@ describe('createCategoryHandler', () => {
             // so the default mock cortex is fine here.
             const ctx = createMockCortexContext();
 
-            await expectMcpInvalidParams(
-                () => createCategoryHandler(ctx, { store: 'default', path: '' }),
+            await expectMcpInvalidParams(() =>
+                createCategoryHandler(ctx, { store: 'default', path: '' })
             );
         });
 
         it('should throw McpError(InvalidParams) for whitespace-only path', async () => {
             const ctx = createMockCortexContext();
 
-            await expectMcpInvalidParams(
-                () => createCategoryHandler(ctx, { store: 'default', path: '   ' }),
+            await expectMcpInvalidParams(() =>
+                createCategoryHandler(ctx, { store: 'default', path: '   ' })
             );
         });
     });
@@ -199,7 +202,9 @@ describe('setCategoryDescriptionHandler', () => {
         it('should throw McpError(InvalidParams) when store does not exist', async () => {
             const ctx = createMockCortexContext({
                 cortex: createMockCortex({
-                    getStore: mock(() => errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' })) as any,
+                    getStore: mock(() =>
+                        errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' })
+                    ) as any,
                 }) as unknown as CortexContext['cortex'],
             });
 
@@ -210,7 +215,7 @@ describe('setCategoryDescriptionHandler', () => {
                         path: 'foo',
                         description: 'hello',
                     }),
-                'not found',
+                'not found'
             );
         });
     });
@@ -323,13 +328,15 @@ describe('deleteCategoryHandler', () => {
         it('should throw McpError(InvalidParams) when store does not exist', async () => {
             const ctx = createMockCortexContext({
                 cortex: createMockCortex({
-                    getStore: mock(() => errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' })) as any,
+                    getStore: mock(() =>
+                        errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' })
+                    ) as any,
                 }) as unknown as CortexContext['cortex'],
             });
 
             await expectMcpInvalidParams(
                 () => deleteCategoryHandler(ctx, { store: 'missing', path: 'foo' }),
-                'not found',
+                'not found'
             );
         });
     });
@@ -368,9 +375,7 @@ describe('deleteCategoryHandler', () => {
             // the core operation returns ROOT_CATEGORY_REJECTED.
             const input: DeleteCategoryInput = { store: 'default', path: 'project' };
 
-            await expectMcpInvalidParams(
-                () => deleteCategoryHandler(ctx, input),
-            );
+            await expectMcpInvalidParams(() => deleteCategoryHandler(ctx, input));
         });
 
         it('should throw McpError(InvalidParams) when category does not exist', async () => {
@@ -379,9 +384,7 @@ describe('deleteCategoryHandler', () => {
                 path: 'project/nonexistent',
             };
 
-            await expectMcpInvalidParams(
-                () => deleteCategoryHandler(ctx, input),
-            );
+            await expectMcpInvalidParams(() => deleteCategoryHandler(ctx, input));
         });
     });
 });

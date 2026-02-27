@@ -148,7 +148,7 @@ export const listStoresFromContext = (
     ctx: CortexContext
 ): Result<ListStoresResult, StoreToolError> => {
     try {
-        const stores: StoreInfo[] = Object.entries(ctx.stores)
+        const stores: StoreInfo[] = Object.entries(ctx.config.stores ?? {})
             .map(([name, definition]) => ({
                 name,
                 path: (definition.properties as { path: string }).path,
@@ -193,7 +193,7 @@ export const listStoresFromContext = (
  * ```
  */
 export const listStoresHandler = async (ctx: CortexContext): Promise<McpToolResponse> => {
-    const stores: StoreInfo[] = Object.entries(ctx.stores)
+    const stores: StoreInfo[] = Object.entries(ctx.config.stores ?? {})
         .map(([name, definition]) => ({
             name,
             path: (definition.properties as { path: string }).path,
@@ -236,7 +236,7 @@ export const createStoreHandler = async (
     }
 
     // Check if store already exists in registry
-    if (ctx.stores[input.name]) {
+    if (ctx.config.stores?.[input.name]) {
         return errorResponse(`Store '${input.name}' already exists. Choose a different name.`);
     }
 
@@ -257,36 +257,18 @@ export const createStoreHandler = async (
         },
     };
 
-    // Register the new store in the context first so the adapter factory can resolve it
-    ctx.stores[input.name] = {
-        kind: storeData.kind,
-        categoryMode: storeData.categoryMode,
-        categories: {},
-        properties: storeData.properties,
-    };
-
-    const storeClient = ctx.cortex.getStore(input.name);
-    if (!storeClient.ok()) {
-        // Roll back the registration on failure
-        delete ctx.stores[input.name];
+    // Persist the store to config first so the adapter factory can find it.
+    const saveResult = await ctx.config.saveStore(input.name, storeData);
+    if (!saveResult.ok()) {
         return errorResponse(
-            'Failed to create store client. Please check server configuration. Message: ' +
-                storeClient.error.message
+            `Failed to register store in configuration: ${saveResult.error.message}`
         );
     }
 
-    const store = storeClient.value;
-    const initializeResult = await store.initialize(storeData);
-    if (!initializeResult.ok()) {
-        delete ctx.stores[input.name];
-        return errorResponse(`Failed to initialize store: ${initializeResult.error.message}`);
-    }
-
-    // Create the store directory
+    // Create the store directory on disk
     try {
         await fs.mkdir(storePath, { recursive: true });
     } catch (error) {
-        delete ctx.stores[input.name];
         return errorResponse(
             `Failed to create store directory: ${error instanceof Error ? error.message : String(error)}`
         );

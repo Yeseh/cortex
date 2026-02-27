@@ -14,25 +14,15 @@ import {
 import { testContext } from '../../../core/src/testing/createContext.ts';
 import { registerStoreTools } from './index.ts';
 import { listStoresHandler, createStoreHandler } from './tools.ts';
-import type { ServerConfig } from '../config.ts';
 import type { CortexContext } from '@yeseh/cortex-core';
 
 describe('store tool registration', () => {
     let server: McpServer;
     let testDir: string;
-    let config: ServerConfig;
 
     beforeEach(async () => {
         server = new McpServer({ name: 'test-server', version: '1.0.0' });
         testDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cortex-test-'));
-        config = {
-            dataPath: testDir,
-            port: 3000,
-            host: '127.0.0.1',
-            defaultStore: 'default',
-            logLevel: 'info',
-            outputFormat: 'yaml',
-        };
     });
 
     afterEach(async () => {
@@ -69,7 +59,11 @@ describe('store tool registration', () => {
         const configAdapter = createInMemoryConfigAdapter(registry);
         const adapter = new FilesystemStorageAdapter(configAdapter, { rootDirectory: testDir });
         const ctx = testContext({ adapter, storePath: testDir, stores: registry, settings: {} });
-        return { ...ctx, config, globalDataPath: testDir } as unknown as CortexContext;
+        return {
+            ...ctx,
+            config: configAdapter,
+            globalDataPath: testDir,
+        } as unknown as CortexContext;
     };
 
     describe('registerStoreTools function', () => {
@@ -87,9 +81,9 @@ describe('store tool registration', () => {
                     return originalRegisterTool(
                         name,
                         configArg as Parameters<typeof originalRegisterTool>[1],
-                        cb as Parameters<typeof originalRegisterTool>[2],
+                        cb as Parameters<typeof originalRegisterTool>[2]
                     );
-                },
+                }
             );
 
             registerStoreTools(server, createTestCortexContext());
@@ -107,9 +101,9 @@ describe('store tool registration', () => {
                     return originalRegisterTool(
                         name,
                         configArg as Parameters<typeof originalRegisterTool>[1],
-                        cb as Parameters<typeof originalRegisterTool>[2],
+                        cb as Parameters<typeof originalRegisterTool>[2]
                     );
-                },
+                }
             );
 
             registerStoreTools(server, createTestCortexContext());
@@ -127,9 +121,9 @@ describe('store tool registration', () => {
                     return originalRegisterTool(
                         name,
                         configArg as Parameters<typeof originalRegisterTool>[1],
-                        cb as Parameters<typeof originalRegisterTool>[2],
+                        cb as Parameters<typeof originalRegisterTool>[2]
                     );
-                },
+                }
             );
 
             registerStoreTools(server, createTestCortexContext());
@@ -150,18 +144,18 @@ describe('store tool registration', () => {
                     return originalRegisterTool(
                         name,
                         configArg as Parameters<typeof originalRegisterTool>[1],
-                        cb as Parameters<typeof originalRegisterTool>[2],
+                        cb as Parameters<typeof originalRegisterTool>[2]
                     );
-                },
+                }
             );
 
             registerStoreTools(server, createTestCortexContext());
 
             const listStoresTool = registeredDescriptions.find(
-                (t) => t.name === 'cortex_list_stores',
+                (t) => t.name === 'cortex_list_stores'
             );
             const createStoreTool = registeredDescriptions.find(
-                (t) => t.name === 'cortex_create_store',
+                (t) => t.name === 'cortex_create_store'
             );
 
             expect(listStoresTool?.description).toBe('List all available memory stores');
@@ -180,9 +174,9 @@ describe('store tool registration', () => {
                     return originalRegisterTool(
                         name,
                         configArg as Parameters<typeof originalRegisterTool>[1],
-                        cb as Parameters<typeof originalRegisterTool>[2],
+                        cb as Parameters<typeof originalRegisterTool>[2]
                     );
-                },
+                }
             );
 
             registerStoreTools(server, createTestCortexContext());
