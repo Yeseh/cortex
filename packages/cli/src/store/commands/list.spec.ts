@@ -25,7 +25,7 @@ describe('handleList', () => {
     it('should output a single store in YAML format by default', async () => {
         const { ctx, stdout } = createMockContext({
             stores: {
-                default: {
+                global: {
                     kind: 'filesystem',
                     categoryMode: 'free',
                     categories: {},
@@ -37,7 +37,7 @@ describe('handleList', () => {
         await handleList(ctx, {}, { stdout });
 
         const output = captureOutput(stdout);
-        expect(output).toContain('default');
+        expect(output).toContain('global');
         expect(output).toContain('/mock/store');
     });
 
@@ -79,7 +79,7 @@ describe('handleList', () => {
     it('should output stores in JSON format when format is json', async () => {
         const { ctx, stdout } = createMockContext({
             stores: {
-                default: {
+                global: {
                     kind: 'filesystem',
                     categoryMode: 'free',
                     categories: {},
@@ -96,7 +96,7 @@ describe('handleList', () => {
         expect(Array.isArray(stores)).toBe(true);
         expect(stores).toEqual([
             {
-                name: 'default',
+                name: 'global',
                 path: '/mock/store',
             },
         ]);

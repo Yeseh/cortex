@@ -123,14 +123,14 @@ export const bootstrapDefaultStoreWithProjectCategory = async (
     const addResult = runCli([
         'store',
         'add',
-        'default',
+        'global',
         sandbox.storeDir,
     ], {
         env: sandbox.env,
         cwd: sandbox.projectDir,
     });
 
-    expectSuccess(addResult, 'name: default');
+    expectSuccess(addResult, 'name: global');
 };
 
 export const readMemoryFile = async (storeDir: string, relativePath: string): Promise<string> => {

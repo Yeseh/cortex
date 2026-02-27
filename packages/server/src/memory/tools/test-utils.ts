@@ -25,7 +25,7 @@ const createFilesystemStorageAdapter = (storeRoot: string): FilesystemStorageAda
 // Test configuration
 export const createTestConfig = (_dataPath: string): CortexConfig => ({
     settings: {
-        defaultStore: 'default',
+        defaultStore: 'global',
         outputFormat: 'yaml',
     },
     stores: {},
@@ -43,7 +43,7 @@ export const createTestContext = (testDir: string): CortexContext => {
 
     // Create store configuration mapping
     const storeConfig: ConfigStores = {
-        default: {
+        global: {
             kind: 'filesystem',
             categoryMode: 'free',
             properties: { path: memoryDir },
@@ -97,7 +97,7 @@ export const createTestContextWithStores = (
     const memoryDir = join(testDir, MEMORY_SUBDIR);
 
     const storeConfig: ConfigStores = {
-        default: {
+        global: {
             kind: 'filesystem',
             categoryMode: 'free',
             properties: { path: memoryDir },

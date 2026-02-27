@@ -73,7 +73,7 @@ describe('cortex_list_memories tool', () => {
 
     it('should list memories in a category', async () => {
         const input: ListMemoriesInput = {
-            store: 'default',
+            store: 'global',
             category: 'project',
         };
 
@@ -87,7 +87,7 @@ describe('cortex_list_memories tool', () => {
 
     it('should list all memories when no category specified', async () => {
         const input: ListMemoriesInput = {
-            store: 'default',
+            store: 'global',
         };
 
         const result = await listMemoriesHandler(ctx, input);
@@ -112,7 +112,7 @@ describe('cortex_list_memories tool', () => {
         });
 
         const input: ListMemoriesInput = {
-            store: 'default',
+            store: 'global',
             category: 'project',
         };
 
@@ -137,7 +137,7 @@ describe('cortex_list_memories tool', () => {
         });
 
         const input: ListMemoriesInput = {
-            store: 'default',
+            store: 'global',
             category: 'project',
             includeExpired: true,
         };
@@ -162,7 +162,7 @@ describe('cortex_list_memories tool', () => {
         });
 
         const input: ListMemoriesInput = {
-            store: 'default',
+            store: 'global',
             category: 'project',
         };
 
@@ -187,7 +187,7 @@ describe('cortex_list_memories tool', () => {
 
     it('should include updated_at field in memory entries', async () => {
         const input: ListMemoriesInput = {
-            store: 'default',
+            store: 'global',
             category: 'project',
         };
 
@@ -233,7 +233,7 @@ describe('listMemoriesHandler (unit)', () => {
         });
 
         await expectMcpInvalidParams(() =>
-            listMemoriesHandler(ctx, { store: 'default' }),
+            listMemoriesHandler(ctx, { store: 'global' }),
         );
     });
 
@@ -249,7 +249,7 @@ describe('listMemoriesHandler (unit)', () => {
         });
 
         await expectMcpInvalidParams(() =>
-            listMemoriesHandler(ctx, { store: 'default', category: 'nonexistent' }),
+            listMemoriesHandler(ctx, { store: 'global', category: 'nonexistent' }),
         );
     });
 
@@ -277,7 +277,7 @@ describe('listMemoriesHandler (unit)', () => {
             cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
         });
 
-        const result = await listMemoriesHandler(ctx, { store: 'default', includeExpired: true });
+        const result = await listMemoriesHandler(ctx, { store: 'global', includeExpired: true });
         const output = parseResponseJson(result) as any;
 
         expect(output.category).toBe('all');
@@ -299,7 +299,7 @@ describe('listMemoriesHandler (unit)', () => {
             cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
         });
 
-        const result = await listMemoriesHandler(ctx, { store: 'default', includeExpired: true });
+        const result = await listMemoriesHandler(ctx, { store: 'global', includeExpired: true });
         const output = parseResponseJson(result) as any;
 
         expect(output.count).toBe(0);
@@ -368,7 +368,7 @@ describe('listMemoriesHandler (unit)', () => {
             cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
         });
 
-        const result = await listMemoriesHandler(ctx, { store: 'default', includeExpired: false });
+        const result = await listMemoriesHandler(ctx, { store: 'global', includeExpired: false });
         const output = parseResponseJson(result) as any;
 
         // Only the active memory should appear

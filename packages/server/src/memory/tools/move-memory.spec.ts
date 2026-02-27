@@ -49,7 +49,7 @@ describe('cortex_move_memory tool', () => {
 
     it('should move a memory', async () => {
         const input: MoveMemoryInput = {
-            store: 'default',
+            store: 'global',
             from_path: 'project/move-source',
             to_path: 'project/move-destination',
         };
@@ -58,11 +58,11 @@ describe('cortex_move_memory tool', () => {
         expect(result.content[0]!.text).toContain('Memory moved');
 
         await expect(
-            getMemoryHandler(ctx, { store: 'default', path: 'project/move-source' }),
+            getMemoryHandler(ctx, { store: 'global', path: 'project/move-source' }),
         ).rejects.toThrow('not found');
 
         const getResult = await getMemoryHandler(ctx, {
-            store: 'default',
+            store: 'global',
             path: 'project/move-destination',
         });
         const output = JSON.parse(getResult.content[0]!.text);
@@ -71,7 +71,7 @@ describe('cortex_move_memory tool', () => {
 
     it('should return error for non-existent source', async () => {
         const input: MoveMemoryInput = {
-            store: 'default',
+            store: 'global',
             from_path: 'project/non-existent',
             to_path: 'project/destination',
         };
@@ -93,7 +93,7 @@ describe('cortex_move_memory tool', () => {
         });
 
         const input: MoveMemoryInput = {
-            store: 'default',
+            store: 'global',
             from_path: 'project/move-source',
             to_path: 'project/existing-destination',
         };
@@ -141,14 +141,14 @@ describe('moveMemoryHandler (unit)', () => {
         });
 
         await expectMcpInvalidParams(() =>
-            moveMemoryHandler(ctx, { store: 'default', from_path: 'cat/old', to_path: 'cat/new' }),
+            moveMemoryHandler(ctx, { store: 'global', from_path: 'cat/old', to_path: 'cat/new' }),
         );
     });
 
     it('should return text response containing "Memory moved from ... to ..." on success', async () => {
         const ctx = createMockCortexContext();
         const result = await moveMemoryHandler(ctx, {
-            store: 'default',
+            store: 'global',
             from_path: 'cat/old',
             to_path: 'cat/new',
         });

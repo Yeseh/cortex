@@ -68,7 +68,7 @@ describe('handleRemove', () => {
         it('should throw CommanderError for a valid name not in context', async () => {
             const { ctx } = createMockContext({
                 stores: {
-                    default: {
+                    global: {
                         kind: 'filesystem',
                         categoryMode: 'free',
                         categories: {},

@@ -78,7 +78,7 @@ describe('cortex_prune_memories tool', () => {
 
     it('should prune expired memories', async () => {
         const input: PruneMemoriesInput = {
-            store: 'default',
+            store: 'global',
         };
 
         const result = await pruneMemoriesHandler(ctx, input);
@@ -87,11 +87,11 @@ describe('cortex_prune_memories tool', () => {
         expect(output.pruned_count).toBe(2);
         expect(output.pruned).toHaveLength(2);
 
-        const getResult = await getMemoryHandler(ctx, { store: 'default', path: 'project/active' });
+        const getResult = await getMemoryHandler(ctx, { store: 'global', path: 'project/active' });
         expect(getResult.content[0]!.text).toContain('Active memory');
 
         await expect(
-            getMemoryHandler(ctx, { store: 'default', path: 'project/expired-1' })
+            getMemoryHandler(ctx, { store: 'global', path: 'project/expired-1' })
         ).rejects.toThrow('not found');
     });
 
@@ -126,7 +126,7 @@ describe('cortex_prune_memories tool', () => {
 
     it('should return what would be pruned in dry_run mode without deleting', async () => {
         const input: PruneMemoriesInput = {
-            store: 'default',
+            store: 'global',
             dry_run: true,
         };
 
@@ -138,14 +138,14 @@ describe('cortex_prune_memories tool', () => {
         expect(output.would_prune).toHaveLength(2);
 
         const getResult1 = await getMemoryHandler(ctx, {
-            store: 'default',
+            store: 'global',
             path: 'project/expired-1',
             include_expired: true,
         });
         expect(getResult1.content[0]!.text).toContain('Expired 1');
 
         const getResult2 = await getMemoryHandler(ctx, {
-            store: 'default',
+            store: 'global',
             path: 'human/expired-2',
             include_expired: true,
         });
@@ -209,7 +209,7 @@ describe('pruneMemoriesHandler (unit)', () => {
             cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
         });
 
-        await expectMcpInternalError(() => pruneMemoriesHandler(ctx, { store: 'default' }));
+        await expectMcpInternalError(() => pruneMemoriesHandler(ctx, { store: 'global' }));
     });
 
     it('should throw McpError(InternalError) when prune() fails', async () => {
@@ -223,7 +223,7 @@ describe('pruneMemoriesHandler (unit)', () => {
             cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
         });
 
-        await expectMcpInternalError(() => pruneMemoriesHandler(ctx, { store: 'default' }));
+        await expectMcpInternalError(() => pruneMemoriesHandler(ctx, { store: 'global' }));
     });
 
     it('should return dry_run response with would_prune list when dryRun=true', async () => {
@@ -244,7 +244,7 @@ describe('pruneMemoriesHandler (unit)', () => {
             cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
         });
 
-        const result = await pruneMemoriesHandler(ctx, { store: 'default', dry_run: true });
+        const result = await pruneMemoriesHandler(ctx, { store: 'global', dry_run: true });
         const output = parseResponseJson(result) as any;
 
         expect(output.dry_run).toBe(true);
@@ -278,7 +278,7 @@ describe('pruneMemoriesHandler (unit)', () => {
             cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
         });
 
-        const result = await pruneMemoriesHandler(ctx, { store: 'default', dry_run: false });
+        const result = await pruneMemoriesHandler(ctx, { store: 'global', dry_run: false });
         const output = parseResponseJson(result) as any;
 
         expect(output.pruned_count).toBe(2);
@@ -300,7 +300,7 @@ describe('pruneMemoriesHandler (unit)', () => {
             cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
         });
 
-        const result = await pruneMemoriesHandler(ctx, { store: 'default' });
+        const result = await pruneMemoriesHandler(ctx, { store: 'global' });
         const output = parseResponseJson(result) as any;
 
         expect(output.pruned_count).toBe(0);

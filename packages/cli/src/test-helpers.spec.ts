@@ -343,7 +343,7 @@ export interface MockContextResult {
  * @example
  * ```typescript
  * const { ctx, stdout } = createMockContext();
- * await handleAdd(ctx, args, 'default', {});
+ * await handleAdd(ctx, args, 'global', {});
  * expect(captureOutput(stdout)).toContain('Memory added');
  * ```
  */
@@ -352,7 +352,7 @@ export function createMockContext(overrides?: MockContextOptions): MockContextRe
     const stdin = new PassThrough();
     const adapter = overrides?.adapter ?? createMockStorageAdapter();
     const stores: ConfigStores = overrides?.stores ?? {
-        default: {
+        global: {
             kind: 'filesystem',
             categoryMode: 'free',
             categories: {},
@@ -392,7 +392,7 @@ export function createMockContext(overrides?: MockContextOptions): MockContextRe
  * @example
  * ```typescript
  * const { ctx, stdout } = createMockContext();
- * await handleList(ctx, {}, 'default', {});
+ * await handleList(ctx, {}, 'global', {});
  * expect(captureOutput(stdout)).toContain('No memories found');
  * ```
  */

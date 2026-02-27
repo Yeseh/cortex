@@ -183,7 +183,7 @@ const createTestProject = async (): Promise<string> => {
     const globalConfigDir = join(projectDir, '.config', 'cortex');
     await fs.mkdir(globalConfigDir, { recursive: true });
     // Provide a minimal config that points at our local store.
-    const configYaml = `stores:\n  default:\n    kind: filesystem\n    properties:\n      path: ${storeDir}\n`;
+    const configYaml = `stores:\n  global:\n    kind: filesystem\n    properties:\n      path: ${storeDir}\n`;
     await fs.writeFile(join(globalConfigDir, 'config.yaml'), configYaml, 'utf8');
 
     return projectDir;

@@ -33,7 +33,7 @@ describe('MCP error handling integration', () => {
         const response = await callTool(
             sandbox.baseUrl,
             'cortex_get_memory',
-            { store: 'default' },
+            { store: 'global' },
             60
         );
 
@@ -59,7 +59,7 @@ describe('MCP error handling integration', () => {
         const invalidPath = await callTool(
             sandbox.baseUrl,
             'cortex_create_category',
-            { store: 'default', path: '   ' },
+            { store: 'global', path: '   ' },
             63
         );
         expectMcpToolError(invalidPath, 'Category path is required');

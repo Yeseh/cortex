@@ -337,7 +337,7 @@ export const createMockStoreClient = (
     overrides: Partial<MockStoreClient> = {}
 ): MockStoreClient => {
     const defaults: MockStoreClient = {
-        name: 'default',
+        name: 'global',
         adapter: {},
         data: null,
         getMemory: mock(() => createMockMemoryClient()),
@@ -390,7 +390,7 @@ export const createMockCortex = (overrides: Partial<MockCortex> = {}): MockCorte
  * Default values:
  * - `cortex` — result of `createMockCortex()`
  * - `stores` — `{}`
- * - `settings` — `{ defaultStore: 'default', outputFormat: 'json' }`
+ * - `settings` — `{ defaultStore: 'global', outputFormat: 'json' }`
  * - `now` — `() => new Date()`
  * - `globalDataPath` — `/tmp/cortex-test`
  * - `stdin` / `stdout` — minimal stream stubs
@@ -407,7 +407,7 @@ export const createMockCortex = (overrides: Partial<MockCortex> = {}): MockCorte
  */
 export const createMockCortexContext = (overrides: Partial<CortexContext> = {}): CortexContext => {
     const defaultSettings: CortexSettings = {
-        defaultStore: 'default',
+        defaultStore: 'global',
         outputFormat: 'json',
     };
 
@@ -495,7 +495,7 @@ export type RegisteredTool = {
  * registerMemoryTools(server as unknown as McpServer, ctx);
  *
  * const tool = registeredTools.get('cortex_add_memory');
- * const result = await tool!.handler({ store: 'default', path: 'cat/mem', content: 'x' });
+ * const result = await tool!.handler({ store: 'global', path: 'cat/mem', content: 'x' });
  * ```
  */
 export const createMockMcpServer = () => {

@@ -63,7 +63,7 @@ describe('createCategoryHandler', () => {
             const ctx = createMockCortexContext();
 
             await expectMcpInvalidParams(() =>
-                createCategoryHandler(ctx, { store: 'default', path: '' }),
+                createCategoryHandler(ctx, { store: 'global', path: '' })
             );
         });
 
@@ -71,7 +71,7 @@ describe('createCategoryHandler', () => {
             const ctx = createMockCortexContext();
 
             await expectMcpInvalidParams(() =>
-                createCategoryHandler(ctx, { store: 'default', path: '   ' }),
+                createCategoryHandler(ctx, { store: 'global', path: '   ' })
             );
         });
     });
@@ -90,7 +90,7 @@ describe('createCategoryHandler', () => {
         });
 
         it('should create a new category and return created: true', async () => {
-            const input: CreateCategoryInput = { store: 'default', path: 'project/cortex' };
+            const input: CreateCategoryInput = { store: 'global', path: 'project/cortex' };
 
             const result = await createCategoryHandler(ctx, input);
             const output = JSON.parse(result.content[0]!.text);
@@ -100,7 +100,7 @@ describe('createCategoryHandler', () => {
         });
 
         it('should return created: false when category already exists', async () => {
-            const input: CreateCategoryInput = { store: 'default', path: 'project/cortex' };
+            const input: CreateCategoryInput = { store: 'global', path: 'project/cortex' };
 
             // First creation
             await createCategoryHandler(ctx, input);
@@ -114,7 +114,7 @@ describe('createCategoryHandler', () => {
         });
 
         it('should auto-create intermediate ancestors', async () => {
-            const input: CreateCategoryInput = { store: 'default', path: 'a/b/c' };
+            const input: CreateCategoryInput = { store: 'global', path: 'a/b/c' };
 
             const result = await createCategoryHandler(ctx, input);
             const output = JSON.parse(result.content[0]!.text);
@@ -124,7 +124,7 @@ describe('createCategoryHandler', () => {
         });
 
         it('should create a root-level category', async () => {
-            const input: CreateCategoryInput = { store: 'default', path: 'toplevel' };
+            const input: CreateCategoryInput = { store: 'global', path: 'toplevel' };
 
             const result = await createCategoryHandler(ctx, input);
             const output = JSON.parse(result.content[0]!.text);
@@ -177,7 +177,7 @@ describe('setCategoryDescriptionHandler', () => {
 
         it('should set description and return path + description', async () => {
             const input: SetCategoryDescriptionInput = {
-                store: 'default',
+                store: 'global',
                 path: 'project/cortex',
                 description: 'My desc',
             };
@@ -191,7 +191,7 @@ describe('setCategoryDescriptionHandler', () => {
 
         it('should auto-create the category when it does not already exist', async () => {
             const input: SetCategoryDescriptionInput = {
-                store: 'default',
+                store: 'global',
                 path: 'newcat/sub',
                 description: 'Auto-created',
             };
@@ -204,7 +204,7 @@ describe('setCategoryDescriptionHandler', () => {
 
         it('should set description on a root category', async () => {
             const input: SetCategoryDescriptionInput = {
-                store: 'default',
+                store: 'global',
                 path: 'project',
                 description: 'Root category description',
             };
@@ -219,14 +219,14 @@ describe('setCategoryDescriptionHandler', () => {
         it('should clear description when given empty string, returning null', async () => {
             // First set a description
             await setCategoryDescriptionHandler(ctx, {
-                store: 'default',
+                store: 'global',
                 path: 'project/cortex',
                 description: 'Initial description',
             });
 
             // Then clear it
             const result = await setCategoryDescriptionHandler(ctx, {
-                store: 'default',
+                store: 'global',
                 path: 'project/cortex',
                 description: '',
             });
@@ -238,7 +238,7 @@ describe('setCategoryDescriptionHandler', () => {
 
         it('should persist description to parent index.yaml file', async () => {
             const input: SetCategoryDescriptionInput = {
-                store: 'default',
+                store: 'global',
                 path: 'test/categories/level1',
                 description: 'Test category for runbook validation',
             };
@@ -292,7 +292,7 @@ describe('deleteCategoryHandler', () => {
             ctx = createTestContext(testDir);
 
             // Create a category so we have something to delete in tests
-            await createCategoryHandler(ctx, { store: 'default', path: 'project/deleteme' });
+            await createCategoryHandler(ctx, { store: 'global', path: 'project/deleteme' });
         });
 
         afterEach(async () => {
@@ -301,7 +301,7 @@ describe('deleteCategoryHandler', () => {
 
         it('should delete an existing category and return deleted: true', async () => {
             const input: DeleteCategoryInput = {
-                store: 'default',
+                store: 'global',
                 path: 'project/deleteme',
             };
 
@@ -315,14 +315,14 @@ describe('deleteCategoryHandler', () => {
         it('should throw McpError(InvalidParams) when deleting a root (single-segment) category', async () => {
             // Root categories (single segment, e.g. "project") cannot be deleted —
             // the core operation returns ROOT_CATEGORY_REJECTED.
-            const input: DeleteCategoryInput = { store: 'default', path: 'project' };
+            const input: DeleteCategoryInput = { store: 'global', path: 'project' };
 
             await expectMcpInvalidParams(() => deleteCategoryHandler(ctx, input));
         });
 
         it('should throw McpError(InvalidParams) when category does not exist', async () => {
             const input: DeleteCategoryInput = {
-                store: 'default',
+                store: 'global',
                 path: 'project/nonexistent',
             };
 

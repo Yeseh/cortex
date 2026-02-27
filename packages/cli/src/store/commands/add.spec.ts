@@ -65,10 +65,10 @@ describe('handleAdd', () => {
 
     describe('store already exists check', () => {
         it('should throw CommanderError when the store name already exists in context', async () => {
-            // 'default' is pre-registered in the mock context
+            // 'global' is pre-registered in the mock context
             const { ctx } = createMockContext({
                 stores: {
-                    default: {
+                    global: {
                         kind: 'filesystem',
                         categoryMode: 'free',
                         categories: {},
@@ -78,7 +78,7 @@ describe('handleAdd', () => {
             });
 
             await expectCommanderError(
-                () => handleAdd(ctx, 'default', '/new/path'),
+                () => handleAdd(ctx, 'global', '/new/path'),
                 'STORE_ALREADY_EXISTS',
                 'already registered',
             );

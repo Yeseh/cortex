@@ -9,7 +9,7 @@ const makeConfig = (dataPath: string): ServerConfig => ({
     dataPath,
     port: 3000,
     host: '127.0.0.1',
-    defaultStore: 'default',
+    defaultStore: 'global',
     logLevel: 'info',
     outputFormat: 'yaml',
     categoryMode: 'free',
@@ -100,7 +100,7 @@ describe('createCortexContext', () => {
 
         await createCortexContext(config);
 
-        const defaultStorePath = join(tempDir, 'stores', 'default');
+        const defaultStorePath = join(tempDir, 'stores', 'global');
         const { stat } = await import('node:fs/promises');
         const dirStat = await stat(defaultStorePath);
         expect(dirStat.isDirectory()).toBe(true);

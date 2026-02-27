@@ -16,7 +16,7 @@ import { createMockCortexContext, parseResponseJson } from '../test-helpers.spec
 describe('storeNameSchema', () => {
     describe('valid names', () => {
         it('should accept "default"', () => {
-            const result = storeNameSchema.safeParse('default');
+            const result = storeNameSchema.safeParse('global');
             expect(result.success).toBe(true);
         });
 
@@ -164,7 +164,7 @@ describe('listStores', () => {
         // Create some store directories
         await fs.mkdir(path.join(testDir, 'store-a'));
         await fs.mkdir(path.join(testDir, 'store-b'));
-        await fs.mkdir(path.join(testDir, 'default'));
+        await fs.mkdir(path.join(testDir, 'global'));
 
         const result = await listStores(testDir);
 
@@ -173,7 +173,7 @@ describe('listStores', () => {
             expect(result.value).toHaveLength(3);
             expect(result.value).toContain('store-a');
             expect(result.value).toContain('store-b');
-            expect(result.value).toContain('default');
+            expect(result.value).toContain('global');
         }
     });
 

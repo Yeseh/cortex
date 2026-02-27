@@ -48,7 +48,7 @@ describe('handleList', () => {
             storePath: tempDir,
             adapterFactory: nullFactory,
             stores: {
-                default: {
+                global: {
                     kind: 'filesystem',
                     properties: { path: tempDir },
                     categories: {},

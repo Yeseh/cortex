@@ -39,7 +39,7 @@ describe('cortex_add_memory tool', () => {
         await createTestCategory(storeRoot, 'project');
 
         const input: AddMemoryInput = {
-            store: 'default',
+            store: 'global',
             path: 'project/test-memory',
             content: 'Test content',
         };
@@ -56,7 +56,7 @@ describe('cortex_add_memory tool', () => {
         await createTestCategory(storeRoot, 'project');
 
         const input: AddMemoryInput = {
-            store: 'default',
+            store: 'global',
             path: 'project/tagged-memory',
             content: 'Content with tags',
             tags: [
@@ -69,7 +69,7 @@ describe('cortex_add_memory tool', () => {
 
         // Verify by reading back
         const getResult = await getMemoryHandler(ctx, {
-            store: 'default',
+            store: 'global',
             path: 'project/tagged-memory',
         });
         const output = JSON.parse(getResult.content[0]!.text);
@@ -84,7 +84,7 @@ describe('cortex_add_memory tool', () => {
 
         const futureDate = new Date(Date.now() + 86400000).toISOString();
         const input: AddMemoryInput = {
-            store: 'default',
+            store: 'global',
             path: 'project/expiring-memory',
             content: 'Expiring content',
             expires_at: futureDate,
@@ -95,7 +95,7 @@ describe('cortex_add_memory tool', () => {
 
         // Verify by reading back
         const getResult = await getMemoryHandler(ctx, {
-            store: 'default',
+            store: 'global',
             path: 'project/expiring-memory',
         });
         const output = JSON.parse(getResult.content[0]!.text);
@@ -114,7 +114,7 @@ describe('cortex_add_memory tool', () => {
 
     it('should reject invalid paths', async () => {
         const input: AddMemoryInput = {
-            store: 'default',
+            store: 'global',
             path: 'invalid',
             content: 'Content',
         };
@@ -145,7 +145,7 @@ describe('addMemoryHandler (unit)', () => {
     it('should return text response containing "Memory created at" on success', async () => {
         const ctx = createMockCortexContext();
         const result = await addMemoryHandler(ctx, {
-            store: 'default',
+            store: 'global',
             path: 'cat/slug',
             content: 'Hello world',
         });
@@ -168,7 +168,7 @@ describe('addMemoryHandler (unit)', () => {
         });
 
         await expectMcpInvalidParams(() =>
-            addMemoryHandler(ctx, { store: 'default', path: 'cat/slug', content: 'x' }),
+            addMemoryHandler(ctx, { store: 'global', path: 'cat/slug', content: 'x' }),
         );
     });
 
@@ -185,7 +185,7 @@ describe('addMemoryHandler (unit)', () => {
 
         const expiresAt = '2030-01-01T00:00:00.000Z';
         await addMemoryHandler(ctx, {
-            store: 'default',
+            store: 'global',
             path: 'cat/slug',
             content: 'x',
             expires_at: expiresAt,
@@ -212,7 +212,7 @@ describe('addMemoryHandler (unit)', () => {
         });
 
         await addMemoryHandler(ctx, {
-            store: 'default',
+            store: 'global',
             path: 'cat/slug',
             content: 'x',
             tags: [
@@ -241,7 +241,7 @@ describe('addMemoryHandler (unit)', () => {
         });
 
         await addMemoryHandler(ctx, {
-            store: 'default',
+            store: 'global',
             path: 'cat/slug',
             content: 'x',
             citations: [

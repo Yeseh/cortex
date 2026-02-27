@@ -79,7 +79,7 @@ describe('cortex_get_recent_memories tool', () => {
         });
 
         const input: GetRecentMemoriesInput = {
-            store: 'default',
+            store: 'global',
             limit: 10,
         };
 
@@ -124,7 +124,7 @@ describe('cortex_get_recent_memories tool', () => {
         }
 
         const input: GetRecentMemoriesInput = {
-            store: 'default',
+            store: 'global',
             limit: 3,
         };
 
@@ -165,7 +165,7 @@ describe('cortex_get_recent_memories tool', () => {
         });
 
         const input: GetRecentMemoriesInput = {
-            store: 'default',
+            store: 'global',
             category: 'project/cortex',
             limit: 10,
         };
@@ -208,7 +208,7 @@ describe('cortex_get_recent_memories tool', () => {
         });
 
         const input: GetRecentMemoriesInput = {
-            store: 'default',
+            store: 'global',
             limit: 10,
         };
 
@@ -248,7 +248,7 @@ describe('cortex_get_recent_memories tool', () => {
         });
 
         const input: GetRecentMemoriesInput = {
-            store: 'default',
+            store: 'global',
             limit: 10,
             include_expired: true,
         };
@@ -264,7 +264,7 @@ describe('cortex_get_recent_memories tool', () => {
 
     it('should return empty array when no memories exist', async () => {
         const input: GetRecentMemoriesInput = {
-            store: 'default',
+            store: 'global',
             limit: 10,
         };
 
@@ -293,7 +293,7 @@ describe('cortex_get_recent_memories tool', () => {
         }
 
         const input: GetRecentMemoriesInput = {
-            store: 'default',
+            store: 'global',
         };
 
         const result = await getRecentMemoriesHandler(ctx, input);
@@ -313,13 +313,13 @@ describe('cortex_get_recent_memories tool', () => {
     });
 
     it('should validate limit parameter bounds', () => {
-        const tooLow = { store: 'default', limit: 0 };
+        const tooLow = { store: 'global', limit: 0 };
         expect(getRecentMemoriesInputSchema.safeParse(tooLow).success).toBe(false);
 
-        const tooHigh = { store: 'default', limit: 101 };
+        const tooHigh = { store: 'global', limit: 101 };
         expect(getRecentMemoriesInputSchema.safeParse(tooHigh).success).toBe(false);
 
-        const valid = { store: 'default', limit: 50 };
+        const valid = { store: 'global', limit: 50 };
         expect(getRecentMemoriesInputSchema.safeParse(valid).success).toBe(true);
     });
 
@@ -359,7 +359,7 @@ describe('getRecentMemoriesHandler (unit)', () => {
         });
 
         await expectMcpInvalidParams(() =>
-            getRecentMemoriesHandler(ctx, { store: 'default', category: 'nonexistent', limit: 5 }),
+            getRecentMemoriesHandler(ctx, { store: 'global', category: 'nonexistent', limit: 5 }),
         );
     });
 
@@ -380,7 +380,7 @@ describe('getRecentMemoriesHandler (unit)', () => {
         });
 
         await expectMcpInternalError(() =>
-            getRecentMemoriesHandler(ctx, { store: 'default', limit: 5 }),
+            getRecentMemoriesHandler(ctx, { store: 'global', limit: 5 }),
         );
     });
 
@@ -405,7 +405,7 @@ describe('getRecentMemoriesHandler (unit)', () => {
         });
 
         await expectMcpInternalError(() =>
-            getRecentMemoriesHandler(ctx, { store: 'default', category: 'project', limit: 3 }),
+            getRecentMemoriesHandler(ctx, { store: 'global', category: 'project', limit: 3 }),
         );
     });
 });

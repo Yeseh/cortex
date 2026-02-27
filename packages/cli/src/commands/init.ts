@@ -3,7 +3,7 @@
  *
  * Creates the global config store at ~/.config/cortex/ with:
  * - config.yaml: Global configuration with default settings
- * - stores.yaml: Store registry with a 'default' store pointing to the memory directory
+ * - stores.yaml: Store registry with a 'global' store pointing to the memory directory
  * - memory/: Default store with 'global' and 'projects' categories
  *
  * @example

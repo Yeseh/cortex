@@ -51,7 +51,7 @@ export const createMemoryCommandContext = (options: {
     adapterFactory?: AdapterFactory;
 }): CortexContext => {
     const stores: ConfigStores = options.stores ?? {
-        default: {
+        global: {
             kind: 'filesystem',
             properties: { path: options.storePath },
             categories: {},

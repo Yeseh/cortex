@@ -47,13 +47,13 @@ describe('cortex_reindex_store tool', () => {
         });
 
         const input: ReindexStoreInput = {
-            store: 'default',
+            store: 'global',
         };
 
         const result = await reindexStoreHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
-        expect(output.store).toBe('default');
+        expect(output.store).toBe('global');
         expect(Array.isArray(output.warnings)).toBe(true);
         expect(output.warnings).toEqual([]);
     });
@@ -68,13 +68,13 @@ describe('cortex_reindex_store tool', () => {
 
     it('should work with empty store', async () => {
         const input: ReindexStoreInput = {
-            store: 'default',
+            store: 'global',
         };
 
         const result = await reindexStoreHandler(ctx, input);
         const output = JSON.parse(result.content[0]!.text);
 
-        expect(output.store).toBe('default');
+        expect(output.store).toBe('global');
         expect(output.warnings).toEqual([]);
     });
 });
@@ -105,7 +105,7 @@ describe('reindexStoreHandler (unit)', () => {
         });
 
         await expectMcpInternalError(() =>
-            reindexStoreHandler(ctx, { store: 'default' }),
+            reindexStoreHandler(ctx, { store: 'global' }),
         );
     });
 
@@ -121,7 +121,7 @@ describe('reindexStoreHandler (unit)', () => {
         });
 
         await expectMcpInternalError(() =>
-            reindexStoreHandler(ctx, { store: 'default' }),
+            reindexStoreHandler(ctx, { store: 'global' }),
         );
     });
 
@@ -136,10 +136,10 @@ describe('reindexStoreHandler (unit)', () => {
             cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
         });
 
-        const result = await reindexStoreHandler(ctx, { store: 'default' });
+        const result = await reindexStoreHandler(ctx, { store: 'global' });
         const output = parseResponseJson(result) as any;
 
-        expect(output.store).toBe('default');
+        expect(output.store).toBe('global');
         expect(output.warnings).toEqual([]);
     });
 
@@ -159,10 +159,10 @@ describe('reindexStoreHandler (unit)', () => {
             cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
         });
 
-        const result = await reindexStoreHandler(ctx, { store: 'default' });
+        const result = await reindexStoreHandler(ctx, { store: 'global' });
         const output = parseResponseJson(result) as any;
 
-        expect(output.store).toBe('default');
+        expect(output.store).toBe('global');
         expect(Array.isArray(output.warnings)).toBe(true);
         expect(output.warnings).toHaveLength(2);
         expect(output.warnings[0]).toBe('Warning: file xyz.md has invalid path');

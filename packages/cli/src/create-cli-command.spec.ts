@@ -21,7 +21,7 @@ describe('validateStorePath', () => {
         // isAbsolute on Linux treats "C:\\..." as relative, but a UNC-style
         // or drive-letter path on Windows would be absolute. We test with a
         // typical Unix absolute path variant to keep cross-platform coverage.
-        const result = validateStorePath('/var/cortex/stores/default', 'default');
+        const result = validateStorePath('/var/cortex/stores/global', 'global');
         expect(result.ok()).toBe(true);
     });
 

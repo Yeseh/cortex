@@ -23,14 +23,14 @@ describe('CLI integration: store commands', () => {
         const addResult = runCli([
             'store',
             'add',
-            'default',
+            'global',
             sandbox.storeDir,
         ], {
             env: sandbox.env,
             cwd: sandbox.projectDir,
         });
 
-        expectSuccess(addResult, 'name: default');
+        expectSuccess(addResult, 'name: global');
 
         const listResult = runCli([
             'store',
@@ -49,7 +49,7 @@ describe('CLI integration: store commands', () => {
         };
 
         expect(parsed.kind).toBe('store-registry');
-        expect(parsed.value.stores.some((store) => store.name === 'default')).toBe(true);
+        expect(parsed.value.stores.some((store) => store.name === 'global')).toBe(true);
     });
 
     it('should fail when adding duplicate store', async () => {
@@ -58,7 +58,7 @@ describe('CLI integration: store commands', () => {
         const firstAdd = runCli([
             'store',
             'add',
-            'default',
+            'global',
             sandbox.storeDir,
         ], {
             env: sandbox.env,
@@ -69,7 +69,7 @@ describe('CLI integration: store commands', () => {
         const secondAdd = runCli([
             'store',
             'add',
-            'default',
+            'global',
             sandbox.storeDir,
         ], {
             env: sandbox.env,
@@ -85,7 +85,7 @@ describe('CLI integration: store commands', () => {
         const addResult = runCli([
             'store',
             'add',
-            'default',
+            'global',
             sandbox.storeDir,
         ], {
             env: sandbox.env,
@@ -96,13 +96,13 @@ describe('CLI integration: store commands', () => {
         const removeResult = runCli([
             'store',
             'remove',
-            'default',
+            'global',
         ], {
             env: sandbox.env,
             cwd: sandbox.projectDir,
         });
 
-        expectSuccess(removeResult, 'name: default');
+        expectSuccess(removeResult, 'name: global');
 
         const listResult = runCli([
             'store',
@@ -113,6 +113,6 @@ describe('CLI integration: store commands', () => {
         });
 
         expectSuccess(listResult);
-        expect(listResult.output).not.toContain('name: default');
+        expect(listResult.output).not.toContain('name: global');
     });
 });

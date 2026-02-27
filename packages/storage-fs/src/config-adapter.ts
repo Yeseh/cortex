@@ -87,7 +87,7 @@ const DEFAULT_CONFIG: ParsedConfig = {
  * }
  *
  * // Get a specific store configuration
- * const storeResult = await adapter.getStore('default');
+ * const storeResult = await adapter.getStore('global');
  * if (storeResult.ok() && storeResult.value) {
  *     console.log('Store kind:', storeResult.value.kind);
  * }
@@ -299,7 +299,7 @@ export class FilesystemConfigAdapter implements ConfigAdapter {
      *
      * @example
      * ```typescript
-     * const result = await adapter.getStore('default');
+     * const result = await adapter.getStore('global');
      * if (result.ok()) {
      *     if (result.value !== null) {
      *         console.log('Found store:', result.value.kind);

@@ -48,7 +48,7 @@ describe('cortex_get_memory tool', () => {
 
     it('should retrieve a memory', async () => {
         const input: GetMemoryInput = {
-            store: 'default',
+            store: 'global',
             path: 'project/existing-memory',
         };
 
@@ -63,7 +63,7 @@ describe('cortex_get_memory tool', () => {
 
     it('should return error for non-existent memory', async () => {
         const input: GetMemoryInput = {
-            store: 'default',
+            store: 'global',
             path: 'project/non-existent',
         };
 
@@ -85,7 +85,7 @@ describe('cortex_get_memory tool', () => {
         });
 
         const input: GetMemoryInput = {
-            store: 'default',
+            store: 'global',
             path: 'project/expired-memory',
         };
 
@@ -107,7 +107,7 @@ describe('cortex_get_memory tool', () => {
         });
 
         const input: GetMemoryInput = {
-            store: 'default',
+            store: 'global',
             path: 'project/expired-memory-2',
             include_expired: true,
         };
@@ -151,13 +151,13 @@ describe('getMemoryHandler (unit)', () => {
         });
 
         await expectMcpInvalidParams(
-            () => getMemoryHandler(ctx, { store: 'default', path: 'cat/slug' }),
+            () => getMemoryHandler(ctx, { store: 'global', path: 'cat/slug' }),
         );
     });
 
     it('should return JSON response with path, content, and metadata on success', async () => {
         const ctx = createMockCortexContext();
-        const result = await getMemoryHandler(ctx, { store: 'default', path: 'cat/slug' });
+        const result = await getMemoryHandler(ctx, { store: 'global', path: 'cat/slug' });
 
         const data = parseResponseJson(result) as {
             path: string;
@@ -171,7 +171,7 @@ describe('getMemoryHandler (unit)', () => {
 
     it('should include created_at, updated_at, and tags in metadata', async () => {
         const ctx = createMockCortexContext();
-        const result = await getMemoryHandler(ctx, { store: 'default', path: 'cat/slug' });
+        const result = await getMemoryHandler(ctx, { store: 'global', path: 'cat/slug' });
 
         const data = parseResponseJson(result) as {
             metadata: { created_at: string; updated_at: string; tags: string[] };
@@ -192,7 +192,7 @@ describe('getMemoryHandler (unit)', () => {
             }) as unknown as CortexContext['cortex'],
         });
 
-        await getMemoryHandler(ctx, { store: 'default', path: 'cat/slug' });
+        await getMemoryHandler(ctx, { store: 'global', path: 'cat/slug' });
 
         // Verify get was called with includeExpired: false
         const calls = memClient.get.mock.calls as unknown as [{ includeExpired: boolean }][];

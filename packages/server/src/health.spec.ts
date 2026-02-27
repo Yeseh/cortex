@@ -12,7 +12,7 @@ const mockConfig: ServerConfig = {
     dataPath: '/tmp/test-cortex',
     port: 3000,
     host: '0.0.0.0',
-    defaultStore: 'default',
+    defaultStore: 'global',
     logLevel: 'info',
     outputFormat: 'yaml',
     categoryMode: 'free',

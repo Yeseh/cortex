@@ -31,7 +31,7 @@ describe('memory citations', () => {
         await createTestCategory(storeRoot, 'project');
 
         const input: AddMemoryInput = {
-            store: 'default',
+            store: 'global',
             path: 'project/with-citations',
             content: 'Memory with citations',
             citations: [
@@ -44,7 +44,7 @@ describe('memory citations', () => {
 
         const getResult = await getMemoryHandler(
             ctx,
-            { store: 'default', path: 'project/with-citations' },
+            { store: 'global', path: 'project/with-citations' },
         );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.citations).toEqual([
@@ -69,7 +69,7 @@ describe('memory citations', () => {
 
         const result = await getMemoryHandler(
             ctx,
-            { store: 'default', path: 'project/cited-memory' },
+            { store: 'global', path: 'project/cited-memory' },
         );
         const output = JSON.parse(result.content[0]!.text);
 
@@ -92,7 +92,7 @@ describe('memory citations', () => {
         });
 
         const updateInput: UpdateMemoryInput = {
-            store: 'default',
+            store: 'global',
             path: 'project/update-citations',
             citations: [
                 'new-citation-1.ts', 'new-citation-2.ts',
@@ -103,7 +103,7 @@ describe('memory citations', () => {
 
         const getResult = await getMemoryHandler(
             ctx,
-            { store: 'default', path: 'project/update-citations' },
+            { store: 'global', path: 'project/update-citations' },
         );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.citations).toEqual([
@@ -126,7 +126,7 @@ describe('memory citations', () => {
 
         const result = await getMemoryHandler(
             ctx,
-            { store: 'default', path: 'project/no-citations' },
+            { store: 'global', path: 'project/no-citations' },
         );
         const output = JSON.parse(result.content[0]!.text);
 

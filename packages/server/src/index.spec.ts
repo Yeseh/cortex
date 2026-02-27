@@ -6,13 +6,13 @@
  * directories and a unique port per test. No module-level mocks are used.
  *
  * NOTE: `packages/server/src/context.ts` has a known bug where the
- * `adapterFactory` passes the store *name* (e.g. `'default'`) as
+ * `adapterFactory` passes the store *name* (e.g. `'global'`) as
  * `rootDirectory` to `FilesystemStorageAdapter` instead of looking up the
  * path from `config.stores[name].properties.path`. As a result the adapter
  * resolves the store root as `resolve(storeName)` = `cwd/<storeName>`.
  *
  * The successful-startup tests work around this by temporarily changing
- * `process.cwd()` to the temp directory so that `resolve('default')` resolves
+ * `process.cwd()` to the temp directory so that `resolve('global')` resolves
  * to `<tempDir>/default`, and ensuring that directory exists.
  *
  * @module server/index.spec
@@ -50,7 +50,7 @@ const nextPort = () => BASE_TEST_PORT + portCounter++;
  * It also writes a `config.yaml` in `baseDir` so context creation reads an
  * existing config rather than auto-generating one.
  */
-async function initTestDataDir(baseDir: string, storeName = 'default'): Promise<void> {
+async function initTestDataDir(baseDir: string, storeName = 'global'): Promise<void> {
     // The broken adapter resolves storeName relative to cwd (which will be
     // baseDir when we call createServer). Create the store directory there.
     const storeDir = join(baseDir, storeName);
@@ -223,7 +223,7 @@ describe('createServer', () => {
     // Successful startup
     //
     // We temporarily change process.cwd() to the temp dir so that the
-    // broken adapter factory (resolve('default')) resolves to the right place.
+    // broken adapter factory (resolve('global')) resolves to the right place.
     // -----------------------------------------------------------------------
 
     describe('successful startup', () => {
@@ -262,7 +262,7 @@ describe('createServer', () => {
                             CORTEX_PORT: String(port),
                             CORTEX_LOG_LEVEL: 'warn',
                             CORTEX_OUTPUT_FORMAT: 'json',
-                            CORTEX_DEFAULT_STORE: 'default',
+                            CORTEX_DEFAULT_STORE: 'global',
                         },
                         () => createServer()
                     )
@@ -275,7 +275,7 @@ describe('createServer', () => {
                     expect(config.port).toBe(port);
                     expect(config.logLevel).toBe('warn');
                     expect(config.outputFormat).toBe('json');
-                    expect(config.defaultStore).toBe('default');
+                    expect(config.defaultStore).toBe('global');
                     await close();
                 }
             });

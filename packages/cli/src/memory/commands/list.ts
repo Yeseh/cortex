@@ -116,7 +116,7 @@ export async function handleList(
         throwCliError(categoryResult.error);
     }
 
-    const storeResult = ctx.cortex.getStore(storeName ?? 'default');
+    const storeResult = ctx.cortex.getStore(storeName ?? 'global');
     if (!storeResult.ok()) {
         throwCliError(storeResult.error);
     }

@@ -11,7 +11,7 @@ describe('ConfigSettings', () => {
     it('should provide default values', () => {
         const defaults = getDefaultSettings();
         expect(defaults.outputFormat).toBe('yaml');
-        expect(defaults.defaultStore).toBe('default');
+        expect(defaults.defaultStore).toBe('global');
     });
 });
 
@@ -21,7 +21,7 @@ describe('parseConfig', () => {
 settings:
   outputFormat: json
 stores:
-  default:
+  global:
     kind: filesystem
     properties:
       path: /home/user/.config/cortex/memory
@@ -30,7 +30,7 @@ stores:
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             expect(result.value.settings?.outputFormat).toBe('json');
-            expect(result.value.stores.default?.properties.path).toBe(
+            expect(result.value.stores.global?.properties.path).toBe(
                 '/home/user/.config/cortex/memory'
             );
         }
@@ -39,7 +39,7 @@ stores:
     it('should use defaults when settings are omitted', () => {
         const raw = `
 stores:
-  default:
+  global:
     kind: filesystem
     properties:
       path: /data/default
@@ -48,7 +48,7 @@ stores:
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             // settings is optional, defaults applied at runtime
-            expect(result.value.stores.default?.properties.path).toBe('/data/default');
+            expect(result.value.stores.global?.properties.path).toBe('/data/default');
         }
     });
 
@@ -90,7 +90,7 @@ stores:
     it('should parse store with description', () => {
         const raw = `
 stores:
-  default:
+  global:
     kind: filesystem
     description: The default memory store
     properties:
@@ -99,7 +99,7 @@ stores:
         const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            expect(result.value.stores.default?.description).toBe('The default memory store');
+            expect(result.value.stores.global?.description).toBe('The default memory store');
         }
     });
 });
@@ -108,7 +108,7 @@ describe('parseConfig category hierarchy', () => {
     it('should parse store with explicit categoryMode', () => {
         const raw = `
 stores:
-  default:
+  global:
     kind: filesystem
     categoryMode: strict
     properties:
@@ -117,14 +117,14 @@ stores:
         const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            expect(result.value.stores.default?.categoryMode).toBe('strict');
+            expect(result.value.stores.global?.categoryMode).toBe('strict');
         }
     });
 
     it('should parse store without categoryMode (key omitted)', () => {
         const raw = `
 stores:
-  default:
+  global:
     kind: filesystem
     properties:
       path: /data/default
@@ -132,14 +132,14 @@ stores:
         const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            expect(result.value.stores.default?.categoryMode).toBeUndefined();
+            expect(result.value.stores.global?.categoryMode).toBeUndefined();
         }
     });
 
     it('should reject invalid categoryMode value', () => {
         const raw = `
 stores:
-  default:
+  global:
     kind: filesystem
     categoryMode: invalid
     properties:
@@ -155,7 +155,7 @@ stores:
     it('should parse store with nested category hierarchy', () => {
         const raw = `
 stores:
-  default:
+  global:
     kind: filesystem
     properties:
       path: /data/default
@@ -171,7 +171,7 @@ stores:
         const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            const categories = result.value.stores.default?.categories;
+            const categories = result.value.stores.global?.categories;
             expect(categories).toBeDefined();
             expect(categories?.standards?.description).toBe('Coding standards');
             expect(categories?.standards?.subcategories?.architecture?.description).toBe(
@@ -186,7 +186,7 @@ stores:
     it('should parse category without description', () => {
         const raw = `
 stores:
-  default:
+  global:
     kind: filesystem
     properties:
       path: /data/default
@@ -196,14 +196,14 @@ stores:
         const result = parseConfig(raw);
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            expect(result.value.stores.default?.categories?.todos).toEqual({});
+            expect(result.value.stores.global?.categories?.todos).toEqual({});
         }
     });
 
     it('should parse deeply nested categories', () => {
         const raw = `
 stores:
-  default:
+  global:
     kind: filesystem
     properties:
       path: /data/default
@@ -219,7 +219,7 @@ stores:
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             const level3 =
-                result.value.stores.default?.categories?.level1?.subcategories?.level2
+                result.value.stores.global?.categories?.level1?.subcategories?.level2
                     ?.subcategories?.level3;
             expect(level3?.description).toBe('Third level');
         }
@@ -229,7 +229,7 @@ stores:
         const longDescription = 'x'.repeat(501);
         const raw = `
 stores:
-  default:
+  global:
     kind: filesystem
     properties:
       path: /data/default

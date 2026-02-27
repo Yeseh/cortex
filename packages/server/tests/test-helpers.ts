@@ -51,7 +51,7 @@ const TEST_CLIENT_INFO = {
 
 const sessionIdsByBaseUrl = new Map<string, string>();
 
-export const createServerSandbox = async (defaultStore = 'default'): Promise<ServerSandbox> => {
+export const createServerSandbox = async (defaultStore = 'global'): Promise<ServerSandbox> => {
     const rootDir = await mkdtemp(join(tmpdir(), 'cortex-server-int-'));
     const homeDir = join(rootDir, 'home');
     const dataPath = join(rootDir, 'data');

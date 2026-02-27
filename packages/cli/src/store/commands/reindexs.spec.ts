@@ -30,8 +30,8 @@ describe('handleReindex', () => {
 
         await handleReindex(ctx, undefined, { stdout });
 
-        expect(calls).toEqual(['default']);
-        expect(captureOutput(stdout)).toContain("Reindexed category indexes for store 'default'.");
+        expect(calls).toEqual(['global']);
+        expect(captureOutput(stdout)).toContain("Reindexed category indexes for store 'global'.");
     });
 
     it('should output success message for an explicit store', async () => {
@@ -69,7 +69,7 @@ describe('handleReindex', () => {
             okResult({ root: () => errResult({ code: 'CATEGORY_NOT_FOUND', message: 'Root missing' }) });
 
         await expectCommanderError(
-            () => handleReindex(ctx, 'default'),
+            () => handleReindex(ctx, 'global'),
             'CATEGORY_NOT_FOUND',
             'Root missing',
         );
@@ -86,7 +86,7 @@ describe('handleReindex', () => {
             okResult({ root: () => okResult(root) });
 
         await expectCommanderError(
-            () => handleReindex(ctx, 'default'),
+            () => handleReindex(ctx, 'global'),
             'REINDEX_FAILED',
             'Index write failed',
         );

@@ -33,7 +33,7 @@ describe('server config loading', () => {
                 expect(result.value.dataPath).toBe(expectedDefaultDataPath);
                 expect(result.value.port).toBe(3000);
                 expect(result.value.host).toBe('0.0.0.0');
-                expect(result.value.defaultStore).toBe('default');
+                expect(result.value.defaultStore).toBe('global');
                 expect(result.value.logLevel).toBe('info');
                 expect(result.value.outputFormat).toBe('yaml');
                 expect(result.value.categoryMode).toBe('free');
@@ -472,7 +472,7 @@ describe('serverConfigSchema', () => {
             expect(result.data.dataPath).toBe(expectedDefaultDataPath);
             expect(result.data.port).toBe(3000);
             expect(result.data.host).toBe('0.0.0.0');
-            expect(result.data.defaultStore).toBe('default');
+            expect(result.data.defaultStore).toBe('global');
             expect(result.data.logLevel).toBe('info');
             expect(result.data.outputFormat).toBe('yaml');
             expect(result.data.categoryMode).toBe('free');
@@ -514,7 +514,7 @@ describe('getMemoryPath', () => {
             dataPath: '/home/user/.config/cortex',
             port: 3000,
             host: '0.0.0.0',
-            defaultStore: 'default',
+            defaultStore: 'global',
             logLevel: 'info' as const,
             outputFormat: 'yaml' as const,
             categoryMode: 'free' as const,
@@ -531,7 +531,7 @@ describe('getMemoryPath', () => {
             dataPath: '/custom/path',
             port: 3000,
             host: '0.0.0.0',
-            defaultStore: 'default',
+            defaultStore: 'global',
             logLevel: 'info' as const,
             outputFormat: 'yaml' as const,
             categoryMode: 'free' as const,
@@ -550,7 +550,7 @@ describe('getMemoryPath', () => {
             dataPath,
             port: 3000,
             host: '0.0.0.0',
-            defaultStore: 'default',
+            defaultStore: 'global',
             logLevel: 'info' as const,
             outputFormat: 'yaml' as const,
             categoryMode: 'free' as const,
@@ -568,7 +568,7 @@ describe('getMemoryPath', () => {
             dataPath: '/any/base/path',
             port: 3000,
             host: '0.0.0.0',
-            defaultStore: 'default',
+            defaultStore: 'global',
             logLevel: 'info' as const,
             outputFormat: 'yaml' as const,
             categoryMode: 'free' as const,

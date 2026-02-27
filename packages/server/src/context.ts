@@ -96,12 +96,12 @@ export const createCortexContext = async (
                 stores: {
                     // TODO: Allow configuring additional stores and categories for MCP servers.
                     // For now we just create a default store with a free category mode
-                    default: {
+                    global: {
                         kind: 'filesystem',
                         categoryMode: 'free',
                         categories: {}, // TODO: category templates for MCP servers. ENV does not make sense
                         properties: {
-                            path: resolve(storesDir, 'default'),
+                            path: resolve(storesDir, 'global'),
                         },
                     },
                 },

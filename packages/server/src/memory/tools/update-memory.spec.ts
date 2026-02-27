@@ -49,7 +49,7 @@ describe('cortex_update_memory tool', () => {
 
     it('should update memory content', async () => {
         const input: UpdateMemoryInput = {
-            store: 'default',
+            store: 'global',
             path: 'project/update-target',
             content: 'Updated content',
         };
@@ -59,7 +59,7 @@ describe('cortex_update_memory tool', () => {
 
         const getResult = await getMemoryHandler(
             ctx,
-            { store: 'default', path: 'project/update-target' },
+            { store: 'global', path: 'project/update-target' },
         );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.content).toBe('Updated content');
@@ -67,7 +67,7 @@ describe('cortex_update_memory tool', () => {
 
     it('should update memory tags', async () => {
         const input: UpdateMemoryInput = {
-            store: 'default',
+            store: 'global',
             path: 'project/update-target',
             tags: ['new-tag'],
         };
@@ -76,7 +76,7 @@ describe('cortex_update_memory tool', () => {
 
         const getResult = await getMemoryHandler(
             ctx,
-            { store: 'default', path: 'project/update-target' },
+            { store: 'global', path: 'project/update-target' },
         );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.tags).toEqual(['new-tag']);
@@ -85,7 +85,7 @@ describe('cortex_update_memory tool', () => {
     it('should update expiry', async () => {
         const futureDate = new Date(Date.now() + 86400000).toISOString();
         const input: UpdateMemoryInput = {
-            store: 'default',
+            store: 'global',
             path: 'project/update-target',
             expires_at: futureDate,
         };
@@ -94,7 +94,7 @@ describe('cortex_update_memory tool', () => {
 
         const getResult = await getMemoryHandler(
             ctx,
-            { store: 'default', path: 'project/update-target' },
+            { store: 'global', path: 'project/update-target' },
         );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.expires_at).toBe(futureDate);
@@ -115,7 +115,7 @@ describe('cortex_update_memory tool', () => {
         });
 
         const input: UpdateMemoryInput = {
-            store: 'default',
+            store: 'global',
             path: 'project/with-expiry',
             expires_at: null,
         };
@@ -124,7 +124,7 @@ describe('cortex_update_memory tool', () => {
 
         const getResult = await getMemoryHandler(
             ctx,
-            { store: 'default', path: 'project/with-expiry' },
+            { store: 'global', path: 'project/with-expiry' },
         );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.expires_at).toBeUndefined();
@@ -146,7 +146,7 @@ describe('cortex_update_memory tool', () => {
         });
 
         const updateInput: UpdateMemoryInput = {
-            store: 'default',
+            store: 'global',
             path: 'project/preserve-expiry',
             content: 'Updated content',
         };
@@ -154,7 +154,7 @@ describe('cortex_update_memory tool', () => {
 
         const getResult = await getMemoryHandler(
             ctx,
-            { store: 'default', path: 'project/preserve-expiry' },
+            { store: 'global', path: 'project/preserve-expiry' },
         );
         const output = JSON.parse(getResult.content[0]!.text);
         expect(output.metadata.expires_at).toBe(expiryDate.toISOString());
@@ -162,7 +162,7 @@ describe('cortex_update_memory tool', () => {
 
     it('should reject update with no changes', async () => {
         const input: UpdateMemoryInput = {
-            store: 'default',
+            store: 'global',
             path: 'project/update-target',
         };
 
@@ -171,7 +171,7 @@ describe('cortex_update_memory tool', () => {
 
     it('should return error for non-existent memory', async () => {
         const input: UpdateMemoryInput = {
-            store: 'default',
+            store: 'global',
             path: 'project/non-existent',
             content: 'New content',
         };
@@ -188,7 +188,7 @@ describe('updateMemoryHandler (unit)', () => {
     it('should throw McpError InvalidParams when no update fields are provided', async () => {
         const ctx = createMockCortexContext();
         await expectMcpInvalidParams(
-            () => updateMemoryHandler(ctx, { store: 'default', path: 'cat/slug' }),
+            () => updateMemoryHandler(ctx, { store: 'global', path: 'cat/slug' }),
             'No updates',
         );
     });
@@ -196,7 +196,7 @@ describe('updateMemoryHandler (unit)', () => {
     it('should succeed when only content is provided (partial update)', async () => {
         const ctx = createMockCortexContext();
         const result = await updateMemoryHandler(ctx, {
-            store: 'default',
+            store: 'global',
             path: 'cat/slug',
             content: 'New content',
         });
@@ -231,14 +231,14 @@ describe('updateMemoryHandler (unit)', () => {
         });
 
         await expectMcpInvalidParams(
-            () => updateMemoryHandler(ctx, { store: 'default', path: 'cat/slug', content: 'x' }),
+            () => updateMemoryHandler(ctx, { store: 'global', path: 'cat/slug', content: 'x' }),
         );
     });
 
     it('should return text response containing "Memory updated at" on success', async () => {
         const ctx = createMockCortexContext();
         const result = await updateMemoryHandler(ctx, {
-            store: 'default',
+            store: 'global',
             path: 'cat/slug',
             content: 'updated',
         });
@@ -257,7 +257,7 @@ describe('updateMemoryHandler (unit)', () => {
         });
 
         await updateMemoryHandler(ctx, {
-            store: 'default',
+            store: 'global',
             path: 'cat/slug',
             expires_at: null,
         });

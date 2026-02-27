@@ -52,7 +52,7 @@ const settingsSchema = z
  */
 export const getDefaultSettings = (): CortexSettings => ({
     outputFormat: 'yaml',
-    defaultStore: 'default',
+    defaultStore: 'global',
 });
 
 const categoriesSchema = z.record(z.string(), category);
@@ -552,7 +552,7 @@ const validateCategoryHierarchy = (
  * settings:
  *   outputFormat: json
  * stores:
- *   default:
+ *   global:
  *     path: /home/user/.config/cortex/memory
  * `;
  * const result = parseMergedConfig(raw);

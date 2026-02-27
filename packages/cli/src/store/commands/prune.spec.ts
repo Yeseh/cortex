@@ -30,7 +30,7 @@ describe('handlePrune', () => {
 
         await handlePrune(ctx, undefined, {}, { stdout });
 
-        expect(calls).toEqual(['default']);
+        expect(calls).toEqual(['global']);
         expect(captureOutput(stdout)).toContain('No expired memories found.');
     });
 
@@ -95,7 +95,7 @@ describe('handlePrune', () => {
             okResult({ root: () => errResult({ code: 'CATEGORY_NOT_FOUND', message: 'Root missing' }) });
 
         await expectCommanderError(
-            () => handlePrune(ctx, 'default', {}, {}),
+            () => handlePrune(ctx, 'global', {}, {}),
             'CATEGORY_NOT_FOUND',
             'Root missing',
         );
@@ -112,7 +112,7 @@ describe('handlePrune', () => {
             okResult({ root: () => okResult(root) });
 
         await expectCommanderError(
-            () => handlePrune(ctx, 'default', {}, {}),
+            () => handlePrune(ctx, 'global', {}, {}),
             'PRUNE_FAILED',
             'Unable to prune',
         );

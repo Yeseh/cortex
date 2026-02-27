@@ -8,7 +8,7 @@ import type { StoreData, StoreName } from '@/store/store';
  *
  * @example
  * ```typescript
- * const result = await storage.load('default');
+ * const result = await storage.load('global');
  * if (result.ok()) {
  *   console.log('Store found:', result.value?.kind);
  * }

@@ -106,7 +106,7 @@ export interface ListStoresResult {
  * ```ts
  * const result = await listStores('./.cortex-data');
  * if (result.ok()) {
- *   console.log('Stores:', result.value); // ['default', 'project-a']
+ *   console.log('Stores:', result.value); // ['global', 'project-a']
  * }
  * ```
  */
@@ -143,7 +143,7 @@ export const listStores = async (dataPath: string): Promise<Result<string[], Sto
  * const result = await listStoresFromContext(ctx);
  * if (result.ok()) {
  *   console.log('Stores:', result.value.stores);
- *   // [{ name: 'default', path: '/path/to/default', description: 'Default store' }]
+ *   // [{ name: 'global', path: '/path/to/default', description: 'Default store' }]
  * }
  * ```
  */

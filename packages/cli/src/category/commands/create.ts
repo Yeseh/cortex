@@ -85,7 +85,7 @@ export async function handleCreate(
     path: string,
     options: CreateCommandOptions = {}
 ): Promise<void> {
-    const store = unwrapOrThrow(ctx.cortex.getStore(storeName ?? 'default'));
+    const store = unwrapOrThrow(ctx.cortex.getStore(storeName ?? 'global'));
     const root = unwrapOrThrow(store.root());
     const category = unwrapOrThrow(root.getCategory(path));
     const result = unwrapOrThrow(await category.create());

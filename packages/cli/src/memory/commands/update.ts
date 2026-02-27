@@ -148,7 +148,7 @@ export async function handleUpdate(
     const expiresAt = parseUpdateExpiresAt(options.expiresAt);
     const updates = buildUpdates(content, tags, expiresAt, options.citation);
 
-    const storeResult = ctx.cortex.getStore(storeName ?? 'default');
+    const storeResult = ctx.cortex.getStore(storeName ?? 'global');
     if (!storeResult.ok()) {
         throwCliError(storeResult.error);
     }

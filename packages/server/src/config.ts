@@ -117,7 +117,7 @@ export const createServerConfigSchema = () =>
         /** Network interface to bind (use "127.0.0.1" for local-only access) */
         host: z.string().default('0.0.0.0'),
         /** Name of the default memory store (aligns with global config convention) */
-        defaultStore: z.string().default('default'),
+        defaultStore: z.string().default('global'),
         /** Logging verbosity level */
         logLevel: logLevelSchema.default('info'),
         /** Output format for responses */

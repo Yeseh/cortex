@@ -77,7 +77,7 @@ export async function handleAdd(
     const expiresAt = parseExpiresAt(options.expiresAt);
     const citations = options.citations ?? [];
 
-    const storeResult = ctx.cortex.getStore(storeName ?? 'default');
+    const storeResult = ctx.cortex.getStore(storeName ?? 'global');
     if (!storeResult.ok()) {
         throwCliError(storeResult.error);
     }

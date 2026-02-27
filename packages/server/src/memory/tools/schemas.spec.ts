@@ -87,35 +87,35 @@ describe('memory tool schemas reject missing store parameter', () => {
     });
 
     it('should accept valid input with store parameter', () => {
-        const addInput = { store: 'default', path: 'project/test', content: 'test' };
+        const addInput = { store: 'global', path: 'project/test', content: 'test' };
         expect(addMemoryInputSchema.safeParse(addInput).success).toBe(true);
 
-        const getInput = { store: 'default', path: 'project/test' };
+        const getInput = { store: 'global', path: 'project/test' };
         expect(getMemoryInputSchema.safeParse(getInput).success).toBe(true);
 
-        const updateInput = { store: 'default', path: 'project/test', content: 'updated' };
+        const updateInput = { store: 'global', path: 'project/test', content: 'updated' };
         expect(updateMemoryInputSchema.safeParse(updateInput).success).toBe(true);
 
-        const removeInput = { store: 'default', path: 'project/test' };
+        const removeInput = { store: 'global', path: 'project/test' };
         expect(removeMemoryInputSchema.safeParse(removeInput).success).toBe(true);
 
         const moveInput = {
-            store: 'default',
+            store: 'global',
             from_path: 'project/source',
             to_path: 'project/dest',
         };
         expect(moveMemoryInputSchema.safeParse(moveInput).success).toBe(true);
 
-        const listInput = { store: 'default', category: 'project' };
+        const listInput = { store: 'global', category: 'project' };
         expect(listMemoriesInputSchema.safeParse(listInput).success).toBe(true);
 
-        const pruneInput = { store: 'default' };
+        const pruneInput = { store: 'global' };
         expect(pruneMemoriesInputSchema.safeParse(pruneInput).success).toBe(true);
 
-        const reindexInput = { store: 'default' };
+        const reindexInput = { store: 'global' };
         expect(reindexStoreInputSchema.safeParse(reindexInput).success).toBe(true);
 
-        const getRecentInput = { store: 'default' };
+        const getRecentInput = { store: 'global' };
         expect(getRecentMemoriesInputSchema.safeParse(getRecentInput).success).toBe(true);
     });
 });

@@ -50,7 +50,7 @@ describe('cortex_remove_memory tool', () => {
 
     it('should remove a memory', async () => {
         const input: RemoveMemoryInput = {
-            store: 'default',
+            store: 'global',
             path: 'project/remove-target',
         };
 
@@ -58,13 +58,13 @@ describe('cortex_remove_memory tool', () => {
         expect(result.content[0]!.text).toContain('Memory removed');
 
         await expect(
-            getMemoryHandler(ctx, { store: 'default', path: 'project/remove-target' }),
+            getMemoryHandler(ctx, { store: 'global', path: 'project/remove-target' }),
         ).rejects.toThrow('not found');
     });
 
     it('should return error for non-existent memory', async () => {
         const input: RemoveMemoryInput = {
-            store: 'default',
+            store: 'global',
             path: 'project/non-existent',
         };
 
@@ -105,13 +105,13 @@ describe('removeMemoryHandler (unit)', () => {
         });
 
         await expectMcpInternalError(
-            () => removeMemoryHandler(ctx, { store: 'default', path: 'cat/slug' }),
+            () => removeMemoryHandler(ctx, { store: 'global', path: 'cat/slug' }),
         );
     });
 
     it('should return text response containing "Memory removed at" on success', async () => {
         const ctx = createMockCortexContext();
-        const result = await removeMemoryHandler(ctx, { store: 'default', path: 'cat/slug' });
+        const result = await removeMemoryHandler(ctx, { store: 'global', path: 'cat/slug' });
         expectTextResponseContains(result, 'Memory removed at');
     });
 });

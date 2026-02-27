@@ -50,7 +50,7 @@ export async function handleReindex(
     const stdout = deps.stdout ?? ctx.stdout ?? process.stdout;
     
     // Get store through Cortex client
-    const effectiveStoreName = storeName ?? 'default';
+    const effectiveStoreName = storeName ?? 'global';
     const storeResult = ctx.cortex.getStore(effectiveStoreName);
     if (!storeResult.ok()) {
         throwCliError(storeResult.error);

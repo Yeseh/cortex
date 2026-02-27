@@ -89,7 +89,7 @@ export async function handlePrune(
     const stdout = deps.stdout ?? ctx.stdout ?? process.stdout;
 
     // Get store through Cortex client
-    const storeResult = ctx.cortex.getStore(storeName ?? 'default');
+    const storeResult = ctx.cortex.getStore(storeName ?? 'global');
     if (!storeResult.ok()) {
         throwCliError(storeResult.error);
     }
