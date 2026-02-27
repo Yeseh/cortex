@@ -17,7 +17,7 @@
  */
 
 import { Command } from '@commander-js/extra-typings';
-import { type CortexContext } from '@yeseh/cortex-core';
+import { type CortexContext, type Result } from '@yeseh/cortex-core';
 
 import { createCliCommandContext } from '../../create-cli-command.ts';
 import { throwCliError } from '../../errors.ts';
@@ -27,6 +27,47 @@ import { serializeOutput, type OutputFormat } from '../../output.ts';
 export interface CreateCommandOptions {
     description?: string;
     format?: string;
+}
+
+/**
+ * Writes command output to stdout.
+ *
+ * @param payload - Category creation result payload
+ * @param options - Command options
+ * @param stdout - Output stream
+ */
+function writeCreateOutput(
+    payload: { path: string; created: boolean },
+    options: CreateCommandOptions,
+    stdout: NodeJS.WritableStream,
+): void {
+    const rawFormat = options.format;
+
+    if (!rawFormat) {
+        const verb = payload.created ? 'Created' : 'Category already exists:';
+        stdout.write(`${verb} ${payload.path}\n`);
+        return;
+    }
+
+    const serialized = serializeOutput(payload, rawFormat as OutputFormat);
+    if (!serialized.ok()) {
+        throwCliError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
+    }
+    stdout.write(serialized.value + '\n');
+}
+
+/**
+ * Unwrap a Result and throw a mapped CLI error on failure.
+ *
+ * @param result - Result value
+ * @returns Unwrapped value
+ */
+function unwrapOrThrow<T, E extends { code: string; message: string }>(result: Result<T, E>): T {
+    if (!result.ok()) {
+        throwCliError(result.error);
+    }
+
+    return result.value;
 }
 
 /**
@@ -42,46 +83,15 @@ export async function handleCreate(
     ctx: CortexContext,
     storeName: string | undefined,
     path: string,
-    options: CreateCommandOptions = {},
+    options: CreateCommandOptions = {}
 ): Promise<void> {
-    const storeResult = ctx.cortex.getStore(storeName ?? 'default');
-    if (!storeResult.ok()) {
-        throwCliError(storeResult.error);
-    }
+    const store = unwrapOrThrow(ctx.cortex.getStore(storeName ?? 'default'));
+    const root = unwrapOrThrow(store.root());
+    const category = unwrapOrThrow(root.getCategory(path));
+    const result = unwrapOrThrow(await category.create());
 
-    const rootResult = storeResult.value.root();
-    if (!rootResult.ok()) {
-        throwCliError(rootResult.error);
-    }
-
-    const categoryClient = rootResult.value.getCategory(path);
-    if (!categoryClient.ok()) {
-        throwCliError(categoryClient.error);
-    }
-
-    const result = await categoryClient.value.create();
-    if (!result.ok()) {
-        throwCliError(result.error);
-    }
-
-    const { path: createdPath, created } = result.value;
     const out = ctx.stdout ?? process.stdout;
-
-    const rawFormat = options.format;
-    if (!rawFormat) {
-        const verb = created ? 'Created' : 'Category already exists:';
-        out.write(`${verb} ${createdPath}\n`);
-    }
-    else {
-        const serialized = serializeOutput(
-            { path: createdPath, created },
-            rawFormat as OutputFormat,
-        );
-        if (!serialized.ok()) {
-            throwCliError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
-        }
-        out.write(serialized.value + '\n');
-    }
+    writeCreateOutput(result, options, out);
 }
 
 /**

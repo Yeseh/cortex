@@ -12,6 +12,7 @@ const makeConfig = (dataPath: string): ServerConfig => ({
     defaultStore: 'default',
     logLevel: 'info',
     outputFormat: 'yaml',
+    categoryMode: 'free'
 });
 
 describe('validateStorePath', () => {
