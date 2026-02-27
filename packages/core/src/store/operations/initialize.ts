@@ -11,33 +11,27 @@ import type { StoreData } from '../store.ts';
 import type { StorageAdapter } from '@/storage/index.ts';
 
 /**
- * Initializes a new store with proper directory structure and registry entry.
+ * Initializes a store by persisting store metadata and ensuring configured categories.
  *
  * This domain operation:
  * 1. Validates the store name
- * 2. Loads the registry and checks for name collision
- * 3. Creates the store directory
- * 4. Registers the store in the registry
- * 5. Creates a root index entry via IndexStorage
- * 6. Optionally creates category subdirectories with indexes
+ * 2. Checks whether store metadata already exists
+ * 3. Persists store metadata through `ConfigAdapter`
+ * 4. Ensures configured category paths through `CategoryAdapter`
  *
- * @param adapter - The registry to use for store registration
+ * @param adapter - Storage adapter with config/category capabilities
  * @param name - The store name (must be a valid lowercase slug)
- * @param path - The filesystem path for the store
- * @param options - Optional settings for categories and description
+ * @param data - Store metadata to persist
  * @returns Result indicating success or failure
  *
  * @example
  * ```typescript
- * const registry = new FilesystemRegistry('/config/stores.yaml');
- * await registry.load();
- *
- * const result = await initializeStore(
- *   registry,
- *   'my-project',
- *   '/path/to/store',
- *   { categories: ['global', 'projects'] }
- * );
+ * const result = await initializeStore(adapter, 'my-project', {
+ *   kind: 'filesystem',
+ *   categoryMode: 'free',
+ *   categories: [{ path: 'standards' }],
+ *   properties: { path: '/path/to/store' },
+ * });
  *
  * if (result.ok()) {
  *   console.log('Store created successfully');

@@ -1,6 +1,5 @@
 /**
- * Core module exports
- * TODO: Clean this up
+ * Public exports for `@yeseh/cortex-core`.
  */
 
 export * from './tokens.ts';

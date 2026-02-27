@@ -11,20 +11,21 @@ import type { CortexSettings, ConfigStores } from '@/config/types.ts';
 /**
  * Factory function for creating scoped storage adapters.
  *
- * @param storePath - The filesystem path to the store's root directory
+ * @param storeName - The logical store name
  * @returns A scoped storage adapter for the store
  *
  * @example
  * ```typescript
  * // Default filesystem adapter factory
- * const defaultFactory: AdapterFactory = (storePath) =>
- *     new FilesystemStorageAdapter({ rootDirectory: storePath });
+ * const defaultFactory: AdapterFactory = (storeName) =>
+ *     createAdapterForStore(storeName);
  *
  * // Mock adapter factory for testing
- * const mockFactory: AdapterFactory = (storePath) => ({
+ * const mockFactory: AdapterFactory = (_storeName) => ({
  *     memories: mockMemoryStorage,
  *     indexes: mockIndexStorage,
  *     categories: mockCategoryStorage,
+ *     config: mockConfigStorage,
  * });
  * ```
  */
@@ -37,9 +38,9 @@ export type AdapterFactory = (storeName: string) => StorageAdapter;
  *
  * @example
  * ```typescript
- * // Minimal options (uses defaults)
+ * // Minimal options
  * const options: CortexOptions = {
- *     adapterFactory: createDefaultAdapterFactory(),
+ *     adapterFactory: (storeName) => createAdapterForStore(storeName),
  * };
  *
  * // Full options
@@ -48,10 +49,12 @@ export type AdapterFactory = (storeName: string) => StorageAdapter;
  *     stores: {
  *         'test-store': {
  *             kind: 'filesystem',
+ *             categoryMode: 'free',
  *             categories: {},
  *             properties: { path: '/data/test-store' },
+ *         },
  *     },
- *     adapterFactory: createAdapterFactory(),
+ *     adapterFactory: (storeName) => createAdapterForStore(storeName),
  * };
  * ```
  */
@@ -64,15 +67,13 @@ export interface CortexOptions {
 
     /**
      * Store definitions mapping store names to their configuration.
-     * Default: empty registry `{}`
+        * Default: empty map `{}`
      */
     stores?: ConfigStores | undefined;
 
     /**
      * Custom adapter factory for creating storage adapters.
-     * Default: filesystem adapter factory
-     *
-     * Override this for testing with mock adapters.
+     * Override this for production wiring or testing with mock adapters.
      */
     adapterFactory: AdapterFactory;
 }

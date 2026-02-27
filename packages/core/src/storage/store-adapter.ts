@@ -2,26 +2,24 @@ import type { Store, StoreResult } from '@/store';
 import type { StoreData, StoreName } from '@/store/store';
 
 /**
- * Storage interface for store registry operations.
+ * Storage interface for per-store metadata operations.
  *
- * Handles persistence of the store registry, which maps store names
- * to their filesystem paths.
+ * Handles loading, saving, and removing store metadata records keyed by store name.
  *
  * @example
  * ```typescript
- * const result = await storage.load('~/.config/cortex/stores.yml');
- * if (result.ok) {
- *   const defaultStore = result.value['default'];
- *   console.log('Default store path:', defaultStore?.path);
+ * const result = await storage.load('default');
+ * if (result.ok()) {
+ *   console.log('Store found:', result.value?.kind);
  * }
  * ```
  */
 export interface StoreAdapter {
     /**
-     * Loads the store from backing storage 
+        * Loads store metadata from backing storage.
      *
-     * @param name - name of the store to load (e.g. 'default') 
-     * @returns Result with the parsed Store on success, or StorageAdapterError on failure 
+        * @param name - Name of the store to load (e.g., `default`)
+        * @returns Result with the parsed store data, `null` when absent, or a storage error
      */
     load(name: StoreName): Promise<StoreResult<Store | null>>;
 
@@ -30,7 +28,7 @@ export interface StoreAdapter {
      *
      * Creates parent directories as needed. Overwrites existing content.
      *
-     * @param name - name of the store to save (e.g. 'default') 
+    * @param name - Name of the store to save (e.g., `default`)
      * @param store - The store data to persist
      * @returns Result indicating success or failure
      */
@@ -41,7 +39,7 @@ export interface StoreAdapter {
      *
      * Silently succeeds if the store does not exist.
      *
-     * @param name - name of the store to remove (e.g. 'default') 
+    * @param name - Name of the store to remove (e.g., `default`)
      * @returns Result indicating success or failure
      */
     remove(name: StoreName): Promise<StoreResult<void>>;

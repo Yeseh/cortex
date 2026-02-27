@@ -7,8 +7,8 @@
  *
  * - {@link MemoryAdapter} - Raw memory file operations
  * - {@link IndexAdapter} - Index file operations and reindexing
- * - {@link StoreAdapter} - Store registry persistence
- * - {@link CategoryStorage} - Category operations (imported from category/types)
+ * - {@link StoreAdapter} - Store metadata persistence
+ * - {@link CategoryStorage} - Category operations
  *
  * @module core/storage/adapter
  */
@@ -47,25 +47,18 @@ export type StorageAdapterResult<T> = Result<T, StorageAdapterError>;
 
 /**
  * Provides access to memory, index, and category operations within a single
- * store's context. Does not include store/registry operations since those
- * are handled at the registry level.
- *
- * This interface is returned by {@link Registry.getStore} for performing
- * store-specific operations.
+ * store's context, plus store configuration operations.
  *
  * @example
  * ```typescript
- * const adapter = registry.getStore('my-project');
- * if (adapter.ok) {
- *   // Read a memory
- *   const result = await adapter.value.memories.read('category/my-memory');
+ * // Read a memory
+ * const memory = await adapter.memories.read('category/my-memory');
  *
- *   // Reindex the store
- *   await adapter.value.indexes.reindex();
+ * // Reindex the store
+ * await adapter.indexes.reindex();
  *
- *   // List categories
- *   const categories = await adapter.value.categories.list('');
- * }
+ * // List categories
+ * const categories = await adapter.categories.list('');
  * ```
  */
 export interface StorageAdapter {

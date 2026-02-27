@@ -4,7 +4,7 @@
  * Provides serialization and deserialization functions with both throwing
  * and Result-based error handling patterns. Supports JSON, YAML, and TOON formats.
  *
- * @module serialization
+ * @module core/serialization
  */
 
 import * as TOON from '@toon-format/toon';

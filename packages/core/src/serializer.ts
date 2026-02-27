@@ -2,11 +2,11 @@
  * Memory serializer interface.
  *
  * Defines the contract for serializing and deserializing memory files.
- * This allows the operations module to work with any serialization format
+ * This allows domain APIs to work with any serialization format
  * without depending on a specific implementation. Storage adapters should
  * provide an implementation of this interface.
  *
- * @module core/memory/operations/serializer
+ * @module core/memory/serializer
  */
 
 import type { Result } from '@/result';
@@ -17,7 +17,7 @@ import type { MemoryError } from './memory/result';
 /**
  * Interface for memory file serialization.
  *
- * This allows the operations module to work with any serialization format
+ * This allows domain APIs to work with any serialization format
  * without depending on a specific implementation. Storage adapters should
  * provide an implementation of this interface.
  *
