@@ -6,8 +6,8 @@ memories:
     token_estimate: 229
     updated_at: 2026-02-26T20:02:52.861Z
   - path: todo/fix-mcp-integration-test-failures
-    token_estimate: 500
-    updated_at: 2026-02-26T20:03:11.810Z
+    token_estimate: 415
+    updated_at: 2026-02-27T19:38:46.095Z
   - path: todo/fix-mcp-server-self-bootstrap
     token_estimate: 347
     updated_at: 2026-02-26T20:02:57.635Z
