@@ -17,6 +17,13 @@ import { Command } from '@commander-js/extra-typings';
 import { throwCliError } from '../../errors.ts';
 import { MemoryPath, type CortexContext } from '@yeseh/cortex-core';
 import { createCliCommandContext } from '../../create-cli-command.ts';
+import { serializeOutput, type OutputFormat } from '../../output.ts';
+
+/** Options for the remove command. */
+export interface RemoveCommandOptions {
+    /** Output format (yaml, json, toon) */
+    format?: string;
+}
 
 /**
  * Handler for the memory remove command.
@@ -30,6 +37,7 @@ export async function handleRemove(
     ctx: CortexContext,
     storeName: string | undefined,
     path: string,
+    options: RemoveCommandOptions = {}
 ): Promise<void> {
     const pathResult = MemoryPath.fromString(path);
     if (!pathResult.ok()) {
@@ -61,7 +69,17 @@ export async function handleRemove(
     }
 
     const out = ctx.stdout ?? process.stdout;
-    out.write(`Removed memory ${pathResult.value.toString()}.\n`);
+    const rawFormat = options.format;
+    if (!rawFormat) {
+        out.write(`Removed memory ${pathResult.value.toString()}.\n`);
+    } else {
+        const format = rawFormat as OutputFormat;
+        const serialized = serializeOutput({ path: pathResult.value.toString() }, format);
+        if (!serialized.ok()) {
+            throwCliError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
+        }
+        out.write(serialized.value + '\n');
+    }
 }
 
 /**
@@ -74,12 +92,13 @@ export async function handleRemove(
 export const removeCommand = new Command('remove')
     .description('Delete a memory')
     .argument('<path>', 'Memory path to remove')
-    .action(async (path, _options, command) => {
+    .option('-o, --format <format>', 'Output format (yaml, json, toon)')
+    .action(async (path, options, command) => {
         const parentOpts = command.parent?.opts() as { store?: string } | undefined;
         const context = await createCliCommandContext();
         if (!context.ok()) {
             throwCliError(context.error);
         }
 
-        await handleRemove(context.value, parentOpts?.store, path);
+        await handleRemove(context.value, parentOpts?.store, path, options);
     });

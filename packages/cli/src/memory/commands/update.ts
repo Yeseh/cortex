@@ -32,6 +32,7 @@ import { MemoryPath, type CortexContext, type UpdateMemoryInput } from '@yeseh/c
 import { resolveInput as resolveCliContent } from '../../input.ts';
 import { parseExpiresAt, parseTags } from '../parsing.ts';
 import { createCliCommandContext } from '../../create-cli-command.ts';
+import { serializeOutput, type OutputFormat } from '../../output.ts';
 
 /** Options parsed by Commander for the update command */
 export interface UpdateCommandOptions {
@@ -46,6 +47,7 @@ export interface UpdateCommandOptions {
      */
     expiresAt?: string | false;
     citation?: string[];
+    format?: string;
 }
 
 const parseUpdateExpiresAt = (raw?: string | false): Date | null | undefined => {
@@ -172,7 +174,28 @@ export async function handleUpdate(
 
     const memory = updateResult.value;
     const stdout = ctx.stdout ?? process.stdout;
-    stdout.write(`Updated memory ${memory.path.toString()}.\n`);
+
+    const rawFormat = options.format;
+    if (!rawFormat) {
+        stdout.write(`Updated memory ${memory.path.toString()}.\n`);
+    } else {
+        const format = rawFormat as OutputFormat;
+        const serialized = serializeOutput(
+            {
+                kind: 'memory',
+                value: {
+                    path: memory.path.toString(),
+                    metadata: memory.metadata,
+                    content: memory.content,
+                },
+            },
+            format
+        );
+        if (!serialized.ok()) {
+            throwCliError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
+        }
+        stdout.write(serialized.value + '\n');
+    }
 }
 
 /**
@@ -194,6 +217,7 @@ export const updateCommand = new Command('update')
     .option('-e, --expires-at <date>', 'New expiration date (ISO 8601)')
     .option('--no-expires-at', 'Remove expiration date')
     .option('--citation <value...>', 'Citation references (replaces existing)')
+    .option('-o, --format <format>', 'Output format (yaml, json, toon)')
     .action(async (path, options, command) => {
         const parentOpts = command.parent?.opts() as { store?: string } | undefined;
         const context = await createCliCommandContext();

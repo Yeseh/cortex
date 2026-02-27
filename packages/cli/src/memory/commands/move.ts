@@ -16,6 +16,13 @@ import { Command } from '@commander-js/extra-typings';
 import { throwCliError } from '../../errors.ts';
 import { MemoryPath, type CortexContext } from '@yeseh/cortex-core';
 import { createCliCommandContext } from '../../create-cli-command.ts';
+import { serializeOutput, type OutputFormat } from '../../output.ts';
+
+/** Options for the move command. */
+export interface MoveCommandOptions {
+    /** Output format (yaml, json, toon) */
+    format?: string;
+}
 
 /**
  * Handler for the memory move command.
@@ -31,6 +38,7 @@ export async function handleMove(
     storeName: string | undefined,
     from: string,
     to: string,
+    options: MoveCommandOptions = {}
 ): Promise<void> {
     const fromResult = MemoryPath.fromString(from);
     if (!fromResult.ok()) {
@@ -67,7 +75,20 @@ export async function handleMove(
     }
 
     const out = ctx.stdout ?? process.stdout;
-    out.write(`Moved memory ${fromResult.value.toString()} to ${toResult.value.toString()}.\n`);
+    const rawFormat = options.format;
+    if (!rawFormat) {
+        out.write(`Moved memory ${fromResult.value.toString()} to ${toResult.value.toString()}.\n`);
+    } else {
+        const format = rawFormat as OutputFormat;
+        const serialized = serializeOutput(
+            { from: fromResult.value.toString(), to: toResult.value.toString() },
+            format
+        );
+        if (!serialized.ok()) {
+            throwCliError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
+        }
+        out.write(serialized.value + '\n');
+    }
 }
 
 /**
@@ -82,12 +103,13 @@ export const moveCommand = new Command('move')
     .description('Move a memory to a new path')
     .argument('<from>', 'Source memory path')
     .argument('<to>', 'Destination memory path')
-    .action(async (from, to, _options, command) => {
+    .option('-o, --format <format>', 'Output format (yaml, json, toon)')
+    .action(async (from, to, options, command) => {
         const parentOpts = command.parent?.opts() as { store?: string } | undefined;
         const context = await createCliCommandContext();
         if (!context.ok()) {
             throwCliError(context.error);
         }
 
-        await handleMove(context.value, parentOpts?.store, from, to);
+        await handleMove(context.value, parentOpts?.store, from, to, options);
     });

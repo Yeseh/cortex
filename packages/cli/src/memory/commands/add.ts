@@ -27,6 +27,7 @@ import { type CortexContext } from '@yeseh/cortex-core';
 import { resolveInput as resolveCliContent } from '../../input.ts';
 import { parseExpiresAt, parseTags } from '../parsing.ts';
 import { createCliCommandContext } from '../../create-cli-command.ts';
+import { serializeOutput, type OutputFormat } from '../../output.ts';
 
 /** Options parsed by Commander for the add command */
 export interface AddCommandOptions {
@@ -35,6 +36,7 @@ export interface AddCommandOptions {
     tags?: string[];
     expiresAt?: string;
     citations?: string[];
+    format?: string;
 }
 /**
  * Handler for the memory add command.
@@ -102,7 +104,27 @@ export async function handleAdd(
     const memory = memoryResult.value;
     const out = ctx.stdout ?? process.stdout;
 
-    out.write(`Added memory ${memory.path} (${source}).\n`);
+    const rawFormat = options.format;
+    if (!rawFormat) {
+        out.write(`Added memory ${memory.path} (${source}).\n`);
+    } else {
+        const format = rawFormat as OutputFormat;
+        const serialized = serializeOutput(
+            {
+                kind: 'memory',
+                value: {
+                    path: memory.path.toString(),
+                    metadata: memory.metadata,
+                    content: memory.content,
+                },
+            },
+            format
+        );
+        if (!serialized.ok()) {
+            throwCliError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
+        }
+        out.write(serialized.value + '\n');
+    }
 }
 
 /**
@@ -123,6 +145,7 @@ export const addCommand = new Command('add')
     .option('-t, --tags <value...>', 'Tags (can be repeated or comma-separated)')
     .option('-e, --expires-at <date>', 'Expiration date (ISO 8601)')
     .option('--citation <value...>', 'Citation references (file paths or URLs)')
+    .option('-o, --format <format>', 'Output format (yaml, json, toon)')
     .action(async (path, options, command) => {
         const parentOpts = command.parent?.opts() as { store?: string } | undefined;
         const context = await createCliCommandContext();
