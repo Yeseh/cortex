@@ -92,8 +92,14 @@ describe('handleList', () => {
 
         const output = captureOutput(stdout);
         const parsed = JSON.parse(output);
-        expect(parsed).toBeDefined();
-        expect(Array.isArray(parsed.stores ?? parsed.value?.stores ?? (parsed as { stores?: unknown[] }).stores)).toBeDefined();
+        const stores = parsed.stores ?? parsed.value?.stores;
+        expect(Array.isArray(stores)).toBe(true);
+        expect(stores).toEqual([
+            {
+                name: 'default',
+                path: '/mock/store',
+            },
+        ]);
     });
 
     it('should include store paths in the output', async () => {

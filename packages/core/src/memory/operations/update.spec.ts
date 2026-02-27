@@ -94,7 +94,9 @@ describe('updateMemory', () => {
         });
         expect(result.ok()).toBe(true);
         if (result.ok()) {
-            expect(result.value.metadata.expiresAt).toBeDefined();
+            expect(result.value.metadata.expiresAt?.toISOString()).toBe(
+                '2025-01-10T12:00:00.000Z',
+            );
         }
     });
 

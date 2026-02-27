@@ -11,107 +11,19 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import {
-    Cortex,
     ok,
     type AdapterFactory,
-    type ConfigAdapter,
-    type ConfigStores,
-    type CortexContext,
-    type CortexSettings,
-    type StorageAdapter,
 } from '@yeseh/cortex-core';
 import { handleAdd } from './add.ts';
+import {
+    createCaptureStream,
+    createMemoryCommandContext,
+    createMockMemoryCommandAdapter,
+} from './test-helpers.spec.ts';
 
 // ---------------------------------------------------------------------------
 // Local helpers
 // ---------------------------------------------------------------------------
-
-const createMockAdapter = (overrides: Record<string, unknown> = {}): StorageAdapter =>
-    ({
-        memories: {
-            load: async () => ok(null),
-            save: async () => ok(undefined),
-            add: async () => ok(undefined),
-            remove: async () => ok(undefined),
-            move: async () => ok(undefined),
-            ...(overrides.memories as object | undefined),
-        },
-        indexes: {
-            load: async () => ok(null),
-            write: async () => ok(undefined),
-            reindex: async () => ok({ warnings: [] }),
-            updateAfterMemoryWrite: async () => ok(undefined),
-            ...(overrides.indexes as object | undefined),
-        },
-        categories: {
-            exists: async () => ok(true),
-            ensure: async () => ok(undefined),
-            delete: async () => ok(undefined),
-            setDescription: async () => ok(undefined),
-            ...(overrides.categories as object | undefined),
-        },
-    }) as unknown as StorageAdapter;
-
-const createContext = (options: {
-    adapter: StorageAdapter;
-    storePath: string;
-    stdout?: PassThrough;
-    stdin?: PassThrough;
-    stores?: ConfigStores;
-    settings?: CortexSettings;
-    now?: () => Date;
-    adapterFactory?: AdapterFactory;
-}): CortexContext => {
-    const stores: ConfigStores = options.stores ?? {
-        default: {
-            kind: 'filesystem',
-            properties: { path: options.storePath },
-            categories: {},
-        },
-    };
-    const cortex = Cortex.init({
-        settings: options.settings,
-        stores,
-        adapterFactory: options.adapterFactory ?? (() => options.adapter),
-    });
-
-    return {
-        cortex,
-        config: {
-            path: '/tmp/test/config.yaml',
-            data: null,
-            get stores() {
-                return stores;
-            },
-            get settings() {
-                return options.settings ?? null;
-            },
-            initializeConfig: async () => ok(undefined),
-            getSettings: async () => ok(options.settings ?? {}),
-            getStores: async () => ok(stores),
-            getStore: async (name: string) => ok(stores[name] ?? null),
-            saveStore: async () => ok(undefined),
-        } as ConfigAdapter,
-        settings: (options.settings ?? {}) as CortexSettings,
-        stores,
-        now: options.now ?? (() => new Date('2025-01-01T00:00:00.000Z')),
-        stdin: (options.stdin ?? new PassThrough()) as unknown as NodeJS.ReadStream,
-        stdout: (options.stdout ?? new PassThrough()) as unknown as NodeJS.WriteStream,
-    };
-};
-
-const createCaptureStream = (): { stream: PassThrough; getOutput: () => string } => {
-    let output = '';
-    const stream = new PassThrough();
-    const originalWrite = stream.write.bind(stream);
-    stream.write = ((chunk: unknown, encoding?: unknown, cb?: unknown) => {
-        output += Buffer.from(chunk as Buffer).toString(
-            typeof encoding === 'string' ? (encoding as BufferEncoding) : undefined
-        );
-        return originalWrite(chunk as Buffer, encoding as BufferEncoding, cb as () => void);
-    }) as typeof stream.write;
-    return { stream, getOutput: () => output };
-};
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -130,8 +42,8 @@ describe('handleAdd', () => {
 
     it('should create a memory and write success message to stdout', async () => {
         const capture = createCaptureStream();
-        const ctx = createContext({
-            adapter: createMockAdapter(),
+        const ctx = createMemoryCommandContext({
+            adapter: createMockMemoryCommandAdapter(),
             storePath: tempDir,
             stdout: capture.stream,
         });
@@ -145,8 +57,8 @@ describe('handleAdd', () => {
 
     it('should pass tags from options', async () => {
         const capture = createCaptureStream();
-        const ctx = createContext({
-            adapter: createMockAdapter(),
+        const ctx = createMemoryCommandContext({
+            adapter: createMockMemoryCommandAdapter(),
             storePath: tempDir,
             stdout: capture.stream,
         });
@@ -162,8 +74,8 @@ describe('handleAdd', () => {
 
     it('should pass expiresAt from options', async () => {
         const capture = createCaptureStream();
-        const ctx = createContext({
-            adapter: createMockAdapter(),
+        const ctx = createMemoryCommandContext({
+            adapter: createMockMemoryCommandAdapter(),
             storePath: tempDir,
             stdout: capture.stream,
         });
@@ -178,8 +90,8 @@ describe('handleAdd', () => {
 
     it('should pass citations from options', async () => {
         const capture = createCaptureStream();
-        const ctx = createContext({
-            adapter: createMockAdapter(),
+        const ctx = createMemoryCommandContext({
+            adapter: createMockMemoryCommandAdapter(),
             storePath: tempDir,
             stdout: capture.stream,
         });
@@ -196,8 +108,8 @@ describe('handleAdd', () => {
         const failingFactory = (() => undefined) as unknown as AdapterFactory;
 
         const stdin = new PassThrough();
-        const ctx = createContext({
-            adapter: createMockAdapter(),
+        const ctx = createMemoryCommandContext({
+            adapter: createMockMemoryCommandAdapter(),
             storePath: tempDir,
             stdin,
             adapterFactory: failingFactory,
@@ -211,8 +123,8 @@ describe('handleAdd', () => {
     it('should throw InvalidArgumentError for MISSING_CONTENT when no content provided', async () => {
         const stdin = new PassThrough();
         stdin.end(); // EOF with no data → empty content → MISSING_CONTENT
-        const ctx = createContext({
-            adapter: createMockAdapter(),
+        const ctx = createMemoryCommandContext({
+            adapter: createMockMemoryCommandAdapter(),
             storePath: tempDir,
             stdin,
         });
@@ -223,8 +135,8 @@ describe('handleAdd', () => {
     });
 
     it('should throw CommanderError when memory create fails due to missing category', async () => {
-        const ctx = createContext({
-            adapter: createMockAdapter({
+        const ctx = createMemoryCommandContext({
+            adapter: createMockMemoryCommandAdapter({
                 categories: {
                     exists: async () => ok(false), // category absent → CATEGORY_NOT_FOUND
                 },
@@ -241,8 +153,8 @@ describe('handleAdd', () => {
         const stdin = new PassThrough();
         stdin.end('Content from stdin');
         const capture = createCaptureStream();
-        const ctx = createContext({
-            adapter: createMockAdapter(),
+        const ctx = createMemoryCommandContext({
+            adapter: createMockMemoryCommandAdapter(),
             storePath: tempDir,
             stdin,
             stdout: capture.stream,

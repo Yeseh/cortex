@@ -25,13 +25,12 @@ describe('config/store category conversions', () => {
 
         const standards = result.value.find((category) => category.path.toString() === 'standards');
         expect(standards).toBeDefined();
-        expect(standards?.description).toBe('Standards');
+        if (!standards) return;
 
-        const architecture = standards?.subcategories?.find(
-            (category) => category.path.toString() === 'standards/architecture',
-        );
-        expect(architecture).toBeDefined();
-        expect(architecture?.description).toBe('Architecture docs');
+        expect(standards.description).toBe('Standards');
+        expect(standards.subcategories?.length).toBe(1);
+        expect(standards.subcategories?.[0]?.path.toString()).toBe('standards/architecture');
+        expect(standards.subcategories?.[0]?.description).toBe('Architecture docs');
     });
 
     it('should return validation error when config category path cannot form a valid CategoryPath', () => {
