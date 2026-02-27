@@ -33,7 +33,7 @@ Categories on disk but not in config can still have memories created in them, be
 ```yaml
 stores:
   cortex:
-    path: /home/jesse/.cortex/memory
+    path: /home/user/.cortex/memory
     categoryMode: strict
     categories:
       standards:
