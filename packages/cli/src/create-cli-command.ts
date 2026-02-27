@@ -44,6 +44,84 @@ export interface ConfigLoadOptions {
     localConfigPath?: string;
 }
 
+export interface CliContextOptions {
+    configDir?: string;
+    configCwd?: string;
+}
+
+export interface CliConfigContext {
+    configAdapter: FilesystemConfigAdapter;
+    stores: Record<string, any>;
+    settings: ReturnType<typeof getDefaultSettings>;
+    effectiveCwd: string;
+}
+
+export const createCliConfigAdapter = (configPath: string): FilesystemConfigAdapter => {
+    return new FilesystemConfigAdapter(configPath);
+};
+
+export const createCliAdapterFactory = (
+    configAdapter: FilesystemConfigAdapter,
+) => {
+    return (storeName: string) => {
+        const stores = configAdapter.stores!;
+        const storeEntry = stores[storeName];
+        if (!storeEntry) {
+            throw new Error(
+                `Store '${storeName}' not found. Available stores: ${Object.keys(stores).join(', ')}`
+            );
+        }
+
+        const storePath = storeEntry.properties?.path as string | undefined;
+        if (!storePath) {
+            throw new Error(`Store '${storeName}' has no path configured in properties.`);
+        }
+
+        return new FilesystemStorageAdapter(configAdapter, {
+            rootDirectory: storePath,
+        });
+    };
+};
+
+export const createCliConfigContext = async (
+    options: CliContextOptions = {}
+): Promise<Result<CliConfigContext, any>> => {
+    const envConfigDir = process.env.CORTEX_CONFIG_DIR;
+    const dir = options.configDir ?? envConfigDir ?? resolve(homedir(), '.config', 'cortex');
+    const absoluteDir = makeAbsolute(dir);
+    const configPath = resolve(absoluteDir, 'config.yaml');
+
+    const envConfigCwd = process.env.CORTEX_CONFIG_CWD;
+    const effectiveCwd =
+        options.configCwd ??
+        (typeof envConfigCwd === 'string' && envConfigCwd.length > 0
+            ? envConfigCwd
+            : process.cwd());
+
+    const configAdapter = createCliConfigAdapter(configPath);
+    const initResult = await configAdapter.initializeConfig();
+    if (!initResult.ok()) {
+        return initResult;
+    }
+
+    const settingsResult = await configAdapter.getSettings();
+    if (!settingsResult.ok()) {
+        return settingsResult;
+    }
+
+    const storesResult = await configAdapter.getStores();
+    if (!storesResult.ok()) {
+        return storesResult;
+    }
+
+    return ok({
+        configAdapter,
+        settings: settingsResult.value,
+        stores: storesResult.value,
+        effectiveCwd,
+    });
+};
+
 /* Creates a CortexContext from the CLI environment, including loading configuration and setting up dependencies.
  * This function is used to create a context object that can be injected into command handlers for consistent access to the Cortex client and other utilities.
  */
@@ -51,56 +129,15 @@ export const createCliCommandContext = async (
     configDir?: string
 ): Promise<Result<CortexContext, any>> => {
     try {
-        // Allow test harnesses / subprocesses to isolate config resolution.
-        const envConfigDir = process.env.CORTEX_CONFIG_DIR;
-        const dir = configDir ?? envConfigDir ?? resolve(homedir(), '.config', 'cortex');
-        const absoluteDir = makeAbsolute(dir);
-        const configPath = resolve(absoluteDir, 'config.yaml');
-        const configFileCwd = process.env.CORTEX_CONFIG_CWD;
-        const effectiveCwd =
-            typeof configFileCwd === 'string' && configFileCwd.length > 0
-                ? configFileCwd
-                : process.cwd();
-
-        // Use FilesystemConfigAdapter to auto-initialize config if it doesn't exist
-        const configAdapter = new FilesystemConfigAdapter(configPath);
-        const initResult = await configAdapter.initializeConfig();
-        if (!initResult.ok()) {
-            return initResult;
+        const configContextResult = await createCliConfigContext({
+            configDir,
+        });
+        if (!configContextResult.ok()) {
+            return configContextResult;
         }
 
-        const settingsResult = await configAdapter.getSettings();
-        if (!settingsResult.ok()) {
-            return settingsResult;
-        }
-
-        const storesResult = await configAdapter.getStores();
-        if (!storesResult.ok()) {
-            return storesResult;
-        }
-
-        const settings = settingsResult.value;
-        const stores = storesResult.value;
-
-        const adapterFactory = (storeName: string) => {
-            // Look up the store's configured path from parsed config
-            const storeEntry = stores[storeName];
-            if (!storeEntry) {
-                throw new Error(
-                    `Store '${storeName}' not found. Available stores: ${Object.keys(stores).join(', ')}`
-                );
-            }
-            const storePath = storeEntry.properties?.path as string | undefined;
-            if (!storePath) {
-                throw new Error(`Store '${storeName}' has no path configured in properties.`);
-            }
-            // Interpret relative store paths relative to the invoking CLI's cwd.
-            // This matches user expectation and allows isolated subprocess tests.
-            const absoluteStorePath = makeAbsolute(resolvePath(effectiveCwd, storePath));
-            return new FilesystemStorageAdapter(configAdapter, {
-                rootDirectory: absoluteStorePath,
-            });
-        };
+        const { configAdapter, settings, stores } = configContextResult.value;
+        const adapterFactory = createCliAdapterFactory(configAdapter);
 
         const now = () => new Date();
         const cortex = Cortex.init({
@@ -121,8 +158,9 @@ export const createCliCommandContext = async (
 
         return ok(context);
     } catch (error) {
-        throw new Error(
-            `Unexpected error creating CLI command context: ${error instanceof Error ? error.message : String(error)}`
-        );
+        return err({
+            code: 'CONTEXT_CREATION_FAILED',
+            message: `Unexpected error creating CLI command context: ${error instanceof Error ? error.message : String(error)}`,
+        });
     }
 };

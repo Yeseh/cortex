@@ -16,7 +16,6 @@
  * ```
  */
 
-import { mkdir, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import { Command } from '@commander-js/extra-typings';
@@ -95,10 +94,10 @@ export async function handleInit(
 ): Promise<void> {
     const cortexConfigDir = resolve(homedir(), '.config', 'cortex');
     const globalStorePath = resolve(cortexConfigDir, 'memory');
-    const configPath = resolve(cortexConfigDir, 'config.yaml');
 
-    await ensureNotInitialized(configPath, globalStorePath, options.force);
-    await initializeGlobalConfig(ctx, cortexConfigDir, configPath, globalStorePath);
+    await initializeConfigAdapter(ctx);
+    await ensureNotInitialized(ctx, globalStorePath, options.force);
+    await createGlobalStore(ctx, globalStorePath);
 
     // Build output
     const output: OutputPayload = {
@@ -115,11 +114,20 @@ export async function handleInit(
 }
 
 const ensureNotInitialized = async (
-    configPath: string,
+    ctx: CortexContext,
     globalStorePath: string,
     force = false,
 ): Promise<void> => {
-    if (!(await pathExists(configPath)) || force) {
+    if (force) {
+        return;
+    }
+
+    const existingStoreResult = await ctx.config.getStore('global');
+    if (!existingStoreResult.ok()) {
+        throwCliError(existingStoreResult.error);
+    }
+
+    if (!existingStoreResult.value) {
         return;
     }
 
@@ -129,33 +137,15 @@ const ensureNotInitialized = async (
     });
 };
 
-const initializeGlobalConfig = async (
-    ctx: CortexContext,
-    cortexConfigDir: string,
-    configPath: string,
-    globalStorePath: string,
-): Promise<void> => {
-    try {
-        await mkdir(cortexConfigDir, { recursive: true });
-        const config: CortexConfig = {
-            settings: getDefaultSettings(),
-            stores: {},
-        };
+const initializeConfigAdapter = async (ctx: CortexContext): Promise<void> => {
+    const config: CortexConfig = {
+        settings: getDefaultSettings(),
+        stores: {},
+    };
 
-        const yamlConfig = serializeOrThrow(config, 'yaml');
-        await Bun.write(configPath, yamlConfig.value);
-
-        const storeResult = await createGlobalStore(ctx, globalStorePath);
-        if (!storeResult.ok()) {
-            throwCliError(storeResult.error);
-        }
-    }
-    catch (error) {
-        throwCliError({
-            code: 'INIT_FAILED',
-            message: `Failed to initialize global config store at ${globalStorePath}.`,
-            cause: error instanceof Error ? error.message : String(error),
-        });
+    const initConfigResult = await ctx.config.initializeConfig(config);
+    if (!initConfigResult.ok()) {
+        throwCliError(initConfigResult.error);
     }
 };
 
@@ -167,13 +157,16 @@ const serializeOrThrow = <T>(value: T, format: OutputFormat) => {
     return serialized;
 };
 
-const createGlobalStore = async (ctx: CortexContext, globalStorePath: string) => {
-    const storeClient = ctx.cortex.getStore('global');
-    if (!storeClient.ok()) {
-        throwCliError(storeClient.error);
+const createGlobalStore = async (ctx: CortexContext, globalStorePath: string): Promise<void> => {
+    const existingStoreResult = await ctx.config.getStore('global');
+    if (!existingStoreResult.ok()) {
+        throwCliError(existingStoreResult.error);
     }
 
-    // TODO: Custom templates
+    if (existingStoreResult.value) {
+        return;
+    }
+
     const templateCategories = configCategoriesToStoreCategories(
         defaultGlobalStoreCategories,
     ).unwrap(); // defaultGlobalStoreCategories is valid, unwrap is safe here
@@ -189,10 +182,10 @@ const createGlobalStore = async (ctx: CortexContext, globalStorePath: string) =>
         },
     };
 
-    const store = storeClient.value;
-    const initResult = await store.initialize(globalStoreData);
-
-    return initResult;
+    const saveStoreResult = await ctx.config.saveStore('global', globalStoreData);
+    if (!saveStoreResult.ok()) {
+        throwCliError(saveStoreResult.error);
+    }
 };
 
 const formatInit = (path: string, categories: readonly string[]): OutputInit => ({
@@ -200,12 +193,3 @@ const formatInit = (path: string, categories: readonly string[]): OutputInit => 
     categories: [...categories],
 });
 
-const pathExists = async (path: string): Promise<boolean> => {
-    try {
-        await stat(path);
-        return true;
-    }
-    catch {
-        return false;
-    }
-};
