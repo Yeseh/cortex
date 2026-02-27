@@ -15,12 +15,12 @@ describe('category/index barrel exports', () => {
         expect(typeof categoryIndex.deleteCategoryHandler).toBe('function');
     });
     it('should export createCategoryInputSchema', () => {
-        expect(categoryIndex.createCategoryInputSchema).toBeDefined();
+        expect(typeof categoryIndex.createCategoryInputSchema.safeParse).toBe('function');
     });
     it('should export setCategoryDescriptionInputSchema', () => {
-        expect(categoryIndex.setCategoryDescriptionInputSchema).toBeDefined();
+        expect(typeof categoryIndex.setCategoryDescriptionInputSchema.safeParse).toBe('function');
     });
     it('should export deleteCategoryInputSchema', () => {
-        expect(categoryIndex.deleteCategoryInputSchema).toBeDefined();
+        expect(typeof categoryIndex.deleteCategoryInputSchema.safeParse).toBe('function');
     });
 });

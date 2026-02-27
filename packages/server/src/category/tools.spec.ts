@@ -8,15 +8,12 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
-import { PassThrough } from 'node:stream';
 
 import { MEMORY_SUBDIR } from '../config.ts';
-import { Cortex } from '@yeseh/cortex-core';
-import { FilesystemConfigAdapter, FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
-import type { CortexContext, ConfigStores } from '@yeseh/cortex-core';
+import type { CortexContext } from '@yeseh/cortex-core';
+import { createTestContext, createTestDir } from '../memory/tools/test-utils.ts';
 import {
     createMockCortexContext,
     createMockCortex,
@@ -33,64 +30,6 @@ import {
     type SetCategoryDescriptionInput,
     type DeleteCategoryInput,
 } from './tools.ts';
-
-// =============================================================================
-// Test helpers
-// =============================================================================
-
-/**
- * Creates a temp directory with a `memory/` subdirectory for the default store.
- */
-const createTestDir = async (): Promise<string> => {
-    const testDir = await mkdtemp(join(tmpdir(), 'cortex-cat-tools-'));
-    const memoryDir = join(testDir, MEMORY_SUBDIR);
-    await mkdir(memoryDir, { recursive: true });
-    return testDir;
-};
-
-/**
- * Creates a real CortexContext backed by a FilesystemStorageAdapter rooted in
- * `${testDir}/memory/`. The default store is registered so that
- * `ctx.cortex.getStore('default')` succeeds and returns an adapter with a
- * real `.categories` property.
- */
-const createTestContext = (testDir: string): CortexContext => {
-    const memoryDir = join(testDir, MEMORY_SUBDIR);
-
-    const storeConfig: ConfigStores = {
-        default: {
-            kind: 'filesystem',
-            categoryMode: 'free',
-            properties: { path: memoryDir },
-            categories: {},
-        },
-    };
-
-    const cortex = Cortex.init({
-        stores: storeConfig as any,
-        adapterFactory: (storeName: string) => {
-            const store = storeConfig[storeName];
-            if (!store) {
-                throw new Error(
-                    `Store '${storeName}' is not registered. Available stores: ${Object.keys(storeConfig).join(', ')}`
-                );
-            }
-            const storePath = store.properties.path as string;
-            const configAdapter = new FilesystemConfigAdapter(join(testDir, 'config.yaml'));
-            return new FilesystemStorageAdapter(configAdapter, { rootDirectory: storePath });
-        },
-    });
-
-    return {
-        settings: { defaultStore: 'default', outputFormat: 'json' },
-        stores: storeConfig,
-        cortex,
-        config: new FilesystemConfigAdapter(join(testDir, 'config.yaml')),
-        now: () => new Date('2024-01-01T00:00:00Z'),
-        stdin: new PassThrough() as unknown as NodeJS.ReadStream,
-        stdout: new PassThrough() as unknown as NodeJS.WriteStream,
-    };
-};
 
 // =============================================================================
 // createCategoryHandler

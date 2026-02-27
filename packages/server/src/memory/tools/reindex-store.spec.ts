@@ -54,8 +54,8 @@ describe('cortex_reindex_store tool', () => {
         const output = JSON.parse(result.content[0]!.text);
 
         expect(output.store).toBe('default');
-        expect(output.warnings).toBeDefined();
         expect(Array.isArray(output.warnings)).toBe(true);
+        expect(output.warnings).toEqual([]);
     });
 
     it('should return error for non-existent store', async () => {

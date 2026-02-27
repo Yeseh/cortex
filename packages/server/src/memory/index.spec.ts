@@ -32,33 +32,33 @@ describe('memory/index barrel exports', () => {
     });
 
     it('should export addMemoryInputSchema', () => {
-        expect(memoryIndex.addMemoryInputSchema).toBeDefined();
+        expect(typeof memoryIndex.addMemoryInputSchema.safeParse).toBe('function');
     });
     it('should export getMemoryInputSchema', () => {
-        expect(memoryIndex.getMemoryInputSchema).toBeDefined();
+        expect(typeof memoryIndex.getMemoryInputSchema.safeParse).toBe('function');
     });
     it('should export updateMemoryInputSchema', () => {
-        expect(memoryIndex.updateMemoryInputSchema).toBeDefined();
+        expect(typeof memoryIndex.updateMemoryInputSchema.safeParse).toBe('function');
     });
     it('should export removeMemoryInputSchema', () => {
-        expect(memoryIndex.removeMemoryInputSchema).toBeDefined();
+        expect(typeof memoryIndex.removeMemoryInputSchema.safeParse).toBe('function');
     });
     it('should export moveMemoryInputSchema', () => {
-        expect(memoryIndex.moveMemoryInputSchema).toBeDefined();
+        expect(typeof memoryIndex.moveMemoryInputSchema.safeParse).toBe('function');
     });
     it('should export listMemoriesInputSchema', () => {
-        expect(memoryIndex.listMemoriesInputSchema).toBeDefined();
+        expect(typeof memoryIndex.listMemoriesInputSchema.safeParse).toBe('function');
     });
     it('should export pruneMemoriesInputSchema', () => {
-        expect(memoryIndex.pruneMemoriesInputSchema).toBeDefined();
+        expect(typeof memoryIndex.pruneMemoriesInputSchema.safeParse).toBe('function');
     });
     it('should export getRecentMemoriesInputSchema', () => {
-        expect(memoryIndex.getRecentMemoriesInputSchema).toBeDefined();
+        expect(typeof memoryIndex.getRecentMemoriesInputSchema.safeParse).toBe('function');
     });
     it('should export reindexStoreHandler', () => {
         expect(typeof memoryIndex.reindexStoreHandler).toBe('function');
     });
     it('should export reindexStoreInputSchema', () => {
-        expect(memoryIndex.reindexStoreInputSchema).toBeDefined();
+        expect(typeof memoryIndex.reindexStoreInputSchema.safeParse).toBe('function');
     });
 });

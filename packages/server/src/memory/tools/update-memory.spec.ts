@@ -97,7 +97,7 @@ describe('cortex_update_memory tool', () => {
             { store: 'default', path: 'project/update-target' },
         );
         const output = JSON.parse(getResult.content[0]!.text);
-        expect(output.metadata.expires_at).toBeDefined();
+        expect(output.metadata.expires_at).toBe(futureDate);
     });
 
     it('should clear expiry', async () => {
