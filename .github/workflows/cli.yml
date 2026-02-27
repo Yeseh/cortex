@@ -81,8 +81,7 @@ jobs:
               run: bun test packages/cli/
 
             - name: Run acceptance test script
-              shell: pwsh
-              run: ./scripts/acceptance-test.ps1
+              run: bash ./scripts/acceptance-test.sh
 
     build:
         name: Build
