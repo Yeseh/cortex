@@ -11,7 +11,7 @@
 
 > ⚠️ **Heads up:** this project is experimental and under active development. No guarantees it will work as expected.
 
-A hierarchical memory system for AI coding agents. Cortex provides persistent, structured storage that agents can use to maintain context across sessions.
+Cortex gives AI coding agents persistent, structured memory across sessions. Agents read and write named memories organized into stores and categories — so context survives between conversations, projects, and machines.
 
 ## Packages
 
@@ -24,85 +24,106 @@ This is a monorepo containing the following packages:
 | [`@yeseh/cortex-cli`](./packages/cli)               | Command-line interface                   |
 | [`@yeseh/cortex-server`](./packages/server)         | MCP server for AI agent integration      |
 
-## Quick Start
+## MCP Server Setup
+
+The primary way to use Cortex is as an MCP server. Once connected, AI agents can call Cortex tools to read, write, and organize memories.
+
+### Build the binary
 
 ```bash
-# Install dependencies
+git clone https://github.com/yeseh/cortex.git
+cd cortex
 bun install
-
-# Initialize global configuration
-bun run packages/cli/src/run.ts init
-
-# Add a memory
-bun run packages/cli/src/run.ts memory add project/notes/architecture -c "Use event sourcing"
-
-# List memories
-bun run packages/cli/src/run.ts memory list project/notes
+bun run compile:mcp     # outputs ./bin/cortex-mcp
 ```
 
-## Installation
+### Claude Desktop
 
-### CLI
-
-```bash
-# Global installation
-bun add -g @yeseh/cortex-cli
-
-# Then use directly
-cortex memory add project/notes -c "Content here"
-```
-
-### MCP Server
-
-Add to your Claude Desktop config:
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 
 ```json
 {
     "mcpServers": {
         "cortex": {
-            "command": "cortex-mcp"
+            "command": "/path/to/bin/cortex-mcp"
         }
     }
 }
 ```
 
-### As a Library
+### OpenCode
+
+Add to your `opencode.json`:
+
+```json
+{
+    "mcp": {
+        "cortex": {
+            "type": "stdio",
+            "command": "/path/to/bin/cortex-mcp"
+        }
+    }
+}
+```
+
+### MCP Tools
+
+Once connected, agents have access to the following tools:
+
+| Tool                              | Description                                   |
+| --------------------------------- | --------------------------------------------- |
+| `cortex_add_memory`               | Create a new memory                           |
+| `cortex_get_memory`               | Retrieve memory content and metadata          |
+| `cortex_update_memory`            | Update memory content or metadata             |
+| `cortex_remove_memory`            | Delete a memory                               |
+| `cortex_move_memory`              | Move or rename a memory                       |
+| `cortex_list_memories`            | List memories in a category                   |
+| `cortex_get_recent_memories`      | Retrieve the N most recently updated memories |
+| `cortex_prune_memories`           | Delete all expired memories                   |
+| `cortex_list_stores`              | List all available memory stores              |
+| `cortex_create_store`             | Create a new memory store                     |
+| `cortex_reindex_store`            | Rebuild category indexes for a store          |
+| `cortex_create_category`          | Create a category and its parent hierarchy    |
+| `cortex_delete_category`          | Delete a category and all its contents        |
+| `cortex_set_category_description` | Set or clear a category description           |
+
+## CLI
+
+The CLI is for manual memory management — inspecting, editing, or scripting memory operations outside of an agent session.
+
+### Build the binary
 
 ```bash
-bun add @yeseh/cortex-core @yeseh/cortex-storage-fs
+bun run compile:cli     # outputs ./bin/cortex
 ```
 
-```typescript
-import { createMemory, validateMemorySlugPath } from '@yeseh/cortex-core/memory';
-import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
+### Initialize
 
-const adapter = new FilesystemStorageAdapter({ rootDirectory: '.cortex' });
-const memory = createMemory('My content', { tags: ['example'] });
-await adapter.writeMemory('notes/example', memory.value);
+```bash
+# Initialize global configuration (~/.config/cortex)
+cortex init
 ```
-
-## CLI Commands
 
 ### Memory Commands
 
 ```bash
 cortex memory add <path> -c "content"    # Create a memory
-cortex memory show <path>                 # Display a memory
-cortex memory update <path> -c "new"      # Update a memory
-cortex memory remove <path>               # Delete a memory
-cortex memory move <from> <to>            # Move/rename a memory
-cortex memory list [category]             # List memories
+cortex memory show <path>                # Display a memory
+cortex memory update <path> -c "new"     # Update a memory
+cortex memory remove <path>              # Delete a memory
+cortex memory move <from> <to>           # Move/rename a memory
+cortex memory list [category]            # List memories
 ```
 
 ### Store Commands
 
 ```bash
-cortex store list                         # List registered stores
-cortex store add <name> <path>            # Register a store
-cortex store remove <name>                # Unregister a store
-cortex store init [path]                  # Initialize a new store
-cortex store prune                        # Remove expired memories
-cortex store reindex                      # Rebuild indexes
+cortex store list                        # List registered stores
+cortex store add <name> <path>           # Register a store
+cortex store remove <name>               # Unregister a store
+cortex store init [path]                 # Initialize a new store
+cortex store prune                       # Remove expired memories
+cortex store reindex                     # Rebuild indexes
 ```
 
 ## Store Resolution
@@ -119,36 +140,34 @@ Cortex uses a YAML configuration file at `~/.config/cortex/config.yaml`:
 
 ```yaml
 settings:
-  outputFormat: yaml  # Output format: yaml, json, or toon
-  autoSummaryThreshold: 0
-  strictLocal: false
+    outputFormat: yaml # Output format: yaml, json, or toon
 
 stores:
-  default:
-    path: /home/user/.config/cortex/memory
-    description: Global user memory store
-    categoryMode: subcategories  # free, subcategories, or strict
-    categories:
-      human:
-        description: User identity and preferences
-        subcategories:
-          profile:
-            description: User profile information
-          preferences:
-            description: Coding style and workflow preferences
-      standards:
-        description: Coding standards and architecture decisions
+    default:
+        path: /home/user/.config/cortex/memory
+        description: Global user memory store
+        categoryMode: free # free, subcategories, or strict
+        categories:
+            human:
+                description: User identity and preferences
+                subcategories:
+                    profile:
+                        description: User profile information
+                    preferences:
+                        description: Coding style and workflow preferences
+            standards:
+                description: Coding standards and architecture decisions
 ```
 
 ### Category Modes
 
 Control how categories can be created and deleted:
 
-| Mode | Description |
-|------|-------------|
-| `free` | Categories can be created/deleted freely (default) |
+| Mode            | Description                                                  |
+| --------------- | ------------------------------------------------------------ |
+| `free`          | Categories can be created/deleted freely (default)           |
 | `subcategories` | Only subcategories of config-defined root categories allowed |
-| `strict` | Only config-defined categories allowed, no runtime creation |
+| `strict`        | Only config-defined categories allowed, no runtime creation  |
 
 ### Category Hierarchy
 
@@ -159,6 +178,43 @@ Define protected category structures in your config. Each category supports:
 
 Categories defined in config are protected from deletion. In `subcategories` mode, new categories can be created under config-defined roots. In `strict` mode, only explicitly defined categories are allowed.
 
+## As a Library
+
+Core types and operations are available for embedding in your own tools. Note that the library API is low-level — this is the same layer used internally by the CLI and MCP server.
+
+```bash
+bun add @yeseh/cortex-core @yeseh/cortex-storage-fs
+```
+
+```typescript
+import { join } from 'node:path';
+import { Cortex } from '@yeseh/cortex-core';
+import { FilesystemStorageAdapter, FilesystemConfigAdapter } from '@yeseh/cortex-storage-fs';
+
+const cortex = Cortex.init({
+    adapterFactory: (storeName) => {
+        const storeRoot = join('.cortex', storeName);
+        return new FilesystemStorageAdapter(
+            new FilesystemConfigAdapter(join(storeRoot, '.config.yaml')),
+            { rootDirectory: storeRoot }
+        );
+    },
+});
+
+const storeResult = cortex.getStore('my-store');
+if (storeResult.ok()) {
+    const memory = storeResult.value.getMemory('notes/example');
+    const result = await memory.create({
+        content: 'My content',
+        source: 'user',
+        tags: ['example'],
+    });
+    if (result.ok()) {
+        console.log('Created:', result.value.path.toString());
+    }
+}
+```
+
 ## Development
 
 ```bash
@@ -166,7 +222,7 @@ Categories defined in config are protected from deletion. In `subcategories` mod
 bun install
 
 # Run all tests
-bun test
+bun test packages
 
 # Run tests for a specific package
 bun test packages/core
@@ -180,7 +236,7 @@ bun run typecheck
 # Lint
 bun run lint
 
-# Build
+# Build all packages
 bun run build
 ```
 
@@ -195,11 +251,10 @@ cortex/
 │   │       ├── category/   # Category and index management
 │   │       ├── store/      # Store registry
 │   │       ├── storage/    # Storage port interfaces
-│   │       └── validation/ # Input validation utilities
+│   │       └── config/     # Configuration parsing
 │   ├── storage-fs/     # @yeseh/cortex-storage-fs
 │   │   └── src/
-│   │       ├── index.ts    # FilesystemStorageAdapter
-│   │       └── ...         # Filesystem operations
+│   │       └── ...         # Filesystem storage adapter
 │   ├── cli/            # @yeseh/cortex-cli
 │   │   └── src/
 │   │       ├── commands/   # CLI commands
