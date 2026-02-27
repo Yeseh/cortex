@@ -13,6 +13,7 @@ import type { StorageAdapter, ReindexResult } from '@/storage';
 import { CategoryPath } from '@/category/category-path.ts';
 import type {
     CategoryError,
+    CategoryModeContext,
     CreateCategoryResult,
     DeleteCategoryResult,
     SetDescriptionResult,
@@ -349,6 +350,7 @@ export class CategoryClient {
      * Idempotent operation - succeeds if category already exists with
      * `created: false`. Creates any missing intermediate parent categories.
      *
+     * @param modeContext - Optional mode context for permission enforcement
      * @returns Result with creation details or CategoryError
      *
      * @example
@@ -368,13 +370,15 @@ export class CategoryClient {
      * - Creating root category returns INVALID_PATH error
      * - Parent categories are created automatically if missing
      */
-    async create(): Promise<Result<CreateCategoryResult, CategoryError>> {
+    async create(
+        modeContext?: CategoryModeContext
+    ): Promise<Result<CreateCategoryResult, CategoryError>> {
         const pathResult = this.parsePath();
         if (!pathResult.ok()) {
             return pathResult;
         }
 
-        return createCategory(this.adapter.categories, pathResult.value.toString());
+        return createCategory(this.adapter.categories, pathResult.value.toString(), modeContext);
     }
 
     /**
@@ -385,6 +389,7 @@ export class CategoryClient {
      * - All subcategories and their contents
      * - The category's entry in its parent's index
      *
+     * @param modeContext - Optional mode context for protection checks
      * @returns Result with deletion details or CategoryError
      *
      * @example
@@ -403,13 +408,15 @@ export class CategoryClient {
      * - Deleting non-existent category returns CATEGORY_NOT_FOUND error
      * - Not idempotent: deleting a missing category is an error
      */
-    async delete(): Promise<Result<DeleteCategoryResult, CategoryError>> {
+    async delete(
+        modeContext?: CategoryModeContext
+    ): Promise<Result<DeleteCategoryResult, CategoryError>> {
         const pathResult = this.parsePath();
         if (!pathResult.ok()) {
             return pathResult;
         }
 
-        return deleteCategory(this.adapter.categories, pathResult.value.toString());
+        return deleteCategory(this.adapter.categories, pathResult.value.toString(), modeContext);
     }
 
     /**
@@ -449,6 +456,7 @@ export class CategoryClient {
      * when listing categories.
      *
      * @param description - Description text, or null/empty string to clear
+     * @param modeContext - Optional mode context for protection checks
      * @returns Result with the final description value or CategoryError
      *
      * @example
@@ -471,7 +479,8 @@ export class CategoryClient {
      * - Category must exist (returns CATEGORY_NOT_FOUND if not)
      */
     async setDescription(
-        description: string | null
+        description: string | null,
+        modeContext?: CategoryModeContext
     ): Promise<Result<SetDescriptionResult, CategoryError>> {
         const pathResult = this.parsePath();
         if (!pathResult.ok()) {
@@ -481,7 +490,8 @@ export class CategoryClient {
         return setDescription(
             this.adapter.categories,
             pathResult.value.toString(),
-            description ?? ''
+            description ?? '',
+            modeContext
         );
     }
 

@@ -121,7 +121,7 @@ export const setCategoryDescriptionInputSchema = z.object({
         .string()
         .max(
             MAX_DESCRIPTION_LENGTH,
-            `Description must be ${MAX_DESCRIPTION_LENGTH} characters or less`,
+            `Description must be ${MAX_DESCRIPTION_LENGTH} characters or less`
         )
         .describe('Category description (empty string to clear)'),
 });
@@ -227,7 +227,7 @@ const parseInput = <T>(schema: z.ZodSchema<T>, input: unknown): T => {
 export const createCategoryHandler = async (
     ctx: CortexContext,
     input: CreateCategoryInput,
-    modeContext?: CategoryModeContext,
+    modeContext?: CategoryModeContext
 ): Promise<McpToolResponse> => {
     // Validate input path: empty string should be considered invalid
     if (typeof input.path !== 'string' || input.path.trim() === '') {
@@ -238,12 +238,12 @@ export const createCategoryHandler = async (
         throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
     }
 
-    // Access the adapter through the store client
-    // The adapter is private, but we need it to pass modeContext to operations
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const adapter = (storeResult.value as any).adapter;
-    const { createCategory } = await import('@yeseh/cortex-core/category');
-    const result = await createCategory(adapter.categories, input.path, modeContext);
+    const categoryResult = storeResult.value.getCategory(input.path);
+    if (!categoryResult.ok()) {
+        throw new McpError(ErrorCode.InvalidParams, categoryResult.error.message);
+    }
+
+    const result = await categoryResult.value.create(modeContext);
 
     if (!result.ok()) {
         if (result.error.code === 'INVALID_PATH') {
@@ -259,13 +259,15 @@ export const createCategoryHandler = async (
     }
 
     return {
-        content: [{
-            type: 'text',
-            text: JSON.stringify({
-                path: result.value.path,
-                created: result.value.created,
-            }),
-        }],
+        content: [
+            {
+                type: 'text',
+                text: JSON.stringify({
+                    path: result.value.path,
+                    created: result.value.created,
+                }),
+            },
+        ],
     };
 };
 
@@ -303,20 +305,22 @@ export const createCategoryHandler = async (
 export const setCategoryDescriptionHandler = async (
     ctx: CortexContext,
     input: SetCategoryDescriptionInput,
-    modeContext?: CategoryModeContext,
+    modeContext?: CategoryModeContext
 ): Promise<McpToolResponse> => {
     const storeResult = ctx.cortex.getStore(input.store);
     if (!storeResult.ok()) {
         throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
     }
 
-    // Access the adapter through the store client
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const adapter = (storeResult.value as any).adapter;
-    const { createCategory, setDescription } = await import('@yeseh/cortex-core/category');
+    const categoryResult = storeResult.value.getCategory(input.path);
+    if (!categoryResult.ok()) {
+        throw new McpError(ErrorCode.InvalidParams, categoryResult.error.message);
+    }
+
+    const category = categoryResult.value;
 
     // MCP convenience: auto-create category if it doesn't exist
-    const createResult = await createCategory(adapter.categories, input.path, modeContext);
+    const createResult = await category.create(modeContext);
     if (!createResult.ok() && createResult.error.code !== 'INVALID_PATH') {
         if (
             createResult.error.code === 'ROOT_CATEGORY_NOT_ALLOWED' ||
@@ -327,12 +331,7 @@ export const setCategoryDescriptionHandler = async (
         throw new McpError(ErrorCode.InternalError, createResult.error.message);
     }
 
-    const result = await setDescription(
-        adapter.categories,
-        input.path,
-        input.description,
-        modeContext,
-    );
+    const result = await category.setDescription(input.description, modeContext);
 
     if (!result.ok()) {
         if (result.error.code === 'DESCRIPTION_TOO_LONG') {
@@ -348,13 +347,15 @@ export const setCategoryDescriptionHandler = async (
     }
 
     return {
-        content: [{
-            type: 'text',
-            text: JSON.stringify({
-                path: result.value.path,
-                description: result.value.description,
-            }),
-        }],
+        content: [
+            {
+                type: 'text',
+                text: JSON.stringify({
+                    path: result.value.path,
+                    description: result.value.description,
+                }),
+            },
+        ],
     };
 };
 
@@ -385,18 +386,19 @@ export const setCategoryDescriptionHandler = async (
 export const deleteCategoryHandler = async (
     ctx: CortexContext,
     input: DeleteCategoryInput,
-    modeContext?: CategoryModeContext,
+    modeContext?: CategoryModeContext
 ): Promise<McpToolResponse> => {
     const storeResult = ctx.cortex.getStore(input.store);
     if (!storeResult.ok()) {
         throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
     }
 
-    // Access the adapter through the store client
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const adapter = (storeResult.value as any).adapter;
-    const { deleteCategory } = await import('@yeseh/cortex-core/category');
-    const result = await deleteCategory(adapter.categories, input.path, modeContext);
+    const categoryResult = storeResult.value.getCategory(input.path);
+    if (!categoryResult.ok()) {
+        throw new McpError(ErrorCode.InvalidParams, categoryResult.error.message);
+    }
+
+    const result = await categoryResult.value.delete(modeContext);
 
     if (!result.ok()) {
         if (result.error.code === 'ROOT_CATEGORY_REJECTED') {
@@ -412,13 +414,15 @@ export const deleteCategoryHandler = async (
     }
 
     return {
-        content: [{
-            type: 'text',
-            text: JSON.stringify({
-                path: result.value.path,
-                deleted: result.value.deleted,
-            }),
-        }],
+        content: [
+            {
+                type: 'text',
+                text: JSON.stringify({
+                    path: result.value.path,
+                    deleted: result.value.deleted,
+                }),
+            },
+        ],
     };
 };
 
@@ -464,14 +468,14 @@ export const deleteCategoryHandler = async (
 export const registerCategoryTools = (
     server: McpServer,
     ctx: CortexContext,
-    categoryConfig?: CategoryToolsOptions,
+    categoryConfig?: CategoryToolsOptions
 ): void => {
     const mode = categoryConfig?.mode ?? 'free';
     const modeContext: CategoryModeContext | undefined = categoryConfig
         ? {
-            mode,
-            configCategories: categoryConfig.configCategories,
-        }
+              mode,
+              configCategories: categoryConfig.configCategories,
+          }
         : undefined;
 
     // In strict mode, don't register create/delete tools
@@ -484,12 +488,11 @@ export const registerCategoryTools = (
                 try {
                     const parsed = parseInput(createCategoryInputSchema, input);
                     return createCategoryHandler(ctx, parsed, modeContext);
-                }
-                catch (error) {
+                } catch (error) {
                     if (error instanceof McpError) return errorResponse(error.message);
                     throw error;
                 }
-            },
+            }
         );
 
         server.tool(
@@ -500,12 +503,11 @@ export const registerCategoryTools = (
                 try {
                     const parsed = parseInput(deleteCategoryInputSchema, input);
                     return deleteCategoryHandler(ctx, parsed, modeContext);
-                }
-                catch (error) {
+                } catch (error) {
                     if (error instanceof McpError) return errorResponse(error.message);
                     throw error;
                 }
-            },
+            }
         );
     }
 
@@ -518,11 +520,10 @@ export const registerCategoryTools = (
             try {
                 const parsed = parseInput(setCategoryDescriptionInputSchema, input);
                 return setCategoryDescriptionHandler(ctx, parsed, modeContext);
-            }
-            catch (error) {
+            } catch (error) {
                 if (error instanceof McpError) return errorResponse(error.message);
                 throw error;
             }
-        },
+        }
     );
 };

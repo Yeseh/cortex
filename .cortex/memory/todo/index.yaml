@@ -5,9 +5,6 @@ memories:
   - path: todo/fix-mcp-integration-test-failures
     token_estimate: 180
     updated_at: 2026-02-27T19:59:37.776Z
-  - path: todo/manual-client-validation
-    token_estimate: 991
-    updated_at: 2026-02-27T20:27:48.113Z
   - path: todo/restructure-readme-for-beta
     token_estimate: 289
     updated_at: 2026-02-26T20:01:24.862Z
