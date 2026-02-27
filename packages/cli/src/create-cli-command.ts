@@ -9,7 +9,6 @@ import {
 } from '@yeseh/cortex-core';
 import { homedir } from 'os';
 import { isAbsolute, resolve } from 'path';
-import { resolve as resolvePath } from 'node:path';
 import { FilesystemStorageAdapter, FilesystemConfigAdapter } from '@yeseh/cortex-storage-fs';
 import { stdin, stdout } from 'process';
 
@@ -60,9 +59,7 @@ export const createCliConfigAdapter = (configPath: string): FilesystemConfigAdap
     return new FilesystemConfigAdapter(configPath);
 };
 
-export const createCliAdapterFactory = (
-    configAdapter: FilesystemConfigAdapter,
-) => {
+export const createCliAdapterFactory = (configAdapter: FilesystemConfigAdapter) => {
     return (storeName: string) => {
         const stores = configAdapter.stores!;
         const storeEntry = stores[storeName];
