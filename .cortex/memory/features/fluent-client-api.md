@@ -3,7 +3,7 @@ created_at: 2026-02-17T20:36:26.000Z
 updated_at: 2026-02-17T20:36:26.000Z
 tags: [feature, api, client, azure-sdk, fluent]
 source: mcp
-citations: [.context/2026-02-17-fluent-client-api-brainstorm.md]
+citations: [docs/brainstorms/2026-02-17-fluent-client-api-brainstorm.md]
 ---
 
 # Feature: Fluent Client API (Azure SDK Style)
@@ -89,4 +89,4 @@ Root category path is `/`.
 
 ## References
 
-- `.context/2026-02-17-fluent-client-api-brainstorm.md` - Full brainstorm session
+- `docs/brainstorms/2026-02-17-fluent-client-api-brainstorm.md` - Full brainstorm session

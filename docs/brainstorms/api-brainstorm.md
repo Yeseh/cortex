@@ -262,7 +262,7 @@ _None remaining — ready for proposal formalization._
 
 ## References
 
-- Memory system design: `.context/memory-brainstorm.md`
+- Memory system design: `docs/brainstorms/memory-brainstorm.md`
 - Project context: `openspec/project.md`
 - MCP TypeScript SDK: https://github.com/modelcontextprotocol/typescript-sdk
 - Microsoft MCP docs: https://learn.microsoft.com/en-us/azure/developer/ai/build-mcp-server-ts

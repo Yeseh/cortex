@@ -1,6 +1,6 @@
 ## Context
 
-This change replaces per-category YAML index files with a single SQLite database per store. The brainstorm document at `.context/2026-02-13-sqlite-index-brainstorm.md` contains the full design rationale.
+This change replaces per-category YAML index files with a single SQLite database per store. The brainstorm document at `docs/brainstorms/2026-02-13-sqlite-index-brainstorm.md` contains the full design rationale.
 
 ## Goals
 

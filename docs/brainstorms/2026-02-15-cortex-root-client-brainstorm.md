@@ -417,7 +417,7 @@ interface CortexContext {
 
 ## Related Documents
 
-- [Registry Brainstorm (2026-01-29)](.context/registry-brainstorm.md) - Original Registry pattern design
+- [Registry Brainstorm (2026-01-29)](docs/brainstorms/registry-brainstorm.md) - Original Registry pattern design
 - [Todo: Review Registry Implementation](cortex:todo/review-registry-implementation) - Audit task that prompted this session
 - [Todo: Decrease MCP FS Coupling](cortex:todo/decrease-mcp-fs-coupling) - Related decoupling work
 

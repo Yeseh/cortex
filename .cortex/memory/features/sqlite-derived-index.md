@@ -2,20 +2,21 @@
 created_at: 2026-02-13T20:26:10.106Z
 updated_at: 2026-02-13T21:47:14.829Z
 tags:
-  - feature
-  - sqlite
-  - index
-  - query
-  - design-complete
-  - openspec
+    - feature
+    - sqlite
+    - index
+    - query
+    - design-complete
+    - openspec
 source: mcp
 citations:
-  - .context/2026-02-13-sqlite-index-brainstorm.md
+    - docs/brainstorms/2026-02-13-sqlite-index-brainstorm.md
 ---
+
 # Feature: SQLite as Derived Index Layer
 
 **Status:** Design complete — OpenSpec proposals created
-**Brainstorm doc:** `.context/2026-02-13-sqlite-index-brainstorm.md`
+**Brainstorm doc:** `docs/brainstorms/2026-02-13-sqlite-index-brainstorm.md`
 **OpenSpec proposals:** `refactor-index-storage` (prerequisite), `add-sqlite-index` (main)
 
 ## Summary

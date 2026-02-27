@@ -43,8 +43,8 @@ Net effect: implementation picked a split-tree (`memories/` + `indexes/`) that c
 
 These are not OpenSpec specs, but they _are_ the project’s recorded design intent and they contradict the current implementation:
 
-- `.context/memory-design.md:23-38` shows `memory/<category>/index.yaml` living alongside memory files.
-- `.context/memory-brainstorm.md:36-52` shows `.cortex/<category>/index.yaml` living alongside memory files.
+- `docs/brainstorms/memory-design.md:23-38` shows `memory/<category>/index.yaml` living alongside memory files.
+- `docs/brainstorms/memory-brainstorm.md:36-52` shows `.cortex/<category>/index.yaml` living alongside memory files.
 
 ### C. A later change proposal reinforced the wrong model
 

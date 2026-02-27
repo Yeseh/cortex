@@ -48,7 +48,7 @@
 
 - `src/core/index/types.ts` (43 → 160 lines)
 - `src/core/index/index.ts` (7 → 38 lines)
-- `.context/plans/2026-01-28-refactor-core-index.md` (new)
+- `docs/plans/2026-01-28-refactor-core-index.md` (now at docs/plans/)
 
 **Review Status:** Approved by code-reviewer agent
 
