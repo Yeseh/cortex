@@ -1,6 +1,0 @@
-memories: 
-  []
-subcategories: 
-  - path: test/categories/level1
-    memory_count: 0
-    description: Test category for runbook validation
