@@ -5,30 +5,9 @@
 
 import { describe, it, expect } from 'bun:test';
 import type { StorageAdapterError } from '@/storage/index.ts';
-import { Memory } from '@/memory';
 import { getMemory } from './get.ts';
-import { createMockStorage } from './test-helpers.spec.ts';
+import { createMockStorage, buildMemory } from './test-helpers.spec.ts';
 import { err, ok } from '@/result.ts';
-
-const buildMemory = (path: string, overrides?: Partial<Memory['metadata']>): Memory => {
-    const now = new Date('2025-01-15T12:00:00.000Z');
-    const metadata = {
-        createdAt: now,
-        updatedAt: now,
-        tags: [
-            'test', 'sample',
-        ],
-        source: 'test',
-        expiresAt: undefined,
-        citations: [],
-        ...overrides,
-    };
-    const result = Memory.init(path, metadata, 'Sample memory content');
-    if (!result.ok()) {
-        throw new Error('Test setup failed to create memory.');
-    }
-    return result.value;
-};
 
 describe('getMemory', () => {
     it('should return memory when found', async () => {

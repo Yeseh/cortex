@@ -4,39 +4,16 @@
  */
 
 import { describe, it, expect } from 'bun:test';
-import { Memory } from '@/memory';
 import { MemoryPath } from '@/memory/memory-path.ts';
 import { listMemories } from './list.ts';
-import { buildIndex, createMockStorage } from './test-helpers.spec.ts';
+import {
+    buildIndex,
+    buildMemory,
+    createMockStorage,
+    memoryPathToString,
+} from './test-helpers.spec.ts';
 import { ok } from '@/result.ts';
 import { CategoryPath } from '@/category/category-path.ts';
-
-const buildMemory = (path: string, expiresAt?: Date): Memory => {
-    const now = new Date('2025-01-15T12:00:00.000Z');
-    const result = Memory.init(
-        path,
-        {
-            createdAt: now,
-            updatedAt: now,
-            tags: [
-                'test', 'sample',
-            ],
-            source: 'test',
-            expiresAt,
-            citations: [],
-        },
-        'Sample memory content',
-    );
-
-    if (!result.ok()) {
-        throw new Error('Test setup failed to create memory.');
-    }
-
-    return result.value;
-};
-
-const pathToString = (memoryPath: MemoryPath): string =>
-    `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`;
 
 describe('listMemories', () => {
     it('should list memories in a category', async () => {
@@ -66,7 +43,7 @@ describe('listMemories', () => {
                 },
             },
             memories: {
-                load: async (memoryPath) => ok(buildMemory(pathToString(memoryPath))),
+                load: async (memoryPath) => ok(buildMemory(memoryPathToString(memoryPath))),
             },
         });
         const result = await listMemories(storage, {
@@ -113,7 +90,7 @@ describe('listMemories', () => {
             },
             memories: {
                 load: async () =>
-                    ok(buildMemory('project/test/expired', new Date('2025-01-10T12:00:00.000Z'))),
+                    ok(buildMemory('project/test/expired', { expiresAt: new Date('2025-01-10T12:00:00.000Z') })),
             },
         });
         const now = new Date('2025-06-15T12:00:00Z');
@@ -143,7 +120,7 @@ describe('listMemories', () => {
             },
             memories: {
                 load: async () =>
-                    ok(buildMemory('project/test/expired', new Date('2025-01-10T12:00:00.000Z'))),
+                    ok(buildMemory('project/test/expired', { expiresAt: new Date('2025-01-10T12:00:00.000Z') })),
             },
         });
         const now = new Date('2025-06-15T12:00:00Z');
@@ -250,7 +227,7 @@ describe('listMemories', () => {
             },
             memories: {
                 load: async (memoryPath: MemoryPath) => {
-                    const path = pathToString(memoryPath);
+                    const path = memoryPathToString(memoryPath);
                     if (path === 'project/test/exists') {
                         return ok(buildMemory('project/test/exists'));
                     }

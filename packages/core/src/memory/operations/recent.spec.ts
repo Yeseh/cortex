@@ -5,7 +5,6 @@
 
 import { describe, it, expect } from 'bun:test';
 import type { Memory } from '@/memory/memory.ts';
-import type { MemoryPath } from '@/memory/memory-path.ts';
 import { getRecentMemories } from './recent.ts';
 import {
     ok,
@@ -14,10 +13,8 @@ import {
     createMockStorage,
     categoryPath,
     memoryPath,
+    memoryPathToString,
 } from './test-helpers.spec.ts';
-
-const pathToString = (memoryPath: MemoryPath): string =>
-    `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`;
 
 const buildRecentMemory = (
     path: string,
@@ -62,7 +59,7 @@ describe('getRecentMemories', () => {
 
         const storage = createMockStorage({
             memories: {
-                load: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
+                load: async (path) => ok(memoryFiles[memoryPathToString(path)] ?? null),
             },
             indexes: {
                 load: async (path) => {
@@ -148,7 +145,7 @@ describe('getRecentMemories', () => {
 
         const storage = createMockStorage({
             memories: {
-                load: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
+                load: async (path) => ok(memoryFiles[memoryPathToString(path)] ?? null),
             },
             indexes: {
                 load: async (path) => {
@@ -213,7 +210,7 @@ describe('getRecentMemories', () => {
 
         const storage = createMockStorage({
             memories: {
-                load: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
+                load: async (path) => ok(memoryFiles[memoryPathToString(path)] ?? null),
             },
             indexes: {
                 load: async (path) => {
@@ -275,7 +272,7 @@ describe('getRecentMemories', () => {
 
         const storage = createMockStorage({
             memories: {
-                load: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
+                load: async (path) => ok(memoryFiles[memoryPathToString(path)] ?? null),
             },
             indexes: {
                 load: async (path) => {
@@ -347,7 +344,7 @@ describe('getRecentMemories', () => {
 
         const storage = createMockStorage({
             memories: {
-                load: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
+                load: async (path) => ok(memoryFiles[memoryPathToString(path)] ?? null),
             },
             indexes: {
                 load: async (path) => {
@@ -410,7 +407,7 @@ describe('getRecentMemories', () => {
 
         const storage = createMockStorage({
             memories: {
-                load: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
+                load: async (path) => ok(memoryFiles[memoryPathToString(path)] ?? null),
             },
             indexes: {
                 load: async (path) => {
@@ -482,7 +479,7 @@ describe('getRecentMemories', () => {
 
         const storage = createMockStorage({
             memories: {
-                load: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
+                load: async (path) => ok(memoryFiles[memoryPathToString(path)] ?? null),
             },
             indexes: {
                 load: async (path) => {
@@ -553,7 +550,7 @@ describe('getRecentMemories', () => {
 
         const storage = createMockStorage({
             memories: {
-                load: async (path) => ok(memoryFiles[pathToString(path)] ?? null),
+                load: async (path) => ok(memoryFiles[memoryPathToString(path)] ?? null),
             },
             indexes: {
                 load: async (path) => {

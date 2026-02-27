@@ -7,47 +7,27 @@ import { describe, it, expect } from 'bun:test';
 import type { StorageAdapterError } from '@/storage/index.ts';
 import type { MemoryData, Memory } from '@/memory';
 import { createMemory } from './create.ts';
-import { createMockStorage } from './test-helpers.spec.ts';
+import { createMockStorage, createMemoryData } from './test-helpers.spec.ts';
 import { err, ok } from '@/result.ts';
-
-/** Helper to create a minimal MemoryData with metadata */
-const createMemoryData = (
-    content: string,
-    source: string,
-    overrides: {
-        tags?: string[];
-        expiresAt?: Date;
-        citations?: string[];
-    } = {},
-): MemoryData => {
-    const now = new Date();
-    return {
-        content,
-        metadata: {
-            createdAt: now,
-            updatedAt: now,
-            tags: overrides.tags ?? [],
-            source,
-            expiresAt: overrides.expiresAt,
-            citations: overrides.citations ?? [],
-        },
-    };
-};
 
 describe('createMemory', () => {
     it('should create a memory with all fields', async () => {
         let writtenMemory: MemoryData | undefined;
         let indexedMemory: Memory | undefined;
+        let writePath: string | undefined;
+        let indexedPath: string | undefined;
 
         const storage = createMockStorage({
             memories: {
-                save: async (_path, memory) => {
+                save: async (path, memory) => {
+                    writePath = path.toString();
                     writtenMemory = memory;
                     return ok(undefined);
                 },
             },
             indexes: {
                 updateAfterMemoryWrite: async (memory) => {
+                    indexedPath = memory.path.toString();
                     indexedMemory = memory;
                     return ok(undefined);
                 },
@@ -72,6 +52,9 @@ describe('createMemory', () => {
         expect(result.ok()).toBe(true);
         expect(writtenMemory).toBeDefined();
         expect(indexedMemory).toBeDefined();
+        expect(writePath).toBe('project/test/memory');
+        expect(indexedPath).toBe('project/test/memory');
+        expect(writtenMemory?.content).toBe('Test content');
         if (indexedMemory) {
             expect(indexedMemory.path.category.toString()).toBe('project/test');
             expect(indexedMemory.path.slug.toString()).toBe('memory');

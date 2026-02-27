@@ -5,12 +5,8 @@
 
 import { describe, it, expect } from 'bun:test';
 import type { StorageAdapterError } from '@/storage/index.ts';
-import type { MemoryPath } from '@/memory/memory-path.ts';
 import { removeMemory } from './remove.ts';
-import { ok, err, createMockStorage, sampleMemory } from './test-helpers.spec.ts';
-
-const pathToString = (memoryPath: MemoryPath): string =>
-    `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`;
+import { ok, err, createMockStorage, sampleMemory, memoryPathToString } from './test-helpers.spec.ts';
 
 describe('removeMemory', () => {
     it('should remove existing memory', async () => {
@@ -19,7 +15,7 @@ describe('removeMemory', () => {
             memories: {
                 load: async () => ok(sampleMemory),
                 remove: async (path) => {
-                    removedPath = pathToString(path);
+                    removedPath = memoryPathToString(path);
                     return ok(undefined);
                 },
             },

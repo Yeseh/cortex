@@ -10,6 +10,7 @@
 import type { StorageAdapter } from '@/storage';
 import { err, ok } from '@/result.ts';
 import { Memory, type MemoryMetadata } from '@/memory/memory.ts';
+import type { MemoryData } from '@/memory';
 import type { Category } from '@/category/types.ts';
 import { CategoryPath } from '@/category/category-path.ts';
 import { MemoryPath } from '@/memory/memory-path.ts';
@@ -82,6 +83,9 @@ export const categoryPath = (path: string): CategoryPath =>
 
 export const memoryPath = (path: string): MemoryPath => MemoryPath.fromString(path).unwrap();
 
+export const memoryPathToString = (memoryPath: MemoryPath): string =>
+    `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`;
+
 // Re-export for convenience in tests
 export { ok, err };
 
@@ -111,6 +115,32 @@ export const buildMemoryFixture = (
     }
 
     return result.value;
+};
+
+export const buildMemory = (path: string, overrides: Partial<MemoryMetadata> = {}): Memory =>
+    buildMemoryFixture(path, overrides, 'Sample memory content');
+
+export const createMemoryData = (
+    content: string,
+    source: string,
+    overrides: {
+        tags?: string[];
+        expiresAt?: Date;
+        citations?: string[];
+    } = {},
+): MemoryData => {
+    const now = new Date();
+    return {
+        content,
+        metadata: {
+            createdAt: now,
+            updatedAt: now,
+            tags: overrides.tags ?? [],
+            source,
+            expiresAt: overrides.expiresAt,
+            citations: overrides.citations ?? [],
+        },
+    };
 };
 
 export const sampleMemory = buildMemoryFixture('project/test/memory');

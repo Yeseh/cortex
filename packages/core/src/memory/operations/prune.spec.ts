@@ -5,7 +5,6 @@
 
 import { describe, it, expect } from 'bun:test';
 import type { StorageAdapterError } from '@/storage/index.ts';
-import type { MemoryPath } from '@/memory/memory-path.ts';
 import { CategoryPath } from '@/category/category-path.ts';
 import { pruneExpiredMemories } from './prune.ts';
 import {
@@ -17,10 +16,8 @@ import {
     memoryWithExpiry,
     categoryPath,
     memoryPath,
+    memoryPathToString,
 } from './test-helpers.spec.ts';
-
-const pathToString = (memoryPath: MemoryPath): string =>
-    `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`;
 
 const expiredAt = new Date('2025-01-10T12:00:00.000Z');
 
@@ -70,7 +67,7 @@ describe('pruneExpiredMemories', () => {
                 load: async (path) =>
                     ok(
                         buildMemoryFixture(
-                            pathToString(path),
+                            memoryPathToString(path),
                             { expiresAt: expiredAt },
                             'Expired content',
                         ),
@@ -120,13 +117,13 @@ describe('pruneExpiredMemories', () => {
                 load: async (path) =>
                     ok(
                         buildMemoryFixture(
-                            pathToString(path),
+                            memoryPathToString(path),
                             { expiresAt: expiredAt },
                             'Expired content',
                         ),
                     ),
                 remove: async (path) => {
-                    deletedPaths.push(pathToString(path));
+                    deletedPaths.push(memoryPathToString(path));
                     return ok(undefined);
                 },
             },
@@ -171,7 +168,7 @@ describe('pruneExpiredMemories', () => {
                 load: async (path) =>
                     ok(
                         buildMemoryFixture(
-                            pathToString(path),
+                            memoryPathToString(path),
                             { expiresAt: expiredAt },
                             'Expired content',
                         ),
@@ -233,7 +230,7 @@ describe('pruneExpiredMemories', () => {
                 load: async (path) =>
                     ok(
                         buildMemoryFixture(
-                            pathToString(path),
+                            memoryPathToString(path),
                             { expiresAt: expiredAt },
                             'Expired content',
                         ),
@@ -274,7 +271,7 @@ describe('pruneExpiredMemories', () => {
             memories: {
                 load: async () => ok(memoryWithExpiry), // Not expired
                 remove: async (path) => {
-                    deletedPaths.push(pathToString(path));
+                    deletedPaths.push(memoryPathToString(path));
                     return ok(undefined);
                 },
             },
@@ -327,13 +324,13 @@ describe('pruneExpiredMemories', () => {
                 load: async (path) =>
                     ok(
                         buildMemoryFixture(
-                            pathToString(path),
+                            memoryPathToString(path),
                             { expiresAt: expiredAt },
                             'Expired content',
                         ),
                     ),
                 remove: async (path) => {
-                    deletedPaths.push(pathToString(path));
+                    deletedPaths.push(memoryPathToString(path));
                     return ok(undefined);
                 },
             },
@@ -388,13 +385,13 @@ describe('pruneExpiredMemories', () => {
                 load: async (path) =>
                     ok(
                         buildMemoryFixture(
-                            pathToString(path),
+                            memoryPathToString(path),
                             { expiresAt: expiredAt },
                             'Expired content',
                         ),
                     ),
                 remove: async (path) => {
-                    deletedPaths.push(pathToString(path));
+                    deletedPaths.push(memoryPathToString(path));
                     return ok(undefined);
                 },
             },
@@ -445,13 +442,13 @@ describe('pruneExpiredMemories', () => {
                     load: async (path) =>
                         ok(
                             buildMemoryFixture(
-                                pathToString(path),
+                                memoryPathToString(path),
                                 { expiresAt: expiredAt },
                                 'Expired content',
                             ),
                         ),
                     remove: async (path) => {
-                        deletedPaths.push(pathToString(path));
+                        deletedPaths.push(memoryPathToString(path));
                         return ok(undefined);
                     },
                 },
@@ -521,13 +518,13 @@ describe('pruneExpiredMemories', () => {
                     load: async (path) =>
                         ok(
                             buildMemoryFixture(
-                                pathToString(path),
+                                memoryPathToString(path),
                                 { expiresAt: expiredAt },
                                 'Expired content',
                             ),
                         ),
                     remove: async (path) => {
-                        deletedPaths.push(pathToString(path));
+                        deletedPaths.push(memoryPathToString(path));
                         return ok(undefined);
                     },
                 },

@@ -5,32 +5,14 @@
 
 import { describe, it, expect } from 'bun:test';
 import type { StorageAdapterError } from '@/storage/index.ts';
-import { Memory } from '@/memory';
-import type { MemoryPath } from '@/memory/memory-path.ts';
 import { moveMemory } from './move.ts';
-import { ok, err, createMockStorage } from './test-helpers.spec.ts';
-
-const buildMemory = (path: string): Memory => {
-    const now = new Date('2025-01-15T12:00:00.000Z');
-    const result = Memory.init(
-        path,
-        {
-            createdAt: now,
-            updatedAt: now,
-            tags: [],
-            source: 'test',
-            citations: [],
-        },
-        'Sample memory content',
-    );
-    if (!result.ok()) {
-        throw new Error('Test setup failed to create memory.');
-    }
-    return result.value;
-};
-
-const pathToString = (memoryPath: MemoryPath): string =>
-    `${memoryPath.category.toString()}/${memoryPath.slug.toString()}`;
+import {
+    ok,
+    err,
+    createMockStorage,
+    buildMemory,
+    memoryPathToString,
+} from './test-helpers.spec.ts';
 
 describe('moveMemory', () => {
     it('should move memory successfully', async () => {
@@ -40,12 +22,12 @@ describe('moveMemory', () => {
         const storage = createMockStorage({
             memories: {
                 load: async (path) =>
-                    pathToString(path) === 'project/src/memory'
-                        ? ok(buildMemory('project/src/memory'))
+                    memoryPathToString(path) === 'project/src/memory'
+                        ? ok(buildMemory('project/src/memory', { tags: [] }))
                         : ok(null),
                 move: async (from, to) => {
-                    movedFrom = pathToString(from);
-                    movedTo = pathToString(to);
+                    movedFrom = memoryPathToString(from);
+                    movedTo = memoryPathToString(to);
                     return ok(undefined);
                 },
             },
@@ -85,7 +67,7 @@ describe('moveMemory', () => {
     it('should return DESTINATION_EXISTS for existing destination', async () => {
         const storage = createMockStorage({
             memories: {
-                load: async () => ok(buildMemory('project/src/memory')), // Both source and dest exist
+                load: async () => ok(buildMemory('project/src/memory', { tags: [] })), // Both source and dest exist
             },
         });
         const result = await moveMemory(storage, 'project/src/memory', 'project/dest/memory');
@@ -119,8 +101,8 @@ describe('moveMemory', () => {
         const storage = createMockStorage({
             memories: {
                 load: async (path) =>
-                    pathToString(path) === 'project/src/memory'
-                        ? ok(buildMemory('project/src/memory'))
+                    memoryPathToString(path) === 'project/src/memory'
+                        ? ok(buildMemory('project/src/memory', { tags: [] }))
                         : ok(null),
             },
             categories: {
@@ -141,8 +123,8 @@ describe('moveMemory', () => {
         const storage = createMockStorage({
             memories: {
                 load: async (path) =>
-                    pathToString(path) === 'project/src/memory'
-                        ? ok(buildMemory('project/src/memory'))
+                    memoryPathToString(path) === 'project/src/memory'
+                        ? ok(buildMemory('project/src/memory', { tags: [] }))
                         : ok(null),
             },
             indexes: {
@@ -162,8 +144,8 @@ describe('moveMemory', () => {
         const storage = createMockStorage({
             memories: {
                 load: async (path) =>
-                    pathToString(path) === 'project/src/memory'
-                        ? ok(buildMemory('project/src/memory'))
+                    memoryPathToString(path) === 'project/src/memory'
+                        ? ok(buildMemory('project/src/memory', { tags: [] }))
                         : ok(null),
                 move: async () =>
                     err({ code: 'IO_WRITE_ERROR', message: 'Move failed' } as StorageAdapterError),
@@ -180,8 +162,8 @@ describe('moveMemory', () => {
         const storage = createMockStorage({
             memories: {
                 load: async (path) =>
-                    pathToString(path) === 'project/src/memory'
-                        ? ok(buildMemory('project/src/memory'))
+                    memoryPathToString(path) === 'project/src/memory'
+                        ? ok(buildMemory('project/src/memory', { tags: [] }))
                         : ok(null),
             },
             indexes: {
