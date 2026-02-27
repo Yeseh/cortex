@@ -24,7 +24,7 @@ const makeAbsolute = (pathStr: string): string => {
 
 export const validateStorePath = (
     storePath: string,
-    storeName: string,
+    storeName: string
 ): Result<void, ConfigValidationError> => {
     if (!isAbsolute(storePath)) {
         return err({
@@ -48,7 +48,7 @@ export interface ConfigLoadOptions {
  * This function is used to create a context object that can be injected into command handlers for consistent access to the Cortex client and other utilities.
  */
 export const createCliCommandContext = async (
-    configDir?: string,
+    configDir?: string
 ): Promise<Result<CortexContext, any>> => {
     try {
         // Allow test harnesses / subprocesses to isolate config resolution.
@@ -64,7 +64,7 @@ export const createCliCommandContext = async (
 
         // Use FilesystemConfigAdapter to auto-initialize config if it doesn't exist
         const configAdapter = new FilesystemConfigAdapter(configPath);
-        const initResult = await configAdapter.initialize();
+        const initResult = await configAdapter.initializeConfig();
         if (!initResult.ok()) {
             return initResult;
         }
@@ -87,7 +87,7 @@ export const createCliCommandContext = async (
             const storeEntry = stores[storeName];
             if (!storeEntry) {
                 throw new Error(
-                    `Store '${storeName}' not found. Available stores: ${Object.keys(stores).join(', ')}`,
+                    `Store '${storeName}' not found. Available stores: ${Object.keys(stores).join(', ')}`
                 );
             }
             const storePath = storeEntry.properties?.path as string | undefined;
@@ -97,7 +97,7 @@ export const createCliCommandContext = async (
             // Interpret relative store paths relative to the invoking CLI's cwd.
             // This matches user expectation and allows isolated subprocess tests.
             const absoluteStorePath = makeAbsolute(resolvePath(effectiveCwd, storePath));
-            return new FilesystemStorageAdapter({
+            return new FilesystemStorageAdapter(configAdapter, {
                 rootDirectory: absoluteStorePath,
             });
         };
@@ -110,6 +110,7 @@ export const createCliCommandContext = async (
         });
 
         const context: CortexContext = {
+            config: configAdapter,
             settings: settings ?? getDefaultSettings(),
             stores: stores ?? {},
             cortex,
@@ -119,10 +120,9 @@ export const createCliCommandContext = async (
         };
 
         return ok(context);
-    }
-    catch (error) {
+    } catch (error) {
         throw new Error(
-            `Unexpected error creating CLI command context: ${error instanceof Error ? error.message : String(error)}`,
+            `Unexpected error creating CLI command context: ${error instanceof Error ? error.message : String(error)}`
         );
     }
 };

@@ -11,6 +11,7 @@ import {
     MemoryPath,
     ok,
     type Category,
+    type ConfigAdapter,
     type ConfigStores,
     type CortexContext,
     type CortexSettings,
@@ -54,7 +55,7 @@ const createMockAdapter = (overrides: Record<string, unknown> = {}): StorageAdap
 const createMemoryFixture = (
     path: string,
     overrides: Partial<MemoryMetadata> = {},
-    content = 'Memory content',
+    content = 'Memory content'
 ): Memory => {
     const timestamp = new Date('2025-01-01T00:00:00.000Z');
     const metadata: MemoryMetadata = {
@@ -82,16 +83,12 @@ const createCaptureStream = (): { stream: PassThrough; getOutput: () => string }
     stream.write = ((
         chunk: Buffer | string,
         encoding?: BufferEncoding | ((error: Error | null | undefined) => void),
-        cb?: (error: Error | null | undefined) => void,
+        cb?: (error: Error | null | undefined) => void
     ) => {
         output += Buffer.from(chunk as Buffer).toString(
-            typeof encoding === 'string' ? (encoding as BufferEncoding) : undefined,
+            typeof encoding === 'string' ? (encoding as BufferEncoding) : undefined
         );
-        return originalWrite(
-            chunk as Buffer,
-            encoding as BufferEncoding,
-            cb as () => void,
-        );
+        return originalWrite(chunk as Buffer, encoding as BufferEncoding, cb as () => void);
     }) as typeof stream.write;
 
     return {
@@ -121,18 +118,35 @@ const createContext = (options: {
         adapterFactory: () => options.adapter,
     });
 
+    const stores: ConfigStores =
+        options.stores ??
+        ({
+            default: {
+                kind: 'filesystem',
+                properties: { path: options.storePath },
+                categories: {},
+            },
+        } as ConfigStores);
+
     return {
         cortex,
+        config: {
+            path: '/tmp/test/config.yaml',
+            data: null,
+            get stores() {
+                return stores;
+            },
+            get settings() {
+                return options.settings ?? null;
+            },
+            initializeConfig: async () => ok(undefined),
+            getSettings: async () => ok(options.settings ?? {}),
+            getStores: async () => ok(stores),
+            getStore: async (name: string) => ok(stores[name] ?? null),
+            saveStore: async () => ok(undefined),
+        } as ConfigAdapter,
         settings: options.settings ?? {},
-        stores:
-            options.stores ??
-            ({
-                default: {
-                    kind: 'filesystem',
-                    properties: { path: options.storePath },
-                    categories: {},
-                },
-            } as ConfigStores),
+        stores,
         now: options.now ?? (() => new Date('2025-01-01T00:00:00.000Z')),
         stdin: (options.stdin ?? new PassThrough()) as unknown as NodeJS.ReadStream,
         stdout: (options.stdout ?? new PassThrough()) as unknown as NodeJS.WriteStream,
@@ -155,7 +169,7 @@ describe('memory command handlers', () => {
             const ctx = createContext({ adapter: createMockAdapter(), storePath: tempDir });
 
             await expect(handleList(ctx, undefined, '/ /', { format: 'yaml' })).rejects.toThrow(
-                InvalidArgumentError,
+                InvalidArgumentError
             );
         });
 
@@ -174,6 +188,21 @@ describe('memory command handlers', () => {
             });
             const ctx: CortexContext = {
                 cortex,
+                config: {
+                    path: '/tmp/test/config.yaml',
+                    data: null,
+                    get stores() {
+                        return {};
+                    },
+                    get settings() {
+                        return null;
+                    },
+                    initializeConfig: async () => ok(undefined),
+                    getSettings: async () => ok({}),
+                    getStores: async () => ok({}),
+                    getStore: async () => ok(null),
+                    saveStore: async () => ok(undefined),
+                } as ConfigAdapter,
                 settings: {} as CortexSettings,
                 stores: {} as ConfigStores,
                 now: () => new Date(),
@@ -181,9 +210,9 @@ describe('memory command handlers', () => {
                 stdout: new PassThrough() as unknown as NodeJS.WriteStream,
             };
 
-            await expect(
-                handleList(ctx, 'missing-store', undefined, {}),
-            ).rejects.toThrow(CommanderError);
+            await expect(handleList(ctx, 'missing-store', undefined, {})).rejects.toThrow(
+                CommanderError
+            );
         });
 
         it('should write serialized list output', async () => {
@@ -195,18 +224,22 @@ describe('memory command handlers', () => {
 
             const rootCategory: Category = {
                 memories: [],
-                subcategories: [{
-                    path: CategoryPath.fromString('project').unwrap(),
-                    memoryCount: 1,
-                    description: 'Project memories',
-                }],
+                subcategories: [
+                    {
+                        path: CategoryPath.fromString('project').unwrap(),
+                        memoryCount: 1,
+                        description: 'Project memories',
+                    },
+                ],
             };
 
             const projectCategory: Category = {
-                memories: [{
-                    path: memoryPath.value,
-                    tokenEstimate: 42,
-                }],
+                memories: [
+                    {
+                        path: memoryPath.value,
+                        tokenEstimate: 42,
+                    },
+                ],
                 subcategories: [],
             };
 
@@ -248,7 +281,7 @@ describe('memory command handlers', () => {
             const ctx = createContext({ adapter: createMockAdapter(), storePath: tempDir });
 
             await expect(handleShow(ctx, undefined, 'invalid', { format: 'yaml' })).rejects.toThrow(
-                InvalidArgumentError,
+                InvalidArgumentError
             );
         });
 
@@ -260,7 +293,7 @@ describe('memory command handlers', () => {
             });
 
             await expect(
-                handleShow(ctx, 'missing-store', 'project/one', { format: 'yaml' }),
+                handleShow(ctx, 'missing-store', 'project/one', { format: 'yaml' })
             ).rejects.toThrow(CommanderError);
         });
 
@@ -292,7 +325,7 @@ describe('memory command handlers', () => {
             const ctx = createContext({ adapter: createMockAdapter(), storePath: tempDir });
 
             await expect(handleMove(ctx, undefined, 'invalid', 'project/two')).rejects.toThrow(
-                InvalidArgumentError,
+                InvalidArgumentError
             );
         });
 
@@ -304,7 +337,7 @@ describe('memory command handlers', () => {
             });
 
             await expect(
-                handleMove(ctx, 'missing-store', 'project/one', 'project/two'),
+                handleMove(ctx, 'missing-store', 'project/one', 'project/two')
             ).rejects.toThrow(CommanderError);
         });
 
@@ -350,7 +383,7 @@ describe('memory command handlers', () => {
             const ctx = createContext({ adapter: createMockAdapter(), storePath: tempDir });
 
             await expect(handleRemove(ctx, undefined, 'invalid')).rejects.toThrow(
-                InvalidArgumentError,
+                InvalidArgumentError
             );
         });
 
@@ -362,7 +395,7 @@ describe('memory command handlers', () => {
             });
 
             await expect(handleRemove(ctx, 'missing-store', 'project/one')).rejects.toThrow(
-                CommanderError,
+                CommanderError
             );
         });
 
@@ -402,7 +435,7 @@ describe('memory command handlers', () => {
             const ctx = createContext({ adapter: createMockAdapter(), storePath: tempDir });
 
             await expect(
-                handleUpdate(ctx, undefined, 'invalid', { content: 'Next' }),
+                handleUpdate(ctx, undefined, 'invalid', { content: 'Next' })
             ).rejects.toThrow(InvalidArgumentError);
         });
 
@@ -414,7 +447,7 @@ describe('memory command handlers', () => {
             });
 
             await expect(
-                handleUpdate(ctx, 'missing-store', 'project/one', { content: 'Next' }),
+                handleUpdate(ctx, 'missing-store', 'project/one', { content: 'Next' })
             ).rejects.toThrow(CommanderError);
         });
 

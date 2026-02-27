@@ -15,7 +15,7 @@ import { removeCommand } from './remove.ts';
 import { showCommand } from './show.ts';
 import { updateCommand } from './update.ts';
 
-const getLongOptions = (command: { options: Array<{ long?: string }> }): string[] =>
+const getLongOptions = (command: { options: ReadonlyArray<{ long?: string }> }): string[] =>
     command.options.map((option) => option.long ?? '').filter(Boolean);
 
 describe('memory command definitions', () => {

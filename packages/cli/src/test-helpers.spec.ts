@@ -123,7 +123,10 @@ export const FIXED_NOW = new Date(FIXED_NOW_ISO);
  * const ctx = createMockContext({ now: fixedNow('2025-01-01T00:00:00.000Z') });
  * ```
  */
-export const fixedNow = (iso: string = FIXED_NOW_ISO): (() => Date) => () => new Date(iso);
+export const fixedNow =
+    (iso: string = FIXED_NOW_ISO): (() => Date) =>
+    () =>
+        new Date(iso);
 
 // ============================================================================
 // 2.4 CLI error assertion helpers
@@ -145,13 +148,12 @@ export const fixedNow = (iso: string = FIXED_NOW_ISO): (() => Date) => () => new
  */
 export async function expectInvalidArgumentError(
     fn: () => Promise<unknown> | unknown,
-    messagePart?: string,
+    messagePart?: string
 ): Promise<void> {
     let threw = false;
     try {
         await fn();
-    }
-    catch (e) {
+    } catch (e) {
         threw = true;
         expect(e).toBeInstanceOf(InvalidArgumentError);
         if (messagePart) {
@@ -181,13 +183,12 @@ export async function expectInvalidArgumentError(
 export async function expectCommanderError(
     fn: () => Promise<unknown> | unknown,
     codePart?: string,
-    messagePart?: string,
+    messagePart?: string
 ): Promise<void> {
     let threw = false;
     try {
         await fn();
-    }
-    catch (e) {
+    } catch (e) {
         threw = true;
         expect(e).toBeInstanceOf(CommanderError);
         if (codePart) {
@@ -221,7 +222,10 @@ export async function expectCommanderError(
  */
 export function createMockMemoryStorage(overrides: Partial<MemoryStorage> = {}): MemoryStorage {
     return {
-        load: async () => ({ ok: () => false as const, error: { code: 'MEMORY_NOT_FOUND', message: 'not found' } }),
+        load: async () => ({
+            ok: () => false as const,
+            error: { code: 'MEMORY_NOT_FOUND', message: 'not found' },
+        }),
         save: async () => ({ ok: () => true as const, value: undefined }),
         add: async () => ({ ok: () => true as const, value: undefined }),
         remove: async () => ({ ok: () => true as const, value: undefined }),
@@ -266,7 +270,9 @@ export function createMockIndexStorage(overrides: Partial<IndexStorage> = {}): I
  * });
  * ```
  */
-export function createMockCategoryStorage(overrides: Partial<CategoryStorage> = {}): CategoryStorage {
+export function createMockCategoryStorage(
+    overrides: Partial<CategoryStorage> = {}
+): CategoryStorage {
     return {
         exists: async () => ({ ok: () => true as const, value: false }),
         ensure: async () => ({ ok: () => true as const, value: undefined }),
@@ -294,10 +300,16 @@ export function createMockStorageAdapter(overrides: Partial<StorageAdapter> = {}
         memories: createMockMemoryStorage(),
         indexes: createMockIndexStorage(),
         categories: createMockCategoryStorage(),
-        stores: {
-            load: async () => ({ ok: () => false as const, error: { code: 'STORE_NOT_FOUND', message: 'not found' } }),
-            save: async () => ({ ok: () => true as const, value: undefined }),
-            remove: async () => ({ ok: () => true as const, value: undefined }),
+        config: {
+            path: '/tmp/cortex-test-config.yaml',
+            data: null,
+            stores: null,
+            settings: null,
+            initializeConfig: async () => ({ ok: () => true as const, value: undefined }),
+            getSettings: async () => ({ ok: () => true as const, value: {} }),
+            getStores: async () => ({ ok: () => true as const, value: {} }),
+            getStore: async () => ({ ok: () => true as const, value: null }),
+            saveStore: async () => ({ ok: () => true as const, value: undefined }),
         },
         ...overrides,
     } as unknown as StorageAdapter;

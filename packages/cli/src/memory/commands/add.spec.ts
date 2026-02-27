@@ -14,6 +14,7 @@ import {
     Cortex,
     ok,
     type AdapterFactory,
+    type ConfigAdapter,
     type ConfigStores,
     type CortexContext,
     type CortexSettings,
@@ -76,6 +77,21 @@ const createContext = (options: {
 
     return {
         cortex,
+        config: {
+            path: '/tmp/test/config.yaml',
+            data: null,
+            get stores() {
+                return stores;
+            },
+            get settings() {
+                return options.settings ?? null;
+            },
+            initializeConfig: async () => ok(undefined),
+            getSettings: async () => ok(options.settings ?? {}),
+            getStores: async () => ok(stores),
+            getStore: async (name: string) => ok(stores[name] ?? null),
+            saveStore: async () => ok(undefined),
+        } as ConfigAdapter,
         settings: (options.settings ?? {}) as CortexSettings,
         stores,
         now: options.now ?? (() => new Date('2025-01-01T00:00:00.000Z')),
@@ -90,7 +106,7 @@ const createCaptureStream = (): { stream: PassThrough; getOutput: () => string }
     const originalWrite = stream.write.bind(stream);
     stream.write = ((chunk: unknown, encoding?: unknown, cb?: unknown) => {
         output += Buffer.from(chunk as Buffer).toString(
-            typeof encoding === 'string' ? (encoding as BufferEncoding) : undefined,
+            typeof encoding === 'string' ? (encoding as BufferEncoding) : undefined
         );
         return originalWrite(chunk as Buffer, encoding as BufferEncoding, cb as () => void);
     }) as typeof stream.write;
@@ -137,9 +153,7 @@ describe('handleAdd', () => {
 
         await handleAdd(ctx, undefined, 'project/tagged', {
             content: 'Tagged memory',
-            tags: [
-                'foo', 'bar',
-            ],
+            tags: ['foo', 'bar'],
         });
 
         expect(capture.getOutput()).toContain('Added memory');
@@ -190,7 +204,7 @@ describe('handleAdd', () => {
         });
 
         await expect(
-            handleAdd(ctx, 'nonexistent', 'project/notes', { content: 'test' }),
+            handleAdd(ctx, 'nonexistent', 'project/notes', { content: 'test' })
         ).rejects.toThrow(CommanderError);
     });
 
@@ -204,7 +218,7 @@ describe('handleAdd', () => {
         });
 
         await expect(handleAdd(ctx, undefined, 'project/notes', {})).rejects.toThrow(
-            InvalidArgumentError,
+            InvalidArgumentError
         );
     });
 
@@ -219,7 +233,7 @@ describe('handleAdd', () => {
         });
 
         await expect(
-            handleAdd(ctx, undefined, 'project/notes', { content: 'test' }),
+            handleAdd(ctx, undefined, 'project/notes', { content: 'test' })
         ).rejects.toThrow(CommanderError);
     });
 

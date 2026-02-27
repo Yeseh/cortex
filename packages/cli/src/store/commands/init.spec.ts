@@ -10,7 +10,6 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { ok, err } from '@yeseh/cortex-core';
 import { handleInit } from './init.ts';
 import {
     createMockContext,
@@ -22,11 +21,17 @@ import {
 // store can be created) and `stores.save` succeeds.
 function createInitAdapter() {
     return createMockStorageAdapter({
-        stores: {
-            load: async () => err({ code: 'STORE_NOT_FOUND' as const, message: 'not found', store: 'unknown' }),
-            save: async () => ok(undefined),
-            remove: async () => ok(undefined),
-        },
+        config: {
+            path: '/tmp/cortex-test-config.yaml',
+            data: null,
+            stores: null,
+            settings: null,
+            initializeConfig: async () => ({ ok: () => true as const, value: undefined }),
+            getSettings: async () => ({ ok: () => true as const, value: {} }),
+            getStores: async () => ({ ok: () => true as const, value: {} }),
+            getStore: async () => ({ ok: () => true as const, value: null }),
+            saveStore: async () => ({ ok: () => true as const, value: undefined }),
+        } as any,
     });
 }
 
@@ -85,9 +90,9 @@ describe('handleInit', () => {
             cwd: tempDir,
         });
 
-        await expect(
-            handleInit(ctx, undefined, { name: '   ', format: 'yaml' }),
-        ).rejects.toThrow(InvalidArgumentError);
+        await expect(handleInit(ctx, undefined, { name: '   ', format: 'yaml' })).rejects.toThrow(
+            InvalidArgumentError
+        );
     });
 
     it('should output in JSON format when format option is json', async () => {
