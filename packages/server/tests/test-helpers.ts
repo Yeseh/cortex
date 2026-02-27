@@ -49,6 +49,8 @@ const TEST_CLIENT_INFO = {
     version: '1.0.0',
 };
 
+const sessionIdsByBaseUrl = new Map<string, string>();
+
 export const createServerSandbox = async (defaultStore = 'default'): Promise<ServerSandbox> => {
     const rootDir = await mkdtemp(join(tmpdir(), 'cortex-server-int-'));
     const homeDir = join(rootDir, 'home');
@@ -173,12 +175,19 @@ export const postMcp = async (
     params: Record<string, unknown> = {},
     id: string | number = 1,
 ): Promise<McpHttpResponse> => {
+    const headers: Record<string, string> = {
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+    };
+
+    const sessionId = sessionIdsByBaseUrl.get(baseUrl);
+    if (sessionId) {
+        headers['mcp-session-id'] = sessionId;
+    }
+
     const response = await fetch(`${baseUrl}/mcp`, {
         method: 'POST',
-        headers: {
-            'content-type': 'application/json',
-            accept: 'application/json, text/event-stream',
-        },
+        headers,
         body: JSON.stringify({
             jsonrpc: '2.0',
             id,
@@ -186,6 +195,11 @@ export const postMcp = async (
             params,
         }),
     });
+
+    const responseSessionId = response.headers.get('mcp-session-id');
+    if (responseSessionId) {
+        sessionIdsByBaseUrl.set(baseUrl, responseSessionId);
+    }
 
     const rawBody = await response.text();
     const body = parseMcpBody(rawBody);
@@ -224,6 +238,14 @@ export const callTool = async (
 export const expectMcpSuccess = <T = unknown>(response: McpHttpResponse): JsonRpcSuccess<T> => {
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty('jsonrpc', '2.0');
+
+    if ('error' in response.body) {
+        const protocolError = response.body as JsonRpcError;
+        throw new Error(
+            `Expected MCP success response with result, but got protocol error: ${protocolError.error.message}`
+        );
+    }
+
     expect(response.body).toHaveProperty('result');
     return response.body as JsonRpcSuccess<T>;
 };
@@ -234,6 +256,13 @@ export const expectMcpError = (
 ): JsonRpcError => {
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty('jsonrpc', '2.0');
+
+    if ('result' in response.body) {
+        throw new Error(
+            'Expected MCP protocol error response, but got a success result envelope. Use expectMcpToolError for tool-level errors.'
+        );
+    }
+
     expect(response.body).toHaveProperty('error');
 
     const body = response.body as JsonRpcError;

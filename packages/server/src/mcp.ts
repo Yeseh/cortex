@@ -4,7 +4,8 @@
  * This module provides factory functions for creating the MCP server
  * and transport layer used by the Cortex memory system. It configures
  * the server with the appropriate name and version, and sets up
- * stateless Web Standard HTTP transport for containerized deployments.
+ * sessioned Web Standard HTTP transport for reliable multi-request
+ * interactions with MCP clients.
  *
  * @module server/mcp
  *
@@ -61,11 +62,10 @@ export const createMcpServer = (): McpServer => {
 };
 
 /**
- * Creates a Web Standard Streamable HTTP transport for stateless MCP communication.
+ * Creates a Web Standard Streamable HTTP transport for sessioned MCP communication.
  *
- * The transport is configured in stateless mode (no session ID generation),
- * which is appropriate for containerized deployments where requests may
- * be routed to different instances.
+ * The transport generates a session ID during initialize so clients can
+ * send `mcp-session-id` on subsequent requests.
  *
  * @returns Configured HTTP transport ready for request handling
  *
@@ -80,7 +80,7 @@ export const createMcpServer = (): McpServer => {
  */
 export const createMcpTransport = (): WebStandardStreamableHTTPServerTransport => {
     return new WebStandardStreamableHTTPServerTransport({
-        sessionIdGenerator: undefined, // stateless mode
+        sessionIdGenerator: () => crypto.randomUUID(),
     }); 
 };
 

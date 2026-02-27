@@ -31,6 +31,9 @@ import {
     type DeleteCategoryInput,
 } from './tools.ts';
 
+type CategoryToolsServer = Parameters<typeof registerCategoryTools>[0];
+type GetStoreResult = ReturnType<CortexContext['cortex']['getStore']>;
+
 // =============================================================================
 // createCategoryHandler
 // =============================================================================
@@ -41,14 +44,14 @@ describe('createCategoryHandler', () => {
             const ctx = createMockCortexContext({
                 cortex: createMockCortex({
                     getStore: mock(() =>
-                        errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' })
-                    ) as any,
+                        errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' }),
+                    ) as unknown as GetStoreResult,
                 }) as unknown as CortexContext['cortex'],
             });
 
             await expectMcpInvalidParams(
                 () => createCategoryHandler(ctx, { store: 'missing', path: 'foo' }),
-                'not found'
+                'not found',
             );
         });
     });
@@ -60,7 +63,7 @@ describe('createCategoryHandler', () => {
             const ctx = createMockCortexContext();
 
             await expectMcpInvalidParams(() =>
-                createCategoryHandler(ctx, { store: 'default', path: '' })
+                createCategoryHandler(ctx, { store: 'default', path: '' }),
             );
         });
 
@@ -68,7 +71,7 @@ describe('createCategoryHandler', () => {
             const ctx = createMockCortexContext();
 
             await expectMcpInvalidParams(() =>
-                createCategoryHandler(ctx, { store: 'default', path: '   ' })
+                createCategoryHandler(ctx, { store: 'default', path: '   ' }),
             );
         });
     });
@@ -142,8 +145,8 @@ describe('setCategoryDescriptionHandler', () => {
             const ctx = createMockCortexContext({
                 cortex: createMockCortex({
                     getStore: mock(() =>
-                        errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' })
-                    ) as any,
+                        errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' }),
+                    ) as unknown as GetStoreResult,
                 }) as unknown as CortexContext['cortex'],
             });
 
@@ -154,7 +157,7 @@ describe('setCategoryDescriptionHandler', () => {
                         path: 'foo',
                         description: 'hello',
                     }),
-                'not found'
+                'not found',
             );
         });
     });
@@ -268,14 +271,14 @@ describe('deleteCategoryHandler', () => {
             const ctx = createMockCortexContext({
                 cortex: createMockCortex({
                     getStore: mock(() =>
-                        errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' })
-                    ) as any,
+                        errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' }),
+                    ) as unknown as GetStoreResult,
                 }) as unknown as CortexContext['cortex'],
             });
 
             await expectMcpInvalidParams(
                 () => deleteCategoryHandler(ctx, { store: 'missing', path: 'foo' }),
-                'not found'
+                'not found',
             );
         });
     });
@@ -342,7 +345,7 @@ describe('registerCategoryTools', () => {
     it('should register all three tools when no options are provided (defaults to free)', () => {
         const { registeredTools, server } = createMockMcpServer();
 
-        registerCategoryTools(server as any, ctx);
+        registerCategoryTools(server as unknown as CategoryToolsServer, ctx);
 
         expect(registeredTools.has('cortex_create_category')).toBe(true);
         expect(registeredTools.has('cortex_set_category_description')).toBe(true);
@@ -352,7 +355,7 @@ describe('registerCategoryTools', () => {
     it('should register all three tools in free mode', () => {
         const { registeredTools, server } = createMockMcpServer();
 
-        registerCategoryTools(server as any, ctx, { mode: 'free' });
+        registerCategoryTools(server as unknown as CategoryToolsServer, ctx, { mode: 'free' });
 
         expect(registeredTools.has('cortex_create_category')).toBe(true);
         expect(registeredTools.has('cortex_set_category_description')).toBe(true);
@@ -363,7 +366,7 @@ describe('registerCategoryTools', () => {
     it('should register all three tools in subcategories mode', () => {
         const { registeredTools, server } = createMockMcpServer();
 
-        registerCategoryTools(server as any, ctx, {
+        registerCategoryTools(server as unknown as CategoryToolsServer, ctx, {
             mode: 'subcategories',
             configCategories: { standards: {}, projects: {} },
         });
@@ -377,7 +380,7 @@ describe('registerCategoryTools', () => {
     it('should register only cortex_set_category_description in strict mode', () => {
         const { registeredTools, server } = createMockMcpServer();
 
-        registerCategoryTools(server as any, ctx, {
+        registerCategoryTools(server as unknown as CategoryToolsServer, ctx, {
             mode: 'strict',
             configCategories: { standards: {}, projects: {} },
         });
@@ -391,7 +394,7 @@ describe('registerCategoryTools', () => {
     it('should attach non-empty descriptions to all registered tools', () => {
         const { registeredTools, server } = createMockMcpServer();
 
-        registerCategoryTools(server as any, ctx);
+        registerCategoryTools(server as unknown as CategoryToolsServer, ctx);
 
         const createTool = registeredTools.get('cortex_create_category');
         const deleteTool = registeredTools.get('cortex_delete_category');

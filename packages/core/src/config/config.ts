@@ -419,57 +419,87 @@ const validateCategoryDefinition = (
     }
 
     const defObj = def as Record<string, unknown>;
+    const withDescriptionResult = validateCategoryDescription(defObj, categoryPath, storeName);
+    if (!withDescriptionResult.ok()) {
+        return withDescriptionResult;
+    }
+
+    return validateCategorySubcategories(
+        withDescriptionResult.value,
+        defObj,
+        categoryPath,
+        storeName,
+    );
+};
+
+const validateCategoryDescription = (
+    definition: Record<string, unknown>,
+    categoryPath: string,
+    storeName: string,
+): Result<ConfigCategory, ConfigValidationError> => {
     const result: ConfigCategory = {};
 
-    // Validate description
-    if ('description' in defObj) {
-        if (typeof defObj.description !== 'string') {
-            return err({
-                code: 'CONFIG_VALIDATION_FAILED',
-                message: `Category '${categoryPath}' description in store '${storeName}' must be a string.`,
-                store: storeName,
-                field: `${categoryPath}.description`,
-            });
-        }
-        if (defObj.description.length > 500) {
-            return err({
-                code: 'CONFIG_VALIDATION_FAILED',
-                message: `Category '${categoryPath}' description in store '${storeName}' exceeds 500 characters.`,
-                store: storeName,
-                field: `${categoryPath}.description`,
-            });
-        }
-        result.description = defObj.description;
+    if (!('description' in definition)) {
+        return ok(result);
     }
 
-    // Validate subcategories recursively
-    if ('subcategories' in defObj) {
-        if (typeof defObj.subcategories !== 'object' || defObj.subcategories === null) {
-            return err({
-                code: 'CONFIG_VALIDATION_FAILED',
-                message: `Category '${categoryPath}' subcategories in store '${storeName}' must be an object.`,
-                store: storeName,
-                field: `${categoryPath}.subcategories`,
-            });
-        }
-
-        const subcategories: Record<string, ConfigCategory> = {};
-        for (const [
-            name, subDef,
-        ] of Object.entries(
-                defObj.subcategories as Record<string, unknown>,
-            )) {
-            const subPath = categoryPath ? `${categoryPath}/${name}` : name;
-            const subResult = validateCategoryDefinition(subDef, subPath, storeName);
-            if (!subResult.ok()) {
-                return subResult;
-            }
-            subcategories[name] = subResult.value;
-        }
-        result.subcategories = subcategories;
+    if (typeof definition.description !== 'string') {
+        return err({
+            code: 'CONFIG_VALIDATION_FAILED',
+            message: `Category '${categoryPath}' description in store '${storeName}' must be a string.`,
+            store: storeName,
+            field: `${categoryPath}.description`,
+        });
     }
 
+    if (definition.description.length > 500) {
+        return err({
+            code: 'CONFIG_VALIDATION_FAILED',
+            message: `Category '${categoryPath}' description in store '${storeName}' exceeds 500 characters.`,
+            store: storeName,
+            field: `${categoryPath}.description`,
+        });
+    }
+
+    result.description = definition.description;
     return ok(result);
+};
+
+const validateCategorySubcategories = (
+    base: ConfigCategory,
+    definition: Record<string, unknown>,
+    categoryPath: string,
+    storeName: string,
+): Result<ConfigCategory, ConfigValidationError> => {
+    if (!('subcategories' in definition)) {
+        return ok(base);
+    }
+
+    if (typeof definition.subcategories !== 'object' || definition.subcategories === null) {
+        return err({
+            code: 'CONFIG_VALIDATION_FAILED',
+            message: `Category '${categoryPath}' subcategories in store '${storeName}' must be an object.`,
+            store: storeName,
+            field: `${categoryPath}.subcategories`,
+        });
+    }
+
+    const subcategories: Record<string, ConfigCategory> = {};
+    for (const [
+        name, subDef,
+    ] of Object.entries(definition.subcategories as Record<string, unknown>)) {
+        const subPath = categoryPath ? `${categoryPath}/${name}` : name;
+        const subResult = validateCategoryDefinition(subDef, subPath, storeName);
+        if (!subResult.ok()) {
+            return subResult;
+        }
+        subcategories[name] = subResult.value;
+    }
+
+    return ok({
+        ...base,
+        subcategories,
+    });
 };
 
 /**

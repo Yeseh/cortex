@@ -97,15 +97,44 @@ export async function handleInit(
     const globalStorePath = resolve(cortexConfigDir, 'memory');
     const configPath = resolve(cortexConfigDir, 'config.yaml');
 
-    // Check if already initialized (unless --force is specified)
-    // TODO: Validate existing config structure instead of just checking existence?
-    if ((await pathExists(configPath)) && !options.force) {
-        throwCliError({
-            code: 'ALREADY_INITIALIZED',
-            message: `Global config store already exists at ${globalStorePath}. Use --force to reinitialize.`,
-        });
+    await ensureNotInitialized(configPath, globalStorePath, options.force);
+    await initializeGlobalConfig(ctx, cortexConfigDir, configPath, globalStorePath);
+
+    // Build output
+    const output: OutputPayload = {
+        kind: 'init',
+        value: formatInit(globalStorePath, Object.keys(defaultGlobalStoreCategories)),
+    };
+
+    // Output result
+    const format: OutputFormat = (options.format as OutputFormat) ?? 'yaml';
+    const outputSerialized = serializeOrThrow(output, format);
+
+    const out = ctx.stdout ?? process.stdout;
+    out.write(outputSerialized.value + '\n');
+}
+
+const ensureNotInitialized = async (
+    configPath: string,
+    globalStorePath: string,
+    force = false,
+): Promise<void> => {
+    if (!(await pathExists(configPath)) || force) {
+        return;
     }
 
+    throwCliError({
+        code: 'ALREADY_INITIALIZED',
+        message: `Global config store already exists at ${globalStorePath}. Use --force to reinitialize.`,
+    });
+};
+
+const initializeGlobalConfig = async (
+    ctx: CortexContext,
+    cortexConfigDir: string,
+    configPath: string,
+    globalStorePath: string,
+): Promise<void> => {
     try {
         await mkdir(cortexConfigDir, { recursive: true });
         const config: CortexConfig = {
@@ -113,13 +142,7 @@ export async function handleInit(
             stores: {},
         };
 
-        // Write config.yaml without store
-        const yamlConfig = serializeOutput(config, 'yaml');
-        if (!yamlConfig.ok()) {
-            throwCliError(yamlConfig.error);
-        }
-
-        // write the yaml
+        const yamlConfig = serializeOrThrow(config, 'yaml');
         await Bun.write(configPath, yamlConfig.value);
 
         const storeResult = await createGlobalStore(ctx, globalStorePath);
@@ -134,23 +157,15 @@ export async function handleInit(
             cause: error instanceof Error ? error.message : String(error),
         });
     }
+};
 
-    // Build output
-    const output: OutputPayload = {
-        kind: 'init',
-        value: formatInit(globalStorePath, Object.keys(defaultGlobalStoreCategories)),
-    };
-
-    // Output result
-    const format: OutputFormat = (options.format as OutputFormat) ?? 'yaml';
-    const outputSerialized = serializeOutput(output, format);
-    if (!outputSerialized.ok()) {
-        throwCliError(outputSerialized.error);
+const serializeOrThrow = <T>(value: T, format: OutputFormat) => {
+    const serialized = serializeOutput(value, format);
+    if (!serialized.ok()) {
+        throwCliError(serialized.error);
     }
-
-    const out = ctx.stdout ?? process.stdout;
-    out.write(outputSerialized.value + '\n');
-}
+    return serialized;
+};
 
 const createGlobalStore = async (ctx: CortexContext, globalStorePath: string) => {
     const storeClient = ctx.cortex.getStore('global');

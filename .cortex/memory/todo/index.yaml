@@ -2,20 +2,11 @@ memories:
   - path: todo/add-concurrent-write-protection
     token_estimate: 564
     updated_at: 2026-02-14T21:33:43.075Z
-  - path: todo/fix-context-adapter-factory-bug
-    token_estimate: 229
-    updated_at: 2026-02-26T20:02:52.861Z
   - path: todo/fix-mcp-integration-test-failures
-    token_estimate: 415
-    updated_at: 2026-02-27T19:38:46.095Z
-  - path: todo/fix-mcp-server-self-bootstrap
-    token_estimate: 347
-    updated_at: 2026-02-26T20:02:57.635Z
+    token_estimate: 180
+    updated_at: 2026-02-27T19:59:37.776Z
   - path: todo/manual-client-validation
     token_estimate: 404
-  - path: todo/merge-categories-indexes
-    token_estimate: 314
-    updated_at: 2026-02-14T21:36:40.287Z
   - path: todo/restructure-readme-for-beta
     token_estimate: 289
     updated_at: 2026-02-26T20:01:24.862Z

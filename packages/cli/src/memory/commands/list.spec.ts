@@ -7,10 +7,8 @@ import {
     CategoryPath,
     MemoryPath,
     ok,
-    testContext,
     type AdapterFactory,
     type Category,
-    type CortexContext,
 } from '@yeseh/cortex-core';
 
 import { handleList } from './list.ts';
@@ -45,7 +43,9 @@ describe('handleList', () => {
 
     it('should throw CommanderError when the adapter factory returns nothing', async () => {
         const nullFactory = (() => undefined) as unknown as AdapterFactory;
-        const ctx: CortexContext = testContext({
+        const ctx = createMemoryCommandContext({
+            adapter: createMockMemoryCommandAdapter(),
+            storePath: tempDir,
             adapterFactory: nullFactory,
             stores: {
                 default: {
@@ -54,7 +54,6 @@ describe('handleList', () => {
                     categories: {},
                 },
             },
-            storePath: tempDir,
         });
 
         await expect(handleList(ctx, 'missing-store', undefined, {})).rejects.toThrow(

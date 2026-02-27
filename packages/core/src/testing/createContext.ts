@@ -8,7 +8,7 @@ import { PassThrough } from 'node:stream';
 /** Creates a minimal no-op ConfigAdapter for use in tests. */
 const createTestConfigAdapter = (
     stores: ConfigStores,
-    settings: CortexSettings
+    settings: CortexSettings,
 ): ConfigAdapter => ({
     path: '/tmp/cortex-test/config.yaml',
     data: null,

@@ -55,7 +55,7 @@ export const registerStoreTools = (server: McpServer, ctx: CortexContext): void 
         {
             description: 'List all available memory stores',
         },
-        wrapToolHandler(async () => listStoresHandler(ctx))
+        wrapToolHandler(async () => listStoresHandler(ctx)),
     );
 
     // Register cortex_create_store tool with input schema
@@ -65,11 +65,11 @@ export const registerStoreTools = (server: McpServer, ctx: CortexContext): void 
             description: 'Create a new memory store',
             inputSchema: {
                 name: storeNameSchema.describe(
-                    'Name of the store to create (alphanumeric, hyphens, underscores only)'
+                    'Name of the store to create (alphanumeric, hyphens, underscores only)',
                 ),
             },
         },
-        wrapToolHandler(async ({ name }) => createStoreHandler(ctx, { name: name as string }))
+        wrapToolHandler(async ({ name }) => createStoreHandler(ctx, { name: name as string })),
     );
 };
 

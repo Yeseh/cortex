@@ -51,10 +51,10 @@ describe(
                 );
 
                 it(
-                    'should be configured for stateless operation', () => {
+                    'should create transport without active session before initialize', () => {
                         const transport = createMcpTransport();
 
-                        // Stateless transports have no session ID generator, meaning sessionId will be undefined
+                        // Session ID is created during initialize, so it starts undefined.
                         expect(transport.sessionId).toBeUndefined();
                     },
                 );

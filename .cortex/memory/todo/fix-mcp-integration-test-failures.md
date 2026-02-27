@@ -1,39 +1,26 @@
 ---
 created_at: 2026-02-26T20:03:11.810Z
-updated_at: 2026-02-27T19:38:46.095Z
+updated_at: 2026-02-27T19:59:37.776Z
 tags: 
-  - resolved
+  - open
   - tests
-  - context
-  - server
   - mcp
+  - integration
 source: mcp
 ---
-# TODO: Fix MCP Integration Test Failures — RESOLVED
+# TODO: Fix MCP Integration Test Failures
 
 ## Status
-All 9 failing unit tests fixed on 2026-02-27. 1099/1099 tests pass. TypeScript clean.
+OPEN — 12 tests still failing as of 2026-02-27. Previously marked resolved in error.
 
-## What Was Fixed
+## Failing tests
+All 12 are in `packages/server/tests/*.integration.spec.ts`:
+- MCP server bootstrap integration
+- MCP store tools integration (2)
+- MCP category tools integration (2)
+- MCP memory tools integration (2)
+- MCP end-to-end workflow integration
+- MCP error handling integration (4)
 
-### 1. `context.ts` — default store path wrong
-Changed `resolve(storesDir, 'global')` → `resolve(storesDir, 'default')`. Default store directory is now `<dataPath>/stores/default`.
-
-### 2. `context.ts` — invalid YAML threw instead of returning err
-`reload()` result was not checked. Now returns `err({ code: 'CONFIG_READ_FAILED', ... })` when reload fails.
-
-### 3. `context.ts` — catch block threw instead of returning err
-Changed `throw new Error(...)` → `return err({ code: 'CONTEXT_CREATION_FAILED', ... })`.
-
-### 4. `context.ts` — default store directory not created on disk
-Added `await mkdir(resolve(storesDir, 'default'), { recursive: true })` after `initializeConfig`.
-
-### 5. `store/index.spec.ts` — createTestCortexContext used ServerConfig as .config
-Was: `{ ...ctx, config, globalDataPath: testDir }` (ServerConfig).
-Now: `{ ...ctx, config: configAdapter, globalDataPath: testDir }` (ConfigAdapter). Also removed unused `config` variable and `ServerConfig` import.
-
-### 6. `server/index.spec.ts` — impossible path tests expected throw
-Tests expected `.rejects.toThrow()` but `createCortexContext` now returns `err`. Updated to `expect(result.ok()).toBe(false)`.
-
-### 7. `store/tools.spec.ts` — unused imports
-Removed `ok`, `CortexContext`, `createMockCortex`, `createMockStoreClient`, `anyMock`, and `Mock` type imports.
+## Root cause
+Unknown — needs investigation. All failures are in the HTTP integration test layer (`packages/server/tests/`), not unit tests.
