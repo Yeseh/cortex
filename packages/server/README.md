@@ -22,10 +22,20 @@ bun run packages/server/src/index.ts
 
 The server is configured via environment variables:
 
-| Variable             | Description        | Default            |
-| -------------------- | ------------------ | ------------------ |
-| `CORTEX_STORE`       | Default store name | (uses resolution)  |
-| `CORTEX_CONFIG_PATH` | Global config path | `~/.config/cortex` |
+| Variable                | Description                                                | Default             |
+| ----------------------- | ---------------------------------------------------------- | ------------------- |
+| `CORTEX_DATA_PATH`      | Base Cortex data path (stores are under `<path>/memory`)  | `~/.config/cortex`  |
+| `CORTEX_PORT`           | HTTP server port                                           | `3000`              |
+| `CORTEX_HOST`           | HTTP bind host                                             | `0.0.0.0`           |
+| `CORTEX_DEFAULT_STORE`  | Default store name                                         | `default`           |
+| `CORTEX_LOG_LEVEL`      | Log verbosity (`debug`, `info`, `warn`, `error`)          | `info`              |
+| `CORTEX_OUTPUT_FORMAT`  | Response output format (`yaml`, `json`, `toon`)           | `yaml`              |
+| `CORTEX_CATEGORY_MODE`  | Default-store initialization mode (`free`, `subcategories`, `strict`) | `free` |
+
+Compatibility aliases:
+
+- `CORTEX_CONFIG_PATH` (alias for `CORTEX_DATA_PATH`)
+- `CORTEX_STORE` (alias for `CORTEX_DEFAULT_STORE`)
 
 ## MCP Tools
 
@@ -82,7 +92,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
         "cortex": {
             "command": "cortex-mcp",
             "env": {
-                "CORTEX_STORE": "my-store"
+                "CORTEX_DEFAULT_STORE": "my-store"
             }
         }
     }

@@ -36,6 +36,7 @@ describe('server config loading', () => {
                 expect(result.value.defaultStore).toBe('default');
                 expect(result.value.logLevel).toBe('info');
                 expect(result.value.outputFormat).toBe('yaml');
+                expect(result.value.categoryMode).toBe('free');
             }
         });
 
@@ -46,6 +47,7 @@ describe('server config loading', () => {
             if (result.ok()) {
                 const keys = Object.keys(result.value).sort();
                 expect(keys).toEqual([
+                    'categoryMode',
                     'dataPath',
                     'defaultStore',
                     'host',
@@ -118,6 +120,58 @@ describe('server config loading', () => {
             }
         });
 
+        it('should read CORTEX_CATEGORY_MODE', () => {
+            process.env.CORTEX_CATEGORY_MODE = 'strict';
+            const result = loadServerConfig();
+
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
+                expect(result.value.categoryMode).toBe('strict');
+            }
+        });
+
+        it('should support CORTEX_CONFIG_PATH as alias for CORTEX_DATA_PATH', () => {
+            process.env.CORTEX_CONFIG_PATH = '/legacy/config/path';
+            const result = loadServerConfig();
+
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
+                expect(result.value.dataPath).toBe('/legacy/config/path');
+            }
+        });
+
+        it('should support CORTEX_STORE as alias for CORTEX_DEFAULT_STORE', () => {
+            process.env.CORTEX_STORE = 'legacy-store';
+            const result = loadServerConfig();
+
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
+                expect(result.value.defaultStore).toBe('legacy-store');
+            }
+        });
+
+        it('should prefer CORTEX_DATA_PATH over CORTEX_CONFIG_PATH when both are set', () => {
+            process.env.CORTEX_DATA_PATH = '/new/data/path';
+            process.env.CORTEX_CONFIG_PATH = '/legacy/config/path';
+            const result = loadServerConfig();
+
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
+                expect(result.value.dataPath).toBe('/new/data/path');
+            }
+        });
+
+        it('should prefer CORTEX_DEFAULT_STORE over CORTEX_STORE when both are set', () => {
+            process.env.CORTEX_DEFAULT_STORE = 'new-default';
+            process.env.CORTEX_STORE = 'legacy-default';
+            const result = loadServerConfig();
+
+            expect(result.ok()).toBe(true);
+            if (result.ok()) {
+                expect(result.value.defaultStore).toBe('new-default');
+            }
+        });
+
         
 
         it('should coerce string port value to number', () => {
@@ -152,6 +206,7 @@ describe('server config loading', () => {
                     defaultStore: 'test-store',
                     logLevel: 'warn',
                     outputFormat: 'json',
+                    categoryMode: 'free',
                 });
             }
         });
@@ -366,6 +421,7 @@ describe('serverConfigSchema', () => {
             defaultStore: 'store',
             logLevel: 'debug' as const,
             outputFormat: 'json' as const,
+            categoryMode: 'strict' as const,
         };
 
         const result = serverConfigSchema.safeParse(config);
@@ -387,6 +443,7 @@ describe('serverConfigSchema', () => {
             expect(result.data.defaultStore).toBe('default');
             expect(result.data.logLevel).toBe('info');
             expect(result.data.outputFormat).toBe('yaml');
+            expect(result.data.categoryMode).toBe('free');
         }
     });
 });
@@ -428,6 +485,7 @@ describe('getMemoryPath', () => {
             defaultStore: 'default',
             logLevel: 'info' as const,
             outputFormat: 'yaml' as const,
+            categoryMode: 'free' as const,
         };
 
         const result = getMemoryPath(config);
@@ -443,6 +501,7 @@ describe('getMemoryPath', () => {
             defaultStore: 'default',
             logLevel: 'info' as const,
             outputFormat: 'yaml' as const,
+            categoryMode: 'free' as const,
         };
 
         const result = getMemoryPath(config);
@@ -460,6 +519,7 @@ describe('getMemoryPath', () => {
             defaultStore: 'default',
             logLevel: 'info' as const,
             outputFormat: 'yaml' as const,
+            categoryMode: 'free' as const,
         };
 
         const result = getMemoryPath(config);
@@ -476,6 +536,7 @@ describe('getMemoryPath', () => {
             defaultStore: 'default',
             logLevel: 'info' as const,
             outputFormat: 'yaml' as const,
+            categoryMode: 'free' as const,
         };
 
         const result = getMemoryPath(config);

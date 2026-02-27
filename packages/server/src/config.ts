@@ -79,6 +79,16 @@ export const outputFormatSchema = z.enum([
 /** Output format type */
 export type OutputFormat = z.infer<typeof outputFormatSchema>;
 
+/** Category mode options for store initialization policy */
+export const categoryModeSchema = z.enum([
+    'free',
+    'subcategories',
+    'strict',
+]);
+
+/** Category mode type */
+export type CategoryMode = z.infer<typeof categoryModeSchema>;
+
 /**
  * Creates the server configuration schema with environment variable defaults.
  *
@@ -89,6 +99,7 @@ export type OutputFormat = z.infer<typeof outputFormatSchema>;
  * - `defaultStore` ← `CORTEX_DEFAULT_STORE` - Default memory store name (default: "default")
  * - `logLevel` ← `CORTEX_LOG_LEVEL` - Logging verbosity (default: "info")
  * - `outputFormat` ← `CORTEX_OUTPUT_FORMAT` - Response format (default: "yaml")
+ * - `categoryMode` ← `CORTEX_CATEGORY_MODE` - Category creation mode for default store initialization (default: "free")
  *
  *
  * Note: The dataPath default is computed at runtime to resolve the user's home directory.
@@ -110,6 +121,8 @@ export const createServerConfigSchema = () =>
         logLevel: logLevelSchema.default('info'),
         /** Output format for responses */
         outputFormat: outputFormatSchema.default('yaml'),
+        /** Category mode for default store initialization */
+        categoryMode: categoryModeSchema.default('free'),
     });
 
 /**
@@ -173,7 +186,11 @@ export interface ConfigLoadError {
  * | `CORTEX_DEFAULT_STORE` | `defaultStore` | "default" |
  * | `CORTEX_LOG_LEVEL` | `logLevel` | "info" |
  * | `CORTEX_OUTPUT_FORMAT` | `outputFormat` | "yaml" |
+ * | `CORTEX_CATEGORY_MODE` | `categoryMode` | "free" |
  *
+ * Backward-compatible aliases are also supported:
+ * - `CORTEX_CONFIG_PATH` as alias for `CORTEX_DATA_PATH`
+ * - `CORTEX_STORE` as alias for `CORTEX_DEFAULT_STORE`
  *
  * Note: Memory stores are located at `${dataPath}/memory/`. Use `getMemoryPath(config)`
  * to get the full memory storage path.
@@ -196,10 +213,10 @@ export interface ConfigLoadError {
  */
 export const loadServerConfig = (): Result<ServerConfig, ConfigLoadError> => {
     const rawConfig = {
-        dataPath: process.env.CORTEX_DATA_PATH,
+        dataPath: process.env.CORTEX_DATA_PATH ?? process.env.CORTEX_CONFIG_PATH,
         port: process.env.CORTEX_PORT,
         host: process.env.CORTEX_HOST,
-        defaultStore: process.env.CORTEX_DEFAULT_STORE,
+        defaultStore: process.env.CORTEX_DEFAULT_STORE ?? process.env.CORTEX_STORE,
         logLevel: process.env.CORTEX_LOG_LEVEL,
         outputFormat: process.env.CORTEX_OUTPUT_FORMAT,
         categoryMode: process.env.CORTEX_CATEGORY_MODE,

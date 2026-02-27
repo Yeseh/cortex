@@ -187,7 +187,7 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
             // Fresh install — initialize the default store with defaults
             const initResult = await defaultStoreClient.initialize({
                 kind: 'filesystem',
-                categoryMode: 'free',
+                categoryMode: config.categoryMode,
                 categories: [],
                 properties: {},
             });
