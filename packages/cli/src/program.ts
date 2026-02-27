@@ -12,6 +12,7 @@ import { Command } from '@commander-js/extra-typings';
 import { memoryCommand } from './memory/index.ts';
 import { storeCommand } from './store/index.ts';
 import { initCommand } from './commands/init.ts';
+import { categoryCommand } from './category/index.ts';
 
 /**
  * The main Commander program instance for Cortex CLI.
@@ -33,6 +34,7 @@ const program = new Command()
     .version('0.1.0');
 
 program.addCommand(memoryCommand);
+program.addCommand(categoryCommand);
 program.addCommand(storeCommand);
 program.addCommand(initCommand);
 
