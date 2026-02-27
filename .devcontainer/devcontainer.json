@@ -1,0 +1,19 @@
+{
+    "name": "cortex-dev",
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+    "features": {
+        "ghcr.io/devcontainers/features/bun:1": {}
+    },
+    "containerEnv": {
+        "CORTEX_WORKSPACE_DIR": "${containerWorkspaceFolder}"
+    },
+    "postCreateCommand": "bash .devcontainer/scripts/setup-cli-path.sh && bun install",
+    "postStartCommand": "bash .devcontainer/scripts/init-cortex-store.sh && bash .devcontainer/scripts/start-mcp-background.sh",
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "bash"
+            }
+        }
+    }
+}
