@@ -4,7 +4,7 @@
  * @module core/store/operations/initialize
  */
 
-import { err, ok } from '@/result.ts';
+import { ok } from '@/result.ts';
 import { storeError, type StoreResult } from '@/store/result.ts';
 import { Slug } from '@/slug.ts';
 import type { StoreData } from '../store.ts';
@@ -47,7 +47,7 @@ import type { StorageAdapter } from '@/storage/index.ts';
 export const initializeStore = async (
     { config, categories }: StorageAdapter,
     name: string,
-    data: StoreData,
+    data: StoreData
 ): Promise<StoreResult<void>> => {
     // 1. Validate store name
     const slugResult = Slug.from(name);
@@ -55,7 +55,7 @@ export const initializeStore = async (
         return storeError(
             'STORE_NAME_INVALID',
             'Store name must be a lowercase slug (letters, numbers, hyphens).',
-            { store: name },
+            { store: name }
         );
     }
 
@@ -65,15 +65,14 @@ export const initializeStore = async (
         return storeError('STORE_ALREADY_EXISTS', 'Store name already exists in registry.', {
             store: name,
         });
-    }
-    else if (!storeResult.ok()) {
+    } else if (!storeResult.ok()) {
         return storeError(
             'STORE_READ_FAILED',
             `Failed to check whether store '${name}' already exists: ${storeResult.error.message}`,
             {
                 store: name,
                 cause: storeResult.error,
-            },
+            }
         );
     }
 
@@ -85,7 +84,7 @@ export const initializeStore = async (
             {
                 store: name,
                 cause: saveResult.error,
-            },
+            }
         );
     }
 
@@ -97,7 +96,7 @@ export const initializeStore = async (
             return storeError(
                 'STORE_CREATE_FAILED',
                 `Failed to initialie store category '${name}' in store '${storeName}'.`,
-                { store: name, cause: categoryResult.error },
+                { store: name, cause: categoryResult.error }
             );
         }
     }

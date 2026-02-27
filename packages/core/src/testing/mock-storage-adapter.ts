@@ -1,5 +1,5 @@
 import type { StorageAdapter } from '@/storage/index.ts';
-import { err, ok } from '@/result.ts';
+import { ok } from '@/result.ts';
 
 export type StorageAdapterOverrides = Partial<{
     memories: Partial<StorageAdapter['memories']>;
@@ -8,9 +8,7 @@ export type StorageAdapterOverrides = Partial<{
     config: Partial<StorageAdapter['config']>;
 }>;
 
-export const createMockStorageAdapter = (
-    overrides?: StorageAdapterOverrides,
-): StorageAdapter => ({
+export const createMockStorageAdapter = (overrides?: StorageAdapterOverrides): StorageAdapter => ({
     memories: {
         load: async () => ok(null),
         save: async () => ok(undefined),

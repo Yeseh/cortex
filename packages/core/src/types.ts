@@ -4,7 +4,7 @@
  * @module core/cortex/types
  */
 
-import type { StorageAdapter } from '@/storage/index.ts';
+import type { StorageAdapter, ConfigAdapter } from '@/storage/index.ts';
 import type { Cortex } from './cortex.ts';
 import type { CortexSettings, ConfigStores } from '@/config/types.ts';
 
@@ -42,11 +42,11 @@ export type AdapterFactory = (storeName: string) => StorageAdapter;
  *     adapterFactory: createDefaultAdapterFactory(),
  * };
  *
- * // Full options  
+ * // Full options
  * const testOptions: CortexOptions = {
  *     settings: { outputFormat: 'json' },
  *     stores: {
- *         'test-store': { 
+ *         'test-store': {
  *             kind: 'filesystem',
  *             categories: {},
  *             properties: { path: '/data/test-store' },
@@ -77,18 +77,19 @@ export interface CortexOptions {
     adapterFactory: AdapterFactory;
 }
 
-
 /**
  * Context object for dependency injection into handlers.
  *
  * Provides access to the Cortex client for store operations.
  * Handlers receive this as their first parameter for consistent
  * dependency injection across CLI and MCP server.
- * 
+ *
  */
 export interface CortexContext {
     /** The root Cortex client instance */
     cortex: Cortex;
+    /** Live configuration adapter — always reflects current on-disk state */
+    config: ConfigAdapter;
     settings: CortexSettings;
     stores: ConfigStores;
 
@@ -98,6 +99,5 @@ export interface CortexContext {
     cwd?: string;
     globalDataPath?: string;
 }
-
 
 export type NonEmptyString<T extends string> = T extends '' ? never : T;
