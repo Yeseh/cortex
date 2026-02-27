@@ -24,6 +24,39 @@ This is a monorepo containing the following packages:
 | [`@yeseh/cortex-cli`](./packages/cli)               | Command-line interface                   |
 | [`@yeseh/cortex-server`](./packages/server)         | MCP server for AI agent integration      |
 
+## Install from GitHub Packages
+
+Cortex packages are published to GitHub Packages under the `@yeseh` scope.
+
+### 1) Configure registry and auth
+
+Add this to your user-level `.npmrc` (recommended) or project `.npmrc`:
+
+```ini
+@yeseh:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+```
+
+Then set `GITHUB_TOKEN` to a token that can read packages from the `yeseh` org/user.
+
+```bash
+export GITHUB_TOKEN=YOUR_GITHUB_TOKEN
+```
+
+### 2) Install packages
+
+```bash
+# Optional: MCP server package
+bun add @yeseh/cortex-server
+
+# Core library + filesystem adapter
+bun add @yeseh/cortex-core @yeseh/cortex-storage-fs
+
+# Optional: CLI package
+bun add @yeseh/cortex-cli
+
+```
+
 ## MCP Server Setup
 
 The primary way to use Cortex is as an MCP server. Once connected, AI agents can call Cortex tools to read, write, and organize memories.
