@@ -79,6 +79,29 @@ export interface CortexOptions {
 }
 
 /**
+ * Logger port interface for structured logging.
+ *
+ * Implementations are provided by entrypoints (MCP server, CLI).
+ * Core code and handlers reference only this interface — no OTel imports in core.
+ *
+ * @example
+ * ```typescript
+ * // Guard against missing logger in tests
+ * ctx.logger?.info('Processing request', { store });
+ * ```
+ */
+export interface Logger {
+    /** Log a debug-level message. Verbose details for development troubleshooting. */
+    debug(msg: string, meta?: Record<string, unknown>): void;
+    /** Log an info-level message. General operational information. */
+    info(msg: string, meta?: Record<string, unknown>): void;
+    /** Log a warning-level message. Conditions that should be reviewed. */
+    warn(msg: string, meta?: Record<string, unknown>): void;
+    /** Log an error-level message with optional Error object for stack trace capture. */
+    error(msg: string, err?: Error | unknown, meta?: Record<string, unknown>): void;
+}
+
+/**
  * Context object for dependency injection into handlers.
  *
  * Provides access to the Cortex client for store operations.
@@ -99,6 +122,8 @@ export interface CortexContext {
     stdout: NodeJS.WriteStream;
     cwd?: string;
     globalDataPath?: string;
+    /** Optional structured logger. Guard calls with ctx.logger?.info(...) when logger may be absent. */
+    logger?: Logger;
 }
 
 export type NonEmptyString<T extends string> = T extends '' ? never : T;

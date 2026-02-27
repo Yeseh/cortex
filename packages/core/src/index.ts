@@ -24,3 +24,5 @@ export {
 
 // Validation schemas
 export { dateSchema, nonEmptyStringSchema, tagsSchema } from './validation/schemas.ts';
+
+export { NoopLogger } from './observability.ts';
