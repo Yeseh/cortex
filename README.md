@@ -43,25 +43,22 @@ Then set `GITHUB_TOKEN` to a token that can read packages from the `yeseh` org/u
 export GITHUB_TOKEN=YOUR_GITHUB_TOKEN
 ```
 
-### 2) Install packages
-
-```bash
-# Optional: MCP server package
-bun add @yeseh/cortex-server
-
-# Core library + filesystem adapter
-bun add @yeseh/cortex-core @yeseh/cortex-storage-fs
-
-# Optional: CLI package
-bun add @yeseh/cortex-cli
-
-```
-
-## MCP Server Setup
+### MCP Server Setup
 
 The primary way to use Cortex is as an MCP server. Once connected, AI agents can call Cortex tools to read, write, and organize memories.
 
-### Build the binary
+### Install via package manager
+_Ensure @yeseh is configured to use GitHub packages in .npmrc_
+
+```bash
+# Npm
+npm install @yeseh/cortex-server -g
+
+# Bun
+bun install @yeseh/cortex-server -g
+```
+
+### Build from source
 
 ```bash
 git clone https://github.com/yeseh/cortex.git
@@ -124,30 +121,26 @@ Once connected, agents have access to the following tools:
 
 The CLI is for manual memory management — inspecting, editing, or scripting memory operations outside of an agent session.
 
-### Build the binary
+### Install via package manager
+_Ensure @yeseh is configured to use GitHub packages in .npmrc_
 
 ```bash
-bun run compile:cli     # outputs ./bin/cortex
-```
+# Npm
+npm install @yeseh/cortex-cli -g
 
-### Install globally with Bun
+# Bun
+bun install @yeseh/cortex-cli -g
+```
+If `cortex` is not found, ensure bun/npm global bin directory is on your `PATH`:
+
+### Build from source
 
 ```bash
-bun add -g @yeseh/cortex-cli
+git clone https://github.com/yeseh/cortex.git
+cd cortex
+bun install
+bun run compile:cli # outputs ./bin/cortex-mcp
 ```
-
-Then run:
-
-```bash
-cortex init
-```
-
-If `cortex` is not found, ensure Bun's global bin directory is on your `PATH`:
-
-```bash
-bun pm bin -g
-```
-
 ### Initialize
 
 ```bash
@@ -175,16 +168,6 @@ cortex store remove <name>               # Unregister a store
 cortex store init [path]                 # Initialize a new store
 cortex store prune                       # Remove expired memories
 cortex store reindex                     # Rebuild indexes
-```
-
-## Install Skills
-
-Install Cortex skills with `npx skills` (from https://skills.sh):
-
-```bash
-npx skills add yeseh/cortex --skill memory
-npx skills add yeseh/cortex --skill memory-review
-npx skills add yeseh/cortex --skill memory-synthesize
 ```
 
 ## Store Resolution
