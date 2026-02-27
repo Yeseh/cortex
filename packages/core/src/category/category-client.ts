@@ -39,7 +39,7 @@ import { MemoryClient } from '../memory/memory-client.ts';
  *
  * @example
  * ```typescript
- * const root = cortex.getStore('my-store').value.rootCategory();
+ * const root = cortex.getStore('my-store').value.root();
  * const standards = root.getCategory('standards');
  * const typescript = standards.getCategory('typescript');
  *
@@ -77,7 +77,7 @@ export class CategoryClient {
     private readonly adapter: StorageAdapter;
 
     /**
-     * Private constructor - use StoreClient.rootCategory() or navigation methods.
+     * Private constructor - use StoreClient.root() or navigation methods.
      *
      * @param rawPath - The category path (normalized to canonical format)
      * @param adapter - The storage adapter for performing operations
@@ -92,7 +92,7 @@ export class CategoryClient {
      *
      * This is an internal factory method for creating clients at arbitrary paths.
      * Used by StoreClient, navigation methods, and tests. External callers should
-     * use `store.rootCategory().getCategory(path)` instead.
+     * use `store.root().getCategory(path)` instead.
      *
      * @internal
      * @param path - The category path (will be normalized)
@@ -101,7 +101,7 @@ export class CategoryClient {
      */
     static init(
         path: string | CategoryPath,
-        adapter: StorageAdapter,
+        adapter: StorageAdapter
     ): CategoryResult<CategoryClient> {
         const normalizedPath = CategoryClient.normalizePath(path.toString());
         const pathPayload = normalizedPath === '/' ? '' : normalizedPath.slice(1);
@@ -471,7 +471,7 @@ export class CategoryClient {
      * - Category must exist (returns CATEGORY_NOT_FOUND if not)
      */
     async setDescription(
-        description: string | null,
+        description: string | null
     ): Promise<Result<SetDescriptionResult, CategoryError>> {
         const pathResult = this.parsePath();
         if (!pathResult.ok()) {
@@ -481,7 +481,7 @@ export class CategoryClient {
         return setDescription(
             this.adapter.categories,
             pathResult.value.toString(),
-            description ?? '',
+            description ?? ''
         );
     }
 
@@ -616,7 +616,7 @@ export class CategoryClient {
      * const result = await standards.reindex();
      *
      * // Reindex entire store from root
-     * const root = store.rootCategory();
+     * const root = store.root();
      * const result = await root.reindex();
      * ```
      *
@@ -666,7 +666,7 @@ export class CategoryClient {
      * const result = await human.prune();
      *
      * // Dry run to preview pruning on entire store
-     * const root = store.rootCategory();
+     * const root = store.root();
      * const preview = await root.prune({ dryRun: true });
      * if (preview.ok()) {
      *     console.log('Would prune:', preview.value.pruned.length, 'memories');
@@ -715,7 +715,7 @@ export class CategoryClient {
      * const result = await standards.getRecent();
      *
      * // Get 10 most recent from entire store
-     * const root = store.rootCategory();
+     * const root = store.root();
      * const result = await root.getRecent({ limit: 10 });
      * ```
      *
@@ -724,7 +724,7 @@ export class CategoryClient {
      * - Expired memories are excluded unless includeExpired is true
      */
     async getRecent(
-        options?: Omit<GetRecentMemoriesOptions, 'category'>,
+        options?: Omit<GetRecentMemoriesOptions, 'category'>
     ): Promise<Result<GetRecentMemoriesResult, CategoryError>> {
         const pathResult = this.parsePath();
         if (!pathResult.ok()) {

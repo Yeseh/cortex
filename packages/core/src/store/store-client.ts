@@ -19,7 +19,6 @@ import { Slug } from '@/slug.ts';
 import { initializeStore } from './operations/initialize.ts';
 import { configCategoriesToStoreCategories } from '@/config/config.ts';
 
-
 /**
  * Client for store operations.
  *
@@ -53,7 +52,7 @@ export class StoreClient {
     /** Store name (e.g., 'my-project') */
     readonly name: string;
 
-    /** Storage adapter for this store (null if store not found) */
+    /** Storage adapter for this store */
     readonly adapter: StorageAdapter;
 
     /** Store data, lazily loaded */
@@ -63,12 +62,9 @@ export class StoreClient {
      * Private constructor - use Cortex.getStore() to create instances.
      *
      * @param name - Store name
-     * @param adapter - Storage adapter for operations (null if not found)
+    * @param adapter - Storage adapter for operations
      */
-    private constructor(
-        name: string,
-        adapter: StorageAdapter,
-    ) {
+    private constructor(name: string, adapter: StorageAdapter) {
         this.name = name;
         this.adapter = adapter;
         this.data = null;
@@ -79,16 +75,11 @@ export class StoreClient {
      *
      * @internal
      * @param name - Store name
-     * @param path - Filesystem path to store
      * @param adapter - Storage adapter for operations
-     * @param description - Optional store description
      * @returns A StoreClient for the store
      */
-    static init(
-        name: string,
-        adapter: StorageAdapter,
-    ): StoreResult<StoreClient> {
-        // TODO: This should not be necessary, remove Result<> wrapper and lazily load adapter in operations instead. 
+    static init(name: string, adapter: StorageAdapter): StoreResult<StoreClient> {
+        // TODO: This should not be necessary, remove Result<> wrapper and lazily load adapter in operations instead.
         if (!adapter) {
             return err({
                 code: 'STORE_CREATE_FAILED',
@@ -105,8 +96,8 @@ export class StoreClient {
      *
      * Returns `ok(StoreData)` on success. Returns an error if:
      * - `STORE_NAME_INVALID` — store name is not a valid slug
-     * - `STORE_NOT_INITIALIZED` — store directory exists but `store.yaml` is absent;
-     *   run `cortex store init <name>` to initialize it
+    * - `STORE_NOT_INITIALIZED` — store metadata is not initialized yet;
+    *   run `cortex store init <name>` to initialize it
      * - `STORE_NOT_FOUND` — underlying storage read failed (permissions, disk error, etc.)
      *
      * @returns Result containing {@link StoreData} or a {@link StoreError}
@@ -178,7 +169,7 @@ export class StoreClient {
 
     /**
      * Saves store metadata to storage.
-     * 
+     *
      * @param data - Store data to save
      * @returns Result indicating success or failure
      */
@@ -258,12 +249,11 @@ export class StoreClient {
      * The root category is the entry point for navigating the category
      * tree. Use it to access subcategories and memories.
      *
-     * @throws Error if the store doesn't exist
      * @returns A CategoryClient for the root category (path "/")
      *
      * @example
      * ```typescript
-     * const root = store.rootCategory();
+     * const root = store.root();
      * console.log(root.rawPath); // '/'
      *
      * const standards = root.getCategory('standards');
@@ -274,7 +264,7 @@ export class StoreClient {
         const categoryResult = CategoryClient.init('/', this.adapter);
         if (!categoryResult.ok()) {
             return categoryResult;
-        };
+        }
 
         return ok(categoryResult.value);
     }
@@ -289,9 +279,7 @@ export class StoreClient {
     }
 
     getMemory(memoryPath: string): MemoryClient {
-        const memoryClient = MemoryClient.pointTo(
-            memoryPath, 
-            this.adapter);   
+        const memoryClient = MemoryClient.pointTo(memoryPath, this.adapter);
 
         return memoryClient;
     }

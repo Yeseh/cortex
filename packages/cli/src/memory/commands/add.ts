@@ -49,7 +49,7 @@ export async function handleAdd(
     ctx: CortexContext,
     storeName: string | undefined,
     path: string,
-    options: AddCommandOptions,
+    options: AddCommandOptions
 ): Promise<void> {
     const content = await resolveCliContent({
         content: options.content,
@@ -81,11 +81,6 @@ export async function handleAdd(
     }
 
     const store = storeResult.value;
-    const rootResult = store.root();
-    if (!rootResult.ok()) {
-        throwCliError(rootResult.error);
-    }
-
     const timestamp = ctx.now() ?? new Date();
     const memoryClient = store.getMemory(path);
     const memoryResult = await memoryClient.create({
