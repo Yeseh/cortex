@@ -35,14 +35,10 @@ import {
     type MemoryStorage,
     type IndexStorage,
     type CategoryStorage,
-    type StoreAdapter,
     type StorageAdapter,
     type ConfigAdapter,
 } from '@yeseh/cortex-core';
-import type {
-    FilesystemStorageAdapterOptions,
-    FilesystemContext,
-} from './types.ts';
+import type { FilesystemStorageAdapterOptions, FilesystemContext } from './types.ts';
 import { normalizeExtension } from './utils.ts';
 // Import ISP-compliant storage implementations
 import { FilesystemMemoryAdapter } from './memory-adapter.ts';
@@ -71,7 +67,7 @@ import { FilesystemCategoryAdapter } from './category-adapter.ts';
  * await adapter.reindexCategoryIndexes();
  * ```
  */
-export class FilesystemStorageAdapter implements StorageAdapter{
+export class FilesystemStorageAdapter implements StorageAdapter {
     private readonly ctx: FilesystemContext;
 
     // ========================================================================
@@ -86,9 +82,7 @@ export class FilesystemStorageAdapter implements StorageAdapter{
     public readonly categories: CategoryStorage;
     public readonly config: ConfigAdapter;
 
-    constructor(
-        configAdapter: ConfigAdapter,
-        options: FilesystemStorageAdapterOptions) {
+    constructor(configAdapter: ConfigAdapter, options: FilesystemStorageAdapterOptions) {
         this.ctx = {
             storeRoot: resolve(options.rootDirectory),
             memoryExtension: normalizeExtension(options.memoryExtension, '.md'),
@@ -99,7 +93,7 @@ export class FilesystemStorageAdapter implements StorageAdapter{
         this.memories = new FilesystemMemoryAdapter(this.ctx);
         this.indexes = new FilesystemIndexAdapter(this.ctx);
         this.categories = new FilesystemCategoryAdapter(this.ctx);
-        this.config = configAdapter; 
+        this.config = configAdapter;
     }
 }
 
@@ -145,4 +139,3 @@ export { FilesystemMemoryAdapter } from './memory-adapter.ts';
 export { FilesystemIndexAdapter } from './index-adapter.ts';
 export { FilesystemCategoryAdapter } from './category-adapter.ts';
 export { FilesystemConfigAdapter } from './config-adapter.ts';
-

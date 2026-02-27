@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { FilesystemCategoryStorage } from './category-storage.ts';
+import { FilesystemCategoryAdapter } from './category-adapter.ts';
 import type { FilesystemContext } from './types.ts';
 import { CategoryPath } from '@yeseh/cortex-core';
 
@@ -11,7 +11,7 @@ const categoryPath = (path: string): CategoryPath => CategoryPath.fromString(pat
 
 describe('FilesystemCategoryStorage', () => {
     let tempDir: string;
-    let storage: FilesystemCategoryStorage;
+    let storage: FilesystemCategoryAdapter;
     let ctx: FilesystemContext;
 
     beforeEach(async () => {
@@ -21,7 +21,7 @@ describe('FilesystemCategoryStorage', () => {
             memoryExtension: '.md',
             indexExtension: '.yaml',
         };
-        storage = new FilesystemCategoryStorage(ctx);
+        storage = new FilesystemCategoryAdapter(ctx);
     });
 
     afterEach(async () => {
@@ -132,7 +132,7 @@ describe('FilesystemCategoryStorage', () => {
 
             const result = await storage.setDescription(
                 categoryPath('parent/child'),
-                'A child category',
+                'A child category'
             );
 
             expect(result.ok()).toBe(true);
@@ -148,7 +148,7 @@ describe('FilesystemCategoryStorage', () => {
 
             const result = await storage.setDescription(
                 categoryPath('parent2/new-child'),
-                'New child description',
+                'New child description'
             );
 
             expect(result.ok()).toBe(true);
@@ -169,10 +169,7 @@ describe('FilesystemCategoryStorage', () => {
             ].join('\n');
             await fs.writeFile(join(tempDir, 'parent3', 'index.yaml'), indexContent);
 
-            const result = await storage.setDescription(
-                categoryPath('parent3/child'),
-                null,
-            );
+            const result = await storage.setDescription(categoryPath('parent3/child'), null);
 
             expect(result.ok()).toBe(true);
 
@@ -185,17 +182,16 @@ describe('FilesystemCategoryStorage', () => {
 
             const result = await storage.setDescription(
                 categoryPath('no-index-parent/child'),
-                'Child category',
+                'Child category'
             );
 
             expect(result.ok()).toBe(true);
 
             const content = await fs.readFile(
                 join(tempDir, 'no-index-parent', 'index.yaml'),
-                'utf8',
+                'utf8'
             );
             expect(content).toContain('no-index-parent/child');
         });
     });
 });
-

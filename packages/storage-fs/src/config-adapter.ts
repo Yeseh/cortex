@@ -145,19 +145,20 @@ export class FilesystemConfigAdapter implements ConfigAdapter {
         if (readResult.ok()) {
             // Config file already exists, nothing to do
             return ok(undefined);
+        } else if (readResult.error.code !== 'CONFIG_NOT_FOUND') {
+            return err(readResult.error);
         }
-        else if (readResult.error.code !== 'CONFIG_NOT_FOUND') {
-            try {
-                await mkdir(dirname(this.configPath), { recursive: true });
-            }
-            catch (error) {
-                return err({
-                    code: 'CONFIG_WRITE_FAILED',
-                    message: `Failed to create config directory: ${error instanceof Error ? error.message : String(error)}`,
-                    path: dirname(this.configPath),
-                    cause: error instanceof Error ? error : undefined,
-                });
-            }
+
+        // Config not found — create parent directory before writing
+        try {
+            await mkdir(dirname(this.configPath), { recursive: true });
+        } catch (error) {
+            return err({
+                code: 'CONFIG_WRITE_FAILED',
+                message: `Failed to create config directory: ${error instanceof Error ? error.message : String(error)}`,
+                path: dirname(this.configPath),
+                cause: error instanceof Error ? error : undefined,
+            });
         }
 
         const configToWrite = config ?? DEFAULT_CONFIG;
@@ -224,6 +225,8 @@ export class FilesystemConfigAdapter implements ConfigAdapter {
         if (!writeResult.ok()) {
             return err(writeResult.error);
         }
+
+        this.#config = updatedConfig;
 
         return ok(undefined);
     }
@@ -328,8 +331,7 @@ export class FilesystemConfigAdapter implements ConfigAdapter {
             const content = Bun.YAML.stringify(config, null, 2);
             await writeFile(this.configPath, content, 'utf-8');
             return ok(undefined);
-        }
-        catch (error) {
+        } catch (error) {
             return err({
                 code: 'CONFIG_WRITE_FAILED',
                 message: `Failed to write config file: ${error instanceof Error ? error.message : String(error)}`,
@@ -352,8 +354,7 @@ export class FilesystemConfigAdapter implements ConfigAdapter {
 
         try {
             content = await readFile(this.configPath, 'utf-8');
-        }
-        catch (error) {
+        } catch (error) {
             if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
                 return err({
                     code: 'CONFIG_NOT_FOUND',
@@ -381,8 +382,7 @@ export class FilesystemConfigAdapter implements ConfigAdapter {
             }
 
             this.#config = parsed.data;
-        }
-        catch (error) {
+        } catch (error) {
             return err({
                 code: 'CONFIG_PARSE_FAILED',
                 message: `Failed to parse config YAML: ${error instanceof Error ? error.message : String(error)}`,
