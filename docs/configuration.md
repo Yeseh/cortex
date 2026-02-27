@@ -8,9 +8,40 @@ Cortex is configured via a single YAML file. This document covers the full schem
 | ------------------ | ----------------------------------- |
 | Global (default)   | `~/.config/cortex/config.yaml`      |
 | Project-local      | `.cortex/config.yaml`               |
-| Custom (CLI / MCP) | `--config <path>` / `CORTEX_CONFIG` |
+| Custom (CLI)       | `CORTEX_CONFIG`                     |
 
-Cortex loads the project-local config when one exists, falling back to the global config. You can always override with `--config`.
+Cortex loads the project-local config when one exists, falling back to the global config.
+
+---
+
+## Environment Overrides
+
+### CLI
+
+CLI config path resolution supports these overrides in precedence order:
+
+1. `CORTEX_CONFIG` (absolute or relative path to `config.yaml`)
+2. `CORTEX_CONFIG_DIR` (directory containing `config.yaml`)
+3. Default: `~/.config/cortex/config.yaml`
+
+### MCP Server
+
+MCP server configuration is environment-driven and does not read `CORTEX_CONFIG`.
+
+| Variable               | Description                                               | Default            |
+| ---------------------- | --------------------------------------------------------- | ------------------ |
+| `CORTEX_DATA_PATH`     | Base data path (`<path>/memory` contains store dirs)     | `~/.config/cortex` |
+| `CORTEX_PORT`          | HTTP server port                                          | `3000`             |
+| `CORTEX_HOST`          | HTTP bind host                                            | `0.0.0.0`          |
+| `CORTEX_DEFAULT_STORE` | Default store name                                        | `default`          |
+| `CORTEX_LOG_LEVEL`     | Log level (`debug`, `info`, `warn`, `error`)             | `info`             |
+| `CORTEX_OUTPUT_FORMAT` | Output format (`yaml`, `json`, `toon`)                   | `yaml`             |
+| `CORTEX_CATEGORY_MODE` | Category mode for default-store first-time initialization | `free`             |
+
+Compatibility aliases:
+
+- `CORTEX_CONFIG_PATH` → `CORTEX_DATA_PATH`
+- `CORTEX_STORE` → `CORTEX_DEFAULT_STORE`
 
 ---
 
