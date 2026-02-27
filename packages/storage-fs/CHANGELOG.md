@@ -1,5 +1,16 @@
 # @yeseh/cortex-storage-fs
 
+## 0.4.0
+
+### Minor Changes
+
+- Add `category create` CLI command, `--format` option to memory mutating commands, `CORTEX_CONFIG` env var support for config file path override, and `categoryMode` config field with env var aliases for the MCP server.
+
+### Patch Changes
+
+- Updated dependencies
+    - @yeseh/cortex-core@0.4.0
+
 ## 0.3.0
 
 ### Minor Changes
