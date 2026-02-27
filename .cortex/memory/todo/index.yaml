@@ -2,11 +2,5 @@ memories:
   - path: todo/add-concurrent-write-protection
     token_estimate: 564
     updated_at: 2026-02-14T21:33:43.075Z
-  - path: todo/fix-mcp-integration-test-failures
-    token_estimate: 180
-    updated_at: 2026-02-27T19:59:37.776Z
-  - path: todo/restructure-readme-for-beta
-    token_estimate: 289
-    updated_at: 2026-02-26T20:01:24.862Z
 subcategories: 
   []
