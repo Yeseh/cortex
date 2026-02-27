@@ -52,6 +52,7 @@ describe('server config loading', () => {
                     'defaultStore',
                     'host',
                     'logLevel',
+                    'otelEnabled',
                     'outputFormat',
                     'port',
                 ]);
@@ -207,6 +208,7 @@ describe('server config loading', () => {
                     logLevel: 'warn',
                     outputFormat: 'json',
                     categoryMode: 'free',
+                    otelEnabled: false,
                 });
             }
         });
@@ -422,6 +424,7 @@ describe('serverConfigSchema', () => {
             logLevel: 'debug' as const,
             outputFormat: 'json' as const,
             categoryMode: 'strict' as const,
+            otelEnabled: false,
         };
 
         const result = serverConfigSchema.safeParse(config);
@@ -486,6 +489,7 @@ describe('getMemoryPath', () => {
             logLevel: 'info' as const,
             outputFormat: 'yaml' as const,
             categoryMode: 'free' as const,
+            otelEnabled: false,
         };
 
         const result = getMemoryPath(config);
@@ -502,6 +506,7 @@ describe('getMemoryPath', () => {
             logLevel: 'info' as const,
             outputFormat: 'yaml' as const,
             categoryMode: 'free' as const,
+            otelEnabled: false,
         };
 
         const result = getMemoryPath(config);
@@ -520,6 +525,7 @@ describe('getMemoryPath', () => {
             logLevel: 'info' as const,
             outputFormat: 'yaml' as const,
             categoryMode: 'free' as const,
+            otelEnabled: false,
         };
 
         const result = getMemoryPath(config);
@@ -537,6 +543,7 @@ describe('getMemoryPath', () => {
             logLevel: 'info' as const,
             outputFormat: 'yaml' as const,
             categoryMode: 'free' as const,
+            otelEnabled: false,
         };
 
         const result = getMemoryPath(config);

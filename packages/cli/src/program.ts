@@ -13,6 +13,7 @@ import { memoryCommand } from './memory/index.ts';
 import { storeCommand } from './store/index.ts';
 import { initCommand } from './commands/init.ts';
 import { categoryCommand } from './category/index.ts';
+import { createCliLogger } from './observability.ts';
 
 /**
  * The main Commander program instance for Cortex CLI.
@@ -61,11 +62,12 @@ export const runProgram = async (): Promise<void> => {
     catch (error) {
         // Commander.js handles most errors by writing to stderr and exiting.
         // This catch handles any unexpected errors that slip through.
+        const logger = createCliLogger();
         if (error instanceof Error) {
-            console.error(`Error: ${error.message}`);
+            logger.error(`Error: ${error.message}`, error);
         }
         else {
-            console.error('An unexpected error occurred');
+            logger.error('An unexpected error occurred');
         }
         process.exitCode = 1;
     }

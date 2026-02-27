@@ -165,6 +165,7 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
     }
 
     const cortex = cortexContext.cortex;
+    const { logger } = cortexContext;
 
     // Create MCP context
     const mcp = createMcpContext();
@@ -258,7 +259,7 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
                         return await transport.handleRequest(req);
                     }
                     catch (error) {
-                        console.error('MCP request handling error:', error);
+                        logger?.error('MCP request handling error', error instanceof Error ? error : new Error(String(error)));
                         return Response.json({ error: 'Internal server error' }, { status: 500 });
                     }
                 },
@@ -270,11 +271,11 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
         fetch: () => new Response('Not Found', { status: 404 }),
     });
 
-    console.warn(`Cortex MCP server listening on http://${config.host}:${config.port}`);
-    console.warn(`  Data path: ${config.dataPath}`);
-    console.warn(`  Default store: ${config.defaultStore}`);
-    console.warn('  MCP endpoint: POST /mcp');
-    console.warn('  Health check: GET /health');
+    logger?.info(`Cortex MCP server listening on http://${config.host}:${config.port}`);
+    logger?.info(`  Data path: ${config.dataPath}`);
+    logger?.info(`  Default store: ${config.defaultStore}`);
+    logger?.info('  MCP endpoint: POST /mcp');
+    logger?.info('  Health check: GET /health');
 
     // Graceful shutdown handler
     const close = async (): Promise<void> => {

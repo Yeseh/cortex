@@ -100,6 +100,7 @@ export type CategoryMode = z.infer<typeof categoryModeSchema>;
  * - `logLevel` ← `CORTEX_LOG_LEVEL` - Logging verbosity (default: "info")
  * - `outputFormat` ← `CORTEX_OUTPUT_FORMAT` - Response format (default: "yaml")
  * - `categoryMode` ← `CORTEX_CATEGORY_MODE` - Category creation mode for default store initialization (default: "free")
+ * - `otelEnabled` ← `CORTEX_OTEL_ENABLED` - Enable OpenTelemetry observability (default: false)
  *
  *
  * Note: The dataPath default is computed at runtime to resolve the user's home directory.
@@ -123,6 +124,8 @@ export const createServerConfigSchema = () =>
         outputFormat: outputFormatSchema.default('yaml'),
         /** Category mode for default store initialization */
         categoryMode: categoryModeSchema.default('free'),
+        /** Enable OpenTelemetry observability (LoggerProvider + TracerProvider with Console exporters) */
+        otelEnabled: z.coerce.boolean().default(false),
     });
 
 /**
@@ -187,6 +190,7 @@ export interface ConfigLoadError {
  * | `CORTEX_LOG_LEVEL` | `logLevel` | "info" |
  * | `CORTEX_OUTPUT_FORMAT` | `outputFormat` | "yaml" |
  * | `CORTEX_CATEGORY_MODE` | `categoryMode` | "free" |
+ * | `CORTEX_OTEL_ENABLED` | `otelEnabled` | false |
  *
  * Backward-compatible aliases are also supported:
  * - `CORTEX_CONFIG_PATH` as alias for `CORTEX_DATA_PATH`
@@ -220,6 +224,7 @@ export const loadServerConfig = (): Result<ServerConfig, ConfigLoadError> => {
         logLevel: process.env.CORTEX_LOG_LEVEL,
         outputFormat: process.env.CORTEX_OUTPUT_FORMAT,
         categoryMode: process.env.CORTEX_CATEGORY_MODE,
+        otelEnabled: process.env.CORTEX_OTEL_ENABLED,
     };
 
     // Create schema at runtime to get correct homedir() default
