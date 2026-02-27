@@ -1,35 +1,36 @@
 {
-  "name": "@yeseh/cortex-storage-fs",
-  "version": "0.2.0",
-  "type": "module",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Yeseh/cortex.git",
-    "directory": "packages/storage-fs"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com",
-    "access": "public"
-  },
-  "exports": {
-    ".": {
-      "import": "./src/index.ts",
-      "types": "./src/index.ts"
-    }
-  },
-  "files": [
-    "src",
-    "dist"
-  ],
-  "scripts": {
-    "build": "tsc",
-    "test": "bun test"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
-  "dependencies": {
-    "@yeseh/cortex-core": "workspace:*"
-  },
-  "sideEffects": false
+    "name": "@yeseh/cortex-storage-fs",
+    "version": "0.2.0",
+    "license": "MIT",
+    "type": "module",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Yeseh/cortex.git",
+        "directory": "packages/storage-fs"
+    },
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com",
+        "access": "public"
+    },
+    "exports": {
+        ".": {
+            "import": "./src/index.ts",
+            "types": "./src/index.ts"
+        }
+    },
+    "files": [
+        "src",
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsc",
+        "test": "bun test"
+    },
+    "peerDependencies": {
+        "typescript": "^5"
+    },
+    "dependencies": {
+        "@yeseh/cortex-core": "workspace:*"
+    },
+    "sideEffects": false
 }

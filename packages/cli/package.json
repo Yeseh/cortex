@@ -1,44 +1,45 @@
 {
-  "name": "@yeseh/cortex-cli",
-  "version": "0.2.0",
-  "type": "module",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Yeseh/cortex.git",
-    "directory": "packages/cli"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com",
-    "access": "public"
-  },
-  "bin": {
-    "cortex": "./src/run.ts"
-  },
-  "exports": {
-    ".": {
-      "import": "./src/program.ts",
-      "types": "./src/program.ts"
-    }
-  },
-  "files": [
-    "src",
-    "dist",
-    "bin"
-  ],
-  "scripts": {
-    "build": "tsc",
-    "test": "bun test",
-    "start": "bun run src/run.ts"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
-  "dependencies": {
-    "@yeseh/cortex-core": "workspace:*",
-    "@yeseh/cortex-storage-fs": "workspace:*",
-    "@commander-js/extra-typings": "^14.0.0",
-    "@toon-format/toon": "^1.0.0",
-    "commander": "^14.0.0"
-  },
-  "sideEffects": false
+    "name": "@yeseh/cortex-cli",
+    "version": "0.2.0",
+    "license": "MIT",
+    "type": "module",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Yeseh/cortex.git",
+        "directory": "packages/cli"
+    },
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com",
+        "access": "public"
+    },
+    "bin": {
+        "cortex": "./src/run.ts"
+    },
+    "exports": {
+        ".": {
+            "import": "./src/program.ts",
+            "types": "./src/program.ts"
+        }
+    },
+    "files": [
+        "src",
+        "dist",
+        "bin"
+    ],
+    "scripts": {
+        "build": "tsc",
+        "test": "bun test",
+        "start": "bun run src/run.ts"
+    },
+    "peerDependencies": {
+        "typescript": "^5"
+    },
+    "dependencies": {
+        "@yeseh/cortex-core": "workspace:*",
+        "@yeseh/cortex-storage-fs": "workspace:*",
+        "@commander-js/extra-typings": "^14.0.0",
+        "@toon-format/toon": "^1.0.0",
+        "commander": "^14.0.0"
+    },
+    "sideEffects": false
 }
