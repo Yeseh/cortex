@@ -70,8 +70,8 @@ describe('StoreClient.root()', () => {
 });
 
 describe('StoreClient.load()', () => {
-    it('should return STORE_NOT_INITIALIZED when store.yaml does not exist', async () => {
-        // Mock adapter that returns ok(null) — simulating missing store.yaml
+    it('should return STORE_NOT_INITIALIZED when store is not in config', async () => {
+        // Mock adapter that returns ok(null) — simulating missing store configuration
         const adapter = createMockStorageAdapter({
             config: { getStore: async () => ok(null) },
         });

@@ -136,7 +136,7 @@ export class StoreClient {
             });
         }
 
-        // Handle null result: store is registered but has no store.yaml yet
+        // Handle null result: store is not registered in config yet
         if (storeData.value === null) {
             return err({
                 code: 'STORE_NOT_INITIALIZED',
@@ -200,7 +200,7 @@ export class StoreClient {
     }
 
     /**
-     * Initializes the store with the provided metadata, creating `store.yaml` in storage.
+     * Initializes the store with the provided metadata by writing store config.
      *
      * Idempotent if the store already exists (overwrites existing data). Returns an error if:
      * - `STORE_NAME_INVALID` — store name is not a valid slug

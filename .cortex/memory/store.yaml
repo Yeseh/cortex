@@ -1,6 +1,0 @@
-kind: filesystem
-category_mode: free
-categories: 
-  []
-properties: 
-  path: /home/user/repo/cortex/.cortex

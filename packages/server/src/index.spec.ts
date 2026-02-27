@@ -13,7 +13,7 @@
  *
  * The successful-startup tests work around this by temporarily changing
  * `process.cwd()` to the temp directory so that `resolve('default')` resolves
- * to `<tempDir>/default`, and placing `store.yaml` there.
+ * to `<tempDir>/default`, and ensuring that directory exists.
  *
  * @module server/index.spec
  */
@@ -43,26 +43,18 @@ const nextPort = () => BASE_TEST_PORT + portCounter++;
  * *name* as `rootDirectory`, the actual store path that gets used is
  * `path.resolve(storeName)` from wherever cwd is at the time.
  *
- * This helper therefore creates the required `store.yaml` at
- * `<baseDir>/<storeName>/store.yaml` so that when we `chdir` to `baseDir`
- * before calling `createServer`, the adapter resolves to the right location.
+ * This helper therefore creates `<baseDir>/<storeName>` so that when we
+ * `chdir` to `baseDir` before calling `createServer`, the adapter resolves to
+ * the right location.
  *
  * It also writes a `config.yaml` in `baseDir` so context creation reads an
  * existing config rather than auto-generating one.
  */
 async function initTestDataDir(baseDir: string, storeName = 'default'): Promise<void> {
     // The broken adapter resolves storeName relative to cwd (which will be
-    // baseDir when we call createServer). Create the store dir and store.yaml there.
+    // baseDir when we call createServer). Create the store directory there.
     const storeDir = join(baseDir, storeName);
     await mkdir(storeDir, { recursive: true });
-
-    const storeYaml = [
-        'kind: filesystem',
-        'category_mode: free',
-        'categories: []',
-        'properties: {}',
-    ].join('\n');
-    await writeFile(join(storeDir, 'store.yaml'), storeYaml, 'utf8');
 
     // Write config.yaml so context reads an existing config file.
     // Use a relative path for the store path (matches what context.ts does).
