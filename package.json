@@ -46,7 +46,8 @@
         "compile:mcp": "bun build --compile --minify --sourcemap --bytecode ./packages/server/src/index.ts --outfile ./bin/cortex-mcp",
         "compile:cli": "bun build --compile --minify --sourcemap --bytecode ./packages/cli/src/run.ts --outfile ./bin/cortex",
         "changeset": "changeset",
-        "version": "changeset version",
-        "release": "changeset publish"
+        "ci:version": "changeset version && bun update",
+        "ci:publish": "for dir in packages/*; do (cd \"$dir\" && bun publish || true); done && changeset tag",
+        "version": "changeset version"
     }
 }

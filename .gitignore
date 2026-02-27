@@ -1,6 +1,9 @@
 # dependencies (bun install)
 node_modules
 
+# auth — written at CI publish time, must not be committed
+.npmrc
+
 # output
 out
 dist

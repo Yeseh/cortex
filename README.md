@@ -130,6 +130,24 @@ The CLI is for manual memory management — inspecting, editing, or scripting me
 bun run compile:cli     # outputs ./bin/cortex
 ```
 
+### Install globally with Bun
+
+```bash
+bun add -g @yeseh/cortex-cli
+```
+
+Then run:
+
+```bash
+cortex init
+```
+
+If `cortex` is not found, ensure Bun's global bin directory is on your `PATH`:
+
+```bash
+bun pm bin -g
+```
+
 ### Initialize
 
 ```bash
@@ -157,6 +175,16 @@ cortex store remove <name>               # Unregister a store
 cortex store init [path]                 # Initialize a new store
 cortex store prune                       # Remove expired memories
 cortex store reindex                     # Rebuild indexes
+```
+
+## Install Skills
+
+Install Cortex skills with `npx skills` (from https://skills.sh):
+
+```bash
+npx skills add yeseh/cortex --skill memory
+npx skills add yeseh/cortex --skill memory-review
+npx skills add yeseh/cortex --skill memory-synthesize
 ```
 
 ## Store Resolution
