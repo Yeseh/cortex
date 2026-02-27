@@ -93,4 +93,52 @@ describe('getDefaultConfigPath', () => {
         const second = getDefaultConfigPath();
         expect(first).toBe(second);
     });
+
+    it('should prefer CORTEX_CONFIG when set', () => {
+        const previous = process.env.CORTEX_CONFIG;
+        const previousDir = process.env.CORTEX_CONFIG_DIR;
+        process.env.CORTEX_CONFIG = '/tmp/custom-config.yaml';
+        process.env.CORTEX_CONFIG_DIR = '/tmp/ignored-dir';
+
+        const path = getDefaultConfigPath();
+
+        if (previous === undefined) {
+            Reflect.deleteProperty(process.env, 'CORTEX_CONFIG');
+        }
+        else {
+            process.env.CORTEX_CONFIG = previous;
+        }
+        if (previousDir === undefined) {
+            Reflect.deleteProperty(process.env, 'CORTEX_CONFIG_DIR');
+        }
+        else {
+            process.env.CORTEX_CONFIG_DIR = previousDir;
+        }
+
+        expect(path).toBe('/tmp/custom-config.yaml');
+    });
+
+    it('should use CORTEX_CONFIG_DIR when CORTEX_CONFIG is unset', () => {
+        const previous = process.env.CORTEX_CONFIG;
+        const previousDir = process.env.CORTEX_CONFIG_DIR;
+        Reflect.deleteProperty(process.env, 'CORTEX_CONFIG');
+        process.env.CORTEX_CONFIG_DIR = '/tmp/custom-config-dir';
+
+        const path = getDefaultConfigPath();
+
+        if (previous === undefined) {
+            Reflect.deleteProperty(process.env, 'CORTEX_CONFIG');
+        }
+        else {
+            process.env.CORTEX_CONFIG = previous;
+        }
+        if (previousDir === undefined) {
+            Reflect.deleteProperty(process.env, 'CORTEX_CONFIG_DIR');
+        }
+        else {
+            process.env.CORTEX_CONFIG_DIR = previousDir;
+        }
+
+        expect(path).toBe(join('/tmp/custom-config-dir', 'config.yaml'));
+    });
 });

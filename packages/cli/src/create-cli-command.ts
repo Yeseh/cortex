@@ -83,10 +83,17 @@ export const createCliAdapterFactory = (configAdapter: FilesystemConfigAdapter) 
 export const createCliConfigContext = async (
     options: CliContextOptions = {}
 ): Promise<Result<CliConfigContext, any>> => {
+    const envConfigPath = process.env.CORTEX_CONFIG;
     const envConfigDir = process.env.CORTEX_CONFIG_DIR;
+
+    const explicitConfigPath =
+        typeof envConfigPath === 'string' && envConfigPath.length > 0
+            ? makeAbsolute(envConfigPath)
+            : undefined;
+
     const dir = options.configDir ?? envConfigDir ?? resolve(homedir(), '.config', 'cortex');
     const absoluteDir = makeAbsolute(dir);
-    const configPath = resolve(absoluteDir, 'config.yaml');
+    const configPath = explicitConfigPath ?? resolve(absoluteDir, 'config.yaml');
 
     const envConfigCwd = process.env.CORTEX_CONFIG_CWD;
     const effectiveCwd =
