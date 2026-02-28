@@ -1,5 +1,17 @@
 # @yeseh/cortex-cli
 
+## 0.5.0
+
+### Minor Changes
+
+- Add logger injection to Cortex context, initial OpenTelemetry support for MCP server
+
+### Patch Changes
+
+- Updated dependencies
+    - @yeseh/cortex-core@0.5.0
+    - @yeseh/cortex-storage-fs@0.5.0
+
 ## 0.4.0
 
 ### Minor Changes

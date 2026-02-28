@@ -1,5 +1,11 @@
 # @yeseh/cortex-core
 
+## 0.5.0
+
+### Minor Changes
+
+- Add logger injection to Cortex context, initial OpenTelemetry support for MCP server
+
 ## 0.4.0
 
 ### Minor Changes
