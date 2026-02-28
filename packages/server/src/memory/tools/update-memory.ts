@@ -10,6 +10,8 @@ import { storeNameSchema } from '../../store/tools.ts';
 import { type CortexContext } from '@yeseh/cortex-core';
 import { isoDateSchema, memoryPathSchema, tagsSchema, translateMemoryError } from './shared.ts';
 import { type McpToolResponse } from '../../response.ts';
+import { withSpan } from '../../tracing.ts';
+import { tracer } from '../../observability.ts';
 
 /** Schema for update_memory tool input */
 export const updateMemoryInputSchema = z.object({
@@ -86,44 +88,46 @@ export const updateMemoryHandler = async (
     ctx: CortexContext,
     input: UpdateMemoryInput,
 ): Promise<McpToolResponse> => {
-    // Validate that at least one update field is provided
-    if (
-        input.content === undefined &&
-        input.tags === undefined &&
-        input.expires_at === undefined &&
-        input.citations === undefined
-    ) {
-        throw new McpError(
-            ErrorCode.InvalidParams,
-            'No updates provided. Specify content, tags, expires_at, or citations.',
-        );
-    }
+    return withSpan(tracer, 'cortex_update_memory', input.store, async () => {
+        // Validate that at least one update field is provided
+        if (
+            input.content === undefined &&
+            input.tags === undefined &&
+            input.expires_at === undefined &&
+            input.citations === undefined
+        ) {
+            throw new McpError(
+                ErrorCode.InvalidParams,
+                'No updates provided. Specify content, tags, expires_at, or citations.',
+            );
+        }
 
-    const storeResult = ctx.cortex.getStore(input.store);
-    if (!storeResult.ok()) {
-        throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
-    }
-    const store = storeResult.value;
+        const storeResult = ctx.cortex.getStore(input.store);
+        if (!storeResult.ok()) {
+            throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
+        }
+        const store = storeResult.value;
 
-    const memoryClient = store.getMemory(input.path);
-    const result = await memoryClient.update({
-        content: input.content,
-        tags: input.tags,
-        expiresAt:
-            input.expires_at === null
-                ? null
-                : input.expires_at
-                    ? new Date(input.expires_at)
-                    : undefined,
-        citations: input.citations,
+        const memoryClient = store.getMemory(input.path);
+        const result = await memoryClient.update({
+            content: input.content,
+            tags: input.tags,
+            expiresAt:
+                input.expires_at === null
+                    ? null
+                    : input.expires_at
+                        ? new Date(input.expires_at)
+                        : undefined,
+            citations: input.citations,
+        });
+
+        if (!result.ok()) {
+            throw translateMemoryError(result.error);
+        }
+
+        const memory = result.value;
+        return {
+            content: [{ type: 'text', text: `Memory updated at ${memory.path}` }],
+        };
     });
-
-    if (!result.ok()) {
-        throw translateMemoryError(result.error);
-    }
-
-    const memory = result.value;
-    return {
-        content: [{ type: 'text', text: `Memory updated at ${memory.path}` }],
-    };
 };

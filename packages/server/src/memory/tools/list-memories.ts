@@ -10,6 +10,8 @@ import type { CategoryError, CategoryClient } from '@yeseh/cortex-core';
 import { storeNameSchema } from '../../store/tools.ts';
 import { type CortexContext } from '@yeseh/cortex-core';
 import { textResponse, type McpToolResponse } from '../../response.ts';
+import { withSpan } from '../../tracing.ts';
+import { tracer } from '../../observability.ts';
 
 /** Schema for list_memories tool input */
 export const listMemoriesInputSchema = z.object({
@@ -128,55 +130,57 @@ export const listMemoriesHandler = async (
     ctx: CortexContext,
     input: ListMemoriesInput
 ): Promise<McpToolResponse> => {
-    const storeResult = ctx.cortex.getStore(input.store);
-    if (!storeResult.ok()) {
-        throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
-    }
-
-    const store = storeResult.value;
-    const rootResult = store.root();
-    if (!rootResult.ok()) {
-        throw new McpError(ErrorCode.InvalidParams, rootResult.error.message);
-    }
-
-    const root = rootResult.value;
-    const includeExpired = input.includeExpired ?? false;
-    const now = ctx.now ? ctx.now() : new Date();
-
-    // Resolve the target category
-    let category: CategoryClient;
-    if (input.category) {
-        const categoryResult = root.getCategory(input.category);
-        if (!categoryResult.ok()) {
-            throw new McpError(ErrorCode.InvalidParams, categoryResult.error.message);
+    return withSpan(tracer, 'cortex_list_memories', input.store, async () => {
+        const storeResult = ctx.cortex.getStore(input.store);
+        if (!storeResult.ok()) {
+            throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
         }
-        category = categoryResult.value;
-    } else {
-        category = root;
-    }
 
-    // Collect memories (recursing into subcategories when listing from root)
-    const memories = input.category
-        ? await collectMemories(root, category, includeExpired, now)
-        : await collectMemories(root, category, includeExpired, now);
+        const store = storeResult.value;
+        const rootResult = store.root();
+        if (!rootResult.ok()) {
+            throw new McpError(ErrorCode.InvalidParams, rootResult.error.message);
+        }
 
-    const subcategoriesResult = await category.listSubcategories();
-    if (!subcategoriesResult.ok()) {
-        throw translateCategoryError(subcategoriesResult.error);
-    }
+        const root = rootResult.value;
+        const includeExpired = input.includeExpired ?? false;
+        const now = ctx.now ? ctx.now() : new Date();
 
-    const subcategories = subcategoriesResult.value;
+        // Resolve the target category
+        let category: CategoryClient;
+        if (input.category) {
+            const categoryResult = root.getCategory(input.category);
+            if (!categoryResult.ok()) {
+                throw new McpError(ErrorCode.InvalidParams, categoryResult.error.message);
+            }
+            category = categoryResult.value;
+        } else {
+            category = root;
+        }
 
-    const output = {
-        category: input.category ?? 'all',
-        count: memories.length,
-        memories,
-        subcategories: subcategories.map((s) => ({
-            path: s.path.toString(),
-            memory_count: s.memoryCount,
-            description: s.description,
-        })),
-    };
+        // Collect memories (recursing into subcategories when listing from root)
+        const memories = input.category
+            ? await collectMemories(root, category, includeExpired, now)
+            : await collectMemories(root, category, includeExpired, now);
 
-    return textResponse(JSON.stringify(output, null, 2));
+        const subcategoriesResult = await category.listSubcategories();
+        if (!subcategoriesResult.ok()) {
+            throw translateCategoryError(subcategoriesResult.error);
+        }
+
+        const subcategories = subcategoriesResult.value;
+
+        const output = {
+            category: input.category ?? 'all',
+            count: memories.length,
+            memories,
+            subcategories: subcategories.map((s) => ({
+                path: s.path.toString(),
+                memory_count: s.memoryCount,
+                description: s.description,
+            })),
+        };
+
+        return textResponse(JSON.stringify(output, null, 2));
+    });
 };

@@ -13,6 +13,8 @@ import {
     type McpToolResponse,
 } from '../../response.ts';
 import { type CortexContext } from '@yeseh/cortex-core';
+import { withSpan } from '../../tracing.ts';
+import { tracer } from '../../observability.ts';
 
 /** Schema for get_recent_memories tool input */
 export const getRecentMemoriesInputSchema = z.object({
@@ -60,44 +62,46 @@ export const getRecentMemoriesHandler = async (
     ctx: CortexContext,
     input: GetRecentMemoriesInput,
 ): Promise<McpToolResponse> => {
-    // Get store using fluent API
-    const storeResult = ctx.cortex.getStore(input.store);
-    if (!storeResult.ok()) {
-        throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
-    }
-    const store = storeResult.value;
-
-    // Validate category path if provided
-    if (input.category) {
-        const categoryResult = store.getCategory(input.category);
-        if (!categoryResult.ok()) {
-            throw new McpError(ErrorCode.InvalidParams, categoryResult.error.message);
+    return withSpan(tracer, 'cortex_get_recent_memories', input.store, async () => {
+        // Get store using fluent API
+        const storeResult = ctx.cortex.getStore(input.store);
+        if (!storeResult.ok()) {
+            throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
         }
-    }
+        const store = storeResult.value;
 
-    // Call getRecentMemories operation directly with the adapter
-    const result = await getRecentMemories(store.adapter, {
-        category: input.category,
-        limit: input.limit ?? 5,
-        includeExpired: input.include_expired ?? false,
+        // Validate category path if provided
+        if (input.category) {
+            const categoryResult = store.getCategory(input.category);
+            if (!categoryResult.ok()) {
+                throw new McpError(ErrorCode.InvalidParams, categoryResult.error.message);
+            }
+        }
+
+        // Call getRecentMemories operation directly with the adapter
+        const result = await getRecentMemories(store.adapter, {
+            category: input.category,
+            limit: input.limit ?? 5,
+            includeExpired: input.include_expired ?? false,
+        });
+
+        if (!result.ok()) {
+            throw new McpError(ErrorCode.InternalError, result.error.message);
+        }
+
+        const recentResult = result.value;
+        const output = {
+            category: recentResult.category,
+            count: recentResult.count,
+            memories: recentResult.memories.map((m) => ({
+                path: m.path,
+                content: m.content,
+                updated_at: m.updatedAt?.toISOString() ?? null,
+                token_estimate: m.tokenEstimate,
+                tags: m.tags,
+            })),
+        };
+
+        return textResponse(JSON.stringify(output, null, 2));
     });
-
-    if (!result.ok()) {
-        throw new McpError(ErrorCode.InternalError, result.error.message);
-    }
-
-    const recentResult = result.value;
-    const output = {
-        category: recentResult.category,
-        count: recentResult.count,
-        memories: recentResult.memories.map((m) => ({
-            path: m.path,
-            content: m.content,
-            updated_at: m.updatedAt?.toISOString() ?? null,
-            token_estimate: m.tokenEstimate,
-            tags: m.tags,
-        })),
-    };
-
-    return textResponse(JSON.stringify(output, null, 2));
 };

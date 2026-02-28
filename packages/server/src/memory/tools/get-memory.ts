@@ -10,6 +10,8 @@ import { storeNameSchema } from '../../store/tools.ts';
 import { type CortexContext } from '@yeseh/cortex-core';
 import { memoryPathSchema, translateMemoryError } from './shared.ts';
 import { type McpToolResponse, textResponse } from '../../response.ts';
+import { withSpan } from '../../tracing.ts';
+import { tracer } from '../../observability.ts';
 
 /** Schema for get_memory tool input */
 export const getMemoryInputSchema = z.object({
@@ -32,34 +34,36 @@ export const getMemoryHandler = async (
     ctx: CortexContext,
     input: GetMemoryInput,
 ): Promise<McpToolResponse> => {
-    const storeResult = ctx.cortex.getStore(input.store);
-    if (!storeResult.ok()) {
-        throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
-    }
-    const store = storeResult.value;
+    return withSpan(tracer, 'cortex_get_memory', input.store, async () => {
+        const storeResult = ctx.cortex.getStore(input.store);
+        if (!storeResult.ok()) {
+            throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
+        }
+        const store = storeResult.value;
 
-    const memoryClient = store.getMemory(input.path);
-    const result = await memoryClient.get({
-        includeExpired: input.include_expired ?? false,
+        const memoryClient = store.getMemory(input.path);
+        const result = await memoryClient.get({
+            includeExpired: input.include_expired ?? false,
+        });
+
+        if (!result.ok()) {
+            throw translateMemoryError(result.error);
+        }
+
+        const memory = result.value;
+        const output = {
+            path: input.path,
+            content: memory.content,
+            metadata: {
+                created_at: memory.metadata.createdAt.toISOString(),
+                updated_at: memory.metadata.updatedAt?.toISOString(),
+                tags: memory.metadata.tags,
+                source: memory.metadata.source,
+                expires_at: memory.metadata.expiresAt?.toISOString(),
+                citations: memory.metadata.citations,
+            },
+        };
+
+        return textResponse(JSON.stringify(output, null, 2));
     });
-
-    if (!result.ok()) {
-        throw translateMemoryError(result.error);
-    }
-
-    const memory = result.value;
-    const output = {
-        path: input.path,
-        content: memory.content,
-        metadata: {
-            created_at: memory.metadata.createdAt.toISOString(),
-            updated_at: memory.metadata.updatedAt?.toISOString(),
-            tags: memory.metadata.tags,
-            source: memory.metadata.source,
-            expires_at: memory.metadata.expiresAt?.toISOString(),
-            citations: memory.metadata.citations,
-        },
-    };
-
-    return textResponse(JSON.stringify(output, null, 2));
 };
