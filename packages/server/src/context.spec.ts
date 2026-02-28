@@ -94,7 +94,7 @@ describe('createCortexContext', () => {
         expect(await configFile.exists()).toBe(true);
     });
 
-    it('should create the default store directory under stores/default', async () => {
+    it('should create the default store directory under stores/global', async () => {
         tempDir = await mkdtemp(join(tmpdir(), 'cortex-test-'));
         const config = makeConfig(tempDir);
 

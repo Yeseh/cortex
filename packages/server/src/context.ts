@@ -28,7 +28,7 @@ const makeAbsolute = (pathStr: string): string => {
 
 export const validateStorePath = (
     storePath: string,
-    storeName: string,
+    storeName: string
 ): Result<void, ConfigValidationError> => {
     if (!isAbsolute(storePath)) {
         return err({
@@ -75,7 +75,7 @@ const createAdapterFactory = (configAdapter: ConfigAdapter) => {
  * The MCP server is self-initializing, so it also uses this function to create a context for its handlers.
  */
 export const createCortexContext = async (
-    options: ServerConfig,
+    options: ServerConfig
 ): Promise<Result<CortexContext, any>> => {
     try {
         const dir = options.dataPath ?? resolve(homedir(), '.config', 'cortex');
@@ -117,9 +117,8 @@ export const createCortexContext = async (
             }
 
             // Create the default store directory on disk so it's ready to use.
-            await mkdir(resolve(storesDir, 'default'), { recursive: true });
-        }
-        else {
+            await mkdir(resolve(storesDir, 'global'), { recursive: true });
+        } else {
             const reloadResult = await configAdapter.reload();
             if (!reloadResult.ok()) {
                 return err({
@@ -153,8 +152,7 @@ export const createCortexContext = async (
         };
 
         return ok(context);
-    }
-    catch (error) {
+    } catch (error) {
         return err({
             code: 'CONTEXT_CREATION_FAILED',
             message: `Unexpected error creating Cortex context: ${error instanceof Error ? error.message : String(error)}`,
