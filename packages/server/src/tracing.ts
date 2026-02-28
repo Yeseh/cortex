@@ -12,28 +12,39 @@ import { SpanStatusCode, type Tracer } from '@opentelemetry/api';
 /**
  * Wraps an async MCP tool handler in an OTel span.
  *
- * When `tracer` is null (CORTEX_OTEL_ENABLED=false), calls `fn()` directly.
- * When `tracer` is set, creates a named span, records the result status,
- * and exports via the configured SpanExporter.
+ * **Zero-overhead passthrough:** When `tracer` is `null` (i.e. `CORTEX_OTEL_ENABLED=false`),
+ * `fn()` is called directly with no span creation, attribute recording, or SDK overhead.
  *
- * @param tracer - Active OTel Tracer, or null when OTel is disabled
- * @param toolName - MCP tool name used as span name and `rpc.method` attribute
- * @param store - Memory store name recorded as `cortex.store` attribute
- * @param fn - Async handler to wrap
- * @returns The handler's return value
+ * **When `tracer` is non-null:** creates an active span named after `toolName`, then:
+ * - Sets `rpc.method` attribute to `toolName`
+ * - Sets `cortex.store` attribute to `store`
+ * - On success: sets `error=false` and span status `OK`
+ * - On throw: sets `error=true`, records `error.type` (the constructor name of the thrown
+ *   `Error`), calls `span.recordException(err)` for full stack capture, sets span status
+ *   `ERROR`, then re-throws so the caller's error handling is unaffected
+ * - Always ends the span in the `finally` block
+ *
+ * @param tracer - Active OTel `Tracer`, or `null` when OTel is disabled
+ * @param toolName - MCP tool name used as the span name and `rpc.method` attribute
+ * @param store - Memory store name recorded as the `cortex.store` span attribute
+ * @param fn - Async handler to wrap; its return value is passed through unchanged
+ * @returns A `Promise` resolving to the handler's return value
+ * @throws Re-throws any error thrown by `fn` after recording it on the span
  *
  * @example
  * ```typescript
- * // With OTel enabled:
+ * // OTel enabled — creates a span named 'cortex_add_memory':
  * return withSpan(tracer, 'cortex_add_memory', input.store, async () => {
- *     // ... handler body ...
+ *     return handler(ctx, input);
  * });
  *
- * // With OTel disabled (tracer=null), behaves identically but with zero overhead:
+ * // OTel disabled — zero overhead, identical behaviour:
  * return withSpan(null, 'cortex_add_memory', input.store, async () => {
- *     // ... handler body ...
+ *     return handler(ctx, input);
  * });
  * ```
+ *
+ * @see {@link tracer} exported from `server/observability` for the tracer instance
  */
 export const withSpan = async <T>(
     tracer: Tracer | null,

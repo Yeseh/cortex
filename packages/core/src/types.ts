@@ -91,13 +91,51 @@ export interface CortexOptions {
  * ```
  */
 export interface Logger {
-    /** Log a debug-level message. Verbose details for development troubleshooting. */
+    /**
+     * Log a debug-level message.
+     *
+     * Use for verbose, developer-facing details such as internal state transitions,
+     * resolved paths, or timing information. Typically suppressed in production.
+     *
+     * @param msg - Diagnostic message
+     * @param meta - Optional structured key-value pairs merged into the log entry
+     */
     debug(msg: string, meta?: Record<string, unknown>): void;
-    /** Log an info-level message. General operational information. */
+
+    /**
+     * Log an info-level message.
+     *
+     * Use for normal operational events that confirm the system is working as
+     * expected — e.g., "server started", "memory added", "store resolved".
+     *
+     * @param msg - Informational message
+     * @param meta - Optional structured key-value pairs merged into the log entry
+     */
     info(msg: string, meta?: Record<string, unknown>): void;
-    /** Log a warning-level message. Conditions that should be reviewed. */
+
+    /**
+     * Log a warning-level message.
+     *
+     * Use for recoverable conditions that are unexpected or potentially problematic
+     * but do not prevent the operation from completing — e.g., deprecated config,
+     * missing optional files, retried operations.
+     *
+     * @param msg - Warning message
+     * @param meta - Optional structured key-value pairs merged into the log entry
+     */
     warn(msg: string, meta?: Record<string, unknown>): void;
-    /** Log an error-level message with optional Error object for stack trace capture. */
+
+    /**
+     * Log an error-level message with optional error details.
+     *
+     * Use when an operation fails and the failure should be surfaced to operators.
+     * Pass the original `Error` object as `err` so implementations can extract
+     * the stack trace and error type for structured log sinks or OTel span recording.
+     *
+     * @param msg - Human-readable description of what failed
+     * @param err - Optional `Error` instance or arbitrary thrown value for stack capture
+     * @param meta - Optional structured key-value pairs merged into the log entry
+     */
     error(msg: string, err?: Error | unknown, meta?: Record<string, unknown>): void;
 }
 
@@ -114,13 +152,20 @@ export interface CortexContext {
     cortex: Cortex;
     /** Live configuration adapter — always reflects current on-disk state */
     config: ConfigAdapter;
+    /** Active runtime settings (output format, default store, etc.) */
     settings: CortexSettings;
+    /** Map of store names to their configuration, sourced from the config file */
     stores: ConfigStores;
 
+    /** Returns the current timestamp; injectable for deterministic testing */
     now: () => Date;
+    /** Process stdin stream — provided for handlers that read interactive input */
     stdin: NodeJS.ReadStream;
+    /** Process stdout stream — provided for handlers that write command output */
     stdout: NodeJS.WriteStream;
+    /** Current working directory; used to resolve the local `.cortex` store path */
     cwd?: string;
+    /** Override for the global data directory; defaults to `~/.config/cortex` */
     globalDataPath?: string;
     /** Optional structured logger. Guard calls with ctx.logger?.info(...) when logger may be absent. */
     logger?: Logger;
