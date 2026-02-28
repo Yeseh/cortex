@@ -36,6 +36,7 @@ import { registerStoreTools } from './store/index.ts';
 import { registerCategoryTools, type CategoryToolsOptions } from './category/index.ts';
 import { err, ok, type Result, storeCategoriesToConfigCategories } from '@yeseh/cortex-core';
 import { createCortexContext } from './context.ts';
+import { shutdown as otelShutdown } from './observability.ts';
 
 /**
  * Complete Cortex server instance with all components.
@@ -281,6 +282,7 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
     const close = async (): Promise<void> => {
         await mcpServer.close();
         server.stop();
+        await otelShutdown();
     };
 
     return ok({ server, mcpContext: mcp, config, close });

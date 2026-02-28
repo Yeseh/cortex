@@ -124,8 +124,13 @@ export const createServerConfigSchema = () =>
         outputFormat: outputFormatSchema.default('yaml'),
         /** Category mode for default store initialization */
         categoryMode: categoryModeSchema.default('free'),
-        /** Enable OpenTelemetry observability (LoggerProvider + TracerProvider with Console exporters) */
-        otelEnabled: z.coerce.boolean().default(false),
+        /** Enable OpenTelemetry observability (LoggerProvider + TracerProvider with Console exporters).
+         *  Note: only lowercase `'true'` and `'1'` are truthy — uppercase `'TRUE'` evaluates to `false`. */
+        otelEnabled: z
+            .string()
+            .optional()
+            .transform((v) => v === 'true' || v === '1')
+            .default(false),
     });
 
 /**

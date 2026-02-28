@@ -69,22 +69,25 @@ class ConsoleLogger implements Logger {
     }
 }
 
-// IMPORTANT: Map LogLevel string to OTel SeverityNumber
-// debug=5, info=9, warn=13, error=17 (OTel spec values)
 function logLevelToSeverity(level: LogLevel): number {
     switch (level) {
         case 'debug':
-            return 5;
+            return SeverityNumber.DEBUG;
         case 'info':
-            return 9;
+            return SeverityNumber.INFO;
         case 'warn':
-            return 13;
+            return SeverityNumber.WARN;
         case 'error':
-            return 17;
+            return SeverityNumber.ERROR;
         default:
-            return 9;
+            return SeverityNumber.INFO;
     }
 }
+
+/** Guards against re-registering OTel providers within a single process. */
+let bootstrapped = false;
+let _tracerProvider: NodeTracerProvider | null = null;
+let _loggerProvider: LoggerProvider | null = null;
 
 /**
  * Module-level tracer — set when OTel is enabled, null otherwise.
@@ -110,22 +113,25 @@ export const createLogger = (logLevel: LogLevel, otelEnabled: boolean): Logger =
         return new ConsoleLogger(logLevel);
     }
 
-    const resource = resourceFromAttributes({ [ATTR_SERVICE_NAME]: 'cortex-memory' });
+    if (!bootstrapped) {
+        bootstrapped = true;
+        const resource = resourceFromAttributes({ [ATTR_SERVICE_NAME]: 'cortex-memory' });
 
-    // Bootstrap TracerProvider — processors go in constructor config (OTel SDK v2)
-    const tracerProvider = new NodeTracerProvider({
-        resource,
-        spanProcessors: [new BatchSpanProcessor(new ConsoleSpanExporter())],
-    });
-    tracerProvider.register();
-    tracer = tracerProvider.getTracer('cortex-memory');
+        // Bootstrap TracerProvider — processors go in constructor config (OTel SDK v2)
+        _tracerProvider = new NodeTracerProvider({
+            resource,
+            spanProcessors: [new BatchSpanProcessor(new ConsoleSpanExporter())],
+        });
+        _tracerProvider.register();
+        tracer = _tracerProvider.getTracer('cortex-memory');
 
-    // Bootstrap LoggerProvider — processors go in constructor config (OTel SDK v2)
-    const loggerProvider = new LoggerProvider({
-        resource,
-        processors: [new BatchLogRecordProcessor(new ConsoleLogRecordExporter())],
-    });
-    logs.setGlobalLoggerProvider(loggerProvider);
+        // Bootstrap LoggerProvider — processors go in constructor config (OTel SDK v2)
+        _loggerProvider = new LoggerProvider({
+            resource,
+            processors: [new BatchLogRecordProcessor(new ConsoleLogRecordExporter())],
+        });
+        logs.setGlobalLoggerProvider(_loggerProvider);
+    }
 
     const otelLogger = logs.getLogger('cortex-memory');
     const minSeverity = logLevelToSeverity(logLevel);
@@ -174,4 +180,26 @@ export const createLogger = (logLevel: LogLevel, otelEnabled: boolean): Logger =
             }
         },
     };
+};
+
+/**
+ * Gracefully flushes and shuts down OTel providers.
+ * Call on server `close()` to ensure buffered spans/logs are exported.
+ *
+ * @example
+ * ```typescript
+ * server.on('close', async () => { await shutdown(); });
+ * ```
+ */
+export const shutdown = async (): Promise<void> => {
+    if (!bootstrapped) return;
+    await Promise.allSettled([
+        _tracerProvider?.shutdown(),
+        _loggerProvider?.shutdown(),
+    ]);
+    // Reset state so createLogger can be safely called again (important for test isolation)
+    bootstrapped = false;
+    tracer = null;
+    _tracerProvider = null;
+    _loggerProvider = null;
 };

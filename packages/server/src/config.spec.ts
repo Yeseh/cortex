@@ -215,6 +215,36 @@ describe('server config loading', () => {
 
     });
 
+    describe('otelEnabled', () => {
+        it('should parse "true" as true', () => {
+            process.env.CORTEX_OTEL_ENABLED = 'true';
+            const result = loadServerConfig();
+            expect(result.ok()).toBe(true);
+            if (result.ok()) expect(result.value.otelEnabled).toBe(true);
+        });
+
+        it('should parse "1" as true', () => {
+            process.env.CORTEX_OTEL_ENABLED = '1';
+            const result = loadServerConfig();
+            expect(result.ok()).toBe(true);
+            if (result.ok()) expect(result.value.otelEnabled).toBe(true);
+        });
+
+        it('should parse "false" as false', () => {
+            process.env.CORTEX_OTEL_ENABLED = 'false';
+            const result = loadServerConfig();
+            expect(result.ok()).toBe(true);
+            if (result.ok()) expect(result.value.otelEnabled).toBe(false);
+        });
+
+        it('should default to false when unset', () => {
+            delete process.env.CORTEX_OTEL_ENABLED;
+            const result = loadServerConfig();
+            expect(result.ok()).toBe(true);
+            if (result.ok()) expect(result.value.otelEnabled).toBe(false);
+        });
+    });
+
     describe('log level validation', () => {
         it('should accept debug log level', () => {
             process.env.CORTEX_LOG_LEVEL = 'debug';
@@ -416,7 +446,7 @@ describe('serverConfigSchema', () => {
     });
 
     it('should parse valid config directly', () => {
-        const config = {
+        const input = {
             dataPath: '/path',
             port: 5000,
             host: 'localhost',
@@ -424,14 +454,13 @@ describe('serverConfigSchema', () => {
             logLevel: 'debug' as const,
             outputFormat: 'json' as const,
             categoryMode: 'strict' as const,
-            otelEnabled: false,
         };
 
-        const result = serverConfigSchema.safeParse(config);
+        const result = serverConfigSchema.safeParse(input);
 
         expect(result.success).toBe(true);
         if (result.success) {
-            expect(result.data).toEqual(config);
+            expect(result.data).toEqual({ ...input, otelEnabled: false });
         }
     });
 
