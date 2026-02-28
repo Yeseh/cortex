@@ -4,7 +4,7 @@ subcategories:
   - path: admin
     memory_count: 0
   - path: decisions
-    memory_count: 4
+    memory_count: 6
   - path: features
     memory_count: 7
   - path: history
