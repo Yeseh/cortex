@@ -20,6 +20,8 @@ import type { CategoryMode, CortexContext, StoreData } from '@yeseh/cortex-core'
 import { convertToCategories, type CategoryInfo } from './shared.ts';
 import { errorResponse, textResponse, type McpToolResponse } from '../response.ts';
 import { resolve } from 'node:path';
+import { withSpan } from '../tracing.ts';
+import { tracer } from '../observability.ts';
 
 /**
  * Error codes for store tool operations.
@@ -197,21 +199,23 @@ export const listStoresFromContext = (
  * ```
  */
 export const listStoresHandler = async (ctx: CortexContext): Promise<McpToolResponse> => {
-    const stores: StoreInfo[] = Object.entries(ctx.config.stores ?? {})
-        .map(([
-            name, definition,
-        ]) => ({
-            name,
-            path: (definition.properties as { path: string }).path,
-            ...(definition.description !== undefined && {
-                description: definition.description,
-            }),
-            categoryMode: definition.categoryMode ?? 'free',
-            categories: convertToCategories(definition.categories),
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name));
+    return withSpan(tracer, 'cortex_list_stores', 'default', async () => {
+        const stores: StoreInfo[] = Object.entries(ctx.config.stores ?? {})
+            .map(([
+                name, definition,
+            ]) => ({
+                name,
+                path: (definition.properties as { path: string }).path,
+                ...(definition.description !== undefined && {
+                    description: definition.description,
+                }),
+                categoryMode: definition.categoryMode ?? 'free',
+                categories: convertToCategories(definition.categories),
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name));
 
-    return textResponse(JSON.stringify({ stores }, null, 2));
+        return textResponse(JSON.stringify({ stores }, null, 2));
+    });
 };
 
 /**
@@ -233,53 +237,55 @@ export const createStoreHandler = async (
     ctx: CortexContext,
     input: CreateStoreInput,
 ): Promise<McpToolResponse> => {
-    // Validate input
-    const validation = createStoreInputSchema.safeParse(input);
-    if (!validation.success) {
-        return errorResponse(
-            `Store name is invalid: ${validation.error.issues.map((issue) => issue.message).join('\n')}`,
-        );
-    }
+    return withSpan(tracer, 'cortex_create_store', input.name ?? 'default', async () => {
+        // Validate input
+        const validation = createStoreInputSchema.safeParse(input);
+        if (!validation.success) {
+            return errorResponse(
+                `Store name is invalid: ${validation.error.issues.map((issue) => issue.message).join('\n')}`,
+            );
+        }
 
-    // Check if store already exists in registry
-    if (ctx.config.stores?.[input.name]) {
-        return errorResponse(`Store '${input.name}' already exists. Choose a different name.`);
-    }
+        // Check if store already exists in registry
+        if (ctx.config.stores?.[input.name]) {
+            return errorResponse(`Store '${input.name}' already exists. Choose a different name.`);
+        }
 
-    if (!ctx.globalDataPath) {
-        return errorResponse(
-            'Server configuration error: globalDataPath is not defined in context.',
-        );
-    }
+        if (!ctx.globalDataPath) {
+            return errorResponse(
+                'Server configuration error: globalDataPath is not defined in context.',
+            );
+        }
 
-    // TODO: Coupled on fs implementation
-    const storePath = resolve(ctx.globalDataPath, input.name);
-    const storeData: StoreData = {
-        kind: 'filesystem',
-        categoryMode: 'free',
-        categories: [], // No pre-defined categories for new stores, but could add templates in the future
-        properties: {
-            path: storePath,
-        },
-    };
+        // TODO: Coupled on fs implementation
+        const storePath = resolve(ctx.globalDataPath, input.name);
+        const storeData: StoreData = {
+            kind: 'filesystem',
+            categoryMode: 'free',
+            categories: [], // No pre-defined categories for new stores, but could add templates in the future
+            properties: {
+                path: storePath,
+            },
+        };
 
-    // Persist the store to config first so the adapter factory can find it.
-    const saveResult = await ctx.config.saveStore(input.name, storeData);
-    if (!saveResult.ok()) {
-        return errorResponse(
-            `Failed to register store in configuration: ${saveResult.error.message}`,
-        );
-    }
+        // Persist the store to config first so the adapter factory can find it.
+        const saveResult = await ctx.config.saveStore(input.name, storeData);
+        if (!saveResult.ok()) {
+            return errorResponse(
+                `Failed to register store in configuration: ${saveResult.error.message}`,
+            );
+        }
 
-    // Create the store directory on disk
-    try {
-        await fs.mkdir(storePath, { recursive: true });
-    }
-    catch (error) {
-        return errorResponse(
-            `Failed to create store directory: ${error instanceof Error ? error.message : String(error)}`,
-        );
-    }
+        // Create the store directory on disk
+        try {
+            await fs.mkdir(storePath, { recursive: true });
+        }
+        catch (error) {
+            return errorResponse(
+                `Failed to create store directory: ${error instanceof Error ? error.message : String(error)}`,
+            );
+        }
 
-    return textResponse(JSON.stringify({ created: input.name }, null, 2));
+        return textResponse(JSON.stringify({ created: input.name }, null, 2));
+    });
 };

@@ -11,6 +11,7 @@ import { homedir } from 'os';
 import { isAbsolute, resolve } from 'path';
 import { FilesystemStorageAdapter, FilesystemConfigAdapter } from '@yeseh/cortex-storage-fs';
 import { stdin, stdout } from 'process';
+import { createCliLogger } from './observability.ts';
 
 // TODO: Much of this module should move to the FS adapter, since it's all about loading config from the filesystem. The CLI command handlers should just call into the core module to load config and create a context, rather than having all the logic here.
 
@@ -23,7 +24,7 @@ const makeAbsolute = (pathStr: string): string => {
 
 export const validateStorePath = (
     storePath: string,
-    storeName: string
+    storeName: string,
 ): Result<void, ConfigValidationError> => {
     if (!isAbsolute(storePath)) {
         return err({
@@ -65,7 +66,7 @@ export const createCliAdapterFactory = (configAdapter: FilesystemConfigAdapter) 
         const storeEntry = stores[storeName];
         if (!storeEntry) {
             throw new Error(
-                `Store '${storeName}' not found. Available stores: ${Object.keys(stores).join(', ')}`
+                `Store '${storeName}' not found. Available stores: ${Object.keys(stores).join(', ')}`,
             );
         }
 
@@ -81,7 +82,7 @@ export const createCliAdapterFactory = (configAdapter: FilesystemConfigAdapter) 
 };
 
 export const createCliConfigContext = async (
-    options: CliContextOptions = {}
+    options: CliContextOptions = {},
 ): Promise<Result<CliConfigContext, any>> => {
     const envConfigPath = process.env.CORTEX_CONFIG;
     const envConfigDir = process.env.CORTEX_CONFIG_DIR;
@@ -130,7 +131,7 @@ export const createCliConfigContext = async (
  * This function is used to create a context object that can be injected into command handlers for consistent access to the Cortex client and other utilities.
  */
 export const createCliCommandContext = async (
-    configDir?: string
+    configDir?: string,
 ): Promise<Result<CortexContext, any>> => {
     try {
         const configContextResult = await createCliConfigContext({
@@ -150,6 +151,8 @@ export const createCliCommandContext = async (
             adapterFactory,
         });
 
+        const logger = createCliLogger();
+
         const context: CortexContext = {
             config: configAdapter,
             settings: settings ?? getDefaultSettings(),
@@ -158,10 +161,12 @@ export const createCliCommandContext = async (
             now,
             stdin,
             stdout,
+            logger,
         };
 
         return ok(context);
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'CONTEXT_CREATION_FAILED',
             message: `Unexpected error creating CLI command context: ${error instanceof Error ? error.message : String(error)}`,

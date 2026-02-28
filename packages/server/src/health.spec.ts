@@ -15,7 +15,8 @@ const mockConfig: ServerConfig = {
     defaultStore: 'default',
     logLevel: 'info',
     outputFormat: 'yaml',
-    categoryMode: 'free'
+    categoryMode: 'free',
+    otelEnabled: false,
 };
 
 // The health check handler doesn't invoke any cortex methods

@@ -15,6 +15,8 @@ import {
     tagsSchema,
     translateMemoryError,
 } from './shared.ts';
+import { withSpan } from '../../tracing.ts';
+import { tracer } from '../../observability.ts';
 
 /** Schema for add_memory tool input */
 export const addMemoryInputSchema = z.object({
@@ -72,32 +74,34 @@ export const addMemoryHandler = async (
     ctx: CortexContext,
     input: AddMemoryInput,
 ): Promise<McpToolResponse> => {
-    const storeResult = ctx.cortex.getStore(input.store);
-    if (!storeResult.ok()) {
-        throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
-    }
+    return withSpan(tracer, 'cortex_add_memory', input.store, async () => {
+        const storeResult = ctx.cortex.getStore(input.store);
+        if (!storeResult.ok()) {
+            throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
+        }
 
-    const store = storeResult.value;
-    const memoryClient = store.getMemory(input.path);
-    const timestamp = new Date();
+        const store = storeResult.value;
+        const memoryClient = store.getMemory(input.path);
+        const timestamp = new Date();
 
-    const result = await memoryClient.create({
-        content: input.content,
-        metadata: {
-            tags: input.tags ?? [],
-            source: 'mcp',
-            createdAt: timestamp,
-            updatedAt: timestamp,
-            expiresAt: input.expires_at ? new Date(input.expires_at) : undefined,
-            citations: input.citations ?? [],
-        },
+        const result = await memoryClient.create({
+            content: input.content,
+            metadata: {
+                tags: input.tags ?? [],
+                source: 'mcp',
+                createdAt: timestamp,
+                updatedAt: timestamp,
+                expiresAt: input.expires_at ? new Date(input.expires_at) : undefined,
+                citations: input.citations ?? [],
+            },
+        });
+
+        if (!result.ok()) {
+            throw translateMemoryError(result.error);
+        }
+
+        const memory = result.value;
+
+        return textResponse(`Memory created at ${memory.path}`);
     });
-
-    if (!result.ok()) {
-        throw translateMemoryError(result.error);
-    }
-
-    const memory = result.value;
-
-    return textResponse(`Memory created at ${memory.path}`);
 };

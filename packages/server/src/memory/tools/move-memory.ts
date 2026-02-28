@@ -10,6 +10,8 @@ import { storeNameSchema } from '../../store/tools.ts';
 import { type CortexContext } from '@yeseh/cortex-core';
 import { type McpToolResponse, textResponse } from '../../response.ts';
 import { memoryPathSchema, translateMemoryError } from './shared.ts';
+import { withSpan } from '../../tracing.ts';
+import { tracer } from '../../observability.ts';
 
 /** Schema for move_memory tool input */
 export const moveMemoryInputSchema = z.object({
@@ -32,19 +34,21 @@ export const moveMemoryHandler = async (
     ctx: CortexContext,
     input: MoveMemoryInput,
 ): Promise<McpToolResponse> => {
-    const storeResult = ctx.cortex.getStore(input.store);
-    if (!storeResult.ok()) {
-        throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
-    }
-    const store = storeResult.value;
+    return withSpan(tracer, 'cortex_move_memory', input.store, async () => {
+        const storeResult = ctx.cortex.getStore(input.store);
+        if (!storeResult.ok()) {
+            throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
+        }
+        const store = storeResult.value;
 
-    const sourceMemory = store.getMemory(input.from_path);
-    const destMemory = store.getMemory(input.to_path);
-    const result = await sourceMemory.move(destMemory);
+        const sourceMemory = store.getMemory(input.from_path);
+        const destMemory = store.getMemory(input.to_path);
+        const result = await sourceMemory.move(destMemory);
 
-    if (!result.ok()) {
-        throw translateMemoryError(result.error);
-    }
+        if (!result.ok()) {
+            throw translateMemoryError(result.error);
+        }
 
-    return textResponse(`Memory moved from ${input.from_path} to ${input.to_path}`);
+        return textResponse(`Memory moved from ${input.from_path} to ${input.to_path}`);
+    });
 };

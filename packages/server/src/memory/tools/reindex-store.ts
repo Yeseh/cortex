@@ -9,6 +9,8 @@ import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { storeNameSchema } from '../../store/tools.ts';
 import { type CortexContext } from '@yeseh/cortex-core';
 import { type McpToolResponse, textResponse } from '../../response.ts';
+import { withSpan } from '../../tracing.ts';
+import { tracer } from '../../observability.ts';
 
 /** Schema for reindex_store tool input */
 export const reindexStoreInputSchema = z.object({
@@ -42,26 +44,28 @@ export const reindexStoreHandler = async (
     ctx: CortexContext,
     input: ReindexStoreInput,
 ): Promise<McpToolResponse> => {
-    const storeResult = ctx.cortex.getStore(input.store);
-    if (!storeResult.ok()) {
-        throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
-    }
-    const store = storeResult.value;
+    return withSpan(tracer, 'cortex_reindex_store', input.store, async () => {
+        const storeResult = ctx.cortex.getStore(input.store);
+        if (!storeResult.ok()) {
+            throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
+        }
+        const store = storeResult.value;
 
-    const rootClientResult = store.root();
-    if (!rootClientResult.ok()) {
-        throw new McpError(ErrorCode.InternalError, rootClientResult.error.message);
-    }
+        const rootClientResult = store.root();
+        if (!rootClientResult.ok()) {
+            throw new McpError(ErrorCode.InternalError, rootClientResult.error.message);
+        }
 
-    const result = await rootClientResult.value.reindex();
-    if (!result.ok()) {
-        throw new McpError(ErrorCode.InternalError, result.error.message);
-    }
+        const result = await rootClientResult.value.reindex();
+        if (!result.ok()) {
+            throw new McpError(ErrorCode.InternalError, result.error.message);
+        }
 
-    const output = {
-        store: input.store,
-        warnings: result.value.warnings,
-    };
+        const output = {
+            store: input.store,
+            warnings: result.value.warnings,
+        };
 
-    return textResponse(JSON.stringify(output, null, 2));
+        return textResponse(JSON.stringify(output, null, 2));
+    });
 };

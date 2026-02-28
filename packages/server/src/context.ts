@@ -15,6 +15,7 @@ import { FilesystemConfigAdapter, FilesystemStorageAdapter } from '@yeseh/cortex
 import { stdin, stdout } from 'process';
 import type { ServerConfig } from './config';
 import { exists, mkdir } from 'fs/promises';
+import { createLogger } from './observability.ts';
 
 // TODO: Much of this module should move to the FS adapter, since it's all about loading config from the filesystem. The CLI command handlers should just call into the core module to load config and create a context, rather than having all the logic here.
 
@@ -27,7 +28,7 @@ const makeAbsolute = (pathStr: string): string => {
 
 export const validateStorePath = (
     storePath: string,
-    storeName: string
+    storeName: string,
 ): Result<void, ConfigValidationError> => {
     if (!isAbsolute(storePath)) {
         return err({
@@ -74,7 +75,7 @@ const createAdapterFactory = (configAdapter: ConfigAdapter) => {
  * The MCP server is self-initializing, so it also uses this function to create a context for its handlers.
  */
 export const createCortexContext = async (
-    options: ServerConfig
+    options: ServerConfig,
 ): Promise<Result<CortexContext, any>> => {
     try {
         const dir = options.dataPath ?? resolve(homedir(), '.config', 'cortex');
@@ -117,7 +118,8 @@ export const createCortexContext = async (
 
             // Create the default store directory on disk so it's ready to use.
             await mkdir(resolve(storesDir, 'default'), { recursive: true });
-        } else {
+        }
+        else {
             const reloadResult = await configAdapter.reload();
             if (!reloadResult.ok()) {
                 return err({
@@ -136,6 +138,8 @@ export const createCortexContext = async (
 
         const now = () => new Date();
 
+        const logger = createLogger(options.logLevel, options.otelEnabled ?? false);
+
         const context: CortexContext = {
             config: configAdapter,
             settings: config.settings ?? getDefaultSettings(),
@@ -145,10 +149,12 @@ export const createCortexContext = async (
             stdin,
             stdout,
             globalDataPath: storesDir,
+            logger,
         };
 
         return ok(context);
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'CONTEXT_CREATION_FAILED',
             message: `Unexpected error creating Cortex context: ${error instanceof Error ? error.message : String(error)}`,
