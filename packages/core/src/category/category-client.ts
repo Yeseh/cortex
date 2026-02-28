@@ -102,7 +102,7 @@ export class CategoryClient {
      */
     static init(
         path: string | CategoryPath,
-        adapter: StorageAdapter
+        adapter: StorageAdapter,
     ): CategoryResult<CategoryClient> {
         const normalizedPath = CategoryClient.normalizePath(path.toString());
         const pathPayload = normalizedPath === '/' ? '' : normalizedPath.slice(1);
@@ -371,7 +371,7 @@ export class CategoryClient {
      * - Parent categories are created automatically if missing
      */
     async create(
-        modeContext?: CategoryModeContext
+        modeContext?: CategoryModeContext,
     ): Promise<Result<CreateCategoryResult, CategoryError>> {
         const pathResult = this.parsePath();
         if (!pathResult.ok()) {
@@ -409,7 +409,7 @@ export class CategoryClient {
      * - Not idempotent: deleting a missing category is an error
      */
     async delete(
-        modeContext?: CategoryModeContext
+        modeContext?: CategoryModeContext,
     ): Promise<Result<DeleteCategoryResult, CategoryError>> {
         const pathResult = this.parsePath();
         if (!pathResult.ok()) {
@@ -480,7 +480,7 @@ export class CategoryClient {
      */
     async setDescription(
         description: string | null,
-        modeContext?: CategoryModeContext
+        modeContext?: CategoryModeContext,
     ): Promise<Result<SetDescriptionResult, CategoryError>> {
         const pathResult = this.parsePath();
         if (!pathResult.ok()) {
@@ -491,7 +491,7 @@ export class CategoryClient {
             this.adapter.categories,
             pathResult.value.toString(),
             description ?? '',
-            modeContext
+            modeContext,
         );
     }
 
@@ -734,7 +734,7 @@ export class CategoryClient {
      * - Expired memories are excluded unless includeExpired is true
      */
     async getRecent(
-        options?: Omit<GetRecentMemoriesOptions, 'category'>
+        options?: Omit<GetRecentMemoriesOptions, 'category'>,
     ): Promise<Result<GetRecentMemoriesResult, CategoryError>> {
         const pathResult = this.parsePath();
         if (!pathResult.ok()) {

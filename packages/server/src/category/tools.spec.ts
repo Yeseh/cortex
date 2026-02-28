@@ -44,14 +44,14 @@ describe('createCategoryHandler', () => {
             const ctx = createMockCortexContext({
                 cortex: createMockCortex({
                     getStore: mock(() =>
-                        errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' })
+                        errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' }),
                     ) as unknown as MockCortex['getStore'],
                 }) as unknown as CortexContext['cortex'],
             });
 
             await expectMcpInvalidParams(
                 () => createCategoryHandler(ctx, { store: 'missing', path: 'foo' }),
-                'not found'
+                'not found',
             );
         });
     });
@@ -63,7 +63,7 @@ describe('createCategoryHandler', () => {
             const ctx = createMockCortexContext();
 
             await expectMcpInvalidParams(() =>
-                createCategoryHandler(ctx, { store: 'default', path: '' })
+                createCategoryHandler(ctx, { store: 'default', path: '' }),
             );
         });
 
@@ -71,7 +71,7 @@ describe('createCategoryHandler', () => {
             const ctx = createMockCortexContext();
 
             await expectMcpInvalidParams(() =>
-                createCategoryHandler(ctx, { store: 'default', path: '   ' })
+                createCategoryHandler(ctx, { store: 'default', path: '   ' }),
             );
         });
     });
@@ -145,7 +145,7 @@ describe('setCategoryDescriptionHandler', () => {
             const ctx = createMockCortexContext({
                 cortex: createMockCortex({
                     getStore: mock(() =>
-                        errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' })
+                        errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' }),
                     ) as unknown as MockCortex['getStore'],
                 }) as unknown as CortexContext['cortex'],
             });
@@ -157,7 +157,7 @@ describe('setCategoryDescriptionHandler', () => {
                         path: 'foo',
                         description: 'hello',
                     }),
-                'not found'
+                'not found',
             );
         });
     });
@@ -271,14 +271,14 @@ describe('deleteCategoryHandler', () => {
             const ctx = createMockCortexContext({
                 cortex: createMockCortex({
                     getStore: mock(() =>
-                        errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' })
+                        errResult({ code: 'STORE_NOT_FOUND', message: 'Store "missing" not found' }),
                     ) as unknown as MockCortex['getStore'],
                 }) as unknown as CortexContext['cortex'],
             });
 
             await expectMcpInvalidParams(
                 () => deleteCategoryHandler(ctx, { store: 'missing', path: 'foo' }),
-                'not found'
+                'not found',
             );
         });
     });
