@@ -149,7 +149,7 @@ describe('handleInit - interactive mode', () => {
         await rm(tempDir, { recursive: true, force: true });
     });
 
-    it('should call promptDeps.input for name and path when stdin is a TTY and no --name given', async () => {
+    it('should call promptDeps.input once (path only) when stdin is a TTY and --name is explicitly given', async () => {
         const inputMock = mock(async ({ default: d }: { message: string; default?: string }) => d ?? 'prompted-value');
         const promptDeps: PromptDeps = { input: inputMock, confirm: mock(async () => true) };
 
@@ -157,7 +157,7 @@ describe('handleInit - interactive mode', () => {
             adapter: createInitAdapter(),
             cwd: tempDir,
         });
-        (stdin as any).isTTY = true;
+        (stdin as unknown as { isTTY: boolean }).isTTY = true;
 
         await handleInit(ctx, undefined, { name: 'my-project', format: 'yaml' }, promptDeps);
 
@@ -174,7 +174,7 @@ describe('handleInit - interactive mode', () => {
             adapter: createInitAdapter(),
             cwd: tempDir,
         });
-        (stdin as any).isTTY = true;
+        (stdin as unknown as { isTTY: boolean }).isTTY = true;
 
         // No --name provided, should prompt for both name and path
         await handleInit(ctx, undefined, { format: 'yaml' }, promptDeps);
@@ -205,7 +205,7 @@ describe('handleInit - interactive mode', () => {
             adapter: createInitAdapter(),
             cwd: tempDir,
         });
-        (stdin as any).isTTY = true;
+        (stdin as unknown as { isTTY: boolean }).isTTY = true;
         const customPath = join(tempDir, 'custom-store');
 
         await handleInit(ctx, customPath, { name: 'my-project', format: 'yaml' }, promptDeps);
@@ -225,7 +225,7 @@ describe('handleInit - interactive mode', () => {
             adapter: createInitAdapter(),
             cwd: tempDir,
         });
-        (stdin as any).isTTY = true;
+        (stdin as unknown as { isTTY: boolean }).isTTY = true;
 
         await handleInit(ctx, undefined, { format: 'json' }, promptDeps);
 

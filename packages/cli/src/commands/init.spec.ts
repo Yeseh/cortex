@@ -143,7 +143,7 @@ describe('handleInit - interactive mode', () => {
             getStore: async () => ok(null),
             saveStore: async () => ok(undefined),
         });
-        (ctx.stdin as any).isTTY = true;
+        (ctx.stdin as unknown as { isTTY: boolean }).isTTY = true;
 
         await handleInit(ctx, { format: 'json' }, promptDeps);
 
@@ -193,7 +193,7 @@ describe('handleInit - interactive mode', () => {
             getStore: async () => ok(null),
             saveStore,
         });
-        (ctx.stdin as any).isTTY = true;
+        (ctx.stdin as unknown as { isTTY: boolean }).isTTY = true;
 
         await handleInit(ctx, { format: 'json' }, promptDeps);
 
