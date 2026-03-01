@@ -6,11 +6,11 @@ A persistent memory management skill for AI coding agents using the Cortex MCP t
 
 This skill provides a standardized interface for managing persistent memory using the Cortex MCP server. Memories are organized into:
 
-- **Stores**: Top-level containers (default store is `memory`)
+- **Stores**: Top-level containers (default store is `default`)
 - **Categories**: Nested folders that group related knowledge
 - **Memories**: Atomic markdown entries with metadata
 
-**Important:** The store name is not part of the memory path. Use `store` separately (or omit it to use the default). See [skills/memory/references/concepts.md](skills/memory/references/concepts.md).
+**Important:** The store name is not part of the memory path. Use `store` separately. See [skills/memory/references/fundamentals.md](skills/memory/references/fundamentals.md).
 
 ## Architecture
 
@@ -18,53 +18,28 @@ This skill provides a standardized interface for managing persistent memory usin
 memory/
 ├── SKILL.md                    # Agent-readable skill instructions
 ├── README.md                   # This file (human documentation)
-└── references/                 # Concepts and guidance
-    ├── concepts.md
-    ├── hierarchy.md
-    ├── loading.md
-    ├── practices.md
-    ├── schema.md
-    ├── tools.md
-    └── workflows.md
+└── references/
+    ├── fundamentals.md         # Rules, structure, loading, expiry, identity schema
+    ├── operations.md           # MCP operation cheat sheet
+    ├── workflows.md            # Workflow index
+    └── workflows/              # One file per workflow playbook
+        ├── session-start.md
+        ├── new-project-init.md
+        ├── capture-knowledge.md
+        ├── synthesize-facts.md
+        ├── review-hygiene.md
+        └── session-end-cleanup.md
 ```
 
-## Key Concepts
+## Key Rules
 
-### Store vs Category vs Memory
+- Always set `store` explicitly.
+- Keep memories atomic (one fact/decision per memory).
+- Load selectively (list → drill down → fetch specific memory).
+- Set expiry for temporary context.
+- Never store sensitive data.
 
-- **Store**: A top-level container (default `memory`)
-- **Category**: A folder path within a store (e.g., `projects/cortex/architecture`)
-- **Memory**: A single markdown entry with metadata
-
-**Correct path format:** `human/profile/identity`  
-**Incorrect path format:** `memory/human/profile/identity`
-
-Details: [skills/memory/references/concepts.md](skills/memory/references/concepts.md).
-
-## Category Hierarchy
-
-Use nested categories and keep paths meaningful:
-
-```
-memory/                           # Store (container)
-├── human/                        # User identity & preferences
-│   ├── profile/
-│   │   └── identity.md
-│   └── preferences/
-│       ├── coding.md
-│       └── communication.md
-├── persona/                      # Agent behavior configuration
-│   ├── tone.md
-│   └── expertise.md
-└── projects/                     # Project-specific knowledge
-    └── cortex/
-        ├── architecture/
-        │   └── patterns.md
-        └── testing/
-            └── policy.md
-```
-
-Standard root categories and anti-patterns are documented in [skills/memory/references/hierarchy.md](skills/memory/references/hierarchy.md).
+See [skills/memory/references/fundamentals.md](skills/memory/references/fundamentals.md).
 
 ## MCP Tools
 
@@ -93,43 +68,16 @@ The Cortex MCP server exposes these tools:
 - `cortex://store/{name}`
 - `cortex://memory/{path}`
 
-Full reference: [skills/memory/references/tools.md](skills/memory/references/tools.md).
-
-## Loading Strategy
-
-Do not load everything. Use progressive discovery:
-
-1. List top-level categories: `cortex_list_memories()`
-2. Drill into relevant categories
-3. Load specific memories with `cortex_get_memory`
-
-Details: [skills/memory/references/loading.md](skills/memory/references/loading.md).
+Full reference: [skills/memory/references/operations.md](skills/memory/references/operations.md).
 
 ## Common Workflows
 
-Examples include session initialization, recording preferences, and migration:
+Examples include session startup, synthesizing facts, hygiene review, and project initialization after Cortex setup:
 
 - [skills/memory/references/workflows.md](skills/memory/references/workflows.md)
 
-## Best Practices
+## Fundamentals Reference
 
-- Use nested categories
-- Keep memories atomic
-- Use consistent tags
-- Update, don’t duplicate
-- Prune expired entries
+Store selection, loading strategy, expiration policy, and human identity schema:
 
-Details: [skills/memory/references/practices.md](skills/memory/references/practices.md).
-
-## Human Profile Schema
-
-The `human/profile/identity` memory should follow this schema:
-
-```
-- Full name: [User's complete name]
-- Region: [NL/BE/DE/PL/CH/US/Other]
-- Role: [Consultant/Sales/HR/Leadership/Other]
-- Handle: [lowercase-identifier]
-```
-
-Schema details: [skills/memory/references/schema.md](skills/memory/references/schema.md).
+- [skills/memory/references/fundamentals.md](skills/memory/references/fundamentals.md)
