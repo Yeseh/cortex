@@ -35,8 +35,10 @@ export const getMemoryHandler = async (
     input: GetMemoryInput,
 ): Promise<McpToolResponse> => {
     return withSpan(tracer, 'cortex_get_memory', input.store, async () => {
+        ctx.logger?.debug('cortex_get_memory invoked', { store: input.store, path: input.path });
         const storeResult = ctx.cortex.getStore(input.store);
         if (!storeResult.ok()) {
+            ctx.logger?.debug('cortex_get_memory failed', { store: input.store, error_code: storeResult.error.code });
             throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
         }
         const store = storeResult.value;
@@ -47,7 +49,21 @@ export const getMemoryHandler = async (
         });
 
         if (!result.ok()) {
-            throw translateMemoryError(result.error);
+            const translatedError = translateMemoryError(result.error);
+            if (translatedError.code === ErrorCode.InternalError) {
+                ctx.logger?.error('cortex_get_memory failed', undefined, {
+                    store: input.store,
+                    path: input.path,
+                    error_code: result.error.code,
+                });
+            } else {
+                ctx.logger?.debug('cortex_get_memory failed', {
+                    store: input.store,
+                    path: input.path,
+                    error_code: result.error.code,
+                });
+            }
+            throw translatedError;
         }
 
         const memory = result.value;
@@ -64,6 +80,7 @@ export const getMemoryHandler = async (
             },
         };
 
+        ctx.logger?.debug('cortex_get_memory succeeded', { store: input.store, path: input.path });
         return textResponse(JSON.stringify(output, null, 2));
     });
 };

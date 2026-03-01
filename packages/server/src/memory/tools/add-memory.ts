@@ -75,8 +75,10 @@ export const addMemoryHandler = async (
     input: AddMemoryInput,
 ): Promise<McpToolResponse> => {
     return withSpan(tracer, 'cortex_add_memory', input.store, async () => {
+        ctx.logger?.debug('cortex_add_memory invoked', { store: input.store, path: input.path });
         const storeResult = ctx.cortex.getStore(input.store);
         if (!storeResult.ok()) {
+            ctx.logger?.debug('cortex_add_memory failed', { store: input.store, error_code: storeResult.error.code });
             throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
         }
 
@@ -97,11 +99,26 @@ export const addMemoryHandler = async (
         });
 
         if (!result.ok()) {
-            throw translateMemoryError(result.error);
+            const translatedError = translateMemoryError(result.error);
+            if (translatedError.code === ErrorCode.InternalError) {
+                ctx.logger?.error('cortex_add_memory failed', undefined, {
+                    store: input.store,
+                    path: input.path,
+                    error_code: result.error.code,
+                });
+            } else {
+                ctx.logger?.debug('cortex_add_memory failed', {
+                    store: input.store,
+                    path: input.path,
+                    error_code: result.error.code,
+                });
+            }
+            throw translatedError;
         }
 
         const memory = result.value;
 
+        ctx.logger?.debug('cortex_add_memory succeeded', { store: input.store, path: memory.path });
         return textResponse(`Memory created at ${memory.path}`);
     });
 };

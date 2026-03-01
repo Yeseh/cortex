@@ -35,8 +35,10 @@ export const moveMemoryHandler = async (
     input: MoveMemoryInput,
 ): Promise<McpToolResponse> => {
     return withSpan(tracer, 'cortex_move_memory', input.store, async () => {
+        ctx.logger?.debug('cortex_move_memory invoked', { store: input.store, from_path: input.from_path, to_path: input.to_path });
         const storeResult = ctx.cortex.getStore(input.store);
         if (!storeResult.ok()) {
+            ctx.logger?.debug('cortex_move_memory failed', { store: input.store, error_code: storeResult.error.code });
             throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
         }
         const store = storeResult.value;
@@ -46,9 +48,26 @@ export const moveMemoryHandler = async (
         const result = await sourceMemory.move(destMemory);
 
         if (!result.ok()) {
-            throw translateMemoryError(result.error);
+            const translatedError = translateMemoryError(result.error);
+            if (translatedError.code === ErrorCode.InternalError) {
+                ctx.logger?.error('cortex_move_memory failed', undefined, {
+                    store: input.store,
+                    from_path: input.from_path,
+                    to_path: input.to_path,
+                    error_code: result.error.code,
+                });
+            } else {
+                ctx.logger?.debug('cortex_move_memory failed', {
+                    store: input.store,
+                    from_path: input.from_path,
+                    to_path: input.to_path,
+                    error_code: result.error.code,
+                });
+            }
+            throw translatedError;
         }
 
+        ctx.logger?.debug('cortex_move_memory succeeded', { store: input.store, from_path: input.from_path, to_path: input.to_path });
         return textResponse(`Memory moved from ${input.from_path} to ${input.to_path}`);
     });
 };

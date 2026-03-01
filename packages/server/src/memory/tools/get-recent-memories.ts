@@ -63,9 +63,11 @@ export const getRecentMemoriesHandler = async (
     input: GetRecentMemoriesInput,
 ): Promise<McpToolResponse> => {
     return withSpan(tracer, 'cortex_get_recent_memories', input.store, async () => {
+        ctx.logger?.debug('cortex_get_recent_memories invoked', { store: input.store, category: input.category, limit: input.limit });
         // Get store using fluent API
         const storeResult = ctx.cortex.getStore(input.store);
         if (!storeResult.ok()) {
+            ctx.logger?.debug('cortex_get_recent_memories failed', { store: input.store, error_code: storeResult.error.code });
             throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
         }
         const store = storeResult.value;
@@ -74,6 +76,7 @@ export const getRecentMemoriesHandler = async (
         if (input.category) {
             const categoryResult = store.getCategory(input.category);
             if (!categoryResult.ok()) {
+                ctx.logger?.debug('cortex_get_recent_memories failed', { store: input.store, category: input.category, error_code: categoryResult.error.code });
                 throw new McpError(ErrorCode.InvalidParams, categoryResult.error.message);
             }
         }
@@ -86,6 +89,7 @@ export const getRecentMemoriesHandler = async (
         });
 
         if (!result.ok()) {
+            ctx.logger?.error('cortex_get_recent_memories failed', undefined, { store: input.store, error_code: result.error.code });
             throw new McpError(ErrorCode.InternalError, result.error.message);
         }
 
@@ -102,6 +106,7 @@ export const getRecentMemoriesHandler = async (
             })),
         };
 
+        ctx.logger?.debug('cortex_get_recent_memories succeeded', { store: input.store, count: recentResult.count });
         return textResponse(JSON.stringify(output, null, 2));
     });
 };

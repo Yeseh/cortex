@@ -45,19 +45,23 @@ export const reindexStoreHandler = async (
     input: ReindexStoreInput,
 ): Promise<McpToolResponse> => {
     return withSpan(tracer, 'cortex_reindex_store', input.store, async () => {
+        ctx.logger?.debug('cortex_reindex_store invoked', { store: input.store });
         const storeResult = ctx.cortex.getStore(input.store);
         if (!storeResult.ok()) {
+            ctx.logger?.debug('cortex_reindex_store failed', { store: input.store, error_code: storeResult.error.code });
             throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
         }
         const store = storeResult.value;
 
         const rootClientResult = store.root();
         if (!rootClientResult.ok()) {
+            ctx.logger?.error('cortex_reindex_store failed', undefined, { store: input.store, error_code: rootClientResult.error.code });
             throw new McpError(ErrorCode.InternalError, rootClientResult.error.message);
         }
 
         const result = await rootClientResult.value.reindex();
         if (!result.ok()) {
+            ctx.logger?.error('cortex_reindex_store failed', undefined, { store: input.store, error_code: result.error.code });
             throw new McpError(ErrorCode.InternalError, result.error.message);
         }
 
@@ -66,6 +70,7 @@ export const reindexStoreHandler = async (
             warnings: result.value.warnings,
         };
 
+        ctx.logger?.debug('cortex_reindex_store succeeded', { store: input.store, warning_count: result.value.warnings.length });
         return textResponse(JSON.stringify(output, null, 2));
     });
 };
