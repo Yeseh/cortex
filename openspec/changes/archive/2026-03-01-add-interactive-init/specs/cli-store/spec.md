@@ -1,17 +1,4 @@
-# cli-store Specification
-
-## Purpose
-
-Defines the CLI commands for managing memory stores, including listing, adding, removing, and initializing stores.
-## Requirements
-### Requirement: Store management commands
-
-The CLI SHALL provide commands to list, add, remove, and initialize stores.
-
-#### Scenario: Listing stores
-
-- **WHEN** a user runs `cortex store list`
-- **THEN** the CLI returns all registered stores
+## MODIFIED Requirements
 
 ### Requirement: Store Init Command
 
@@ -100,34 +87,6 @@ The `store init` command SHALL use the `initializeStore` domain operation to cre
 - **THEN** the path prompt is skipped
 - **AND** only the name prompt is shown
 
-### Requirement: Store init with template categories
-
-When `cortex store init` creates template categories, each category directory SHALL contain its own `index.yaml` file.
-
-#### Scenario: Template category with in-folder index
-
-- **WHEN** a user runs `cortex store init` and template categories are created
-- **THEN** each category directory (e.g., `global/`, `projects/`) contains an `index.yaml` file
-
-### Requirement: Project entry creation
-
-When a project store is initialized, the CLI SHALL create a project entry memory in the default store for discoverability.
-
-#### Scenario: Project entry created on init
-
-- **WHEN** a user successfully runs `cortex store init`
-- **THEN** a memory is created at `projects/{store-name}` in the default store
-
-#### Scenario: Project entry contains metadata
-
-- **WHEN** the project entry memory is created
-- **THEN** it contains the project name and associated store name
-
-#### Scenario: Default store auto-created if missing
-
-- **WHEN** the default store does not exist during project entry creation
-- **THEN** the default store is created before adding the project entry
-
 ### Requirement: Global Init Command
 
 The `cortex init` command SHALL use the `initializeStore` domain operation for store creation while keeping CLI-specific concerns (config.yaml) in the CLI layer.
@@ -136,7 +95,7 @@ The `cortex init` command SHALL use the `initializeStore` domain operation for s
 
 - **GIVEN** no global config exists
 - **WHEN** `cortex init` is executed
-- **THEN** it calls `initializeStore` with name "default" and categories `["global", "projects"]`
+- **THEN** it calls `initializeStore` with name "global" and categories `["global", "projects"]`
 - **AND** creates `config.yaml` in CLI layer
 - **AND** creates `stores.yaml` via registry
 
@@ -157,4 +116,3 @@ The `cortex init` command SHALL use the `initializeStore` domain operation for s
 - **WHEN** `cortex init` is executed in a TTY
 - **THEN** the user is prompted to confirm or change the global store path
 - **AND** the user is prompted to confirm or change the global store name
-

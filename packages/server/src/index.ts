@@ -29,7 +29,7 @@
  */
 
 import { loadServerConfig, type ServerConfig } from './config.ts';
-import { createMcpContext, type McpContext } from './mcp.ts';
+import { createMcpContext, createMcpTransport, type McpContext } from './mcp.ts';
 import { createHealthResponse } from './health.ts';
 import { registerMemoryTools } from './memory/index.ts';
 import { registerStoreTools } from './store/index.ts';
@@ -168,9 +168,9 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
     const cortex = cortexContext.cortex;
     const { logger } = cortexContext;
 
-    // Create MCP context
+    // Create MCP context (transport is created per-request in stateless mode)
     const mcp = createMcpContext();
-    const { server: mcpServer, transport } = mcp;
+    const { server: mcpServer } = mcp;
 
     // Get category mode options from default store config
     const storeResult = cortex.getStore(config.defaultStore);
@@ -234,9 +234,6 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
     // 2. Or make category mode a required property of each store, and require the default store to be configured with the desired category mode for the server.
     registerCategoryTools(mcpServer, cortexContext, categoryToolsOptions);
 
-    // Connect MCP server to transport
-    await mcpServer.connect(transport);
-
     // Create Bun HTTP server with routes
     const server = Bun.serve({
         port: config.port,
@@ -257,6 +254,11 @@ export const createServer = async (): Promise<Result<CortexServer, ServerStartEr
                             );
                         }
 
+                        // Stateless mode: SDK 1.27+ requires a fresh transport per request.
+                        // Close the previous transport first so the McpServer can reconnect.
+                        await mcpServer.close();
+                        const transport = createMcpTransport();
+                        await mcpServer.connect(transport);
                         return await transport.handleRequest(req);
                     }
                     catch (error) {

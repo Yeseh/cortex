@@ -4,6 +4,7 @@ import { PassThrough } from 'node:stream';
 import { err, ok, type ConfigStore, type CortexContext } from '@yeseh/cortex-core';
 
 import { handleInit } from './init.ts';
+import type { PromptDeps } from '../prompts.ts';
 
 const existingGlobalStore: ConfigStore = {
     kind: 'filesystem',
@@ -122,5 +123,81 @@ describe('handleInit', () => {
         });
 
         await expect(handleInit(ctx, { format: 'yaml' })).rejects.toThrow(CommanderError);
+    });
+});
+
+describe('handleInit - interactive mode', () => {
+    it('should call promptDeps.input twice when stdin is a TTY and no flags are given', async () => {
+        const inputMock = mock(async ({ default: d }: { message: string; default?: string }) => d ?? 'prompted-value');
+        const confirmMock = mock(async () => true);
+        const promptDeps: PromptDeps = { input: inputMock, confirm: confirmMock };
+
+        const { ctx } = createContext({
+            path: '/tmp/test-config.yaml',
+            data: null,
+            stores: null,
+            settings: null,
+            initializeConfig: async () => ok(undefined),
+            getSettings: async () => ok({}),
+            getStores: async () => ok({}),
+            getStore: async () => ok(null),
+            saveStore: async () => ok(undefined),
+        });
+        (ctx.stdin as unknown as { isTTY: boolean }).isTTY = true;
+
+        await handleInit(ctx, { format: 'json' }, promptDeps);
+
+        expect(inputMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('should NOT call promptDeps.input when stdin is NOT a TTY', async () => {
+        const inputMock = mock(async ({ default: d }: { message: string; default?: string }) => d ?? 'prompted-value');
+        const promptDeps: PromptDeps = { input: inputMock, confirm: mock(async () => true) };
+
+        const { ctx } = createContext({
+            path: '/tmp/test-config.yaml',
+            data: null,
+            stores: null,
+            settings: null,
+            initializeConfig: async () => ok(undefined),
+            getSettings: async () => ok({}),
+            getStores: async () => ok({}),
+            getStore: async () => ok(null),
+            saveStore: async () => ok(undefined),
+        });
+        // ctx.stdin is a PassThrough with isTTY = undefined (non-TTY)
+
+        await handleInit(ctx, { format: 'json' }, promptDeps);
+
+        expect(inputMock).not.toHaveBeenCalled();
+    });
+
+    it('should use prompted store name in saveStore call when TTY', async () => {
+        const promptedName = 'my-custom-name';
+        const inputMock = mock(async ({ message, default: d }: { message: string; default?: string }) => {
+            // Second call is for store name
+            if (message.includes('name')) return promptedName;
+            return d ?? 'default-path';
+        });
+        const promptDeps: PromptDeps = { input: inputMock, confirm: mock(async () => true) };
+
+        const saveStore = mock(async () => ok(undefined));
+        const { ctx } = createContext({
+            path: '/tmp/test-config.yaml',
+            data: null,
+            stores: null,
+            settings: null,
+            initializeConfig: async () => ok(undefined),
+            getSettings: async () => ok({}),
+            getStores: async () => ok({}),
+            getStore: async () => ok(null),
+            saveStore,
+        });
+        (ctx.stdin as unknown as { isTTY: boolean }).isTTY = true;
+
+        await handleInit(ctx, { format: 'json' }, promptDeps);
+
+        // saveStore should be called with the prompted name
+        expect(saveStore).toHaveBeenCalledWith(promptedName, expect.any(Object));
     });
 });

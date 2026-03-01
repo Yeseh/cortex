@@ -19,7 +19,7 @@
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import { Command } from '@commander-js/extra-typings';
-import { throwCliError as throwCliError } from '../errors.ts';
+import { throwCliError } from '../errors.ts';
 import {
     serializeOutput,
     type OutputFormat,
@@ -35,6 +35,7 @@ import {
     type StoreData,
 } from '@yeseh/cortex-core';
 import { createCliCommandContext } from '../create-cli-command.ts';
+import { isTTY, defaultPromptDeps, type PromptDeps } from '../prompts.ts';
 
 /**
  * Options for the init command.
@@ -74,35 +75,135 @@ export const initCommand = new Command('init')
     });
 
 /**
- * Handles the init command execution.
+ * Prompts the user to confirm or change the resolved global store path and name.
  *
- * This function:
- * 1. Initializes the global cortex config store
- * 2. Creates default categories
- * 3. Outputs the result
+ * Returns `resolved` unchanged when stdin is not a TTY.
  *
- * @param options - Command options (force, format)
- * @throws {InvalidArgumentError} When arguments are invalid
- * @throws {CommanderError} When initialization fails
+ * @param ctx - Cortex context used for TTY detection via `ctx.stdin`
+ * @param resolved - Default store name and path to present as suggestions
+ * @param promptDeps - Injectable prompt functions for testability
+ * @returns Finalized store name and path (either from prompts or from `resolved`)
  */
+
+/**
+ * Resolve a user-supplied path:
+ * - expands a leading '~' to the user's home directory
+ * - resolves relative paths to an absolute path
+ */
+function resolveUserPath(userPath: string): string {
+    if (!userPath) return userPath;
+
+    let expanded = userPath;
+    if (userPath.startsWith('~')) {
+        expanded = resolve(homedir(), userPath.slice(1));
+    }
+
+    return resolve(expanded);
+}
+
+function normalizeStoreName(input: string, fallback: string): string {
+    const trimmed = input.trim();
+    if (!trimmed) return fallback;
+
+    const slug = trimmed
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]+/gi, '-')
+        .replace(/^-+|-+$/g, '');
+
+    return slug || fallback;
+}
+
+function normalizeStorePath(input: string, fallback: string): string {
+    const trimmed = input.trim();
+    const base = trimmed || fallback;
+    return resolveUserPath(base);
+}
+
+async function promptInitOptions(
+    ctx: CortexContext,
+    resolved: { storeName: string; storePath: string },
+    promptDeps: PromptDeps,
+): Promise<{ storeName: string; storePath: string }> {
+    if (!isTTY(ctx.stdin)) {
+        return {
+            storeName: normalizeStoreName(resolved.storeName, resolved.storeName),
+            storePath: normalizeStorePath(resolved.storePath, resolved.storePath),
+        };
+    }
+
+    const storePathInput = await promptDeps.input({
+        message: 'Global store path:',
+        default: resolved.storePath,
+    });
+    const storeNameInput = await promptDeps.input({
+        message: 'Global store name:',
+        default: resolved.storeName,
+    });
+
+    const storeName = normalizeStoreName(storeNameInput, resolved.storeName);
+    const storePath = normalizeStorePath(storePathInput, resolved.storePath);
+    return { storePath, storeName };
+}
 
 // TODO: We should move this logic into the core package as a helper function, and just call it from the CLI command handler.
 //       Use the ConfigAdapter to initialize the config store and write the default config, instead of manually writing files here. This way we can reuse the same initialization logic in other contexts (e.g. programmatic setup, tests).
+
+/**
+ * Handles the init command execution.
+ *
+ * This function:
+ * 1. When stdin is a TTY, prompts for global store path and name confirmation
+ * 2. Initializes the global cortex config store
+ * 3. Creates default categories
+ * 4. Outputs the result
+ *
+ * Interactive mode activates automatically when `ctx.stdin.isTTY === true`.
+ * In non-TTY environments (CI, pipes) the defaults are used without prompting.
+ *
+ * @param ctx - The Cortex context (stdin TTY state used for interactive detection)
+ * @param options - Command options (force, format)
+ * @param promptDeps - Injectable prompt functions; defaults to real `@inquirer/prompts` functions
+ * @throws {InvalidArgumentError} When arguments are invalid
+ * @throws {CommanderError} When initialization fails
+ *
+ * @example
+ * ```typescript
+ * // Non-interactive (CI / scripts):
+ * await handleInit(ctx, { format: 'yaml' });
+ *
+ * // Force interactive with test stubs:
+ * const stubs: PromptDeps = {
+ *     input: async ({ default: d }) => d ?? 'test',
+ *     confirm: async () => true,
+ * };
+ * (ctx.stdin as any).isTTY = true;
+ * await handleInit(ctx, {}, stubs);
+ * ```
+ */
 export async function handleInit(
     ctx: CortexContext,
     options: InitCommandOptions = {},
+    promptDeps: PromptDeps = defaultPromptDeps,
 ): Promise<void> {
     const cortexConfigDir = resolve(homedir(), '.config', 'cortex');
     const globalStorePath = resolve(cortexConfigDir, 'memory');
 
+    const resolved = await promptInitOptions(
+        ctx,
+        { storeName: 'global', storePath: globalStorePath },
+        promptDeps,
+    );
+    const finalStorePath = resolved.storePath;
+    const finalStoreName = resolved.storeName;
+
     await initializeConfigAdapter(ctx);
-    await ensureNotInitialized(ctx, globalStorePath, options.force);
-    await createGlobalStore(ctx, globalStorePath);
+    await ensureNotInitialized(ctx, finalStoreName, finalStorePath, options.force);
+    await createGlobalStore(ctx, finalStoreName, finalStorePath);
 
     // Build output
     const output: OutputPayload = {
         kind: 'init',
-        value: formatInit(globalStorePath, Object.keys(defaultGlobalStoreCategories)),
+        value: formatInit(finalStorePath, Object.keys(defaultGlobalStoreCategories)),
     };
 
     // Output result
@@ -115,6 +216,7 @@ export async function handleInit(
 
 const ensureNotInitialized = async (
     ctx: CortexContext,
+    storeName: string,
     globalStorePath: string,
     force = false,
 ): Promise<void> => {
@@ -122,7 +224,7 @@ const ensureNotInitialized = async (
         return;
     }
 
-    const existingStoreResult = await ctx.config.getStore('global');
+    const existingStoreResult = await ctx.config.getStore(storeName);
     if (!existingStoreResult.ok()) {
         throwCliError(existingStoreResult.error);
     }
@@ -157,8 +259,12 @@ const serializeOrThrow = <T>(value: T, format: OutputFormat) => {
     return serialized;
 };
 
-const createGlobalStore = async (ctx: CortexContext, globalStorePath: string): Promise<void> => {
-    const existingStoreResult = await ctx.config.getStore('global');
+const createGlobalStore = async (
+    ctx: CortexContext,
+    storeName: string,
+    globalStorePath: string,
+): Promise<void> => {
+    const existingStoreResult = await ctx.config.getStore(storeName);
     if (!existingStoreResult.ok()) {
         throwCliError(existingStoreResult.error);
     }
@@ -182,7 +288,7 @@ const createGlobalStore = async (ctx: CortexContext, globalStorePath: string): P
         },
     };
 
-    const saveStoreResult = await ctx.config.saveStore('global', globalStoreData);
+    const saveStoreResult = await ctx.config.saveStore(storeName, globalStoreData);
     if (!saveStoreResult.ok()) {
         throwCliError(saveStoreResult.error);
     }
