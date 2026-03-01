@@ -3,9 +3,7 @@
 ## Purpose
 
 Defines the CLI commands for managing memory stores, including listing, adding, removing, and initializing stores.
-
 ## Requirements
-
 ### Requirement: Store management commands
 
 The CLI SHALL provide commands to list, add, remove, and initialize stores.
@@ -21,8 +19,9 @@ The `store init` command SHALL use the `initializeStore` domain operation to cre
 
 1. Resolve store name (explicit or from git repo)
 2. Resolve target path (explicit or default to `.cortex`)
-3. Call `initializeStore(registry, name, path)` domain operation
-4. Create project entry in default store (best effort)
+3. When stdin is a TTY, prompt for store name (skipped if `--name` given) and path (skipped if path argument given)
+4. Call `initializeStore(registry, name, path)` domain operation
+5. Create project entry in default store (best effort)
 
 #### Scenario: Initialize store via domain operation
 
@@ -58,10 +57,15 @@ The `store init` command SHALL use the `initializeStore` domain operation to cre
 - **WHEN** a user runs `cortex store init --name custom-name` in a git repository
 - **THEN** the store is named `custom-name` instead of the git repository name
 
-#### Scenario: Non-git directory without name flag
+#### Scenario: Non-git directory without name flag in non-TTY
 
-- **WHEN** a user runs `cortex store init` in a non-git directory without `--name`
+- **WHEN** a user runs `cortex store init` in a non-git directory without `--name` and stdin is not a TTY
 - **THEN** the command returns an error requiring `--name` to be specified
+
+#### Scenario: Non-git directory without name flag in TTY
+
+- **WHEN** a user runs `cortex store init` in a non-git directory without `--name` and stdin is a TTY
+- **THEN** the command prompts the user for a store name
 
 #### Scenario: Store name collision
 
@@ -72,6 +76,29 @@ The `store init` command SHALL use the `initializeStore` domain operation to cre
 
 - **WHEN** a user successfully runs `cortex store init`
 - **THEN** the store is registered in `~/.config/cortex/stores.yaml` with its path
+
+#### Scenario: Interactive prompts skipped in non-TTY
+
+- **WHEN** `cortex store init` is executed in a non-TTY environment (CI, pipes)
+- **THEN** no prompts are shown and the command uses resolved defaults
+
+#### Scenario: Interactive prompts for name and path in TTY
+
+- **WHEN** `cortex store init` is executed in a TTY without `--name` and without a path argument
+- **THEN** the user is prompted to confirm or change the store name
+- **AND** the user is prompted to confirm or change the store path
+
+#### Scenario: Interactive name prompt skipped when explicit name given
+
+- **WHEN** `cortex store init --name my-store` is executed in a TTY
+- **THEN** the name prompt is skipped
+- **AND** only the path prompt is shown
+
+#### Scenario: Interactive path prompt skipped when explicit path given
+
+- **WHEN** `cortex store init ./custom-path` is executed in a TTY without `--name`
+- **THEN** the path prompt is skipped
+- **AND** only the name prompt is shown
 
 ### Requirement: Store init with template categories
 
@@ -119,3 +146,15 @@ The `cortex init` command SHALL use the `initializeStore` domain operation for s
 - **WHEN** `cortex init --force` is executed
 - **THEN** it reinitializes the store via `initializeStore`
 - **AND** overwrites existing configuration
+
+#### Scenario: Interactive prompts skipped in non-TTY
+
+- **WHEN** `cortex init` is executed in a non-TTY environment (CI, pipes)
+- **THEN** no prompts are shown and the command uses defaults
+
+#### Scenario: Interactive prompts for path and name in TTY
+
+- **WHEN** `cortex init` is executed in a TTY
+- **THEN** the user is prompted to confirm or change the global store path
+- **AND** the user is prompted to confirm or change the global store name
+
