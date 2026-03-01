@@ -9,16 +9,16 @@
  */
 
 import { describe, it, expect } from 'bun:test';
-
 import { program, runProgram } from './program.ts';
+import packageInfo from '../package.json'
 
 describe('program', () => {
     it('should have name "cortex"', () => {
         expect(program.name()).toBe('cortex');
     });
 
-    it('should have version "0.1.0"', () => {
-        expect(program.version()).toBe('0.1.0');
+    it(`should have version "${packageInfo.version}"`, () => {
+        expect(program.version()).toBe(packageInfo.version);
     });
 
     it('should have "memory" command registered', () => {
