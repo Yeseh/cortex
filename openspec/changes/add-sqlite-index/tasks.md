@@ -9,14 +9,15 @@
 - [ ] 2.1 Implement `updateEntry(slugPath, entry)` — upsert memory + category rows
 - [ ] 2.2 Implement `removeEntry(slugPath)` — delete memory row, clean up orphan categories
 - [ ] 2.3 Implement `query(filter)` — build SQL from MemoryFilter, execute, return IndexMemoryEntry[]
-- [ ] 2.4 Implement `reindex()` — drop and rebuild all tables from filesystem `.md` files
+- [ ] 2.4 Implement `reindex(scope: CategoryPath)` — rebuild entries under scope from filesystem `.md` files (full store when root)
 
 ## 3. Core Domain Updates
 
 - [ ] 3.1 Add `MemoryFilter` type to core
-- [ ] 3.2 Add `queryMemories` domain operation wrapping `IndexStorage.query()` with business logic (expiration filtering)
-- [ ] 3.3 Reimplement `getRecentMemories` to delegate to `query(sortBy: 'updatedAt', ...)`
-- [ ] 3.4 Update `createMemory`, `updateMemory`, `removeMemory`, `moveMemory` to call `updateEntry`/`removeEntry`
+- [ ] 3.2 Remove `updateAfterMemoryWrite` from `IndexAdapter` interface; replace with `updateEntry` and `removeEntry`
+- [ ] 3.3 Add `queryMemories` domain operation wrapping `IndexStorage.query()` with business logic (expiration filtering)
+- [ ] 3.4 Reimplement `getRecentMemories` to delegate to `query(sortBy: 'updatedAt', ...)`
+- [ ] 3.5 Update `createMemory`, `updateMemory`, `removeMemory`, `moveMemory` to call `updateEntry`/`removeEntry` directly
 
 ## 4. MCP Tool
 

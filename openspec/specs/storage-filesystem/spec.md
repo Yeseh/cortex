@@ -3,7 +3,9 @@
 ## Purpose
 
 Defines the filesystem storage adapter that persists memories and indexes to disk using the canonical store layout.
+
 ## Requirements
+
 ### Requirement: ScopedStorageAdapter Interface
 
 The system SHALL provide a `ScopedStorageAdapter` interface representing a storage adapter scoped to a specific store. It SHALL have:
@@ -32,7 +34,7 @@ The system SHALL provide a storage adapter interface that composes four focused 
 #### Scenario: Accessing index operations
 
 - **WHEN** a consumer needs to read or write index files
-- **THEN** it accesses `adapter.indexes.read()` or `adapter.indexes.write()`
+- **THEN** it accesses `adapter.indexes.load()` or `adapter.indexes.write()`
 
 #### Scenario: Accessing category operations
 
@@ -123,22 +125,22 @@ The system SHALL provide a `MemoryStorage` interface for memory file operations 
 
 ### Requirement: Index storage interface
 
-The system SHALL provide an `IndexStorage` interface that returns structured `CategoryIndex` data. The interface SHALL include `read(categoryPath)` returning `CategoryIndex | null`, `write(categoryPath, index: CategoryIndex)`, and `reindex()`. Parsing and serialization of the index format (e.g., YAML) is an internal concern of the storage adapter, not exposed through the interface.
+The system SHALL provide an `IndexStorage` interface that returns structured `Category` data. The interface SHALL include `load(categoryPath)` returning `Category | null`, `write(categoryPath, category: Category)`, `reindex(scope: CategoryPath)`, and `updateAfterMemoryWrite(memory, options?)`. Parsing and serialization of the index format (e.g., YAML) is an internal concern of the storage adapter, not exposed through the interface.
 
 #### Scenario: Interface methods
 
 - **WHEN** the `IndexStorage` interface is defined
-- **THEN** it includes `read(categoryPath)` returning `CategoryIndex | null`, `write(categoryPath, index)` accepting `CategoryIndex`, and `reindex()`
+- **THEN** it includes `load(categoryPath)` returning `Category | null`, `write(categoryPath, category)`, `reindex(scope)`, and `updateAfterMemoryWrite(memory, options?)`
 
-#### Scenario: Read returns structured data
+#### Scenario: Load returns structured data
 
-- **WHEN** `adapter.indexes.read(categoryPath)` is called
-- **THEN** it returns a structured `CategoryIndex` object or `null` if no index exists
+- **WHEN** `adapter.indexes.load(categoryPath)` is called
+- **THEN** it returns a structured `Category` object or `null` if no index exists
 - **AND** the caller never receives raw serialized strings
 
 #### Scenario: Write accepts structured data
 
-- **WHEN** `adapter.indexes.write(categoryPath, index)` is called with a `CategoryIndex` object
+- **WHEN** `adapter.indexes.write(categoryPath, category)` is called with a `Category` object
 - **THEN** the storage adapter serializes it to its internal format (e.g., YAML)
 - **AND** the caller never constructs serialized strings
 
@@ -213,4 +215,3 @@ The `Cortex.fromConfig()` method SHALL read the merged `config.yaml` format with
 - **WHEN** `Cortex.fromConfig(path)` is called
 - **THEN** it reads `config.yaml` from that directory
 - **AND** sets `rootDirectory` to the resolved absolute path
-
