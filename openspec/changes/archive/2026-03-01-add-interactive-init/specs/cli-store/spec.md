@@ -95,7 +95,7 @@ The `cortex init` command SHALL use the `initializeStore` domain operation for s
 
 - **GIVEN** no global config exists
 - **WHEN** `cortex init` is executed
-- **THEN** it calls `initializeStore` with name "default" and categories `["global", "projects"]`
+- **THEN** it calls `initializeStore` with name "global" and categories `["global", "projects"]`
 - **AND** creates `config.yaml` in CLI layer
 - **AND** creates `stores.yaml` via registry
 
