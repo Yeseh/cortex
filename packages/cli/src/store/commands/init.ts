@@ -67,14 +67,18 @@ function writeOutput(
 }
 
 /**
- * Prompts the user for store name and path when running in an interactive TTY.
- * Skips prompts when stdin is not a TTY, or when values were explicitly provided.
+ * Prompts the user to confirm or change the resolved store name and path.
  *
- * @param ctx - The Cortex context (used to detect TTY)
- * @param resolved - The auto-resolved store name and path
- * @param explicit - Which values were explicitly provided by the caller
- * @param promptDeps - The prompt functions to use
- * @returns The final store name and path (prompted or original)
+ * Prompts are selectively skipped:
+ * - Name prompt skipped when `explicit.name` is provided
+ * - Path prompt skipped when `explicit.path` is provided
+ * - All prompts skipped when stdin is not a TTY
+ *
+ * @param ctx - Cortex context used for TTY detection via `ctx.stdin`
+ * @param resolved - Default store name and path to present as suggestions
+ * @param explicit - Which values were provided explicitly by the user
+ * @param promptDeps - Injectable prompt functions for testability
+ * @returns Finalized store name and path
  */
 async function promptStoreInitOptions(
     ctx: CortexContext,
@@ -96,21 +100,56 @@ async function promptStoreInitOptions(
 }
 
 /**
- * Handles the init command execution.
+ * Tries to resolve the store name. Returns an empty string when resolution
+ * fails and stdin is a TTY (allowing the interactive prompt to take over).
+ * Re-throws when stdin is not a TTY.
+ *
+ * @param cwd - Current working directory for git detection
+ * @param explicitName - Optional explicit name from `--name` flag
+ * @param tty - Whether stdin is a TTY
+ */
+async function resolveStoreNameOrEmpty(
+    cwd: string,
+    explicitName: string | undefined,
+    tty: boolean,
+): Promise<string> {
+    try {
+        return await resolveStoreName(cwd, explicitName);
+    } catch (e) {
+        if (tty) return '';
+        throw e;
+    }
+}
+
+/**
+ * Handles the store init command execution.
  *
  * This function:
- * 1. Resolves the store name (explicit or git detection)
- * 2. In TTY mode, prompts user to confirm/change store name and path
- * 3. Resolves target path (default to .cortex in cwd)
- * 4. Initializes the store directory and registers it
+ * 1. Resolves the store name (explicit or git detection; falls back to empty for TTY prompt)
+ * 2. Resolves target path (default to .cortex in cwd)
+ * 3. When stdin is a TTY, prompts for unresolved name and/or path
+ * 4. Uses `store.initialize` to create directory, index, and register
  * 5. Outputs the result
  *
- * @param ctx - The Cortex context
+ * Interactive mode activates automatically when `ctx.stdin.isTTY === true`.
+ * In non-TTY environments (CI, pipes) the command behaves exactly as before —
+ * no behavioral regression.
+ *
+ * @param ctx - The Cortex context (stdin TTY state used for interactive detection)
  * @param targetPath - Optional path for the store (defaults to .cortex in cwd)
- * @param options - Command options (name, format)
- * @param promptDeps - Optional prompt dependencies for testing
+ * @param options - Command options (name, format, categoryMode, description)
+ * @param promptDeps - Injectable prompt functions; defaults to real `@inquirer/prompts` functions
  * @throws {InvalidArgumentError} When the store name is invalid
  * @throws {CommanderError} When the store already exists or init fails
+ *
+ * @example
+ * ```typescript
+ * // Explicit name + path (no prompts even in TTY):
+ * await handleInit(ctx, './my-store', { name: 'my-project' });
+ *
+ * // Interactive (TTY detected, no --name given):
+ * await handleInit(ctx, undefined, {}, defaultPromptDeps);
+ * ```
  */
 export async function handleInit(
     ctx: CortexContext,
@@ -121,19 +160,7 @@ export async function handleInit(
     const cwd = ctx.cwd ?? process.cwd();
     const stdout = ctx.stdout ?? process.stdout;
 
-    let storeName: string;
-    try {
-        storeName = await resolveStoreName(cwd, options.name);
-    }
-    catch (e) {
-        if (isTTY(ctx.stdin)) {
-            // Will be resolved via prompt below
-            storeName = '';
-        }
-        else {
-            throw e;
-        }
-    }
+    const storeName = await resolveStoreNameOrEmpty(cwd, options.name, isTTY(ctx.stdin));
 
     const storePath = targetPath
         ? resolveUserPath(targetPath.trim(), cwd)
