@@ -49,7 +49,7 @@
         "compile:cli": "bun build --compile --minify --sourcemap --bytecode ./packages/cli/src/run.ts --outfile ./bin/cortex",
         "changeset": "changeset",
         "ci:version": "changeset version && bun update",
-        "ci:publish": "for dir in packages/*; do (cd \"$dir\" && bun publish --access public --provenance) || exit 1; done && changeset tag",
+        "ci:publish": "for dir in packages/*; do (cd \"$dir\" && npm publish --access public --provenance) || exit 1; done && changeset tag",
         "version": "changeset version"
     }
 }
