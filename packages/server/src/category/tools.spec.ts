@@ -64,7 +64,7 @@ describe('createCategoryHandler', () => {
             const ctx = createMockCortexContext();
 
             await expectMcpInvalidParams(() =>
-                createCategoryHandler(ctx, { store: 'global', path: '' })
+                createCategoryHandler(ctx, { store: 'global', path: '' }),
             );
         });
 
@@ -72,7 +72,7 @@ describe('createCategoryHandler', () => {
             const ctx = createMockCortexContext();
 
             await expectMcpInvalidParams(() =>
-                createCategoryHandler(ctx, { store: 'global', path: '   ' })
+                createCategoryHandler(ctx, { store: 'global', path: '   ' }),
             );
         });
     });

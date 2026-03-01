@@ -49,7 +49,7 @@ type InputResult = Result<InputContent, InputError>;
 type OptionalContentResult = Result<InputContent | null, InputError>;
 
 export const readContentFromFile = async (
-    filePath: string | undefined
+    filePath: string | undefined,
 ): Promise<OptionalContentResult> => {
     if (filePath === undefined) {
         return ok(null);
@@ -64,7 +64,8 @@ export const readContentFromFile = async (
     try {
         const content = await readFile(trimmed, 'utf8');
         return ok({ content, source: 'file' });
-    } catch (error) {
+    }
+    catch (error) {
         return err({
             code: 'FILE_READ_FAILED',
             message: `Failed to read content file: ${trimmed}.`,
@@ -75,7 +76,7 @@ export const readContentFromFile = async (
 };
 
 export const readContentFromStream = async (
-    stream: NodeJS.ReadableStream
+    stream: NodeJS.ReadableStream,
 ): Promise<OptionalContentResult> => {
     const isTty = 'isTTY' in stream ? Boolean(stream.isTTY) : false;
     if (isTty) {
@@ -110,7 +111,11 @@ export const resolveInput = async (source: InputSource): Promise<InputResult> =>
         source.stream !== undefined &&
         !('isTTY' in source.stream && Boolean((source.stream as { isTTY?: boolean }).isTTY));
 
-    const requestedSources = [contentProvided, fileProvided, streamRequested].filter(Boolean);
+    const requestedSources = [
+        contentProvided,
+        fileProvided,
+        streamRequested,
+    ].filter(Boolean);
 
     if (requestedSources.length > 1) {
         return err({

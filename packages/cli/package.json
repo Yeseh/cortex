@@ -16,13 +16,11 @@
     },
     "exports": {
         ".": {
-            "bun": "./src/program.ts",
-            "types": "./src/program.ts",
+            "types": "./dist/program.d.ts",
             "import": "./dist/program.js"
         }
     },
     "files": [
-        "src",
         "dist"
     ],
     "scripts": {

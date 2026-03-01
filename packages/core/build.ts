@@ -11,13 +11,14 @@ const entrypoints = [
     './src/category/index.ts',
     './src/store/index.ts',
     './src/storage/index.ts',
+    './src/testing/index.ts',
 ];
 
 const result = await Bun.build({
     entrypoints,
     outdir: './dist',
     root: './src',
-    target: 'bun',
+    target: 'node',
     format: 'esm',
     splitting: true,
     sourcemap: 'external',

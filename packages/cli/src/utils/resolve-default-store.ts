@@ -53,8 +53,12 @@ export function resolveDefaultStore(ctx: CortexContext, explicit: string | undef
     // 2. Local store – registered store whose path is the `.cortex` dir in cwd
     //    Both `.cortex` and `.cortex/memory` are accepted to handle both
     //    naming conventions in use across the project.
-    const localPaths = [join(cwd, '.cortex'), join(cwd, '.cortex', 'memory')];
-    for (const [name, store] of Object.entries(stores)) {
+    const localPaths = [
+        join(cwd, '.cortex'), join(cwd, '.cortex', 'memory'),
+    ];
+    for (const [
+        name, store,
+    ] of Object.entries(stores)) {
         const storePath = store.properties?.path as string | undefined;
         if (storePath && localPaths.includes(storePath)) {
             return name;

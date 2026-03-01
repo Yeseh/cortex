@@ -11,7 +11,7 @@ import {
     type ConfigStores,
     type StoreData,
 } from '@yeseh/cortex-core';
-import { testContext } from '../../../core/src/testing/createContext.ts';
+import { testContext } from '@yeseh/cortex-core/testing';
 import { registerStoreTools } from './index.ts';
 import { listStoresHandler, createStoreHandler } from './tools.ts';
 import type { CortexContext } from '@yeseh/cortex-core';

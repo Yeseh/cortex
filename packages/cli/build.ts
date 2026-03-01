@@ -11,7 +11,7 @@ const result = await Bun.build({
     entrypoints: ['./src/run.ts', './src/program.ts'],
     outdir: './dist',
     root: './src',
-    target: 'bun',
+    target: 'node',
     format: 'esm',
     splitting: true,
     sourcemap: 'external',
@@ -34,11 +34,10 @@ if (!result.success) {
     process.exit(1);
 }
 
-// Add shebang to the CLI entrypoint
+// Add shebang to the CLI entrypoint, replacing any existing one
 const runPath = join('dist', 'run.js');
 const content = readFileSync(runPath, 'utf-8');
-if (!content.startsWith('#!')) {
-    writeFileSync(runPath, `#!/usr/bin/env bun\n${content}`);
-}
+const withoutShebang = content.replace(/^#!.*\n/, '');
+writeFileSync(runPath, `#!/usr/bin/env node\n${withoutShebang}`);
 
 console.log(`Built ${result.outputs.length} files to dist/`);

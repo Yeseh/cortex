@@ -11,7 +11,7 @@ const result = await Bun.build({
     entrypoints: ['./src/index.ts'],
     outdir: './dist',
     root: './src',
-    target: 'bun',
+    target: 'node',
     format: 'esm',
     splitting: true,
     sourcemap: 'external',
@@ -34,11 +34,10 @@ if (!result.success) {
     process.exit(1);
 }
 
-// Add shebang to the server entrypoint
+// Add shebang to the server entrypoint, replacing any existing one
 const indexPath = join('dist', 'index.js');
 const content = readFileSync(indexPath, 'utf-8');
-if (!content.startsWith('#!')) {
-    writeFileSync(indexPath, `#!/usr/bin/env bun\n${content}`);
-}
+const withoutShebang = content.replace(/^#!.*\n/, '');
+writeFileSync(indexPath, `#!/usr/bin/env node\n${withoutShebang}`);
 
 console.log(`Built ${result.outputs.length} files to dist/`);

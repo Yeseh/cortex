@@ -14,7 +14,7 @@ function makeCtx(
         cwd?: string;
         stores?: Record<string, { properties?: Record<string, unknown> }>;
         defaultStore?: string;
-    } = {}
+    } = {},
 ): CortexContext {
     return {
         cwd: overrides.cwd ?? '/home/user/myproject',
