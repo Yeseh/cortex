@@ -116,7 +116,10 @@ async function resolveStoreNameOrEmpty(
     try {
         return await resolveStoreName(cwd, explicitName);
     } catch (e) {
-        if (tty) return '';
+        // When running in a TTY, only swallow errors (and fall back to prompting)
+        // if no explicit name was provided. If the user passed an explicit --name,
+        // re-throw so they see the actual invalid-name error.
+        if (tty && !explicitName) return '';
         throw e;
     }
 }
