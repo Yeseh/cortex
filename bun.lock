@@ -33,7 +33,7 @@
     },
     "packages/cli": {
       "name": "@yeseh/cortex-cli",
-      "version": "0.6.0",
+      "version": "0.6.1",
       "bin": {
         "cortex": "./src/run.ts",
       },
@@ -51,7 +51,7 @@
     },
     "packages/core": {
       "name": "@yeseh/cortex-core",
-      "version": "0.6.0",
+      "version": "0.6.1",
       "dependencies": {
         "@toon-format/toon": "^1.0.0",
         "zod": "^4.3.6",
@@ -62,7 +62,7 @@
     },
     "packages/server": {
       "name": "@yeseh/cortex-server",
-      "version": "0.6.0",
+      "version": "0.6.1",
       "bin": {
         "cortex-mcp": "./src/index.ts",
       },
@@ -84,7 +84,7 @@
     },
     "packages/storage-fs": {
       "name": "@yeseh/cortex-storage-fs",
-      "version": "0.6.0",
+      "version": "0.6.1",
       "dependencies": {
         "@yeseh/cortex-core": "workspace:*",
       },
