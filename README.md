@@ -32,13 +32,26 @@ Cortex packages are published to npm under the `@yeseh` scope.
 
 ```bash
 npm install -g @yeseh/cortex-cli
+# OR
+bun install -g @yeseh/cortex-cli
 ```
 
 ### MCP server
 
 ```bash
 npm install -g @yeseh/cortex-server
+# OR
+bun install -g @yeseh/cortex-server
 ```
+
+### Agent Skill
+Cortex comes with a bundled skill for your coding agent. You can install it using 
+
+```bash
+npx skills add yeseh/cortex --skill memory
+#OR
+bunx skills add yeseh/cortex --skill memory
+
 
 ## Quickstart (CLI)
 
