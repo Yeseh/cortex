@@ -26,7 +26,7 @@ import { getDefaultConfigPath } from '../../context.ts';
 import { serializeOutput, type OutputStore, type OutputFormat } from '../../output.ts';
 import { resolveUserPath } from '../../paths.ts';
 import { Slug, parseConfig, type CortexContext, type ConfigStore } from '@yeseh/cortex-core';
-import { createCliCommandContext } from '../../create-cli-command.ts';
+import { createCliCommandContext } from '../../context.ts';
 
 /**
  * Options for the add command.

@@ -16,7 +16,7 @@ import { throwCliError } from '../../errors.ts';
 import { getDefaultConfigPath } from '../../context.ts';
 import { serializeOutput, type OutputStore, type OutputFormat } from '../../output.ts';
 import { Slug, parseConfig, type CortexContext } from '@yeseh/cortex-core';
-import { createCliCommandContext } from '../../create-cli-command.ts';
+import { createCliCommandContext } from '../../context.ts';
 
 /**
  * Options for the remove command.

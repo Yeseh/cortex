@@ -4,7 +4,7 @@ import { PassThrough } from 'node:stream';
 import { err, ok, type ConfigStore, type CortexContext } from '@yeseh/cortex-core';
 
 import { handleInit } from './init.ts';
-import type { PromptDeps } from '../prompts.ts';
+import type { PromptDeps } from '../utils/prompts.ts';
 
 const existingGlobalStore: ConfigStore = {
     kind: 'filesystem',

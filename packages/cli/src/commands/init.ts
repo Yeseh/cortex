@@ -34,8 +34,8 @@ import {
     type CortexContext,
     type StoreData,
 } from '@yeseh/cortex-core';
-import { createCliCommandContext } from '../create-cli-command.ts';
-import { isTTY, defaultPromptDeps, type PromptDeps } from '../prompts.ts';
+import { createCliCommandContext } from '../context.ts';
+import { isTTY, defaultPromptDeps, type PromptDeps } from '../utils/prompts.ts';
 
 /**
  * Options for the init command.
@@ -251,7 +251,7 @@ const initializeConfigAdapter = async (ctx: CortexContext): Promise<void> => {
     }
 };
 
-const serializeOrThrow = <T>(value: T, format: OutputFormat) => {
+const serializeOrThrow = <T extends OutputPayload>(value: T, format: OutputFormat) => {
     const serialized = serializeOutput(value, format);
     if (!serialized.ok()) {
         throwCliError(serialized.error);

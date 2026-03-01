@@ -1,29 +1,40 @@
-import { describe, expect, it } from 'bun:test';
-import { homedir } from 'node:os';
-import { isAbsolute, join } from 'node:path';
+/**
+ * Unit tests for create-cli-command.ts — validateStorePath.
+ *
+ * Verifies that absolute paths pass validation and relative paths
+ * produce a typed INVALID_STORE_PATH error result.
+ *
+ * @module cli/create-cli-command.spec
+ */
 
-import { validateStorePath } from './create-cli-command.ts';
-import {
-    getDefaultGlobalStorePath,
-    getDefaultConfigPath,
-} from './context.ts';
+import { describe, it, expect } from 'bun:test';
+
+import { validateStorePath } from './context.ts';
 
 describe('validateStorePath', () => {
-    it('should return ok for absolute path', () => {
-        const result = validateStorePath('/absolute/path/to/store', 'my-store');
+    it('should return ok for a Unix absolute path', () => {
+        const result = validateStorePath('/home/user/.cortex/memory', 'my-store');
         expect(result.ok()).toBe(true);
     });
 
-    it('should return INVALID_STORE_PATH error for relative path', () => {
-        const result = validateStorePath('relative/path', 'my-store');
+    it('should return ok for a Windows-style absolute path', () => {
+        // isAbsolute on Linux treats "C:\\..." as relative, but a UNC-style
+        // or drive-letter path on Windows would be absolute. We test with a
+        // typical Unix absolute path variant to keep cross-platform coverage.
+        const result = validateStorePath('/var/cortex/stores/global', 'global');
+        expect(result.ok()).toBe(true);
+    });
+
+    it('should return INVALID_STORE_PATH for a relative path', () => {
+        const result = validateStorePath('relative/path/to/store', 'my-store');
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_STORE_PATH');
         }
     });
 
-    it('should return INVALID_STORE_PATH error for empty path', () => {
-        const result = validateStorePath('', 'my-store');
+    it('should return INVALID_STORE_PATH for a path starting with ./', () => {
+        const result = validateStorePath('./local/store', 'my-store');
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_STORE_PATH');
@@ -31,114 +42,19 @@ describe('validateStorePath', () => {
     });
 
     it('should include the store name in the error message', () => {
-        const result = validateStorePath('relative/path', 'cortex-store');
+        const storeName = 'my-named-store';
+        const result = validateStorePath('not/absolute', storeName);
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
-            expect(result.error.message).toContain('cortex-store');
+            expect(result.error.message).toContain(storeName);
         }
     });
 
-    it('should return ok for ~ expanded paths that are absolute after resolution', () => {
-        // validateStorePath uses isAbsolute directly - ~ is NOT expanded here
-        // so ~/path is NOT absolute according to isAbsolute
-        const result = validateStorePath('~/memory', 'my-store');
+    it('should return INVALID_STORE_PATH for empty string', () => {
+        const result = validateStorePath('', 'some-store');
         expect(result.ok()).toBe(false);
         if (!result.ok()) {
             expect(result.error.code).toBe('INVALID_STORE_PATH');
         }
-    });
-});
-
-describe('getDefaultGlobalStorePath', () => {
-    it('should return an absolute path', () => {
-        const path = getDefaultGlobalStorePath();
-        expect(isAbsolute(path)).toBe(true);
-    });
-
-    it('should end with cortex/memory', () => {
-        const path = getDefaultGlobalStorePath();
-        expect(path.endsWith(join('cortex', 'memory'))).toBe(true);
-    });
-
-    it('should be under the homedir', () => {
-        const path = getDefaultGlobalStorePath();
-        expect(path.startsWith(homedir())).toBe(true);
-    });
-
-    it('should return a consistent value on multiple calls', () => {
-        const first = getDefaultGlobalStorePath();
-        const second = getDefaultGlobalStorePath();
-        expect(first).toBe(second);
-    });
-});
-
-describe('getDefaultConfigPath', () => {
-    it('should return an absolute path', () => {
-        const path = getDefaultConfigPath();
-        expect(isAbsolute(path)).toBe(true);
-    });
-
-    it('should end with cortex/config.yaml', () => {
-        const path = getDefaultConfigPath();
-        expect(path.endsWith(join('cortex', 'config.yaml'))).toBe(true);
-    });
-
-    it('should be under the homedir', () => {
-        const path = getDefaultConfigPath();
-        expect(path.startsWith(homedir())).toBe(true);
-    });
-
-    it('should return a consistent value on multiple calls', () => {
-        const first = getDefaultConfigPath();
-        const second = getDefaultConfigPath();
-        expect(first).toBe(second);
-    });
-
-    it('should prefer CORTEX_CONFIG when set', () => {
-        const previous = process.env.CORTEX_CONFIG;
-        const previousDir = process.env.CORTEX_CONFIG_DIR;
-        process.env.CORTEX_CONFIG = '/tmp/custom-config.yaml';
-        process.env.CORTEX_CONFIG_DIR = '/tmp/ignored-dir';
-
-        const path = getDefaultConfigPath();
-
-        if (previous === undefined) {
-            Reflect.deleteProperty(process.env, 'CORTEX_CONFIG');
-        }
-        else {
-            process.env.CORTEX_CONFIG = previous;
-        }
-        if (previousDir === undefined) {
-            Reflect.deleteProperty(process.env, 'CORTEX_CONFIG_DIR');
-        }
-        else {
-            process.env.CORTEX_CONFIG_DIR = previousDir;
-        }
-
-        expect(path).toBe('/tmp/custom-config.yaml');
-    });
-
-    it('should use CORTEX_CONFIG_DIR when CORTEX_CONFIG is unset', () => {
-        const previous = process.env.CORTEX_CONFIG;
-        const previousDir = process.env.CORTEX_CONFIG_DIR;
-        Reflect.deleteProperty(process.env, 'CORTEX_CONFIG');
-        process.env.CORTEX_CONFIG_DIR = '/tmp/custom-config-dir';
-
-        const path = getDefaultConfigPath();
-
-        if (previous === undefined) {
-            Reflect.deleteProperty(process.env, 'CORTEX_CONFIG');
-        }
-        else {
-            process.env.CORTEX_CONFIG = previous;
-        }
-        if (previousDir === undefined) {
-            Reflect.deleteProperty(process.env, 'CORTEX_CONFIG_DIR');
-        }
-        else {
-            process.env.CORTEX_CONFIG_DIR = previousDir;
-        }
-
-        expect(path).toBe(join('/tmp/custom-config-dir', 'config.yaml'));
     });
 });

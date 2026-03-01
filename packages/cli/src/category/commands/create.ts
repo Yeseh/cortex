@@ -19,7 +19,7 @@
 import { Command } from '@commander-js/extra-typings';
 import { type CortexContext, type Result } from '@yeseh/cortex-core';
 
-import { createCliCommandContext } from '../../create-cli-command.ts';
+import { createCliCommandContext } from '../../context.ts';
 import { throwCliError } from '../../errors.ts';
 import { serializeOutput, type OutputFormat } from '../../output.ts';
 
@@ -49,7 +49,7 @@ function writeCreateOutput(
         return;
     }
 
-    const serialized = serializeOutput(payload, rawFormat as OutputFormat);
+    const serialized = serializeOutput({ kind: 'created-category', value: payload }, rawFormat as OutputFormat);
     if (!serialized.ok()) {
         throwCliError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
     }

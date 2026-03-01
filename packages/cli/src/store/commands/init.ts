@@ -30,7 +30,7 @@ import { type StoreData } from '@yeseh/cortex-core/store';
 import { type CategoryMode, type CortexContext } from '@yeseh/cortex-core';
 import { serializeOutput, type OutputStoreInit, type OutputFormat } from '../../output.ts';
 import { resolveUserPath } from '../../paths.ts';
-import { createCliCommandContext } from '../../create-cli-command.ts';
+import { createCliCommandContext } from '../../context.ts';
 import { isTTY, defaultPromptDeps, type PromptDeps } from '../../prompts.ts';
 
 /**

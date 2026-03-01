@@ -22,7 +22,7 @@
 import { Command } from '@commander-js/extra-typings';
 import { throwCliError } from '../../errors.ts';
 import { type CortexContext } from '@yeseh/cortex-core';
-import { createCliCommandContext } from '../../create-cli-command.ts';
+import { createCliCommandContext } from '../../context.ts';
 
 /**
  * Options for the prune command.

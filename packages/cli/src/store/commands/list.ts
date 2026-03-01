@@ -17,7 +17,7 @@
 import { Command } from '@commander-js/extra-typings';
 import { type CortexContext } from '@yeseh/cortex-core';
 import { throwCliError } from '../../errors.ts';
-import { createCliCommandContext } from '../../create-cli-command.ts';
+import { createCliCommandContext } from '../../context.ts';
 import { serializeOutput, type OutputStoreRegistry, type OutputFormat } from '../../output.ts';
 
 /**

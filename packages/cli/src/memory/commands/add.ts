@@ -26,7 +26,7 @@ import { throwCliError } from '../../errors.ts';
 import { type CortexContext } from '@yeseh/cortex-core';
 import { resolveInput as resolveCliContent } from '../../input.ts';
 import { parseExpiresAt, parseTags } from '../parsing.ts';
-import { createCliCommandContext } from '../../create-cli-command.ts';
+import { createCliCommandContext } from '../../context.ts';
 import { serializeOutput, type OutputFormat } from '../../output.ts';
 
 /** Options parsed by Commander for the add command */

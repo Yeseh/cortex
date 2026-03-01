@@ -49,3 +49,27 @@ export function resolveUserPath(inputPath: string, cwd: string): string {
     // Relative to cwd
     return resolve(cwd, inputPath);
 }
+
+/**
+ * Default path to the global store.
+ */
+export const getDefaultGlobalStorePath = (): string =>
+    resolve(homedir(), '.config', 'cortex', 'memory');
+
+/**
+ * Default path to the store configuration file.
+ * Respects CORTEX_CONFIG (config file path) and CORTEX_CONFIG_DIR (config directory)
+ * environment variables when set.
+ */
+export const getDefaultConfigPath = (): string => {
+    const envConfigPath = process.env.CORTEX_CONFIG;
+    if (envConfigPath) {
+        return resolve(envConfigPath);
+    }
+
+    const envConfigDir = process.env.CORTEX_CONFIG_DIR;
+    if (envConfigDir) {
+        return resolve(envConfigDir, 'config.yaml');
+    }
+    return resolve(homedir(), '.config', 'cortex', 'config.yaml');
+};

@@ -44,6 +44,11 @@ export interface OutputCategory {
     subcategories: OutputSubcategory[];
 }
 
+export interface OutputCreatedCategory {
+    path: string;
+    created: boolean;
+}
+
 export interface OutputStore {
     name: string;
     path: string;
@@ -66,6 +71,7 @@ export interface OutputInit {
 export type OutputPayload =
     | { kind: 'memory'; value: OutputMemory }
     | { kind: 'category'; value: OutputCategory }
+    | { kind: 'created-category'; value: OutputCreatedCategory}
     | { kind: 'store'; value: OutputStore }
     | { kind: 'store-registry'; value: OutputStoreRegistry }
     | { kind: 'store-init'; value: OutputStoreInit }
@@ -87,7 +93,7 @@ export interface OutputSerializeError {
  * @returns Result with serialized string or error
  */
 export const serializeOutput = (
-    payload: unknown,
+    payload: OutputPayload,
     format: OutputFormat,
 ): Result<string, OutputSerializeError> => {
     const result = serialize(payload, format);

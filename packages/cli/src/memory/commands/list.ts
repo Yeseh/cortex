@@ -35,7 +35,7 @@ import { CategoryPath, type CategoryClient } from '@yeseh/cortex-core/category';
 import { serialize, type CortexContext } from '@yeseh/cortex-core';
 import type { SubcategoryEntry } from '@yeseh/cortex-core/category';
 import { type OutputFormat } from '../../output.ts';
-import { createCliCommandContext } from '../../create-cli-command.ts';
+import { createCliCommandContext } from '../../context.ts';
 
 /**
  * Options for the list command.

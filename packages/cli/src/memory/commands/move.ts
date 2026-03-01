@@ -15,7 +15,7 @@
 import { Command } from '@commander-js/extra-typings';
 import { throwCliError } from '../../errors.ts';
 import { MemoryPath, type CortexContext } from '@yeseh/cortex-core';
-import { createCliCommandContext } from '../../create-cli-command.ts';
+import { createCliCommandContext } from '../../context.ts';
 import { serializeOutput, type OutputFormat } from '../../output.ts';
 
 /** Options for the move command. */

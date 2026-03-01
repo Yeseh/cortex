@@ -27,7 +27,7 @@ import { throwCliError } from '../../errors.ts';
 import { defaultTokenizer, MemoryPath, type CortexContext } from '@yeseh/cortex-core';
 import { type StoreClient } from '@yeseh/cortex-core/store';
 import { serializeOutput, type OutputMemory, type OutputFormat } from '../../output.ts';
-import { createCliCommandContext } from '../../create-cli-command.ts';
+import { createCliCommandContext } from '../../context.ts';
 
 /**
  * Options for the show command.
