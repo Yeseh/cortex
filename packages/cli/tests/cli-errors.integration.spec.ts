@@ -21,18 +21,21 @@ describe('CLI integration: error handling', () => {
         sandbox = await createIntegrationSandbox();
         await bootstrapDefaultStoreWithProjectCategory(sandbox);
 
-        const result = runCli([
-            'memory',
-            'add',
-            'project/bad-expiry',
-            '--content',
-            'temp note',
-            '--expires-at',
-            'not-a-date',
-        ], {
-            env: sandbox.env,
-            cwd: sandbox.projectDir,
-        });
+        const result = runCli(
+            [
+                'memory',
+                'add',
+                'project/bad-expiry',
+                '--content',
+                'temp note',
+                '--expires-at',
+                'not-a-date',
+            ],
+            {
+                env: sandbox.env,
+                cwd: sandbox.projectDir,
+            }
+        );
 
         expectFailure(result, 'Invalid expiration date format');
     });
@@ -40,43 +43,31 @@ describe('CLI integration: error handling', () => {
     it('should fail when an unknown store is requested', async () => {
         sandbox = await createIntegrationSandbox();
 
-        const result = runCli([
-            'memory',
-            '--store',
-            'missing',
-            'list',
-        ], {
+        const result = runCli(['memory', '--store', 'missing', 'list'], {
             env: sandbox.env,
             cwd: sandbox.projectDir,
         });
 
-        expectFailure(result, "Store 'missing' not found");
+        expectFailure(result, "Store 'missing' is not registered");
     });
 
     it('should fail when update has no update fields', async () => {
         sandbox = await createIntegrationSandbox();
         await bootstrapDefaultStoreWithProjectCategory(sandbox);
 
-        const addResult = runCli([
-            'memory',
-            'add',
-            'project/no-update',
-            '--content',
-            'seed content',
-        ], {
-            env: sandbox.env,
-            cwd: sandbox.projectDir,
-        });
+        const addResult = runCli(
+            ['memory', 'add', 'project/no-update', '--content', 'seed content'],
+            {
+                env: sandbox.env,
+                cwd: sandbox.projectDir,
+            }
+        );
 
         if (addResult.exitCode !== 0) {
             throw new Error(`Setup failed: ${addResult.output}`);
         }
 
-        const result = runCli([
-            'memory',
-            'update',
-            'project/no-update',
-        ], {
+        const result = runCli(['memory', 'update', 'project/no-update'], {
             env: sandbox.env,
             cwd: sandbox.projectDir,
         });

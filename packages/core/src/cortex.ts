@@ -71,17 +71,17 @@ export class Cortex {
      *
      * @example
      * ```typescript
-    * // With custom settings and stores
+     * // With custom settings and stores
      * const cortex = Cortex.init({
-    *     adapterFactory: (storeName) => createAdapterForStore(storeName),
+     *     adapterFactory: (storeName) => createAdapterForStore(storeName),
      *     settings: { outputFormat: 'json' },
      *     stores: {
-    *         'my-store': {
-    *             kind: 'filesystem',
-    *             categoryMode: 'free',
-    *             categories: {},
-    *             properties: { path: '/data/my-store' },
-    *         },
+     *         'my-store': {
+     *             kind: 'filesystem',
+     *             categoryMode: 'free',
+     *             categories: {},
+     *             properties: { path: '/data/my-store' },
+     *         },
      *     },
      * });
      * ```
@@ -95,20 +95,20 @@ export class Cortex {
     /**
      * Returns a store client for the specified store.
      *
-    * This method resolves an adapter through the configured `adapterFactory`
-    * and returns a `Result` containing a `StoreClient` on success.
+     * This method resolves an adapter through the configured `adapterFactory`
+     * and returns a `Result` containing a `StoreClient` on success.
      *
      * @param name - The store name to get a client for
-    * @returns Result containing a `StoreClient` or a `CortexClientError`
+     * @returns Result containing a `StoreClient` or a `CortexClientError`
      *
      * @example
      * ```typescript
-    * const storeResult = cortex.getStore('my-project');
-    * if (storeResult.ok()) {
-    *     const root = storeResult.value.root();
-    *     const result = await root.getCategory('standards').exists();
+     * const storeResult = cortex.getStore('my-project');
+     * if (storeResult.ok()) {
+     *     const root = storeResult.value.root();
+     *     const result = await root.getCategory('standards').exists();
      * } else {
-    *     console.error(storeResult.error.message);
+     *     console.error(storeResult.error.message);
      * }
      * ```
      */
@@ -119,7 +119,10 @@ export class Cortex {
         } catch (error) {
             return err({
                 code: 'STORE_NOT_FOUND',
-                message: error instanceof Error ? error.message : `Store '${name}' not found.`,
+                message:
+                    error instanceof Error
+                        ? error.message
+                        : `Store '${name}' not found. Use --store to specify a registered store, or run \`cortex store list\` to see available stores.`,
                 store: name,
             });
         }

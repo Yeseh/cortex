@@ -167,5 +167,34 @@ pass "store reindex succeeds"
 run_cortex 0 store --store global prune
 pass "store prune succeeds"
 
+# ── Local store auto-detection ────────────────────────────────────────────────
+# Regression test for: https://github.com/yeseh/cortex/issues/NNN
+# Scenario: user runs `cortex store init` in a project dir, then creates a
+# category without --store — the local store should be selected automatically.
+
+LOCAL_PROJECT_DIR="$TEMP_ROOT/local-project"
+mkdir -p "$LOCAL_PROJECT_DIR"
+
+# Point CORTEX_CONFIG_CWD at the new project directory for these commands
+OLD_CWD="$CORTEX_CONFIG_CWD"
+export CORTEX_CONFIG_CWD="$LOCAL_PROJECT_DIR"
+
+run_cortex 0 store init --name local-test-project --format json
+assert_contains "$CORTEX_OUTPUT" "local-test-project" "store init succeeds in local project"
+
+# category create WITHOUT --store should auto-select the local store
+run_cortex 0 category create my-category --format json
+assert_contains "$CORTEX_OUTPUT" "my-category" "category create auto-detects local store (no --store required)"
+
+# memory add WITHOUT --store should also use the local store
+run_cortex 0 memory add my-category/note -c "local store memory" --format json
+assert_contains "$CORTEX_OUTPUT" "my-category/note" "memory add auto-detects local store"
+
+# memory show WITHOUT --store
+run_cortex 0 memory show my-category/note --format json
+assert_contains "$CORTEX_OUTPUT" "local store memory" "memory show auto-detects local store"
+
+export CORTEX_CONFIG_CWD="$OLD_CWD"
+
 echo ""
 echo "ALL ACCEPTANCE CHECKS PASSED"

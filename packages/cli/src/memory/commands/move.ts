@@ -17,6 +17,7 @@ import { throwCliError } from '../../errors.ts';
 import { MemoryPath, type CortexContext } from '@yeseh/cortex-core';
 import { createCliCommandContext } from '../../context.ts';
 import { serializeOutput, type OutputFormat } from '../../output.ts';
+import { resolveDefaultStore } from '../../utils/resolve-default-store.ts';
 
 /** Options for the move command. */
 export interface MoveCommandOptions {
@@ -50,7 +51,7 @@ export async function handleMove(
         throwCliError(toResult.error);
     }
 
-    const storeResult = ctx.cortex.getStore(storeName ?? 'global');
+    const storeResult = ctx.cortex.getStore(resolveDefaultStore(ctx, storeName));
     if (!storeResult.ok()) {
         throwCliError(storeResult.error);
     }
@@ -81,7 +82,10 @@ export async function handleMove(
     } else {
         const format = rawFormat as OutputFormat;
         const serialized = serializeOutput(
-            { kind: 'moved-memory', value: { from: fromResult.value.toString(), to: toResult.value.toString() } },
+            {
+                kind: 'moved-memory',
+                value: { from: fromResult.value.toString(), to: toResult.value.toString() },
+            },
             format
         );
         if (!serialized.ok()) {

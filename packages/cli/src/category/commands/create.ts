@@ -22,6 +22,7 @@ import { type CortexContext, type Result } from '@yeseh/cortex-core';
 import { createCliCommandContext } from '../../context.ts';
 import { throwCliError } from '../../errors.ts';
 import { serializeOutput, type OutputFormat } from '../../output.ts';
+import { resolveDefaultStore } from '../../utils/resolve-default-store.ts';
 
 /** Options parsed by Commander for the create command */
 export interface CreateCommandOptions {
@@ -39,7 +40,7 @@ export interface CreateCommandOptions {
 function writeCreateOutput(
     payload: { path: string; created: boolean },
     options: CreateCommandOptions,
-    stdout: NodeJS.WritableStream,
+    stdout: NodeJS.WritableStream
 ): void {
     const rawFormat = options.format;
 
@@ -49,7 +50,10 @@ function writeCreateOutput(
         return;
     }
 
-    const serialized = serializeOutput({ kind: 'created-category', value: payload }, rawFormat as OutputFormat);
+    const serialized = serializeOutput(
+        { kind: 'created-category', value: payload },
+        rawFormat as OutputFormat
+    );
     if (!serialized.ok()) {
         throwCliError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
     }
@@ -85,7 +89,7 @@ export async function handleCreate(
     path: string,
     options: CreateCommandOptions = {}
 ): Promise<void> {
-    const store = unwrapOrThrow(ctx.cortex.getStore(storeName ?? 'global'));
+    const store = unwrapOrThrow(ctx.cortex.getStore(resolveDefaultStore(ctx, storeName)));
     const root = unwrapOrThrow(store.root());
     const category = unwrapOrThrow(root.getCategory(path));
     const result = unwrapOrThrow(await category.create());

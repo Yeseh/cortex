@@ -28,6 +28,7 @@ import { resolveInput as resolveCliContent } from '../../utils/input.ts';
 import { parseExpiresAt, parseTags } from '../parsing.ts';
 import { createCliCommandContext } from '../../context.ts';
 import { serializeOutput, type OutputFormat } from '../../output.ts';
+import { resolveDefaultStore } from '../../utils/resolve-default-store.ts';
 
 /** Options parsed by Commander for the add command */
 export interface AddCommandOptions {
@@ -77,7 +78,7 @@ export async function handleAdd(
     const expiresAt = parseExpiresAt(options.expiresAt);
     const citations = options.citations ?? [];
 
-    const storeResult = ctx.cortex.getStore(storeName ?? 'global');
+    const storeResult = ctx.cortex.getStore(resolveDefaultStore(ctx, storeName));
     if (!storeResult.ok()) {
         throwCliError(storeResult.error);
     }

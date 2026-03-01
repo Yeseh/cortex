@@ -36,6 +36,7 @@ import { serialize, type CortexContext } from '@yeseh/cortex-core';
 import type { SubcategoryEntry } from '@yeseh/cortex-core/category';
 import { type OutputFormat } from '../../output.ts';
 import { createCliCommandContext } from '../../context.ts';
+import { resolveDefaultStore } from '../../utils/resolve-default-store.ts';
 
 /**
  * Options for the list command.
@@ -116,7 +117,7 @@ export async function handleList(
         throwCliError(categoryResult.error);
     }
 
-    const storeResult = ctx.cortex.getStore(storeName ?? 'global');
+    const storeResult = ctx.cortex.getStore(resolveDefaultStore(ctx, storeName));
     if (!storeResult.ok()) {
         throwCliError(storeResult.error);
     }

@@ -18,6 +18,7 @@ import { throwCliError } from '../../errors.ts';
 import { MemoryPath, type CortexContext } from '@yeseh/cortex-core';
 import { createCliCommandContext } from '../../context.ts';
 import { serializeOutput, type OutputFormat } from '../../output.ts';
+import { resolveDefaultStore } from '../../utils/resolve-default-store.ts';
 
 /** Options for the remove command. */
 export interface RemoveCommandOptions {
@@ -44,7 +45,7 @@ export async function handleRemove(
         throwCliError(pathResult.error);
     }
 
-    const storeResult = ctx.cortex.getStore(storeName ?? 'global');
+    const storeResult = ctx.cortex.getStore(resolveDefaultStore(ctx, storeName));
     if (!storeResult.ok()) {
         throwCliError(storeResult.error);
     }
@@ -74,7 +75,10 @@ export async function handleRemove(
         out.write(`Removed memory ${pathResult.value.toString()}.\n`);
     } else {
         const format = rawFormat as OutputFormat;
-        const serialized = serializeOutput({kind: 'path', value: { path: pathResult.value.toString() }}, format);
+        const serialized = serializeOutput(
+            { kind: 'path', value: { path: pathResult.value.toString() } },
+            format
+        );
         if (!serialized.ok()) {
             throwCliError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
         }

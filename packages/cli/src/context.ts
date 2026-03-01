@@ -24,7 +24,7 @@ const makeAbsolute = (pathStr: string): string => {
 
 export const validateStorePath = (
     storePath: string,
-    storeName: string,
+    storeName: string
 ): Result<void, ConfigValidationError> => {
     if (!isAbsolute(storePath)) {
         return err({
@@ -65,14 +65,19 @@ export const createCliAdapterFactory = (configAdapter: FilesystemConfigAdapter) 
         const stores = configAdapter.stores!;
         const storeEntry = stores[storeName];
         if (!storeEntry) {
+            const available = Object.keys(stores).join(', ') || 'none';
             throw new Error(
-                `Store '${storeName}' not found. Available stores: ${Object.keys(stores).join(', ')}`,
+                `Store '${storeName}' is not registered. Available stores: ${available}. ` +
+                    'Use --store to specify a registered store, or run `cortex store init` to create one.'
             );
         }
 
         const storePath = storeEntry.properties?.path as string | undefined;
         if (!storePath) {
-            throw new Error(`Store '${storeName}' has no path configured in properties.`);
+            throw new Error(
+                `Store '${storeName}' has no path configured. ` +
+                    'Check your cortex config or re-run `cortex store init`.'
+            );
         }
 
         return new FilesystemStorageAdapter(configAdapter, {
@@ -82,7 +87,7 @@ export const createCliAdapterFactory = (configAdapter: FilesystemConfigAdapter) 
 };
 
 export const createCliConfigContext = async (
-    options: CliContextOptions = {},
+    options: CliContextOptions = {}
 ): Promise<Result<CliConfigContext, any>> => {
     const envConfigPath = process.env.CORTEX_CONFIG;
     const envConfigDir = process.env.CORTEX_CONFIG_DIR;
@@ -93,13 +98,10 @@ export const createCliConfigContext = async (
             ? makeAbsolute(envConfigPath)
             : undefined;
 
-    const dir = options.configDir 
-        ?? envConfigDir 
-        ?? resolve(homedir(), '.config', 'cortex');
+    const dir = options.configDir ?? envConfigDir ?? resolve(homedir(), '.config', 'cortex');
 
     const absoluteDir = makeAbsolute(dir);
-    const configPath = explicitConfigPath 
-        ?? resolve(absoluteDir, 'config.yaml');
+    const configPath = explicitConfigPath ?? resolve(absoluteDir, 'config.yaml');
 
     const effectiveCwd =
         options.configCwd ??
@@ -125,7 +127,7 @@ export const createCliConfigContext = async (
  * This function is used to create a context object that can be injected into command handlers for consistent access to the Cortex client and other utilities.
  */
 export const createCliCommandContext = async (
-    configDir?: string,
+    configDir?: string
 ): Promise<Result<CortexContext, any>> => {
     try {
         const configContextResult = await createCliConfigContext({
@@ -159,8 +161,7 @@ export const createCliCommandContext = async (
         };
 
         return ok(context);
-    }
-    catch (error) {
+    } catch (error) {
         return err({
             code: 'CONTEXT_CREATION_FAILED',
             message: `Unexpected error creating CLI command context: ${error instanceof Error ? error.message : String(error)}`,

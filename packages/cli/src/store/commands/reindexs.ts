@@ -18,6 +18,7 @@ import { Command } from '@commander-js/extra-typings';
 import { throwCliError } from '../../errors.ts';
 import { type CortexContext } from '@yeseh/cortex-core';
 import { createCliCommandContext } from '../../context.ts';
+import { resolveDefaultStore } from '../../utils/resolve-default-store.ts';
 
 /**
  * Dependencies for the reindex command handler.
@@ -45,12 +46,12 @@ export interface ReindexHandlerDeps {
 export async function handleReindex(
     ctx: CortexContext,
     storeName: string | undefined,
-    deps: ReindexHandlerDeps = {},
+    deps: ReindexHandlerDeps = {}
 ): Promise<void> {
     const stdout = deps.stdout ?? ctx.stdout ?? process.stdout;
-    
+
     // Get store through Cortex client
-    const effectiveStoreName = storeName ?? 'global';
+    const effectiveStoreName = resolveDefaultStore(ctx, storeName);
     const storeResult = ctx.cortex.getStore(effectiveStoreName);
     if (!storeResult.ok()) {
         throwCliError(storeResult.error);

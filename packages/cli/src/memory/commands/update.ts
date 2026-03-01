@@ -33,6 +33,7 @@ import { resolveInput as resolveCliContent } from '../../utils/input.ts';
 import { parseExpiresAt, parseTags } from '../parsing.ts';
 import { createCliCommandContext } from '../../context.ts';
 import { serializeOutput, type OutputFormat } from '../../output.ts';
+import { resolveDefaultStore } from '../../utils/resolve-default-store.ts';
 
 /** Options parsed by Commander for the update command */
 export interface UpdateCommandOptions {
@@ -148,7 +149,7 @@ export async function handleUpdate(
     const expiresAt = parseUpdateExpiresAt(options.expiresAt);
     const updates = buildUpdates(content, tags, expiresAt, options.citation);
 
-    const storeResult = ctx.cortex.getStore(storeName ?? 'global');
+    const storeResult = ctx.cortex.getStore(resolveDefaultStore(ctx, storeName));
     if (!storeResult.ok()) {
         throwCliError(storeResult.error);
     }

@@ -28,6 +28,7 @@ import { defaultTokenizer, MemoryPath, type CortexContext } from '@yeseh/cortex-
 import { type StoreClient } from '@yeseh/cortex-core/store';
 import { serializeOutput, type OutputMemory, type OutputFormat } from '../../output.ts';
 import { createCliCommandContext } from '../../context.ts';
+import { resolveDefaultStore } from '../../utils/resolve-default-store.ts';
 
 /**
  * Options for the show command.
@@ -80,7 +81,7 @@ export async function handleShow(
         throwCliError(pathResult.error);
     }
 
-    const storeResult = ctx.cortex.getStore(storeName ?? 'global');
+    const storeResult = ctx.cortex.getStore(resolveDefaultStore(ctx, storeName));
     if (!storeResult.ok()) {
         throwCliError(storeResult.error);
     }
@@ -126,7 +127,7 @@ export async function handleShow(
     };
 
     const format = (options.format as OutputFormat) ?? 'yaml';
-    const serialized = serializeOutput({kind: 'memory', value: outputMemory}, format);
+    const serialized = serializeOutput({ kind: 'memory', value: outputMemory }, format);
     if (!serialized.ok()) {
         throwCliError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
     }

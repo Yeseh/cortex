@@ -23,6 +23,7 @@ import { Command } from '@commander-js/extra-typings';
 import { throwCliError } from '../../errors.ts';
 import { type CortexContext } from '@yeseh/cortex-core';
 import { createCliCommandContext } from '../../context.ts';
+import { resolveDefaultStore } from '../../utils/resolve-default-store.ts';
 
 /**
  * Options for the prune command.
@@ -83,13 +84,13 @@ export async function handlePrune(
     ctx: CortexContext,
     storeName: string | undefined,
     options: PruneCommandOptions,
-    deps: PruneHandlerDeps = {},
+    deps: PruneHandlerDeps = {}
 ): Promise<void> {
     const now = deps.now ?? ctx.now();
     const stdout = deps.stdout ?? ctx.stdout ?? process.stdout;
 
     // Get store through Cortex client
-    const storeResult = ctx.cortex.getStore(storeName ?? 'global');
+    const storeResult = ctx.cortex.getStore(resolveDefaultStore(ctx, storeName));
     if (!storeResult.ok()) {
         throwCliError(storeResult.error);
     }
@@ -121,8 +122,7 @@ export async function handlePrune(
     const paths = pruned.map((entry) => entry.path).join('\n  ');
     if (options.dryRun) {
         stdout.write(`Would prune ${pruned.length} expired memories:\n  ${paths}\n`);
-    }
-    else {
+    } else {
         stdout.write(`Pruned ${pruned.length} expired memories:\n  ${paths}\n`);
     }
 }
