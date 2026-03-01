@@ -22,6 +22,8 @@ jobs:
     release:
         name: Changesets Release
         runs-on: ubuntu-latest
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         outputs:
             published: ${{ steps.changesets.outputs.published }}
             version: ${{ steps.version.outputs.version }}
@@ -37,18 +39,8 @@ jobs:
               with:
                   bun-version: latest
 
-            - name: Setup Node
-              uses: actions/setup-node@v4
-              with:
-                  node-version: 20
-                  registry-url: https://npm.pkg.github.com
-                  scope: '@yeseh'
-
             - name: Install dependencies
               run: bun install --frozen-lockfile
-
-            - name: Setup npmrc
-              run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > .npmrc
 
             - name: Run ESLint
               run: bun run lint
@@ -75,7 +67,7 @@ jobs:
               id: version
               if: steps.changesets.outputs.published == 'true'
               run: |
-                  VERSION=$(node -e "console.log(JSON.parse(require('fs').readFileSync('packages/core/package.json', 'utf8')).version)")
+                  VERSION=$(bun -e "console.log((await Bun.file('packages/core/package.json').json()).version)")
                   echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
     build-binaries:

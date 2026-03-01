@@ -1,7 +1,8 @@
 {
     "name": "cortex",
     "type": "module",
-    "private": true,
+    "private": false,
+    "version": "0.6.0",
     "workspaces": [
         "packages/*"
     ],
