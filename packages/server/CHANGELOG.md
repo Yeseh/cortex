@@ -1,5 +1,15 @@
 # @yeseh/cortex-server
 
+## 0.6.3
+
+### Patch Changes
+
+- Updated dependencies [18dd91b]
+- Updated dependencies [b93b0a3]
+- Updated dependencies [4e128cc]
+    - @yeseh/cortex-core@0.6.3
+    - @yeseh/cortex-storage-fs@0.6.3
+
 ## 0.6.2
 
 ### Patch Changes
