@@ -48,8 +48,23 @@ export const moveMemoryHandler = async (
         const result = await sourceMemory.move(destMemory);
 
         if (!result.ok()) {
-            ctx.logger?.debug('cortex_move_memory failed', { store: input.store, from_path: input.from_path, error_code: result.error.code });
-            throw translateMemoryError(result.error);
+            const translatedError = translateMemoryError(result.error);
+            if (translatedError.code === ErrorCode.InternalError) {
+                ctx.logger?.error('cortex_move_memory failed', undefined, {
+                    store: input.store,
+                    from_path: input.from_path,
+                    to_path: input.to_path,
+                    error_code: result.error.code,
+                });
+            } else {
+                ctx.logger?.debug('cortex_move_memory failed', {
+                    store: input.store,
+                    from_path: input.from_path,
+                    to_path: input.to_path,
+                    error_code: result.error.code,
+                });
+            }
+            throw translatedError;
         }
 
         ctx.logger?.debug('cortex_move_memory succeeded', { store: input.store, from_path: input.from_path, to_path: input.to_path });
