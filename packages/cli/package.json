@@ -1,6 +1,6 @@
 {
     "name": "@yeseh/cortex-cli",
-    "version": "0.6.4",
+    "version": "0.6.6",
     "license": "MIT",
     "type": "module",
     "repository": {
@@ -31,15 +31,15 @@
         "start": "bun run src/run.ts"
     },
     "peerDependencies": {
-        "typescript": "^5"
+        "typescript": "^5.9.3"
     },
     "dependencies": {
         "@yeseh/cortex-core": "workspace:*",
         "@yeseh/cortex-storage-fs": "workspace:*",
         "@commander-js/extra-typings": "^14.0.0",
-        "@inquirer/prompts": "^8.0.0",
-        "@toon-format/toon": "^1.0.0",
-        "commander": "^14.0.0"
+        "@inquirer/prompts": "^8.3.0",
+        "@toon-format/toon": "^1.4.0",
+        "commander": "^14.0.3"
     },
     "sideEffects": false
 }

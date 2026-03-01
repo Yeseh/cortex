@@ -1,6 +1,6 @@
 {
     "name": "@yeseh/cortex-storage-fs",
-    "version": "0.6.4",
+    "version": "0.6.6",
     "license": "MIT",
     "type": "module",
     "repository": {
@@ -26,7 +26,7 @@
         "test": "bun test"
     },
     "peerDependencies": {
-        "typescript": "^5"
+        "typescript": "^5.9.3"
     },
     "dependencies": {
         "@yeseh/cortex-core": "workspace:*"

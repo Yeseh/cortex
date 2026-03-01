@@ -1,11 +1,11 @@
 {
     "name": "@yeseh/cortex-core",
-    "version": "0.6.4",
+    "version": "0.6.6",
     "license": "MIT",
     "type": "module",
     "repository": {
         "type": "git",
-        "url": "https://github.com/Yeseh/cortex.git",
+        "url": "git+https://github.com/Yeseh/cortex.git",
         "directory": "packages/core"
     },
     "publishConfig": {
@@ -42,11 +42,20 @@
         "test": "bun test"
     },
     "peerDependencies": {
-        "typescript": "^5"
+        "typescript": "^5.9.3"
     },
     "dependencies": {
         "zod": "^4.3.6",
-        "@toon-format/toon": "^1.0.0"
+        "@toon-format/toon": "^1.4.0"
     },
-    "sideEffects": false
+    "sideEffects": false,
+    "description": "Core domain logic for the Cortex memory system. This package provides types, validation, and business logic for memories, categories, stores, and indexing.",
+    "main": "index.js",
+    "devDependencies": {},
+    "keywords": [],
+    "author": "",
+    "bugs": {
+        "url": "https://github.com/Yeseh/cortex/issues"
+    },
+    "homepage": "https://github.com/Yeseh/cortex#readme"
 }
