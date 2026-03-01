@@ -13,24 +13,29 @@
     },
     "exports": {
         ".": {
-            "import": "./src/index.ts",
-            "types": "./src/index.ts"
+            "bun": "./src/index.ts",
+            "types": "./src/index.ts",
+            "import": "./dist/index.js"
         },
         "./memory": {
-            "import": "./src/memory/index.ts",
-            "types": "./src/memory/index.ts"
+            "bun": "./src/memory/index.ts",
+            "types": "./src/memory/index.ts",
+            "import": "./dist/memory/index.js"
         },
         "./category": {
-            "import": "./src/category/index.ts",
-            "types": "./src/category/index.ts"
+            "bun": "./src/category/index.ts",
+            "types": "./src/category/index.ts",
+            "import": "./dist/category/index.js"
         },
         "./store": {
-            "import": "./src/store/index.ts",
-            "types": "./src/store/index.ts"
+            "bun": "./src/store/index.ts",
+            "types": "./src/store/index.ts",
+            "import": "./dist/store/index.js"
         },
         "./storage": {
-            "import": "./src/storage/index.ts",
-            "types": "./src/storage/index.ts"
+            "bun": "./src/storage/index.ts",
+            "types": "./src/storage/index.ts",
+            "import": "./dist/storage/index.js"
         }
     },
     "files": [
@@ -38,7 +43,7 @@
         "dist"
     ],
     "scripts": {
-        "build": "tsc",
+        "build": "rm -f tsconfig.tsbuildinfo && bun run build.ts && tsc && tsc-alias -p tsconfig.json",
         "test": "bun test"
     },
     "peerDependencies": {
@@ -50,7 +55,6 @@
     },
     "sideEffects": false,
     "description": "Core domain logic for the Cortex memory system. This package provides types, validation, and business logic for memories, categories, stores, and indexing.",
-    "main": "index.js",
     "devDependencies": {},
     "keywords": [],
     "author": "",

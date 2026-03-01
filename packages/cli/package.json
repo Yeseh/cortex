@@ -12,21 +12,21 @@
         "access": "public"
     },
     "bin": {
-        "cortex": "./src/run.ts"
+        "cortex": "./dist/run.js"
     },
     "exports": {
         ".": {
-            "import": "./src/program.ts",
-            "types": "./src/program.ts"
+            "bun": "./src/program.ts",
+            "types": "./src/program.ts",
+            "import": "./dist/program.js"
         }
     },
     "files": [
         "src",
-        "dist",
-        "bin"
+        "dist"
     ],
     "scripts": {
-        "build": "tsc",
+        "build": "rm -f tsconfig.tsbuildinfo && bun run build.ts && tsc",
         "test": "bun test",
         "start": "bun run src/run.ts"
     },
