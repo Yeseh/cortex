@@ -1,5 +1,13 @@
 # @yeseh/cortex-cli
 
+## 0.6.1
+
+### Patch Changes
+
+- a6f6bb4: Correctly use current package version for cortex --version
+    - @yeseh/cortex-core@0.6.1
+    - @yeseh/cortex-storage-fs@0.6.1
+
 ## 0.6.0
 
 ### Minor Changes
