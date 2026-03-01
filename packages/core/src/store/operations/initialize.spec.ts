@@ -18,7 +18,7 @@ describe('initializeStore', () => {
             err({
                 code: 'CONFIG_NOT_FOUND' as const,
                 message: 'Store not found',
-            }),
+            })
         );
         const adapter = createMockStorageAdapter({
             config: { getStore: load },
@@ -49,12 +49,13 @@ describe('initializeStore', () => {
 
         const adapter = createMockStorageAdapter({
             config: {
-                getStore: async () => ok({
-                    kind: existingStore.kind,
-                    categoryMode: existingStore.categoryMode,
-                    categories: {},
-                    properties: existingStore.properties,
-                }),
+                getStore: async () =>
+                    ok({
+                        kind: existingStore.kind,
+                        categoryMode: existingStore.categoryMode,
+                        categories: {},
+                        properties: existingStore.properties,
+                    }),
             },
         });
 
@@ -115,7 +116,10 @@ describe('initializeStore', () => {
 
         expect(result.ok()).toBe(true);
         expect(save.mock.calls.length).toBe(1);
-        expect(ensure.mock.calls.length).toBe(0);
+        // Root directory creation always happens even with no configured categories
+        expect(ensure.mock.calls.length).toBe(1);
+        const firstCallArg = (ensure.mock.calls as unknown as [CategoryPath[]])[0]?.[0];
+        expect(firstCallArg?.toString()).toBe(CategoryPath.root().toString());
     });
 
     it('should initialize configured categories', async () => {
@@ -145,7 +149,7 @@ describe('initializeStore', () => {
         const result = await initializeStore(adapter, 'my-store', data);
 
         expect(result.ok()).toBe(true);
-        expect(ensure.mock.calls.length).toBe(2);
+        expect(ensure.mock.calls.length).toBe(3); // root + 2 configured categories
     });
 
     it('should return STORE_CREATE_FAILED errors from save', async () => {
@@ -155,6 +159,30 @@ describe('initializeStore', () => {
                     err({
                         code: 'CONFIG_WRITE_FAILED' as const,
                         message: 'Failed to create store',
+                    }),
+            },
+        });
+
+        const result = await initializeStore(adapter, 'my-store', {
+            kind: 'local',
+            categoryMode: 'free' as const,
+            categories: [],
+            properties: {},
+        });
+
+        expect(result.ok()).toBe(false);
+        if (!result.ok()) {
+            expect(result.error.code).toBe('STORE_CREATE_FAILED');
+        }
+    });
+
+    it('should return STORE_CREATE_FAILED when root directory creation fails', async () => {
+        const adapter = createMockStorageAdapter({
+            categories: {
+                ensure: async () =>
+                    err({
+                        code: 'INVALID_PATH' as const,
+                        message: 'Cannot create root directory',
                     }),
             },
         });
@@ -189,10 +217,12 @@ describe('initializeStore', () => {
             properties: {
                 path: '/path/to/store',
             },
-            categories: [{
-                path: CategoryPath.fromString('standards').unwrap(),
-                subcategories: [],
-            }],
+            categories: [
+                {
+                    path: CategoryPath.fromString('standards').unwrap(),
+                    subcategories: [],
+                },
+            ],
         });
 
         expect(result.ok()).toBe(false);

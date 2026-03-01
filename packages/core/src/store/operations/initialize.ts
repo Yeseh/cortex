@@ -7,6 +7,7 @@
 import { ok } from '@/result.ts';
 import { storeError, type StoreResult } from '@/store/result.ts';
 import { Slug } from '@/slug.ts';
+import { CategoryPath } from '@/category/category-path.ts';
 import type { StoreData } from '../store.ts';
 import type { StorageAdapter } from '@/storage/index.ts';
 
@@ -17,7 +18,8 @@ import type { StorageAdapter } from '@/storage/index.ts';
  * 1. Validates the store name
  * 2. Checks whether store metadata already exists
  * 3. Persists store metadata through `ConfigAdapter`
- * 4. Ensures configured category paths through `CategoryAdapter`
+ * 4. Creates the store root directory through `CategoryAdapter`
+ * 5. Ensures configured category paths through `CategoryAdapter`
  *
  * @param adapter - Storage adapter with config/category capabilities
  * @param name - The store name (must be a valid lowercase slug)
@@ -79,6 +81,16 @@ export const initializeStore = async (
                 store: name,
                 cause: saveResult.error,
             }
+        );
+    }
+
+    // Create the store root directory
+    const rootResult = await categories.ensure(CategoryPath.root());
+    if (!rootResult.ok()) {
+        return storeError(
+            'STORE_CREATE_FAILED',
+            `Failed to create store root directory for '${name}': ${rootResult.error.message}`,
+            { store: name, cause: rootResult.error }
         );
     }
 
