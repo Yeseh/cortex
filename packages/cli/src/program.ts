@@ -14,6 +14,7 @@ import { storeCommand } from './store/index.ts';
 import { initCommand } from './commands/init.ts';
 import { categoryCommand } from './category/index.ts';
 import { createCliLogger } from './observability.ts';
+import packageInfo from '../package.json'
 
 /**
  * The main Commander program instance for Cortex CLI.
@@ -32,7 +33,7 @@ import { createCliLogger } from './observability.ts';
 const program = new Command()
     .name('cortex')
     .description('Memory system for AI agents')
-    .version('0.1.0');
+    .version(packageInfo.version);
 
 program.addCommand(memoryCommand);
 program.addCommand(categoryCommand);
