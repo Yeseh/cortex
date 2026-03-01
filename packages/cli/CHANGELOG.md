@@ -1,5 +1,13 @@
 # @yeseh/cortex-cli
 
+## 0.6.2
+
+### Patch Changes
+
+- 0f0180b: Fix a bug where `cortex store init` would return a 'store not found' error for the new store
+    - @yeseh/cortex-core@0.6.2
+    - @yeseh/cortex-storage-fs@0.6.2
+
 ## 0.6.1
 
 ### Patch Changes
