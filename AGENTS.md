@@ -5,7 +5,6 @@ Hierarchical memory system for AI coding agents. Provides persistent, structured
 ## Project information
 
 - **Repository**: https://github.com/yeseh/cortex
-- **License**: MIT
 - **Runtime**: Bun (v1.3.6+) — no Node.js-specific APIs
 - **Language**: TypeScript 5.x (strict mode, ESM)
 - **Test framework**: Bun test (`bun test`)
@@ -16,42 +15,6 @@ Hierarchical memory system for AI coding agents. Provides persistent, structured
 - **Versioning**: Changesets (fixed versioning — all packages share a version)
 
 Use the `gh` CLI tool to interact with the repository, issues, pull requests, and CI/CD workflows.
-
-## Monorepo structure
-
-```
-packages/
-├── core/          # @yeseh/cortex-core — domain logic, types, validation
-├── storage-fs/    # @yeseh/cortex-storage-fs — filesystem storage adapter
-├── cli/           # @yeseh/cortex-cli — command-line interface (Commander.js)
-└── server/        # @yeseh/cortex-server — MCP server (Model Context Protocol)
-```
-
-**Dependency graph**: `core ← storage-fs ← cli` and `core ← storage-fs ← server`
-
-### Key scripts
-
-| Script            | Command                                    | Purpose                         |
-| ----------------- | ------------------------------------------ | ------------------------------- |
-| `build`           | `bun run --filter '*' build`               | TypeScript compile all packages |
-| `test`            | `bun test packages`                        | Run all tests                   |
-| `test:core`       | `bun test packages/core`                   | Core tests only                 |
-| `test:cli`        | `bun test packages/cli`                    | CLI tests only                  |
-| `test:server`     | `bun test packages/server`                 | Server tests only               |
-| `test:storage-fs` | `bun test packages/storage-fs`             | Storage tests only              |
-| `lint`            | `bunx eslint packages/*/src/**/*.ts --fix` | Lint + autofix                  |
-| `typecheck`       | `bunx tsc --build`                         | Full type check                 |
-| `compile:mcp`     | `bun build --compile ...`                  | Standalone MCP binary           |
-| `compile:cli`     | `bun build --compile ...`                  | Standalone CLI binary           |
-
-### CI/CD workflows (`.github/workflows/`)
-
-- **core.yml** — Lint → Type Check → Test → Build (triggers on `packages/core/**`, `packages/storage-fs/**`)
-- **cli.yml** — Lint → Type Check → Test → Build + upload artifact
-- **mcp-server.yml** — Lint → Type Check → Test → Build + upload artifact
-- **release.yml** — Tag `v*` or manual dispatch → Build & Test → Publish via Changesets
-
-All workflows run on `ubuntu-latest` with `oven-sh/setup-bun@v2`.
 
 ## Architecture
 
@@ -64,19 +27,6 @@ Cortex follows **ports and adapters** (hexagonal) architecture.
 3. **Result types**: All fallible operations return `Result<T, E>` — never throw
 4. **Interface segregation**: Storage is split into `MemoryStorage`, `IndexStorage`, `CategoryStorage`, `StoreStorage` composed via `ScopedStorageAdapter`
 5. **Registry as factory**: `Registry.getStore(name)` returns a `ScopedStorageAdapter`
-
-### Module file structure
-
-```
-src/{module}/
-├── operations/                # Pure business logic functions (storage port as first param) 
-├── | {operation}.ts           # Dedicated file for each operation with JSDoc and edge case handling
-├── | {operation}.spec.ts      # Colocated tests for each operation
-├── index.ts                   # Barrel exports (selective, explicit)
-├── types.ts                   # Port interface, error codes, result types
-```
-
-When logic implementation become big single files can be split into subdirectories (e.g., `memory/operations/addMemory.ts`), but avoid generic files like `memory.ts` that mix multiple operations. 
 
 ### Type conventions
 
@@ -92,20 +42,6 @@ When logic implementation become big single files can be split into subdirectori
 - Optional arrays default to `[]`, never `undefined`
 - No boolean flag arguments — prefer nullable fields, distinct methods, or enums
 
-### Memory file format
-
-Files use YAML frontmatter with **snake_case** keys, internal API uses **camelCase**:
-
-```yaml
----
-created_at: 2024-01-01T00:00:00.000Z
-updated_at: 2024-01-01T00:00:00.000Z
-tags: [example, test]
-source: user
-expires_at: 2024-12-31T23:59:59.000Z # optional
----
-Memory content here.
-```
 
 ### Documentation
 
@@ -119,8 +55,6 @@ Every exported function MUST have JSDoc with `@module`, `@param`, `@returns`, `@
 
 ## Testing
 
-- **Files**: Colocated `*.spec.ts` next to source
-- **Naming**: `describe` per function, `it("should {expected behavior}")`
 - **Both paths**: Test success and error cases, including edge cases
 - **Isolation**: NEVER use global module mocking (`mock.module()`). Use real temp directories via `mkdtemp()` with cleanup in `afterEach`.
 - **Mock factory**: Create factory functions returning mock port implementations with `Partial<T>` overrides.
@@ -131,41 +65,6 @@ Every exported function MUST have JSDoc with `@module`, `@param`, `@returns`, `@
     if (!result.ok) expect(result.error.code).toBe('ERROR_CODE');
     ```
 
-## Entrypoint patterns
-
-### CLI commands
-
-Commands use dependency injection for testability:
-
-```typescript
-export interface HandlerDeps {
-    stdout?: NodeJS.WritableStream;
-    stdin?: NodeJS.ReadableStream;
-    now?: Date;
-    adapter?: ScopedStorageAdapter;
-}
-
-export async function handleCommand(
-    arg: string, options: CommandOptions,
-    storeName: string | undefined, deps: HandlerDeps = {}
-): Promise<void> { ... }
-```
-
-Use `mapCoreError()` to translate domain errors to Commander exceptions (`InvalidArgumentError` for input errors, `CommanderError` for system errors).
-
-### MCP tools
-
-Follow the thin wrapper pattern with Zod validation:
-
-```typescript
-server.tool('cortex_tool_name', 'Description', inputSchema.shape, async (input) => {
-    const parsed = parseInput(schema, input);
-    return handler(ctx, parsed);
-});
-```
-
-MCP tools must NOT contain business logic, directly call filesystem operations, or duplicate core logic.
-
 ## Conventional commits
 
 Format: `<type>(<scope>): <description>`
@@ -173,6 +72,7 @@ Format: `<type>(<scope>): <description>`
 **Scopes:**
 
 - `core` — core domain logic
+- `skill` — Updates to skill prompts
 - `mcp` — MCP server
 - `cli` — command-line interface
 - `storage-fs` — filesystem storage adapter
@@ -183,43 +83,11 @@ Example: `feat(core): add new caching mechanism for improved performance`
 
 ## Using memory
 
-When interacting with the memory system use `cortex` as the project store.
-Start every session by retrieving the most recent memories from the `cortex` store to build context, and save new memories back to it as you work.
+When interacting with the memory system use `cortex` as the project store. Use the `memory` skill for more information.
 
-### Memory stores
+- Create new memories often
+- Check for relevant memories often
 
-| Store     | Path                               | Purpose                                              |
-| --------- | ---------------------------------- | ---------------------------------------------------- |
-| `cortex`  | `.cortex/memory` (project-local)   | Project knowledge: standards, decisions, maps, todos |
-| `default` | `~/.config/cortex/memory` (global) | User identity, preferences, cross-project knowledge  |
-
-### Category conventions
-
-| Category            | Store     | Purpose                                       |
-| ------------------- | --------- | --------------------------------------------- |
-| `human/profile`     | `default` | User identity                                 |
-| `human/preferences` | `default` | Coding style, workflow preferences            |
-| `standards/`        | `cortex`  | Architecture decisions, coding standards      |
-| `decisions/`        | `cortex`  | Specific development decisions with rationale |
-| `map/`              | `cortex`  | Codebase maps (package overviews, file lists) |
-| `runbooks/`         | `cortex`  | Debugging and operational procedures          |
-| `todo/`             | `cortex`  | Outstanding work items                        |
-| `features/`         | `cortex`  | Planned or in-progress feature descriptions   |
-| `investigations/`   | `cortex`  | Temporary research (set expiration)           |
-| `standup/`          | `cortex`  | Daily standup summaries (7-day expiry)        |
-
-### Store resolution order
-
-1. Explicit: `--store` flag / `store` parameter
-2. Local: `.cortex/memory` in current working directory
-3. Global: `~/.config/cortex/memory`
-
-### Expiration policy
-
-- **Session context / standups**: 1–7 days
-- **Sprint notes**: 2–4 weeks
-- **Experiments / investigations**: 1–2 weeks
-- **Never expires**: Architecture decisions, user preferences, coding standards, runbooks
 
 <!-- OPENSPEC:START -->
 
