@@ -30,8 +30,8 @@ Two tables: `memories` (with JSON `tags` column, epoch ms dates, explicit `categ
 
 ### Interface
 
-`IndexStorage` final interface: `reindex()`, `updateEntry()`, `removeEntry()`, `query(filter)`.
-No `getIndex`/`putIndex` — covered by query + entry methods.
+`IndexStorage` final interface: `reindex(scope: CategoryPath)`, `updateEntry()`, `removeEntry()`, `query(filter)`.
+No `load`/`write`/`updateAfterMemoryWrite` — covered by query + entry methods.
 
 ### MCP Tools
 

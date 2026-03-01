@@ -17,17 +17,22 @@ The system SHALL store index data in a single SQLite database (`cortex.db`) per 
 
 ### Requirement: Manual reindex
 
-The system SHALL provide a reindex operation that rebuilds the SQLite database from filesystem contents.
+The system SHALL provide a reindex operation that rebuilds the SQLite database from filesystem contents. The operation SHALL accept a `scope: CategoryPath` parameter; passing `CategoryPath.root()` performs a full store-wide rebuild.
 
-#### Scenario: Rebuilding indexes
+#### Scenario: Full store rebuild
 
-- **WHEN** a user invokes the reindex command
+- **WHEN** a user invokes the reindex command (scope = root)
 - **THEN** the SQLite database is dropped and rebuilt from all `.md` files in the store
+
+#### Scenario: Scoped rebuild
+
+- **WHEN** a reindex is invoked with a non-root scope (e.g., `standards`)
+- **THEN** only entries under that subtree are removed and rebuilt in the SQLite database
 
 #### Scenario: Auto-rebuild on missing database
 
 - **WHEN** an operation accesses a store with no `cortex.db` file
-- **THEN** the system automatically triggers a reindex with a log/warning message
+- **THEN** the system automatically triggers a full reindex with a log/warning message
 - **AND** the operation proceeds after the rebuild completes
 
 ### Requirement: SQLite WAL mode

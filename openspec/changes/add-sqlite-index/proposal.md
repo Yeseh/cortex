@@ -20,5 +20,5 @@ Per-category YAML `index.yaml` files limit queryability: cross-category tag sear
 ## Impact
 
 - Affected specs: `index`, `storage-filesystem`, `mcp-memory-tools`
-- Affected code: `packages/storage-fs/src/index-storage.ts` (major rewrite), `packages/core/src/memory/operations.ts`, `packages/server/src/memory/tools.ts`
+- Affected code: `packages/storage-fs/src/index-adapter.ts` (major rewrite), `packages/core/src/memory/operations/` (create, update, remove, move, recent), `packages/server/src/memory/tools/`
 - New dependency: `bun:sqlite` (built-in, no external package)
