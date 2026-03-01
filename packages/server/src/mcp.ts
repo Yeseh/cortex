@@ -58,14 +58,19 @@ export const createMcpServer = (): McpServer => {
     return new McpServer({
         name: SERVER_NAME,
         version: SERVER_VERSION,
-    }); 
+    });
 };
 
 /**
- * Creates a Web Standard Streamable HTTP transport for sessioned MCP communication.
+ * Creates a Web Standard Streamable HTTP transport in stateless mode.
  *
- * The transport generates a session ID during initialize so clients can
- * send `mcp-session-id` on subsequent requests.
+ * Session management is disabled (`sessionIdGenerator: undefined`) so that
+ * clients such as OpenCode can re-initialize on every connection without
+ * needing to persist an `mcp-session-id` across application restarts.
+ *
+ * In stateless mode the SDK skips the "Server already initialized" guard,
+ * meaning multiple sequential connections are all accepted — each
+ * `initialize` request resets the transport's internal state.
  *
  * @returns Configured HTTP transport ready for request handling
  *
@@ -80,8 +85,8 @@ export const createMcpServer = (): McpServer => {
  */
 export const createMcpTransport = (): WebStandardStreamableHTTPServerTransport => {
     return new WebStandardStreamableHTTPServerTransport({
-        sessionIdGenerator: () => crypto.randomUUID(),
-    }); 
+        sessionIdGenerator: undefined,
+    });
 };
 
 /**
