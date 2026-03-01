@@ -21,10 +21,18 @@ export interface OutputMemoryMetadata {
     expiresAt?: Date;
 }
 
+export interface OutputPath {
+    path: string;
+}
+
 export interface OutputMemory {
     path: string;
     metadata: OutputMemoryMetadata;
     content: string;
+}
+export interface OutputMovedMemory {
+    from: string;
+    to: string;
 }
 
 export interface OutputCategoryMemory {
@@ -70,6 +78,8 @@ export interface OutputInit {
 
 export type OutputPayload =
     | { kind: 'memory'; value: OutputMemory }
+    | { kind: 'moved-memory'; value: OutputMovedMemory }
+    | { kind: 'path'; value: OutputPath }
     | { kind: 'category'; value: OutputCategory }
     | { kind: 'created-category'; value: OutputCreatedCategory}
     | { kind: 'store'; value: OutputStore }

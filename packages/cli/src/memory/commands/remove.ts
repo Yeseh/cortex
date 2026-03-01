@@ -74,7 +74,7 @@ export async function handleRemove(
         out.write(`Removed memory ${pathResult.value.toString()}.\n`);
     } else {
         const format = rawFormat as OutputFormat;
-        const serialized = serializeOutput({ path: pathResult.value.toString() }, format);
+        const serialized = serializeOutput({kind: 'path', value: { path: pathResult.value.toString() }}, format);
         if (!serialized.ok()) {
             throwCliError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
         }

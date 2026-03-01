@@ -22,9 +22,9 @@ import { mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { Command } from '@commander-js/extra-typings';
 import { throwCliError } from '../../errors.ts';
-import { getDefaultConfigPath } from '../../context.ts';
+import { getDefaultConfigPath } from '../../utils/paths.ts';
 import { serializeOutput, type OutputStore, type OutputFormat } from '../../output.ts';
-import { resolveUserPath } from '../../paths.ts';
+import { resolveUserPath } from '../../utils/paths.ts';
 import { Slug, parseConfig, type CortexContext, type ConfigStore } from '@yeseh/cortex-core';
 import { createCliCommandContext } from '../../context.ts';
 

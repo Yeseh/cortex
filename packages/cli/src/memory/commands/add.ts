@@ -24,7 +24,7 @@
 import { Command } from '@commander-js/extra-typings';
 import { throwCliError } from '../../errors.ts';
 import { type CortexContext } from '@yeseh/cortex-core';
-import { resolveInput as resolveCliContent } from '../../input.ts';
+import { resolveInput as resolveCliContent } from '../../utils/input.ts';
 import { parseExpiresAt, parseTags } from '../parsing.ts';
 import { createCliCommandContext } from '../../context.ts';
 import { serializeOutput, type OutputFormat } from '../../output.ts';

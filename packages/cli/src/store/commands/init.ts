@@ -29,9 +29,9 @@ import { throwCliError } from '../../errors.ts';
 import { type StoreData } from '@yeseh/cortex-core/store';
 import { type CategoryMode, type CortexContext } from '@yeseh/cortex-core';
 import { serializeOutput, type OutputStoreInit, type OutputFormat } from '../../output.ts';
-import { resolveUserPath } from '../../paths.ts';
+import { resolveUserPath } from '../../utils/paths.ts';
 import { createCliCommandContext } from '../../context.ts';
-import { isTTY, defaultPromptDeps, type PromptDeps } from '../../prompts.ts';
+import { isTTY, defaultPromptDeps, type PromptDeps } from '../../utils/prompts.ts';
 
 /**
  * Options for the init command.

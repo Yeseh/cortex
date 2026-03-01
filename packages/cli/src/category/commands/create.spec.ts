@@ -85,8 +85,8 @@ describe('handleCreate', () => {
         await handleCreate(ctx, undefined, 'standards', { format: 'json' });
 
         const parsed = JSON.parse(capture.getOutput());
-        expect(parsed.path).toBe('standards');
-        expect(parsed.created).toBeTrue();
+        expect(parsed.value.path).toBe('standards');
+        expect(parsed.value.created).toBeTrue();
     });
 
     it('should throw CommanderError when store not found', async () => {

@@ -126,7 +126,7 @@ export async function handleShow(
     };
 
     const format = (options.format as OutputFormat) ?? 'yaml';
-    const serialized = serializeOutput(outputMemory, format);
+    const serialized = serializeOutput({kind: 'memory', value: outputMemory}, format);
     if (!serialized.ok()) {
         throwCliError({ code: 'SERIALIZE_FAILED', message: serialized.error.message });
     }

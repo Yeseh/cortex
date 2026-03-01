@@ -13,7 +13,7 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { throwCliError } from '../../errors.ts';
-import { getDefaultConfigPath } from '../../context.ts';
+import { getDefaultConfigPath } from '../../utils/paths.ts';
 import { serializeOutput, type OutputStore, type OutputFormat } from '../../output.ts';
 import { Slug, parseConfig, type CortexContext } from '@yeseh/cortex-core';
 import { createCliCommandContext } from '../../context.ts';

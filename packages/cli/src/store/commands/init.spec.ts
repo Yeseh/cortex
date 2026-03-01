@@ -9,7 +9,7 @@ import { InvalidArgumentError } from '@commander-js/extra-typings';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { PromptDeps } from '../../prompts.ts';
+import type { PromptDeps } from '../../utils/prompts.ts';
 
 import { handleInit } from './init.ts';
 import {

@@ -81,7 +81,7 @@ export async function handleMove(
     } else {
         const format = rawFormat as OutputFormat;
         const serialized = serializeOutput(
-            { from: fromResult.value.toString(), to: toResult.value.toString() },
+            { kind: 'moved-memory', value: { from: fromResult.value.toString(), to: toResult.value.toString() } },
             format
         );
         if (!serialized.ok()) {

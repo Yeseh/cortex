@@ -64,8 +64,8 @@ describe('handleShow', () => {
         await handleShow(ctx, undefined, 'project/show', { format: 'json' });
 
         const output = JSON.parse(capture.getOutput());
-        expect(output.path).toBe('project/show');
-        expect(output.content).toBe('Show content');
-        expect(output.metadata.tags).toEqual(['test']);
+        expect(output.value.path).toBe('project/show');
+        expect(output.value.content).toBe('Show content');
+        expect(output.value.metadata.tags).toEqual(['test']);
     });
 });
