@@ -1,5 +1,14 @@
 # @yeseh/cortex-cli
 
+## 0.6.8
+
+### Patch Changes
+
+- 39a58e9: New version for publishing
+- Updated dependencies [39a58e9]
+    - @yeseh/cortex-core@0.6.8
+    - @yeseh/cortex-storage-fs@0.6.8
+
 ## 0.6.7
 
 ### Patch Changes

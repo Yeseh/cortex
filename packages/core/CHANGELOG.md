@@ -1,5 +1,11 @@
 # @yeseh/cortex-core
 
+## 0.6.8
+
+### Patch Changes
+
+- 39a58e9: New version for publishing
+
 ## 0.6.7
 
 ### Patch Changes
