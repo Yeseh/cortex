@@ -35,6 +35,7 @@ import {
     type StoreData,
 } from '@yeseh/cortex-core';
 import { createCliCommandContext } from '../create-cli-command.ts';
+import { isTTY, defaultPromptDeps, type PromptDeps } from '../prompts.ts';
 
 /**
  * Options for the init command.
@@ -86,23 +87,50 @@ export const initCommand = new Command('init')
  * @throws {CommanderError} When initialization fails
  */
 
+async function promptInitOptions(
+    ctx: CortexContext,
+    resolved: { storeName: string; storePath: string },
+    promptDeps: PromptDeps,
+): Promise<{ storeName: string; storePath: string }> {
+    if (!isTTY(ctx.stdin)) return resolved;
+
+    const storePath = await promptDeps.input({
+        message: 'Global store path:',
+        default: resolved.storePath,
+    });
+    const storeName = await promptDeps.input({
+        message: 'Global store name:',
+        default: resolved.storeName,
+    });
+    return { storePath, storeName };
+}
+
 // TODO: We should move this logic into the core package as a helper function, and just call it from the CLI command handler.
 //       Use the ConfigAdapter to initialize the config store and write the default config, instead of manually writing files here. This way we can reuse the same initialization logic in other contexts (e.g. programmatic setup, tests).
 export async function handleInit(
     ctx: CortexContext,
     options: InitCommandOptions = {},
+    promptDeps: PromptDeps = defaultPromptDeps,
 ): Promise<void> {
     const cortexConfigDir = resolve(homedir(), '.config', 'cortex');
     const globalStorePath = resolve(cortexConfigDir, 'memory');
 
+    const resolved = await promptInitOptions(
+        ctx,
+        { storeName: 'global', storePath: globalStorePath },
+        promptDeps,
+    );
+    const finalStorePath = resolved.storePath;
+    const finalStoreName = resolved.storeName;
+
     await initializeConfigAdapter(ctx);
-    await ensureNotInitialized(ctx, globalStorePath, options.force);
-    await createGlobalStore(ctx, globalStorePath);
+    await ensureNotInitialized(ctx, finalStoreName, finalStorePath, options.force);
+    await createGlobalStore(ctx, finalStoreName, finalStorePath);
 
     // Build output
     const output: OutputPayload = {
         kind: 'init',
-        value: formatInit(globalStorePath, Object.keys(defaultGlobalStoreCategories)),
+        value: formatInit(finalStorePath, Object.keys(defaultGlobalStoreCategories)),
     };
 
     // Output result
@@ -115,6 +143,7 @@ export async function handleInit(
 
 const ensureNotInitialized = async (
     ctx: CortexContext,
+    storeName: string,
     globalStorePath: string,
     force = false,
 ): Promise<void> => {
@@ -122,7 +151,7 @@ const ensureNotInitialized = async (
         return;
     }
 
-    const existingStoreResult = await ctx.config.getStore('global');
+    const existingStoreResult = await ctx.config.getStore(storeName);
     if (!existingStoreResult.ok()) {
         throwCliError(existingStoreResult.error);
     }
@@ -157,8 +186,12 @@ const serializeOrThrow = <T>(value: T, format: OutputFormat) => {
     return serialized;
 };
 
-const createGlobalStore = async (ctx: CortexContext, globalStorePath: string): Promise<void> => {
-    const existingStoreResult = await ctx.config.getStore('global');
+const createGlobalStore = async (
+    ctx: CortexContext,
+    storeName: string,
+    globalStorePath: string,
+): Promise<void> => {
+    const existingStoreResult = await ctx.config.getStore(storeName);
     if (!existingStoreResult.ok()) {
         throwCliError(existingStoreResult.error);
     }
@@ -182,7 +215,7 @@ const createGlobalStore = async (ctx: CortexContext, globalStorePath: string): P
         },
     };
 
-    const saveStoreResult = await ctx.config.saveStore('global', globalStoreData);
+    const saveStoreResult = await ctx.config.saveStore(storeName, globalStoreData);
     if (!saveStoreResult.ok()) {
         throwCliError(saveStoreResult.error);
     }
