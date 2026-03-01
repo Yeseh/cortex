@@ -86,17 +86,21 @@ export const createCliConfigContext = async (
 ): Promise<Result<CliConfigContext, any>> => {
     const envConfigPath = process.env.CORTEX_CONFIG;
     const envConfigDir = process.env.CORTEX_CONFIG_DIR;
+    const envConfigCwd = process.env.CORTEX_CONFIG_CWD;
 
     const explicitConfigPath =
         typeof envConfigPath === 'string' && envConfigPath.length > 0
             ? makeAbsolute(envConfigPath)
             : undefined;
 
-    const dir = options.configDir ?? envConfigDir ?? resolve(homedir(), '.config', 'cortex');
-    const absoluteDir = makeAbsolute(dir);
-    const configPath = explicitConfigPath ?? resolve(absoluteDir, 'config.yaml');
+    const dir = options.configDir 
+        ?? envConfigDir 
+        ?? resolve(homedir(), '.config', 'cortex');
 
-    const envConfigCwd = process.env.CORTEX_CONFIG_CWD;
+    const absoluteDir = makeAbsolute(dir);
+    const configPath = explicitConfigPath 
+        ?? resolve(absoluteDir, 'config.yaml');
+
     const effectiveCwd =
         options.configCwd ??
         (typeof envConfigCwd === 'string' && envConfigCwd.length > 0
@@ -109,20 +113,10 @@ export const createCliConfigContext = async (
         return initResult;
     }
 
-    const settingsResult = await configAdapter.getSettings();
-    if (!settingsResult.ok()) {
-        return settingsResult;
-    }
-
-    const storesResult = await configAdapter.getStores();
-    if (!storesResult.ok()) {
-        return storesResult;
-    }
-
     return ok({
         configAdapter,
-        settings: settingsResult.value,
-        stores: storesResult.value,
+        settings: configAdapter.settings!,
+        stores: configAdapter.stores!,
         effectiveCwd,
     });
 };

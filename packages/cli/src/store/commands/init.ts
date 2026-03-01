@@ -24,14 +24,17 @@
 
 import { Command } from '@commander-js/extra-typings';
 import { resolve } from 'node:path';
+import { stdin, stdout as processStdout } from 'node:process';
 import { resolveStoreName } from '../utils/resolve-store-name.ts';
 import { throwCliError } from '../../errors.ts';
-import { type StoreData } from '@yeseh/cortex-core/store';
+import { type StoreData, initializeStore } from '@yeseh/cortex-core/store';
 import { type CategoryMode, type CortexContext } from '@yeseh/cortex-core';
 import { serializeOutput, type OutputStoreInit, type OutputFormat } from '../../output.ts';
 import { resolveUserPath } from '../../utils/paths.ts';
-import { createCliCommandContext } from '../../context.ts';
+import { createCliConfigContext } from '../../context.ts';
 import { isTTY, defaultPromptDeps, type PromptDeps } from '../../utils/prompts.ts';
+import type { FilesystemConfigAdapter } from '@yeseh/cortex-storage-fs';
+import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
 
 /**
  * Options for the init command.
@@ -95,7 +98,8 @@ async function promptStoreInitOptions(
     let storePath: string;
     if (explicit.path) {
         storePath = resolved.storePath;
-    } else {
+    }
+    else {
         const promptedPath = await promptDeps.input({
             message: 'Store path:',
             default: resolved.storePath,
@@ -123,7 +127,8 @@ async function resolveStoreNameOrEmpty(
 ): Promise<string> {
     try {
         return await resolveStoreName(cwd, explicitName);
-    } catch (e) {
+    }
+    catch (e) {
         // When running in a TTY, only swallow errors (and fall back to prompting)
         // if no explicit name was provided. If the user passed an explicit --name,
         // re-throw so they see the actual invalid-name error.
@@ -194,11 +199,6 @@ export async function handleInit(
         });
     }
 
-    const clientResult = ctx.cortex.getStore(finalStoreName);
-    if (!clientResult.ok()) {
-        throwCliError(clientResult.error);
-    }
-
     const storeData: StoreData = {
         kind: 'filesystem',
         categoryMode: (options.categoryMode as CategoryMode) ?? 'free',
@@ -209,8 +209,10 @@ export async function handleInit(
         description: options.description,
     };
 
-    const store = clientResult.value;
-    const createResult = await store.initialize(storeData);
+    const adapter = new FilesystemStorageAdapter(ctx.config as FilesystemConfigAdapter, {
+        rootDirectory: finalStorePath,
+    });
+    const createResult = await initializeStore(adapter, finalStoreName, storeData);
     if (!createResult.ok()) {
         throwCliError(createResult.error);
     }
@@ -242,12 +244,26 @@ export const initCommand = new Command('init')
     .option('-c, --category-mode <mode>', 'Category mode (free, strict, flat)', 'free')
     .option('-o, --format <format>', 'Output format (yaml, json, toon)', 'yaml')
     .action(async (path, options) => {
-        const context = await createCliCommandContext();
-        if (!context.ok()) {
-            throwCliError(context.error);
+        const configCtx = await createCliConfigContext();
+        if (!configCtx.ok()) {
+            throwCliError(configCtx.error);
         }
 
-        await handleInit(context.value, path, {
+        const { configAdapter, effectiveCwd } = configCtx.value;
+
+        // Build a minimal context for handleInit. The init command cannot go
+        // through the full CortexContext/adapterFactory because the store is
+        // not yet registered — the adapter factory would throw STORE_NOT_FOUND.
+        // handleInit only needs cwd, stdin, stdout, and config (to construct
+        // its own adapter directly via initializeStore).
+        const ctx = {
+            config: configAdapter,
+            cwd: effectiveCwd,
+            stdin,
+            stdout: processStdout,
+        } as unknown as CortexContext;
+
+        await handleInit(ctx, path, {
             name: options.name,
             description: options.description,
             categoryMode: options.categoryMode as CategoryMode,

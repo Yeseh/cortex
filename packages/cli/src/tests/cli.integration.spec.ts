@@ -1167,4 +1167,97 @@ describe('Cortex CLI Integration Tests', () => {
             expect(result.stdout).toContain('reindex');
         });
     });
+
+    describe('store init command', () => {
+        it('should initialize a new store when no store is configured', async () => {
+            // Create an isolated directory with no pre-configured stores — the
+            // config.yaml exists but has no store entries, simulating a fresh install.
+            const freshDir = await fs.mkdtemp(join(tmpdir(), 'cortex-store-init-'));
+            const configDir = join(freshDir, '.config', 'cortex');
+            await fs.mkdir(configDir, { recursive: true });
+            await fs.writeFile(join(configDir, 'config.yaml'), 'stores: {}\n', 'utf8');
+
+            const storePath = join(freshDir, '.cortex', 'memory');
+
+            try {
+                const result = await runCortexCli(
+                    [
+                        'store',
+                        'init',
+                        storePath,
+                        '--name',
+                        'my-project',
+                        '--format',
+                        'json',
+                    ],
+                    {
+                        cwd: freshDir,
+                        env: { CORTEX_CONFIG_DIR: configDir },
+                    },
+                );
+
+                expectCliOk([
+                    'store',
+                    'init',
+                    storePath,
+                    '--name',
+                    'my-project',
+                ], result);
+                expect(result.exitCode).toBe(0);
+
+                const parsed = JSON.parse(result.stdout) as {
+                    value: { name: string; path: string };
+                };
+                expect(parsed.value.name).toBe('my-project');
+                expect(parsed.value.path).toBe(storePath);
+
+                // Verify the store was registered in config.yaml
+                const configContent = await fs.readFile(join(configDir, 'config.yaml'), 'utf8');
+                expect(configContent).toContain('my-project');
+                expect(configContent).toContain(storePath);
+            }
+            finally {
+                await fs.rm(freshDir, { recursive: true, force: true });
+            }
+        });
+
+        it('should fail when the store name already exists', async () => {
+            // Register a store first using the existing testProject setup
+            const storePath = join(testProject, '.cortex', 'memory2');
+            const firstInit = await runCortexCli(
+                [
+                    'store',
+                    'init',
+                    storePath,
+                    '--name',
+                    'existing-store',
+                    '--format',
+                    'json',
+                ],
+                { cwd: testProject },
+            );
+            expectCliOk([
+                'store',
+                'init',
+                storePath,
+                '--name',
+                'existing-store',
+            ], firstInit);
+
+            // Attempt to init the same name again — should fail
+            const secondInit = await runCortexCli(
+                [
+                    'store',
+                    'init',
+                    join(testProject, '.cortex', 'memory3'),
+                    '--name',
+                    'existing-store',
+                ],
+                { cwd: testProject },
+            );
+
+            expect(secondInit.exitCode).toBe(1);
+            expect(secondInit.stderr.toLowerCase()).toMatch(/already exists/);
+        });
+    });
 });
