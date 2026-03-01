@@ -22,6 +22,10 @@ jobs:
     release:
         name: Changesets Release
         runs-on: ubuntu-latest
+        outputs:
+            published: ${{ steps.changesets.outputs.published }}
+            version: ${{ steps.version.outputs.version }}
+            sha: ${{ github.sha }}
         steps:
             - name: Checkout
               uses: actions/checkout@v4
@@ -72,31 +76,96 @@ jobs:
               if: steps.changesets.outputs.published == 'true'
               run: |
                   VERSION=$(node -e "console.log(JSON.parse(require('fs').readFileSync('packages/core/package.json', 'utf8')).version)")
-                  echo "${VERSION}" > .release-version
                   echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
-            - name: Write release status log
+    build-binaries:
+        name: Build binaries (${{ matrix.platform }})
+        needs: release
+        if: needs.release.outputs.published == 'true'
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - runner: ubuntu-latest
+                      platform: linux-x64
+                      exe: ''
+                    - runner: ubuntu-24.04-arm
+                      platform: linux-arm64
+                      exe: ''
+                    - runner: macos-14
+                      platform: macos-arm64
+                      exe: ''
+                    - runner: windows-latest
+                      platform: windows-x64
+                      exe: '.exe'
+        runs-on: ${{ matrix.runner }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  ref: ${{ needs.release.outputs.sha }}
+
+            - name: Setup Bun
+              uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version: latest
+
+            - name: Install dependencies
+              run: bun install --frozen-lockfile
+
+            - name: Build CLI binary
               shell: bash
               run: |
-                  {
-                    echo "workflow=release"
-                    echo "run_id=${{ github.run_id }}"
-                    echo "sha=${{ github.sha }}"
-                    echo "published=${{ steps.changesets.outputs.published }}"
-                    echo "version=${{ steps.version.outputs.version }}"
-                  } > release-status.log
+                  mkdir -p release-assets
+                  bun build --compile --minify --sourcemap --bytecode ./packages/cli/src/run.ts --outfile "./release-assets/cortex-${{ matrix.platform }}${{ matrix.exe }}"
 
-            - name: Upload release metadata
-              if: steps.changesets.outputs.published == 'true'
+            - name: Build MCP server binary
+              shell: bash
+              run: |
+                  bun build --compile --minify --sourcemap --bytecode ./packages/server/src/index.ts --outfile "./release-assets/cortex-mcp-${{ matrix.platform }}${{ matrix.exe }}"
+
+            - name: Upload platform binaries
               uses: actions/upload-artifact@v4
               with:
-                  name: release-metadata
-                  path: .release-version
-                  retention-days: 7
+                  name: binaries-${{ matrix.platform }}
+                  path: release-assets/*
+                  retention-days: 14
 
-            - name: Trigger binary release workflow
-              if: steps.changesets.outputs.published == 'true'
-              uses: peter-evans/repository-dispatch@v3
+    publish-binaries:
+        name: Publish binary assets
+        needs: [release, build-binaries]
+        if: needs.release.outputs.published == 'true'
+        runs-on: ubuntu-latest
+        steps:
+            - name: Download all binary artifacts
+              uses: actions/download-artifact@v4
               with:
-                  event-type: release_published
-                  client-payload: '{"version":"${{ steps.version.outputs.version }}","sha":"${{ github.sha }}"}'
+                  pattern: binaries-*
+                  merge-multiple: true
+                  path: release-assets
+
+            - name: Generate SHA256 checksums
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  cd release-assets
+
+                  : > SHA256SUMS
+                  for file in *; do
+                    if [[ -f "$file" ]]; then
+                      sha256sum "$file" >> SHA256SUMS
+                      sha256sum "$file" | awk '{print $1}' > "${file}.sha256"
+                    fi
+                  done
+
+            - name: Create GitHub release with binaries
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: v${{ needs.release.outputs.version }}
+                  name: v${{ needs.release.outputs.version }}
+                  target_commitish: ${{ needs.release.outputs.sha }}
+                  generate_release_notes: true
+                  files: release-assets/*
+                  fail_on_unmatched_files: true
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

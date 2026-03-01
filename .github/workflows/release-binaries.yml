@@ -1,8 +1,6 @@
-name: Release Binaries
+name: Release Binaries (Manual)
 
 on:
-    repository_dispatch:
-        types: [release_published]
     workflow_dispatch:
         inputs:
             version:
@@ -23,60 +21,8 @@ concurrency:
     cancel-in-progress: false
 
 jobs:
-    prepare:
-        name: Prepare release context
-        if: github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch'
-        runs-on: ubuntu-latest
-        outputs:
-            should_release: ${{ steps.resolve.outputs.should_release }}
-            version: ${{ steps.resolve.outputs.version }}
-            sha: ${{ steps.resolve.outputs.sha }}
-        steps:
-            - name: Resolve version and commit
-              id: resolve
-              shell: bash
-              run: |
-                  if [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
-                    VERSION="${{ github.event.client_payload.version }}"
-                    SHA="${{ github.event.client_payload.sha }}"
-                    SHOULD_RELEASE=true
-                  elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-                    VERSION="${{ github.event.inputs.version }}"
-                    SHA="${{ github.event.inputs.sha }}"
-                    if [[ -z "${SHA}" ]]; then
-                      SHA="${{ github.sha }}"
-                    fi
-                    SHOULD_RELEASE=true
-                  else
-                    VERSION=""
-                    SHA="${{ github.sha }}"
-                    SHOULD_RELEASE=false
-                  fi
-
-                  echo "should_release=${SHOULD_RELEASE}" >> "$GITHUB_OUTPUT"
-                  echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-                  echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
-
-                  {
-                    echo "workflow=release-binaries"
-                    echo "run_id=${{ github.run_id }}"
-                    echo "event_name=${{ github.event_name }}"
-                    echo "should_release=${SHOULD_RELEASE}"
-                    echo "version=${VERSION}"
-                    echo "sha=${SHA}"
-                  } > binary-release-status.log
-
-            - name: Upload binary release logs
-              uses: actions/upload-artifact@v4
-              with:
-                  name: binary-release-logs
-                  path: binary-release-status.log
-                  retention-days: 14
-
     build-binaries:
         name: Build binaries (${{ matrix.platform }})
-        needs: prepare
-        if: needs.prepare.outputs.should_release == 'true'
         strategy:
             fail-fast: false
             matrix:
@@ -98,7 +44,7 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
               with:
-                  ref: ${{ needs.prepare.outputs.sha }}
+                  ref: ${{ inputs.sha || github.sha }}
 
             - name: Setup Bun
               uses: oven-sh/setup-bun@v2
@@ -128,8 +74,7 @@ jobs:
 
     publish-binaries:
         name: Publish binary assets
-        needs: [prepare, build-binaries]
-        if: needs.prepare.outputs.should_release == 'true'
+        needs: build-binaries
         runs-on: ubuntu-latest
         steps:
             - name: Download all binary artifacts
@@ -153,13 +98,10 @@ jobs:
                     fi
                   done
 
-            - name: Create/update GitHub release with binaries
+            - name: Attach binaries to GitHub release
               uses: softprops/action-gh-release@v2
               with:
-                  tag_name: v${{ needs.prepare.outputs.version }}
-                  name: v${{ needs.prepare.outputs.version }}
-                  target_commitish: ${{ needs.prepare.outputs.sha }}
-                  generate_release_notes: true
+                  tag_name: v${{ inputs.version }}
                   files: release-assets/*
                   fail_on_unmatched_files: true
               env:
