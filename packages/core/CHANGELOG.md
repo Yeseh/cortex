@@ -1,5 +1,11 @@
 # @yeseh/cortex-core
 
+## 0.6.7
+
+### Patch Changes
+
+- 7ca2ea7: Use bun to bundle the application
+
 ## 0.6.4
 
 ## 0.6.3

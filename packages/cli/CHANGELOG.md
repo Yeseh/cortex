@@ -1,5 +1,14 @@
 # @yeseh/cortex-cli
 
+## 0.6.7
+
+### Patch Changes
+
+- 7ca2ea7: Use bun to bundle the application
+- Updated dependencies [7ca2ea7]
+    - @yeseh/cortex-storage-fs@0.6.7
+    - @yeseh/cortex-core@0.6.7
+
 ## 0.6.4
 
 ### Patch Changes
