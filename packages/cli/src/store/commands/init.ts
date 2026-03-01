@@ -92,9 +92,17 @@ async function promptStoreInitOptions(
         ? resolved.storeName
         : await promptDeps.input({ message: 'Store name:', default: resolved.storeName });
 
-    const storePath = explicit.path
-        ? resolved.storePath
-        : await promptDeps.input({ message: 'Store path:', default: resolved.storePath });
+    let storePath: string;
+    if (explicit.path) {
+        storePath = resolved.storePath;
+    } else {
+        const promptedPath = await promptDeps.input({
+            message: 'Store path:',
+            default: resolved.storePath,
+        });
+        const trimmedPath = promptedPath.trim();
+        storePath = resolveUserPath(trimmedPath, process.cwd());
+    }
 
     return { storeName, storePath };
 }
