@@ -45,13 +45,14 @@ bun install -g @yeseh/cortex-server
 ```
 
 ### Agent Skill
-Cortex comes with a bundled skill for your coding agent. You can install it using 
+
+Cortex comes with a bundled skill for your coding agent. You can install it using
 
 ```bash
 npx skills add yeseh/cortex --skill memory
 #OR
 bunx skills add yeseh/cortex --skill memory
-
+```
 
 ## Quickstart (CLI)
 
@@ -124,6 +125,9 @@ bun run build
 
 ```
 cortex/
+├── assets/             # Logo and static assets
+├── bin/                # Binary entry points
+├── docs/               # User documentation
 ├── packages/
 │   ├── core/           # @yeseh/cortex-core
 │   │   └── src/
@@ -131,7 +135,7 @@ cortex/
 │   │       ├── category/   # Category and index management
 │   │       ├── store/      # Store registry
 │   │       ├── storage/    # Storage port interfaces
-│   │       └── config/     # Configuration parsing
+│   │       └── testing/    # Test helpers and mock adapters
 │   ├── storage-fs/     # @yeseh/cortex-storage-fs
 │   │   └── src/
 │   │       └── ...         # Filesystem storage adapter
@@ -145,6 +149,8 @@ cortex/
 │           ├── category/   # Category MCP tools
 │           ├── store/      # Store MCP tools
 │           └── index.ts    # MCP server entry
+├── scripts/            # Build and utility scripts
+├── skills/             # Pre-built agent skills
 ├── openspec/           # Specifications and change proposals
 ├── package.json        # Workspace root
 └── tsconfig.base.json  # Shared TypeScript config

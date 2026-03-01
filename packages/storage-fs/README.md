@@ -22,19 +22,24 @@ This package provides:
 
 ```typescript
 import { FilesystemStorageAdapter } from '@yeseh/cortex-storage-fs';
+import { parseMemory } from '@yeseh/cortex-storage-fs';
 
 const adapter = new FilesystemStorageAdapter({
-  rootDirectory: '/path/to/store'
+    rootDirectory: '/path/to/store',
 });
 
-// Read a memory
+// Read a memory (returns raw file contents as string | null)
 const result = await adapter.memories.read('project/notes/api-design');
 if (result.ok && result.value) {
-  console.log(result.value.content);
-  console.log(result.value.metadata);
+    // Parse the raw string into a Memory object
+    const parsed = parseMemory(result.value);
+    if (parsed.ok) {
+        console.log(parsed.value.content);
+        console.log(parsed.value.metadata);
+    }
 }
 
-// Write a memory
+// Write a memory (accepts raw serialized string)
 await adapter.memories.write('project/notes/new-note', 'Memory content here');
 
 // Delete a memory
@@ -75,17 +80,17 @@ Use PostgreSQL for ACID compliance.
 
 const result = parseMemory(fileContent);
 if (result.ok) {
-  console.log(result.value.content);  // "Use PostgreSQL for ACID compliance."
-  console.log(result.value.metadata.tags);  // ["architecture", "backend"]
+    console.log(result.value.content); // "Use PostgreSQL for ACID compliance."
+    console.log(result.value.metadata.tags); // ["architecture", "backend"]
 }
 
 // Serialize a memory to file format
 const serialized = serializeMemory({
-  content: 'New content',
-  metadata: {
-    createdAt: new Date(),
-    updatedAt: new Date()
-  }
+    content: 'New content',
+    metadata: {
+        createdAt: new Date(),
+        updatedAt: new Date(),
+    },
 });
 ```
 
@@ -111,10 +116,10 @@ store/
 created_at: 2024-01-15T10:00:00.000Z
 updated_at: 2024-01-15T10:00:00.000Z
 tags:
-  - tag1
-  - tag2
-expires_at: 2024-12-31T23:59:59.000Z  # optional
-source: user  # optional
+    - tag1
+    - tag2
+expires_at: 2024-12-31T23:59:59.000Z # optional
+source: user # optional
 ---
 
 Memory content goes here. This can be any markdown content.
@@ -124,14 +129,14 @@ Memory content goes here. This can be any markdown content.
 
 ```yaml
 memories:
-  - path: category/memory-slug
-    token_estimate: 42
-    summary: First line or generated summary
-    updated_at: 2024-01-15T10:00:00.000Z # optional
+    - path: category/memory-slug
+      token_estimate: 42
+      summary: First line or generated summary
+      updated_at: 2024-01-15T10:00:00.000Z # optional
 subcategories:
-  - path: category/subcategory
-    memory_count: 5
-    description: Subcategory description
+    - path: category/subcategory
+      memory_count: 5
+      description: Subcategory description
 ```
 
 ## Related Packages

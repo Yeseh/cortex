@@ -7,9 +7,8 @@ Pre-built agent skills for working with Cortex. These are designed for [OpenCode
 Copy the skills you want into your OpenCode global skills directory:
 
 ```bash
-# Copy all three skills at once
+# Copy all skills at once
 cp -r skills/memory ~/.config/opencode/skills/
-cp -r skills/memory-review ~/.config/opencode/skills/
 cp -r skills/memory-synthesize ~/.config/opencode/skills/
 ```
 
@@ -30,14 +29,6 @@ Load this skill at the start of any session involving memory operations.
 - `SKILL.md` — agent-readable instructions
 - `README.md` — human documentation
 - `references/` — detailed guidance on concepts, hierarchy, loading strategy, expiration, workflows, and best practices
-
-### `memory-review/`
-
-Memory quality review skill. Walks agents through an incremental audit of a store: removing stale or redundant memories, consolidating duplicate categories, adding missing descriptions, and reindexing after changes.
-
-**Files:**
-
-- `SKILL.md` — agent-readable instructions
 
 ### `memory-synthesize/`
 
