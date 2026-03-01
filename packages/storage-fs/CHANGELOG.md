@@ -1,5 +1,11 @@
 # @yeseh/cortex-storage-fs
 
+## 0.6.4
+
+### Patch Changes
+
+- @yeseh/cortex-core@0.6.4
+
 ## 0.6.3
 
 ### Patch Changes
