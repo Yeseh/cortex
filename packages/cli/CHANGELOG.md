@@ -1,5 +1,19 @@
 # @yeseh/cortex-cli
 
+## 0.6.4
+
+### Patch Changes
+
+- f816907: Restore human-readable CLI log output by default.
+
+    CLI logs now emit readable stderr lines (`INFO: ...`, `WARN: ...`, `ERROR: ...`) instead of structured JSON by default, while keeping `DEBUG=cortex` gated debug logging and error context output.
+
+- d7a40cf: Fix duplicate CLI error text for command failures.
+
+    When a command throws an error handled by `runProgram`, stderr now prints a single clear message instead of repeating the same text in both the main message and `error="..."` metadata.
+    - @yeseh/cortex-core@0.6.4
+    - @yeseh/cortex-storage-fs@0.6.4
+
 ## 0.6.3
 
 ### Patch Changes
