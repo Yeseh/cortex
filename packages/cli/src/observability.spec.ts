@@ -27,22 +27,17 @@ describe('createCliLogger', () => {
     });
 
     describe('info()', () => {
-        it('should write info log to stderr as JSON', () => {
+        it('should write human-friendly info log to stderr', () => {
             const logger = createCliLogger();
             logger.info('hello world');
             expect(stderrLines.length).toBe(1);
-            const parsed = JSON.parse(stderrLines[0]!);
-            expect(parsed.level).toBe('info');
-            expect(parsed.msg).toBe('hello world');
-            expect(parsed.ts).toBeDefined();
+            expect(stderrLines[0]).toBe('INFO: hello world\n');
         });
 
         it('should include metadata in the log line', () => {
             const logger = createCliLogger();
             logger.info('test', { store: 'default', count: 5 });
-            const parsed = JSON.parse(stderrLines[0]!);
-            expect(parsed.store).toBe('default');
-            expect(parsed.count).toBe(5);
+            expect(stderrLines[0]).toBe('INFO: test store=default count=5\n');
         });
     });
 
@@ -51,9 +46,7 @@ describe('createCliLogger', () => {
             const logger = createCliLogger();
             logger.warn('warning message');
             expect(stderrLines.length).toBe(1);
-            const parsed = JSON.parse(stderrLines[0]!);
-            expect(parsed.level).toBe('warn');
-            expect(parsed.msg).toBe('warning message');
+            expect(stderrLines[0]).toBe('WARN: warning message\n');
         });
     });
 
@@ -62,25 +55,20 @@ describe('createCliLogger', () => {
             const logger = createCliLogger();
             logger.error('something failed', new Error('boom'));
             expect(stderrLines.length).toBe(1);
-            const parsed = JSON.parse(stderrLines[0]!);
-            expect(parsed.level).toBe('error');
-            expect(parsed.msg).toBe('something failed');
-            expect(parsed.error).toBe('boom');
+            expect(stderrLines[0]).toBe('ERROR: something failed error=boom\n');
         });
 
         it('should handle string error argument', () => {
             const logger = createCliLogger();
             logger.error('failed', 'string error');
-            const parsed = JSON.parse(stderrLines[0]!);
-            expect(parsed.error).toBe('string error');
+            expect(stderrLines[0]).toBe('ERROR: failed error="string error"\n');
         });
 
         it('should handle missing error argument', () => {
             const logger = createCliLogger();
             logger.error('failed');
             expect(stderrLines.length).toBe(1);
-            const parsed = JSON.parse(stderrLines[0]!);
-            expect(parsed.error).toBeUndefined();
+            expect(stderrLines[0]).toBe('ERROR: failed\n');
         });
     });
 
@@ -97,8 +85,7 @@ describe('createCliLogger', () => {
             const logger = createCliLogger();
             logger.debug('debug message');
             expect(stderrLines.length).toBe(1);
-            const parsed = JSON.parse(stderrLines[0]!);
-            expect(parsed.level).toBe('debug');
+            expect(stderrLines[0]).toBe('DEBUG: debug message\n');
         });
 
         it('should write debug output when DEBUG includes cortex alongside other values', () => {
