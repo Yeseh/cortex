@@ -26,7 +26,6 @@ Cortex follows **ports and adapters** (hexagonal) architecture.
 2. **Abstract interfaces**: Core defines ports (interfaces); storage-fs provides adapters (implementations)
 3. **Result types**: All fallible operations return `Result<T, E>` — never throw
 4. **Interface segregation**: Storage is split into `MemoryStorage`, `IndexStorage`, `CategoryStorage`, `StoreStorage` composed via `ScopedStorageAdapter`
-5. **Registry as factory**: `Registry.getStore(name)` returns a `ScopedStorageAdapter`
 
 ### Type conventions
 
@@ -41,11 +40,6 @@ Cortex follows **ports and adapters** (hexagonal) architecture.
 - With composition, simplify method names: `adapter.memories.read(path)` not `adapter.memories.readMemoryFile(path)`
 - Optional arrays default to `[]`, never `undefined`
 - No boolean flag arguments — prefer nullable fields, distinct methods, or enums
-
-
-### Documentation
-
-Every exported function MUST have JSDoc with `@module`, `@param`, `@returns`, `@example`, and edge case documentation.
 
 ## Rules
 
@@ -80,6 +74,9 @@ Format: `<type>(<scope>): <description>`
 **Types:** `feat`, `fix`, `refactor`, `test`, `chore`, `docs`
 
 Example: `feat(core): add new caching mechanism for improved performance`
+
+## Creating PRs
+When creating PRs, use the labels specified in `.github/release.yaml` when creating pull requests to ensure changes are automatically included in release notes.
 
 ## Using memory
 
