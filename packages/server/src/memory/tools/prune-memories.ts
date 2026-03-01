@@ -33,18 +33,21 @@ export interface PruneMemoriesInput {
  */
 export const pruneMemoriesHandler = async (
     ctx: CortexContext,
-    input: PruneMemoriesInput
+    input: PruneMemoriesInput,
 ): Promise<McpToolResponse> => {
     return withSpan(tracer, 'cortex_prune_memories', input.store, async () => {
+        ctx.logger?.debug('cortex_prune_memories invoked', { store: input.store, dry_run: input.dry_run ?? false });
+        const dryRun = input.dry_run ?? false;
         const storeResult = ctx.cortex.getStore(input.store);
         if (!storeResult.ok()) {
+            ctx.logger?.debug('cortex_prune_memories failed', { store: input.store, error_code: storeResult.error.code });
             throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
         }
 
         const store = storeResult.value;
-        const dryRun = input.dry_run ?? false;
         const rootClient = store.root();
         if (!rootClient.ok()) {
+            ctx.logger?.error('cortex_prune_memories failed', undefined, { store: input.store, error_code: rootClient.error.code });
             throw new McpError(ErrorCode.InternalError, rootClient.error.message);
         }
 
@@ -52,6 +55,7 @@ export const pruneMemoriesHandler = async (
             dryRun,
         });
         if (!result.ok()) {
+            ctx.logger?.error('cortex_prune_memories failed', undefined, { store: input.store, error_code: result.error.code });
             throw new McpError(ErrorCode.InternalError, result.error.message);
         }
 
@@ -61,21 +65,18 @@ export const pruneMemoriesHandler = async (
             expires_at: m.expiresAt.toISOString(),
         }));
 
-        if (dryRun) {
-            const output = {
-                dry_run: true,
-                would_prune_count: prunedEntries.length,
-                would_prune: prunedEntries,
-            };
+        const output = dryRun
+            ? {
+                  dry_run: true,
+                  would_prune_count: prunedEntries.length,
+                  would_prune: prunedEntries,
+              }
+            : {
+                  pruned_count: prunedEntries.length,
+                  pruned: prunedEntries,
+              };
 
-            return textResponse(JSON.stringify(output, null, 2));
-        }
-
-        const output = {
-            pruned_count: prunedEntries.length,
-            pruned: prunedEntries,
-        };
-
+        ctx.logger?.debug('cortex_prune_memories succeeded', { store: input.store, dry_run: dryRun, count: prunedEntries.length });
         return textResponse(JSON.stringify(output, null, 2));
     });
 };

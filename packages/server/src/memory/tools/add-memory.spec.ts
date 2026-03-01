@@ -257,4 +257,90 @@ describe('addMemoryHandler (unit)', () => {
             'docs/spec.md', 'https://example.com',
         ]);
     });
+
+    // -------------------------------------------------------------------------
+    // Logging behaviour
+    // -------------------------------------------------------------------------
+
+    describe('logging', () => {
+        const createSpyLogger = () => ({
+            debug: mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            info:  mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            warn:  mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            error: mock((_msg: string, _err?: unknown, _meta?: Record<string, unknown>) => {}),
+        });
+
+        it('should log "invoked" and "succeeded" on success', async () => {
+            const logger = createSpyLogger();
+            const ctx = createMockCortexContext({ logger });
+
+            await addMemoryHandler(ctx, { store: 'global', path: 'cat/slug', content: 'Hello' });
+
+            const invokedCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_add_memory invoked',
+            );
+            expect(invokedCall).toBeDefined();
+            expect(invokedCall![1]?.store).toBe('global');
+            expect(invokedCall![1]?.path).toBe('cat/slug');
+
+            const succeededCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_add_memory succeeded',
+            );
+            expect(succeededCall).toBeDefined();
+            expect(succeededCall![1]?.store).toBe('global');
+        });
+
+        it('should log "failed" with error_code when store resolution fails', async () => {
+            const logger = createSpyLogger();
+            const ctx = createMockCortexContext({
+                logger,
+                cortex: createMockCortex({
+                    getStore: mock(() =>
+                        errResult({ code: 'STORE_NOT_FOUND', message: 'Store not found' }),
+                    ) as any,
+                }) as unknown as CortexContext['cortex'],
+            });
+
+            await expectMcpInvalidParams(() =>
+                addMemoryHandler(ctx, { store: 'missing', path: 'cat/slug', content: 'x' }),
+            );
+
+            const failedCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_add_memory failed',
+            );
+            expect(failedCall).toBeDefined();
+            expect(failedCall![1]?.store).toBe('missing');
+            expect(failedCall![1]?.error_code).toBe('STORE_NOT_FOUND');
+        });
+
+        it('should log "failed" with error_code when create() returns error', async () => {
+            const logger = createSpyLogger();
+            const memClient = createMockMemoryClient({
+                create: mock(async () =>
+                    errResult({ code: 'MEMORY_NOT_FOUND', message: 'Not found', path: 'cat/slug' }),
+                ) as any,
+            });
+            const storeClient = createMockStoreClient({
+                getMemory: mock(() => memClient),
+            });
+            const ctx = createMockCortexContext({
+                logger,
+                cortex: createMockCortex({
+                    getStore: mock(() => okResult(storeClient)) as any,
+                }) as unknown as CortexContext['cortex'],
+            });
+
+            await expectMcpInvalidParams(() =>
+                addMemoryHandler(ctx, { store: 'global', path: 'cat/slug', content: 'x' }),
+            );
+
+            const failedCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_add_memory failed',
+            );
+            expect(failedCall).toBeDefined();
+            expect(failedCall![1]?.store).toBe('global');
+            expect(failedCall![1]?.path).toBe('cat/slug');
+            expect(failedCall![1]?.error_code).toBe('MEMORY_NOT_FOUND');
+        });
+    });
 });

@@ -20,6 +20,7 @@ import {
     createMockMcpServer,
     expectMcpInvalidParams,
     errResult,
+    okResult,
     type MockCortex,
 } from '../test-helpers.spec.ts';
 import {
@@ -131,6 +132,81 @@ describe('createCategoryHandler', () => {
 
             expect(output.path).toBe('toplevel');
             expect(output.created).toBe(true);
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    // Logging behaviour
+    // -------------------------------------------------------------------------
+
+    describe('logging', () => {
+        const createSpyLogger = () => ({
+            debug: mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            info:  mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            warn:  mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            error: mock((_msg: string, _err?: unknown, _meta?: Record<string, unknown>) => {}),
+        });
+
+        const createMockCategoryWithCreate = (createResult: unknown) => ({
+            create: mock(async () => createResult),
+        });
+
+        const createMockStoreWithCategory = (categoryMock: unknown) =>
+            createMockCortex({
+                getStore: mock(() =>
+                    okResult({
+                        getCategory: mock(() => okResult(categoryMock)),
+                    }),
+                ) as unknown as MockCortex['getStore'],
+            }) as unknown as CortexContext['cortex'];
+
+        it('should log "invoked" and "succeeded" on success', async () => {
+            const logger = createSpyLogger();
+            const categoryMock = createMockCategoryWithCreate(
+                okResult({ path: 'project/new-cat', created: true }),
+            );
+            const ctx = createMockCortexContext({
+                logger,
+                cortex: createMockStoreWithCategory(categoryMock),
+            });
+
+            await createCategoryHandler(ctx, { store: 'global', path: 'project/new-cat' });
+
+            const invokedCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_create_category invoked',
+            );
+            expect(invokedCall).toBeDefined();
+            expect(invokedCall![1]?.store).toBe('global');
+            expect(invokedCall![1]?.path).toBe('project/new-cat');
+
+            const succeededCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_create_category succeeded',
+            );
+            expect(succeededCall).toBeDefined();
+            expect(succeededCall![1]?.store).toBe('global');
+        });
+
+        it('should log "failed" when store resolution fails', async () => {
+            const logger = createSpyLogger();
+            const ctx = createMockCortexContext({
+                logger,
+                cortex: createMockCortex({
+                    getStore: mock(() =>
+                        errResult({ code: 'STORE_NOT_FOUND', message: 'Store not found' }),
+                    ) as unknown as MockCortex['getStore'],
+                }) as unknown as CortexContext['cortex'],
+            });
+
+            await expectMcpInvalidParams(() =>
+                createCategoryHandler(ctx, { store: 'missing', path: 'foo' }),
+            );
+
+            const failedCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_create_category failed',
+            );
+            expect(failedCall).toBeDefined();
+            expect(failedCall![1]?.store).toBe('missing');
+            expect(failedCall![1]?.error_code).toBe('STORE_NOT_FOUND');
         });
     });
 });
@@ -259,6 +335,83 @@ describe('setCategoryDescriptionHandler', () => {
             expect(indexContent).toContain('test/categories/level1');
         });
     });
+
+    // -------------------------------------------------------------------------
+    // Logging behaviour
+    // -------------------------------------------------------------------------
+
+    describe('logging', () => {
+        const createSpyLogger = () => ({
+            debug: mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            info:  mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            warn:  mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            error: mock((_msg: string, _err?: unknown, _meta?: Record<string, unknown>) => {}),
+        });
+
+        it('should log "invoked" and "succeeded" on success', async () => {
+            const logger = createSpyLogger();
+            const categoryMock = {
+                create: mock(async () => okResult({ path: 'project/cat', created: false })),
+                setDescription: mock(async () =>
+                    okResult({ path: 'project/cat', description: 'A description' }),
+                ),
+            };
+            const ctx = createMockCortexContext({
+                logger,
+                cortex: createMockCortex({
+                    getStore: mock(() =>
+                        okResult({ getCategory: mock(() => okResult(categoryMock)) }),
+                    ) as unknown as MockCortex['getStore'],
+                }) as unknown as CortexContext['cortex'],
+            });
+
+            await setCategoryDescriptionHandler(ctx, {
+                store: 'global',
+                path: 'project/cat',
+                description: 'A description',
+            });
+
+            const invokedCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_set_category_description invoked',
+            );
+            expect(invokedCall).toBeDefined();
+            expect(invokedCall![1]?.store).toBe('global');
+            expect(invokedCall![1]?.path).toBe('project/cat');
+
+            const succeededCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_set_category_description succeeded',
+            );
+            expect(succeededCall).toBeDefined();
+            expect(succeededCall![1]?.store).toBe('global');
+        });
+
+        it('should log "failed" when store resolution fails', async () => {
+            const logger = createSpyLogger();
+            const ctx = createMockCortexContext({
+                logger,
+                cortex: createMockCortex({
+                    getStore: mock(() =>
+                        errResult({ code: 'STORE_NOT_FOUND', message: 'Store not found' }),
+                    ) as unknown as MockCortex['getStore'],
+                }) as unknown as CortexContext['cortex'],
+            });
+
+            await expectMcpInvalidParams(() =>
+                setCategoryDescriptionHandler(ctx, {
+                    store: 'missing',
+                    path: 'foo',
+                    description: 'hello',
+                }),
+            );
+
+            const failedCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_set_category_description failed',
+            );
+            expect(failedCall).toBeDefined();
+            expect(failedCall![1]?.store).toBe('missing');
+            expect(failedCall![1]?.error_code).toBe('STORE_NOT_FOUND');
+        });
+    });
 });
 
 // =============================================================================
@@ -327,6 +480,72 @@ describe('deleteCategoryHandler', () => {
             };
 
             await expectMcpInvalidParams(() => deleteCategoryHandler(ctx, input));
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    // Logging behaviour
+    // -------------------------------------------------------------------------
+
+    describe('logging', () => {
+        const createSpyLogger = () => ({
+            debug: mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            info:  mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            warn:  mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            error: mock((_msg: string, _err?: unknown, _meta?: Record<string, unknown>) => {}),
+        });
+
+        it('should log "invoked" and "succeeded" on success', async () => {
+            const logger = createSpyLogger();
+            const categoryMock = {
+                delete: mock(async () => okResult({ path: 'project/cat', deleted: true })),
+            };
+            const ctx = createMockCortexContext({
+                logger,
+                cortex: createMockCortex({
+                    getStore: mock(() =>
+                        okResult({ getCategory: mock(() => okResult(categoryMock)) }),
+                    ) as unknown as MockCortex['getStore'],
+                }) as unknown as CortexContext['cortex'],
+            });
+
+            await deleteCategoryHandler(ctx, { store: 'global', path: 'project/cat' });
+
+            const invokedCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_delete_category invoked',
+            );
+            expect(invokedCall).toBeDefined();
+            expect(invokedCall![1]?.store).toBe('global');
+            expect(invokedCall![1]?.path).toBe('project/cat');
+
+            const succeededCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_delete_category succeeded',
+            );
+            expect(succeededCall).toBeDefined();
+            expect(succeededCall![1]?.store).toBe('global');
+        });
+
+        it('should log "failed" when store resolution fails', async () => {
+            const logger = createSpyLogger();
+            const ctx = createMockCortexContext({
+                logger,
+                cortex: createMockCortex({
+                    getStore: mock(() =>
+                        errResult({ code: 'STORE_NOT_FOUND', message: 'Store not found' }),
+                    ) as unknown as MockCortex['getStore'],
+                }) as unknown as CortexContext['cortex'],
+            });
+
+            await expectMcpInvalidParams(() =>
+                deleteCategoryHandler(ctx, { store: 'missing', path: 'foo' }),
+            );
+
+            const failedCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_delete_category failed',
+            );
+            expect(failedCall).toBeDefined();
+            expect(failedCall![1]?.store).toBe('missing');
+            expect(failedCall![1]?.error_code).toBe('STORE_NOT_FOUND');
         });
     });
 });

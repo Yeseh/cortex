@@ -89,6 +89,7 @@ export const updateMemoryHandler = async (
     input: UpdateMemoryInput,
 ): Promise<McpToolResponse> => {
     return withSpan(tracer, 'cortex_update_memory', input.store, async () => {
+        ctx.logger?.debug('cortex_update_memory invoked', { store: input.store, path: input.path });
         // Validate that at least one update field is provided
         if (
             input.content === undefined &&
@@ -96,6 +97,11 @@ export const updateMemoryHandler = async (
             input.expires_at === undefined &&
             input.citations === undefined
         ) {
+            ctx.logger?.debug('cortex_update_memory failed', {
+                store: input.store,
+                path: input.path,
+                error_code: 'NO_UPDATES_PROVIDED',
+            });
             throw new McpError(
                 ErrorCode.InvalidParams,
                 'No updates provided. Specify content, tags, expires_at, or citations.',
@@ -104,6 +110,7 @@ export const updateMemoryHandler = async (
 
         const storeResult = ctx.cortex.getStore(input.store);
         if (!storeResult.ok()) {
+            ctx.logger?.debug('cortex_update_memory failed', { store: input.store, error_code: storeResult.error.code });
             throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
         }
         const store = storeResult.value;
@@ -122,10 +129,12 @@ export const updateMemoryHandler = async (
         });
 
         if (!result.ok()) {
+            ctx.logger?.debug('cortex_update_memory failed', { store: input.store, path: input.path, error_code: result.error.code });
             throw translateMemoryError(result.error);
         }
 
         const memory = result.value;
+        ctx.logger?.debug('cortex_update_memory succeeded', { store: input.store, path: memory.path });
         return {
             content: [{ type: 'text', text: `Memory updated at ${memory.path}` }],
         };

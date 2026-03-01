@@ -68,7 +68,7 @@ const collectMemories = async (
     client: CategoryClient,
     includeExpired: boolean,
     now: Date,
-    visited: Set<string> = new Set()
+    visited: Set<string> = new Set(),
 ): Promise<{ path: string; token_estimate: number; updated_at?: string }[]> => {
     const key = client.rawPath;
     if (visited.has(key)) return [];
@@ -115,7 +115,7 @@ const collectMemories = async (
             subResult.value,
             includeExpired,
             now,
-            visited
+            visited,
         );
         entries.push(...subMemories);
     }
@@ -128,11 +128,13 @@ const collectMemories = async (
  */
 export const listMemoriesHandler = async (
     ctx: CortexContext,
-    input: ListMemoriesInput
+    input: ListMemoriesInput,
 ): Promise<McpToolResponse> => {
     return withSpan(tracer, 'cortex_list_memories', input.store, async () => {
+        ctx.logger?.debug('cortex_list_memories invoked', { store: input.store, category: input.category });
         const storeResult = ctx.cortex.getStore(input.store);
         if (!storeResult.ok()) {
+            ctx.logger?.debug('cortex_list_memories failed', { store: input.store, error_code: storeResult.error.code });
             throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
         }
 
@@ -154,7 +156,8 @@ export const listMemoriesHandler = async (
                 throw new McpError(ErrorCode.InvalidParams, categoryResult.error.message);
             }
             category = categoryResult.value;
-        } else {
+        }
+        else {
             category = root;
         }
 
@@ -181,6 +184,7 @@ export const listMemoriesHandler = async (
             })),
         };
 
+        ctx.logger?.debug('cortex_list_memories succeeded', { store: input.store, category: input.category, count: memories.length });
         return textResponse(JSON.stringify(output, null, 2));
     });
 };

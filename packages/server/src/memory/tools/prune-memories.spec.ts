@@ -306,4 +306,110 @@ describe('pruneMemoriesHandler (unit)', () => {
         expect(output.pruned_count).toBe(0);
         expect(output.pruned).toEqual([]);
     });
+
+    // -------------------------------------------------------------------------
+    // Logging behaviour
+    // -------------------------------------------------------------------------
+
+    describe('logging', () => {
+        const createSpyLogger = () => ({
+            debug: mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            info:  mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            warn:  mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            error: mock((_msg: string, _err?: unknown, _meta?: Record<string, unknown>) => {}),
+        });
+
+        it('should log "invoked" and "succeeded" with dry_run and count on success', async () => {
+            const logger = createSpyLogger();
+            const rootCategory = createMockCategoryClient({
+                prune: mock(async () => ok({ pruned: [], dryRun: false }) as any),
+            });
+            const storeClient = createMockStoreClient({
+                root: mock(() => ok(rootCategory) as any),
+            });
+            const ctx = createMockCortexContext({
+                logger,
+                cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
+            });
+
+            await pruneMemoriesHandler(ctx, { store: 'global', dry_run: false });
+
+            const invokedCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_prune_memories invoked',
+            );
+            expect(invokedCall).toBeDefined();
+            expect(invokedCall![1]?.store).toBe('global');
+            expect(invokedCall![1]?.dry_run).toBe(false);
+
+            const succeededCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_prune_memories succeeded',
+            );
+            expect(succeededCall).toBeDefined();
+            expect(succeededCall![1]?.store).toBe('global');
+            expect(succeededCall![1]?.dry_run).toBe(false);
+            expect(succeededCall![1]?.count).toBe(0);
+        });
+
+        it('should log "failed" (debug) when store resolution fails', async () => {
+            const logger = createSpyLogger();
+            const ctx = createMockCortexContext({
+                logger,
+                cortex: createMockCortex({
+                    getStore: mock(() => err({ code: 'STORE_NOT_FOUND', message: 'Store not found' }) as any),
+                }) as any,
+            });
+
+            await expectMcpInvalidParams(() => pruneMemoriesHandler(ctx, { store: 'missing' }));
+
+            const failedCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_prune_memories failed',
+            );
+            expect(failedCall).toBeDefined();
+            expect(failedCall![1]?.store).toBe('missing');
+            expect(failedCall![1]?.error_code).toBe('STORE_NOT_FOUND');
+        });
+
+        it('should log "failed" (error) when store.root() fails', async () => {
+            const logger = createSpyLogger();
+            const storeClient = createMockStoreClient({
+                root: mock(() => err({ code: 'STORAGE_ERROR', message: 'Root unavailable' }) as any),
+            });
+            const ctx = createMockCortexContext({
+                logger,
+                cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
+            });
+
+            await expectMcpInternalError(() => pruneMemoriesHandler(ctx, { store: 'global' }));
+
+            const failedCall = logger.error.mock.calls.find(
+                ([msg]) => msg === 'cortex_prune_memories failed',
+            );
+            expect(failedCall).toBeDefined();
+            expect(failedCall![2]?.store).toBe('global');
+            expect(failedCall![2]?.error_code).toBe('STORAGE_ERROR');
+        });
+
+        it('should log "failed" (error) when prune() fails', async () => {
+            const logger = createSpyLogger();
+            const rootCategory = createMockCategoryClient({
+                prune: mock(async () => err({ code: 'STORAGE_ERROR', message: 'Prune failed' }) as any),
+            });
+            const storeClient = createMockStoreClient({
+                root: mock(() => ok(rootCategory) as any),
+            });
+            const ctx = createMockCortexContext({
+                logger,
+                cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
+            });
+
+            await expectMcpInternalError(() => pruneMemoriesHandler(ctx, { store: 'global' }));
+
+            const failedCall = logger.error.mock.calls.find(
+                ([msg]) => msg === 'cortex_prune_memories failed',
+            );
+            expect(failedCall).toBeDefined();
+            expect(failedCall![2]?.store).toBe('global');
+            expect(failedCall![2]?.error_code).toBe('STORAGE_ERROR');
+        });
+    });
 });

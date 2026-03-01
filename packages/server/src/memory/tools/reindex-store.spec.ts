@@ -168,4 +168,108 @@ describe('reindexStoreHandler (unit)', () => {
         expect(output.warnings[0]).toBe('Warning: file xyz.md has invalid path');
         expect(output.warnings[1]).toBe('Warning: duplicate slug detected in project/');
     });
+
+    // -------------------------------------------------------------------------
+    // Logging behaviour
+    // -------------------------------------------------------------------------
+
+    describe('logging', () => {
+        const createSpyLogger = () => ({
+            debug: mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            info:  mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            warn:  mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            error: mock((_msg: string, _err?: unknown, _meta?: Record<string, unknown>) => {}),
+        });
+
+        it('should log "invoked" and "succeeded" with warning_count on success', async () => {
+            const logger = createSpyLogger();
+            const rootCategory = createMockCategoryClient({
+                reindex: mock(async () => ok({ warnings: [] }) as any),
+            });
+            const storeClient = createMockStoreClient({
+                root: mock(() => ok(rootCategory) as any),
+            });
+            const ctx = createMockCortexContext({
+                logger,
+                cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
+            });
+
+            await reindexStoreHandler(ctx, { store: 'global' });
+
+            const invokedCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_reindex_store invoked',
+            );
+            expect(invokedCall).toBeDefined();
+            expect(invokedCall![1]?.store).toBe('global');
+
+            const succeededCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_reindex_store succeeded',
+            );
+            expect(succeededCall).toBeDefined();
+            expect(succeededCall![1]?.store).toBe('global');
+            expect(succeededCall![1]?.warning_count).toBe(0);
+        });
+
+        it('should log "failed" (debug) when store resolution fails', async () => {
+            const logger = createSpyLogger();
+            const ctx = createMockCortexContext({
+                logger,
+                cortex: createMockCortex({
+                    getStore: mock(() => err({ code: 'STORE_NOT_FOUND', message: 'Store not found' }) as any),
+                }) as any,
+            });
+
+            await expectMcpInvalidParams(() => reindexStoreHandler(ctx, { store: 'missing' }));
+
+            const failedCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_reindex_store failed',
+            );
+            expect(failedCall).toBeDefined();
+            expect(failedCall![1]?.store).toBe('missing');
+            expect(failedCall![1]?.error_code).toBe('STORE_NOT_FOUND');
+        });
+
+        it('should log "failed" (error) when store.root() fails', async () => {
+            const logger = createSpyLogger();
+            const storeClient = createMockStoreClient({
+                root: mock(() => err({ code: 'STORAGE_ERROR', message: 'Root unavailable' }) as any),
+            });
+            const ctx = createMockCortexContext({
+                logger,
+                cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
+            });
+
+            await expectMcpInternalError(() => reindexStoreHandler(ctx, { store: 'global' }));
+
+            const failedCall = logger.error.mock.calls.find(
+                ([msg]) => msg === 'cortex_reindex_store failed',
+            );
+            expect(failedCall).toBeDefined();
+            expect(failedCall![2]?.store).toBe('global');
+            expect(failedCall![2]?.error_code).toBe('STORAGE_ERROR');
+        });
+
+        it('should log "failed" (error) when reindex() fails', async () => {
+            const logger = createSpyLogger();
+            const rootCategory = createMockCategoryClient({
+                reindex: mock(async () => err({ code: 'STORAGE_ERROR', message: 'Reindex failed' }) as any),
+            });
+            const storeClient = createMockStoreClient({
+                root: mock(() => ok(rootCategory) as any),
+            });
+            const ctx = createMockCortexContext({
+                logger,
+                cortex: createMockCortex({ getStore: mock(() => ok(storeClient) as any) }) as any,
+            });
+
+            await expectMcpInternalError(() => reindexStoreHandler(ctx, { store: 'global' }));
+
+            const failedCall = logger.error.mock.calls.find(
+                ([msg]) => msg === 'cortex_reindex_store failed',
+            );
+            expect(failedCall).toBeDefined();
+            expect(failedCall![2]?.store).toBe('global');
+            expect(failedCall![2]?.error_code).toBe('STORAGE_ERROR');
+        });
+    });
 });

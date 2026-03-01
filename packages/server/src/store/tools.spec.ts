@@ -1,5 +1,4 @@
-import type { mock } from 'bun:test';
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -460,6 +459,37 @@ describe('listStoresHandler', () => {
 
         expect(response.isError).toBeUndefined();
     });
+
+    // -------------------------------------------------------------------------
+    // Logging behaviour
+    // -------------------------------------------------------------------------
+
+    describe('logging', () => {
+        const createSpyLogger = () => ({
+            debug: mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            info:  mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            warn:  mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            error: mock((_msg: string, _err?: unknown, _meta?: Record<string, unknown>) => {}),
+        });
+
+        it('should log "invoked" and "succeeded" on success', async () => {
+            const logger = createSpyLogger();
+            const ctx = createMockCortexContext({ logger, stores: {} });
+
+            await listStoresHandler(ctx);
+
+            const invokedCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_list_stores invoked',
+            );
+            expect(invokedCall).toBeDefined();
+
+            const succeededCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_list_stores succeeded',
+            );
+            expect(succeededCall).toBeDefined();
+            expect(succeededCall![1]?.count).toBe(0);
+        });
+    });
 });
 
 // ---------------------------------------------------------------------------
@@ -595,5 +625,41 @@ describe('createStoreHandler', () => {
         const storeData = callArgs[1]!;
         expect(storeData.kind).toBe('filesystem');
         expect(storeData.properties.path).toBe(path.join(testDir, 'checked-store'));
+    });
+
+    // -------------------------------------------------------------------------
+    // Logging behaviour
+    // -------------------------------------------------------------------------
+
+    describe('logging', () => {
+        const createSpyLogger = () => ({
+            debug: mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            info:  mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            warn:  mock((_msg: string, _meta?: Record<string, unknown>) => {}),
+            error: mock((_msg: string, _err?: unknown, _meta?: Record<string, unknown>) => {}),
+        });
+
+        it('should log "invoked" and "succeeded" on success', async () => {
+            const logger = createSpyLogger();
+            const ctx = createMockCortexContext({
+                logger,
+                stores: {},
+                globalDataPath: testDir,
+            });
+
+            await createStoreHandler(ctx, { name: 'logged-store' });
+
+            const invokedCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_create_store invoked',
+            );
+            expect(invokedCall).toBeDefined();
+            expect(invokedCall![1]?.name).toBe('logged-store');
+
+            const succeededCall = logger.debug.mock.calls.find(
+                ([msg]) => msg === 'cortex_create_store succeeded',
+            );
+            expect(succeededCall).toBeDefined();
+            expect(succeededCall![1]?.name).toBe('logged-store');
+        });
     });
 });

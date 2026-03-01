@@ -33,8 +33,10 @@ export const removeMemoryHandler = async (
     input: RemoveMemoryInput,
 ): Promise<McpToolResponse> => {
     return withSpan(tracer, 'cortex_remove_memory', input.store, async () => {
+        ctx.logger?.debug('cortex_remove_memory invoked', { store: input.store, path: input.path });
         const storeResult = ctx.cortex.getStore(input.store);
         if (!storeResult.ok()) {
+            ctx.logger?.debug('cortex_remove_memory failed', { store: input.store, error_code: storeResult.error.code });
             throw new McpError(ErrorCode.InvalidParams, storeResult.error.message);
         }
         const store = storeResult.value;
@@ -43,9 +45,11 @@ export const removeMemoryHandler = async (
         const result = await memoryClient.delete();
 
         if (!result.ok()) {
+            ctx.logger?.error('cortex_remove_memory failed', undefined, { store: input.store, path: input.path, error_code: result.error.code });
             throw new McpError(ErrorCode.InternalError, result.error.message);
         }
 
+        ctx.logger?.debug('cortex_remove_memory succeeded', { store: input.store, path: input.path });
         return textResponse(`Memory removed at ${input.path}`);
     });
 };

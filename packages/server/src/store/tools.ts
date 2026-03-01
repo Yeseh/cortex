@@ -200,6 +200,7 @@ export const listStoresFromContext = (
  */
 export const listStoresHandler = async (ctx: CortexContext): Promise<McpToolResponse> => {
     return withSpan(tracer, 'cortex_list_stores', 'default', async () => {
+        ctx.logger?.debug('cortex_list_stores invoked');
         const stores: StoreInfo[] = Object.entries(ctx.config.stores ?? {})
             .map(([
                 name, definition,
@@ -214,6 +215,7 @@ export const listStoresHandler = async (ctx: CortexContext): Promise<McpToolResp
             }))
             .sort((a, b) => a.name.localeCompare(b.name));
 
+        ctx.logger?.debug('cortex_list_stores succeeded', { count: stores.length });
         return textResponse(JSON.stringify({ stores }, null, 2));
     });
 };
@@ -238,6 +240,7 @@ export const createStoreHandler = async (
     input: CreateStoreInput,
 ): Promise<McpToolResponse> => {
     return withSpan(tracer, 'cortex_create_store', input.name ?? 'default', async () => {
+        ctx.logger?.debug('cortex_create_store invoked', { name: input.name });
         // Validate input
         const validation = createStoreInputSchema.safeParse(input);
         if (!validation.success) {
@@ -286,6 +289,7 @@ export const createStoreHandler = async (
             );
         }
 
+        ctx.logger?.debug('cortex_create_store succeeded', { name: input.name });
         return textResponse(JSON.stringify({ created: input.name }, null, 2));
     });
 };
