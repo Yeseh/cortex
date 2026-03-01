@@ -54,12 +54,7 @@ export const SERVER_VERSION = '1.0.0';
  * - `warn` - Warning conditions that should be reviewed
  * - `error` - Error conditions that need attention
  */
-export const logLevelSchema = z.enum([
-    'debug',
-    'info',
-    'warn',
-    'error',
-]);
+export const logLevelSchema = z.enum(['debug', 'info', 'warn', 'error']);
 
 /** Log verbosity level */
 export type LogLevel = z.infer<typeof logLevelSchema>;
@@ -70,21 +65,13 @@ export type LogLevel = z.infer<typeof logLevelSchema>;
  * - `json` - Machine-readable JSON format
  * - `toon` - Token-optimized format for LLM consumption (~40% token reduction)
  */
-export const outputFormatSchema = z.enum([
-    'yaml',
-    'json',
-    'toon',
-]);
+export const outputFormatSchema = z.enum(['yaml', 'json', 'toon']);
 
 /** Output format type */
 export type OutputFormat = z.infer<typeof outputFormatSchema>;
 
 /** Category mode options for store initialization policy */
-export const categoryModeSchema = z.enum([
-    'free',
-    'subcategories',
-    'strict',
-]);
+export const categoryModeSchema = z.enum(['free', 'subcategories', 'strict']);
 
 /** Category mode type */
 export type CategoryMode = z.infer<typeof categoryModeSchema>;
@@ -96,7 +83,7 @@ export type CategoryMode = z.infer<typeof categoryModeSchema>;
  * - `dataPath` ← `CORTEX_DATA_PATH` - Base cortex config directory (default: "~/.config/cortex/")
  * - `port` ← `CORTEX_PORT` - HTTP server port (default: 3000)
  * - `host` ← `CORTEX_HOST` - Network interface to bind (default: "0.0.0.0")
- * - `defaultStore` ← `CORTEX_DEFAULT_STORE` - Default memory store name (default: "default")
+ * - `defaultStore` ← `CORTEX_DEFAULT_STORE` - Default memory store name (default: "global")
  * - `logLevel` ← `CORTEX_LOG_LEVEL` - Logging verbosity (default: "info")
  * - `outputFormat` ← `CORTEX_OUTPUT_FORMAT` - Response format (default: "yaml")
  * - `categoryMode` ← `CORTEX_CATEGORY_MODE` - Category creation mode for default store initialization (default: "free")
@@ -191,7 +178,7 @@ export interface ConfigLoadError {
  * | `CORTEX_DATA_PATH` | `dataPath` | "~/.config/cortex/" |
  * | `CORTEX_PORT` | `port` | 3000 |
  * | `CORTEX_HOST` | `host` | "0.0.0.0" |
- * | `CORTEX_DEFAULT_STORE` | `defaultStore` | "default" |
+ * | `CORTEX_DEFAULT_STORE` | `defaultStore` | "global" |
  * | `CORTEX_LOG_LEVEL` | `logLevel` | "info" |
  * | `CORTEX_OUTPUT_FORMAT` | `outputFormat` | "yaml" |
  * | `CORTEX_CATEGORY_MODE` | `categoryMode` | "free" |

@@ -94,7 +94,7 @@ const categoryPathSchema = z.string().min(1, 'Category path is required');
  * @example
  * ```json
  * {
- *   "store": "default",
+ *   "store": "global",
  *   "path": "project/cortex"
  * }
  * ```
@@ -110,7 +110,7 @@ export const createCategoryInputSchema = z.object({
  * @example
  * ```json
  * {
- *   "store": "default",
+ *   "store": "global",
  *   "path": "project/cortex",
  *   "description": "Memory system for AI agents"
  * }
@@ -123,7 +123,7 @@ export const setCategoryDescriptionInputSchema = z.object({
         .string()
         .max(
             MAX_DESCRIPTION_LENGTH,
-            `Description must be ${MAX_DESCRIPTION_LENGTH} characters or less`,
+            `Description must be ${MAX_DESCRIPTION_LENGTH} characters or less`
         )
         .describe('Category description (empty string to clear)'),
 });
@@ -134,7 +134,7 @@ export const setCategoryDescriptionInputSchema = z.object({
  * @example
  * ```json
  * {
- *   "store": "default",
+ *   "store": "global",
  *   "path": "project/old-project"
  * }
  * ```
@@ -229,7 +229,7 @@ const parseInput = <T>(schema: z.ZodSchema<T>, input: unknown): T => {
 export const createCategoryHandler = async (
     ctx: CortexContext,
     input: CreateCategoryInput,
-    modeContext?: CategoryModeContext,
+    modeContext?: CategoryModeContext
 ): Promise<McpToolResponse> => {
     return withSpan(tracer, 'cortex_create_category', input.store, async () => {
         // Validate input path: empty string should be considered invalid
@@ -262,13 +262,15 @@ export const createCategoryHandler = async (
         }
 
         return {
-            content: [{
-                type: 'text',
-                text: JSON.stringify({
-                    path: result.value.path,
-                    created: result.value.created,
-                }),
-            }],
+            content: [
+                {
+                    type: 'text',
+                    text: JSON.stringify({
+                        path: result.value.path,
+                        created: result.value.created,
+                    }),
+                },
+            ],
         };
     });
 };
@@ -307,7 +309,7 @@ export const createCategoryHandler = async (
 export const setCategoryDescriptionHandler = async (
     ctx: CortexContext,
     input: SetCategoryDescriptionInput,
-    modeContext?: CategoryModeContext,
+    modeContext?: CategoryModeContext
 ): Promise<McpToolResponse> => {
     return withSpan(tracer, 'cortex_set_category_description', input.store, async () => {
         const storeResult = ctx.cortex.getStore(input.store);
@@ -350,13 +352,15 @@ export const setCategoryDescriptionHandler = async (
         }
 
         return {
-            content: [{
-                type: 'text',
-                text: JSON.stringify({
-                    path: result.value.path,
-                    description: result.value.description,
-                }),
-            }],
+            content: [
+                {
+                    type: 'text',
+                    text: JSON.stringify({
+                        path: result.value.path,
+                        description: result.value.description,
+                    }),
+                },
+            ],
         };
     });
 };
@@ -388,7 +392,7 @@ export const setCategoryDescriptionHandler = async (
 export const deleteCategoryHandler = async (
     ctx: CortexContext,
     input: DeleteCategoryInput,
-    modeContext?: CategoryModeContext,
+    modeContext?: CategoryModeContext
 ): Promise<McpToolResponse> => {
     return withSpan(tracer, 'cortex_delete_category', input.store, async () => {
         const storeResult = ctx.cortex.getStore(input.store);
@@ -417,13 +421,15 @@ export const deleteCategoryHandler = async (
         }
 
         return {
-            content: [{
-                type: 'text',
-                text: JSON.stringify({
-                    path: result.value.path,
-                    deleted: result.value.deleted,
-                }),
-            }],
+            content: [
+                {
+                    type: 'text',
+                    text: JSON.stringify({
+                        path: result.value.path,
+                        deleted: result.value.deleted,
+                    }),
+                },
+            ],
         };
     });
 };
@@ -470,14 +476,14 @@ export const deleteCategoryHandler = async (
 export const registerCategoryTools = (
     server: McpServer,
     ctx: CortexContext,
-    categoryConfig?: CategoryToolsOptions,
+    categoryConfig?: CategoryToolsOptions
 ): void => {
     const mode = categoryConfig?.mode ?? 'free';
     const modeContext: CategoryModeContext | undefined = categoryConfig
         ? {
-            mode,
-            configCategories: categoryConfig.configCategories,
-        }
+              mode,
+              configCategories: categoryConfig.configCategories,
+          }
         : undefined;
 
     // In strict mode, don't register create/delete tools
@@ -490,12 +496,11 @@ export const registerCategoryTools = (
                 try {
                     const parsed = parseInput(createCategoryInputSchema, input);
                     return createCategoryHandler(ctx, parsed, modeContext);
-                }
-                catch (error) {
+                } catch (error) {
                     if (error instanceof McpError) return errorResponse(error.message);
                     throw error;
                 }
-            },
+            }
         );
 
         server.tool(
@@ -506,12 +511,11 @@ export const registerCategoryTools = (
                 try {
                     const parsed = parseInput(deleteCategoryInputSchema, input);
                     return deleteCategoryHandler(ctx, parsed, modeContext);
-                }
-                catch (error) {
+                } catch (error) {
                     if (error instanceof McpError) return errorResponse(error.message);
                     throw error;
                 }
-            },
+            }
         );
     }
 
@@ -524,11 +528,10 @@ export const registerCategoryTools = (
             try {
                 const parsed = parseInput(setCategoryDescriptionInputSchema, input);
                 return setCategoryDescriptionHandler(ctx, parsed, modeContext);
-            }
-            catch (error) {
+            } catch (error) {
                 if (error instanceof McpError) return errorResponse(error.message);
                 throw error;
             }
-        },
+        }
     );
 };

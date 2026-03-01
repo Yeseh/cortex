@@ -20,8 +20,8 @@ import type { Logger } from '@yeseh/cortex-core';
  * @example
  * ```typescript
  * const logger = createCliLogger();
- * logger.info('Starting command', { store: 'default' });
- * // → {"ts":"2024-01-01T00:00:00.000Z","level":"info","msg":"Starting command","store":"default"}
+ * logger.info('Starting command', { store: 'global' });
+ * // → {"ts":"2024-01-01T00:00:00.000Z","level":"info","msg":"Starting command","store":"global"}
  * ```
  *
  * @example
@@ -36,7 +36,7 @@ export const createCliLogger = (): Logger => {
 
     const write = (level: string, msg: string, meta?: Record<string, unknown>): void => {
         process.stderr.write(
-            JSON.stringify({ ts: new Date().toISOString(), level, msg, ...meta }) + '\n',
+            JSON.stringify({ ts: new Date().toISOString(), level, msg, ...meta }) + '\n'
         );
     };
 
@@ -55,8 +55,8 @@ export const createCliLogger = (): Logger => {
                 err instanceof Error
                     ? { error: err.message, stack: err.stack }
                     : err !== null && err !== undefined
-                        ? { error: String(err) }
-                        : {};
+                      ? { error: String(err) }
+                      : {};
             write('error', msg, { ...meta, ...errMeta });
         },
     };

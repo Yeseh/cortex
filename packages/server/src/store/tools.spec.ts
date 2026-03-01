@@ -15,7 +15,7 @@ import { createMockCortexContext, parseResponseJson } from '../test-helpers.spec
 
 describe('storeNameSchema', () => {
     describe('valid names', () => {
-        it('should accept "default"', () => {
+        it('should accept "global"', () => {
             const result = storeNameSchema.safeParse('global');
             expect(result.success).toBe(true);
         });
@@ -69,7 +69,7 @@ describe('storeNameSchema', () => {
             if (!result.success) {
                 expect(result.error.issues).toHaveLength(1);
                 expect(result.error.issues[0]?.message).toContain(
-                    'Store name must start with alphanumeric',
+                    'Store name must start with alphanumeric'
                 );
             }
         });
@@ -80,7 +80,7 @@ describe('storeNameSchema', () => {
             if (!result.success) {
                 expect(result.error.issues).toHaveLength(1);
                 expect(result.error.issues[0]?.message).toContain(
-                    'Store name must start with alphanumeric',
+                    'Store name must start with alphanumeric'
                 );
             }
         });
@@ -91,7 +91,7 @@ describe('storeNameSchema', () => {
             if (!result.success) {
                 expect(result.error.issues).toHaveLength(1);
                 expect(result.error.issues[0]?.message).toContain(
-                    'Store name must start with alphanumeric',
+                    'Store name must start with alphanumeric'
                 );
             }
         });
@@ -102,7 +102,7 @@ describe('storeNameSchema', () => {
             if (!result.success) {
                 expect(result.error.issues).toHaveLength(1);
                 expect(result.error.issues[0]?.message).toContain(
-                    'Store name must start with alphanumeric',
+                    'Store name must start with alphanumeric'
                 );
             }
         });
@@ -113,7 +113,7 @@ describe('storeNameSchema', () => {
             if (!result.success) {
                 expect(result.error.issues).toHaveLength(1);
                 expect(result.error.issues[0]?.message).toContain(
-                    'Store name must start with alphanumeric',
+                    'Store name must start with alphanumeric'
                 );
             }
         });
@@ -357,11 +357,7 @@ describe('listStoresFromContext', () => {
         expect(result.ok()).toBe(true);
         if (result.ok()) {
             const names = result.value.stores.map((s) => s.name);
-            expect(names).toEqual([
-                'alpha',
-                'mango',
-                'zebra',
-            ]);
+            expect(names).toEqual(['alpha', 'mango', 'zebra']);
         }
     });
 
@@ -455,9 +451,7 @@ describe('listStoresHandler', () => {
 
         const data = parseResponseJson(response) as { stores: { name: string }[] };
         const names = data.stores.map((s) => s.name);
-        expect(names).toEqual([
-            'alpha', 'zebra',
-        ]);
+        expect(names).toEqual(['alpha', 'zebra']);
     });
 
     it('should not set isError on the response', async () => {
@@ -550,7 +544,7 @@ describe('createStoreHandler', () => {
             globalDataPath: testDir,
         });
         (ctx.config.saveStore as ReturnType<typeof mock>).mockImplementation(async () =>
-            err({ code: 'CONFIG_WRITE_FAILED' as const, message: 'disk full' }),
+            err({ code: 'CONFIG_WRITE_FAILED' as const, message: 'disk full' })
         );
 
         const response = await createStoreHandler(ctx, { name: 'new-store' });
