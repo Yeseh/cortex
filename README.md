@@ -48,6 +48,7 @@ export GITHUB_TOKEN=YOUR_GITHUB_TOKEN
 The primary way to use Cortex is as an MCP server. Once connected, AI agents can call Cortex tools to read, write, and organize memories.
 
 ### Install via package manager
+
 _Ensure @yeseh is configured to use GitHub packages in .npmrc_
 
 ```bash
@@ -67,6 +68,21 @@ bun install
 bun run compile:mcp     # outputs ./bin/cortex-mcp
 ```
 
+### Starting the server
+
+```bash
+# Default: listens on http://0.0.0.0:3000
+./bin/cortex-mcp
+
+# Custom port / host
+CORTEX_PORT=8080 CORTEX_HOST=127.0.0.1 ./bin/cortex-mcp
+```
+
+The server exposes two endpoints:
+
+- `POST /mcp` — MCP protocol endpoint
+- `GET /health` — health check
+
 ### Claude Desktop
 
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
@@ -75,7 +91,8 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 {
     "mcpServers": {
         "cortex": {
-            "command": "/path/to/bin/cortex-mcp"
+            "type": "http",
+            "url": "http://localhost:3000/mcp"
         }
     }
 }
@@ -89,8 +106,8 @@ Add to your `opencode.json`:
 {
     "mcp": {
         "cortex": {
-            "type": "stdio",
-            "command": "/path/to/bin/cortex-mcp"
+            "type": "http",
+            "url": "http://localhost:3000/mcp"
         }
     }
 }
@@ -122,6 +139,7 @@ Once connected, agents have access to the following tools:
 The CLI is for manual memory management — inspecting, editing, or scripting memory operations outside of an agent session.
 
 ### Install via package manager
+
 _Ensure @yeseh is configured to use GitHub packages in .npmrc_
 
 ```bash
@@ -131,6 +149,7 @@ npm install @yeseh/cortex-cli -g
 # Bun
 bun install @yeseh/cortex-cli -g
 ```
+
 If `cortex` is not found, ensure bun/npm global bin directory is on your `PATH`:
 
 ### Build from source
@@ -141,6 +160,7 @@ cd cortex
 bun install
 bun run compile:cli # outputs ./bin/cortex-mcp
 ```
+
 ### Initialize
 
 ```bash
