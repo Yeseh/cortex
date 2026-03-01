@@ -24,260 +24,63 @@ This is a monorepo containing the following packages:
 | [`@yeseh/cortex-cli`](./packages/cli)               | Command-line interface                   |
 | [`@yeseh/cortex-server`](./packages/server)         | MCP server for AI agent integration      |
 
-## Install from GitHub Packages
+## Install
 
-Cortex packages are published to GitHub Packages under the `@yeseh` scope.
+Cortex packages are published to npm under the `@yeseh` scope.
 
-### 1) Configure registry and auth
-
-Add this to your user-level `.npmrc` (recommended) or project `.npmrc`:
-
-```ini
-@yeseh:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
-```
-
-Then set `GITHUB_TOKEN` to a token that can read packages from the `yeseh` org/user.
+### CLI (global)
 
 ```bash
-export GITHUB_TOKEN=YOUR_GITHUB_TOKEN
+npm install -g @yeseh/cortex-cli
 ```
 
-### MCP Server Setup
-
-The primary way to use Cortex is as an MCP server. Once connected, AI agents can call Cortex tools to read, write, and organize memories.
-
-### Install via package manager
-
-_Ensure @yeseh is configured to use GitHub packages in .npmrc_
+### MCP server
 
 ```bash
-# Npm
-npm install @yeseh/cortex-server -g
-
-# Bun
-bun install @yeseh/cortex-server -g
+npm install -g @yeseh/cortex-server
 ```
 
-### Build from source
+## Quickstart (CLI)
+
+Use the CLI to initialize a store and create your first memory in under a minute.
 
 ```bash
-git clone https://github.com/yeseh/cortex.git
-cd cortex
-bun install
-bun run compile:mcp     # outputs ./bin/cortex-mcp
+# 1) Initialize global config + default store
+cortex init
+
+# 2) (Optional) Initialize a project-local store in the current repo
+cortex store init
+
+# 3) Add a memory
+cortex memory add notes/first-memory -c "Cortex is set up"
+
+# 4) List memories
+cortex memory list
+
+# 5) Read a memory
+cortex memory show notes/first-memory
 ```
 
-### Starting the server
+For command reference and advanced usage, see [CLI Guide](./docs/cli.md).
 
-```bash
-# Default: listens on http://0.0.0.0:3000
-./bin/cortex-mcp
+## Documentation
 
-# Custom port / host
-CORTEX_PORT=8080 CORTEX_HOST=127.0.0.1 ./bin/cortex-mcp
-```
+- [CLI Guide](./docs/cli.md)
+- [MCP Server Guide](./docs/mcp-server.md)
+- [Library Guide](./docs/library.md)
+- [Configuration Reference](./docs/configuration.md)
+- [Agent Instructions](./docs/agent-instructions.md)
+- [Memory Lifecycle](./docs/memory-lifecycle.md)
+- [Memory Organization](./docs/memory-organization.md)
 
-The server exposes two endpoints:
+## MCP Server
+
+The MCP server exposes Cortex tools for agents over HTTP.
 
 - `POST /mcp` — MCP protocol endpoint
 - `GET /health` — health check
 
-### Claude Desktop
-
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
-
-```json
-{
-    "mcpServers": {
-        "cortex": {
-            "type": "http",
-            "url": "http://localhost:3000/mcp"
-        }
-    }
-}
-```
-
-### OpenCode
-
-Add to your `opencode.json`:
-
-```json
-{
-    "mcp": {
-        "cortex": {
-            "type": "http",
-            "url": "http://localhost:3000/mcp"
-        }
-    }
-}
-```
-
-### MCP Tools
-
-Once connected, agents have access to the following tools:
-
-| Tool                              | Description                                   |
-| --------------------------------- | --------------------------------------------- |
-| `cortex_add_memory`               | Create a new memory                           |
-| `cortex_get_memory`               | Retrieve memory content and metadata          |
-| `cortex_update_memory`            | Update memory content or metadata             |
-| `cortex_remove_memory`            | Delete a memory                               |
-| `cortex_move_memory`              | Move or rename a memory                       |
-| `cortex_list_memories`            | List memories in a category                   |
-| `cortex_get_recent_memories`      | Retrieve the N most recently updated memories |
-| `cortex_prune_memories`           | Delete all expired memories                   |
-| `cortex_list_stores`              | List all available memory stores              |
-| `cortex_create_store`             | Create a new memory store                     |
-| `cortex_reindex_store`            | Rebuild category indexes for a store          |
-| `cortex_create_category`          | Create a category and its parent hierarchy    |
-| `cortex_delete_category`          | Delete a category and all its contents        |
-| `cortex_set_category_description` | Set or clear a category description           |
-
-## CLI
-
-The CLI is for manual memory management — inspecting, editing, or scripting memory operations outside of an agent session.
-
-### Install via package manager
-
-_Ensure @yeseh is configured to use GitHub packages in .npmrc_
-
-```bash
-# Npm
-npm install @yeseh/cortex-cli -g
-
-# Bun
-bun install @yeseh/cortex-cli -g
-```
-
-If `cortex` is not found, ensure bun/npm global bin directory is on your `PATH`:
-
-### Build from source
-
-```bash
-git clone https://github.com/yeseh/cortex.git
-cd cortex
-bun install
-bun run compile:cli # outputs ./bin/cortex-mcp
-```
-
-### Initialize
-
-```bash
-# Initialize global configuration (~/.config/cortex)
-cortex init
-```
-
-### Memory Commands
-
-```bash
-cortex memory add <path> -c "content"    # Create a memory
-cortex memory show <path>                # Display a memory
-cortex memory update <path> -c "new"     # Update a memory
-cortex memory remove <path>              # Delete a memory
-cortex memory move <from> <to>           # Move/rename a memory
-cortex memory list [category]            # List memories
-```
-
-### Store Commands
-
-```bash
-cortex store list                        # List registered stores
-cortex store add <name> <path>           # Register a store
-cortex store remove <name>               # Unregister a store
-cortex store init [path]                 # Initialize a new store
-cortex store prune                       # Remove expired memories
-cortex store reindex                     # Rebuild indexes
-```
-
-## Store Resolution
-
-Cortex resolves which store to use in this order:
-
-1. **Explicit**: `--store <name>` flag
-2. **Local**: `.cortex/memory` in current directory
-3. **Global**: `~/.config/cortex/memory`
-
-## Configuration
-
-Cortex uses a YAML configuration file at `~/.config/cortex/config.yaml`:
-
-```yaml
-settings:
-    outputFormat: yaml # Output format: yaml, json, or toon
-
-stores:
-    default:
-        path: /home/user/.config/cortex/memory
-        description: Global user memory store
-        categoryMode: free # free, subcategories, or strict
-        categories:
-            human:
-                description: User identity and preferences
-                subcategories:
-                    profile:
-                        description: User profile information
-                    preferences:
-                        description: Coding style and workflow preferences
-            standards:
-                description: Coding standards and architecture decisions
-```
-
-### Category Modes
-
-Control how categories can be created and deleted:
-
-| Mode            | Description                                                  |
-| --------------- | ------------------------------------------------------------ |
-| `free`          | Categories can be created/deleted freely (default)           |
-| `subcategories` | Only subcategories of config-defined root categories allowed |
-| `strict`        | Only config-defined categories allowed, no runtime creation  |
-
-### Category Hierarchy
-
-Define protected category structures in your config. Each category supports:
-
-- `description`: Optional description (max 500 characters)
-- `subcategories`: Nested category definitions
-
-Categories defined in config are protected from deletion. In `subcategories` mode, new categories can be created under config-defined roots. In `strict` mode, only explicitly defined categories are allowed.
-
-## As a Library
-
-Core types and operations are available for embedding in your own tools. Note that the library API is low-level — this is the same layer used internally by the CLI and MCP server.
-
-```bash
-bun add @yeseh/cortex-core @yeseh/cortex-storage-fs
-```
-
-```typescript
-import { join } from 'node:path';
-import { Cortex } from '@yeseh/cortex-core';
-import { FilesystemStorageAdapter, FilesystemConfigAdapter } from '@yeseh/cortex-storage-fs';
-
-const cortex = Cortex.init({
-    adapterFactory: (storeName) => {
-        const storeRoot = join('.cortex', storeName);
-        return new FilesystemStorageAdapter(
-            new FilesystemConfigAdapter(join(storeRoot, '.config.yaml')),
-            { rootDirectory: storeRoot }
-        );
-    },
-});
-
-const storeResult = cortex.getStore('my-store');
-if (storeResult.ok()) {
-    const memory = storeResult.value.getMemory('notes/example');
-    const result = await memory.create({
-        content: 'My content',
-        source: 'user',
-        tags: ['example'],
-    });
-    if (result.ok()) {
-        console.log('Created:', result.value.path.toString());
-    }
-}
-```
+See [MCP Server Guide](./docs/mcp-server.md) for installation, startup, and client integration examples.
 
 ## Development
 
