@@ -50,6 +50,12 @@ jobs:
             - name: Run tests
               run: bun test packages
 
+            - name: Setup Node.js for npm publishing
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '22'
+                  registry-url: 'https://registry.npmjs.org'
+
             - name: Create release PR or publish
               id: changesets
               uses: changesets/action@v1
@@ -60,6 +66,7 @@ jobs:
                   commit: 'chore: release packages'
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
             - name: Resolve released version
               id: version
