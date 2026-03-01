@@ -4,11 +4,12 @@
  * @module cli/store/commands/init.spec
  */
 
-import { describe, it, expect, afterEach, beforeEach } from 'bun:test';
+import { describe, it, expect, afterEach, beforeEach, mock } from 'bun:test';
 import { InvalidArgumentError } from '@commander-js/extra-typings';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { PromptDeps } from '../../prompts.ts';
 
 import { handleInit } from './init.ts';
 import {
@@ -91,7 +92,7 @@ describe('handleInit', () => {
         });
 
         await expect(handleInit(ctx, undefined, { name: '   ', format: 'yaml' })).rejects.toThrow(
-            InvalidArgumentError
+            InvalidArgumentError,
         );
     });
 
@@ -134,5 +135,102 @@ describe('handleInit', () => {
 
         const out = captureOutput(stdout);
         expect(out).toContain('my-store');
+    });
+});
+
+describe('handleInit - interactive mode', () => {
+    let tempDir: string;
+
+    beforeEach(async () => {
+        tempDir = await mkdtemp(join(tmpdir(), 'cortex-init-interactive-'));
+    });
+
+    afterEach(async () => {
+        await rm(tempDir, { recursive: true, force: true });
+    });
+
+    it('should call promptDeps.input for name and path when stdin is a TTY and no --name given', async () => {
+        const inputMock = mock(async ({ default: d }: { message: string; default?: string }) => d ?? 'prompted-value');
+        const promptDeps: PromptDeps = { input: inputMock, confirm: mock(async () => true) };
+
+        const { ctx, stdin } = createMockContext({
+            adapter: createInitAdapter(),
+            cwd: tempDir,
+        });
+        (stdin as any).isTTY = true;
+
+        await handleInit(ctx, undefined, { name: 'my-project', format: 'yaml' }, promptDeps);
+
+        // Should NOT call input when --name is explicitly given (skips name prompt but still prompts path)
+        // With explicit name, only path prompt is called
+        expect(inputMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('should call promptDeps.input twice (name + path) when stdin is a TTY and no --name given', async () => {
+        const inputMock = mock(async ({ default: d }: { message: string; default?: string }) => d ?? 'prompted-value');
+        const promptDeps: PromptDeps = { input: inputMock, confirm: mock(async () => true) };
+
+        const { ctx, stdin } = createMockContext({
+            adapter: createInitAdapter(),
+            cwd: tempDir,
+        });
+        (stdin as any).isTTY = true;
+
+        // No --name provided, should prompt for both name and path
+        await handleInit(ctx, undefined, { format: 'yaml' }, promptDeps);
+
+        expect(inputMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('should NOT call promptDeps.input when stdin is NOT a TTY', async () => {
+        const inputMock = mock(async ({ default: d }: { message: string; default?: string }) => d ?? 'prompted-value');
+        const promptDeps: PromptDeps = { input: inputMock, confirm: mock(async () => true) };
+
+        const { ctx } = createMockContext({
+            adapter: createInitAdapter(),
+            cwd: tempDir,
+        });
+        // ctx stdin has isTTY = undefined (non-TTY)
+
+        await handleInit(ctx, undefined, { name: 'my-project', format: 'yaml' }, promptDeps);
+
+        expect(inputMock).not.toHaveBeenCalled();
+    });
+
+    it('should skip both prompts when --name and target path are both given explicitly and TTY', async () => {
+        const inputMock = mock(async ({ default: d }: { message: string; default?: string }) => d ?? 'prompted-value');
+        const promptDeps: PromptDeps = { input: inputMock, confirm: mock(async () => true) };
+
+        const { ctx, stdin } = createMockContext({
+            adapter: createInitAdapter(),
+            cwd: tempDir,
+        });
+        (stdin as any).isTTY = true;
+        const customPath = join(tempDir, 'custom-store');
+
+        await handleInit(ctx, customPath, { name: 'my-project', format: 'yaml' }, promptDeps);
+
+        expect(inputMock).not.toHaveBeenCalled();
+    });
+
+    it('should use prompted store name in the output', async () => {
+        const promptedName = 'prompted-store-name';
+        const inputMock = mock(async ({ message, default: d }: { message: string; default?: string }) => {
+            if (message.toLowerCase().includes('name')) return promptedName;
+            return d ?? 'default-path';
+        });
+        const promptDeps: PromptDeps = { input: inputMock, confirm: mock(async () => true) };
+
+        const { ctx, stdin, stdout } = createMockContext({
+            adapter: createInitAdapter(),
+            cwd: tempDir,
+        });
+        (stdin as any).isTTY = true;
+
+        await handleInit(ctx, undefined, { format: 'json' }, promptDeps);
+
+        const out = captureOutput(stdout);
+        const parsed = JSON.parse(out) as { value: { name: string } };
+        expect(parsed.value.name).toBe(promptedName);
     });
 });

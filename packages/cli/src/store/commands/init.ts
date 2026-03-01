@@ -31,6 +31,7 @@ import { type CategoryMode, type CortexContext } from '@yeseh/cortex-core';
 import { serializeOutput, type OutputStoreInit, type OutputFormat } from '../../output.ts';
 import { resolveUserPath } from '../../paths.ts';
 import { createCliCommandContext } from '../../create-cli-command.ts';
+import { isTTY, defaultPromptDeps, type PromptDeps } from '../../prompts.ts';
 
 /**
  * Options for the init command.
@@ -66,17 +67,48 @@ function writeOutput(
 }
 
 /**
+ * Prompts the user for store name and path when running in an interactive TTY.
+ * Skips prompts when stdin is not a TTY, or when values were explicitly provided.
+ *
+ * @param ctx - The Cortex context (used to detect TTY)
+ * @param resolved - The auto-resolved store name and path
+ * @param explicit - Which values were explicitly provided by the caller
+ * @param promptDeps - The prompt functions to use
+ * @returns The final store name and path (prompted or original)
+ */
+async function promptStoreInitOptions(
+    ctx: CortexContext,
+    resolved: { storeName: string; storePath: string },
+    explicit: { name?: string; path?: string },
+    promptDeps: PromptDeps,
+): Promise<{ storeName: string; storePath: string }> {
+    if (!isTTY(ctx.stdin)) return resolved;
+
+    const storeName = explicit.name
+        ? resolved.storeName
+        : await promptDeps.input({ message: 'Store name:', default: resolved.storeName });
+
+    const storePath = explicit.path
+        ? resolved.storePath
+        : await promptDeps.input({ message: 'Store path:', default: resolved.storePath });
+
+    return { storeName, storePath };
+}
+
+/**
  * Handles the init command execution.
  *
  * This function:
  * 1. Resolves the store name (explicit or git detection)
- * 2. Resolves target path (default to .cortex in cwd)
- * 3. Uses initializeStore to create directory, index, and register
- * 4. Outputs the result
+ * 2. In TTY mode, prompts user to confirm/change store name and path
+ * 3. Resolves target path (default to .cortex in cwd)
+ * 4. Initializes the store directory and registers it
+ * 5. Outputs the result
  *
+ * @param ctx - The Cortex context
  * @param targetPath - Optional path for the store (defaults to .cortex in cwd)
  * @param options - Command options (name, format)
- * @param deps - Optional dependencies for testing
+ * @param promptDeps - Optional prompt dependencies for testing
  * @throws {InvalidArgumentError} When the store name is invalid
  * @throws {CommanderError} When the store already exists or init fails
  */
@@ -84,16 +116,47 @@ export async function handleInit(
     ctx: CortexContext,
     targetPath: string | undefined,
     options: InitCommandOptions = {},
+    promptDeps: PromptDeps = defaultPromptDeps,
 ): Promise<void> {
     const cwd = ctx.cwd ?? process.cwd();
     const stdout = ctx.stdout ?? process.stdout;
 
-    const storeName = await resolveStoreName(cwd, options.name);
-    const storePath = targetPath 
-        ? resolveUserPath(targetPath.trim(), cwd) 
+    let storeName: string;
+    try {
+        storeName = await resolveStoreName(cwd, options.name);
+    }
+    catch (e) {
+        if (isTTY(ctx.stdin)) {
+            // Will be resolved via prompt below
+            storeName = '';
+        }
+        else {
+            throw e;
+        }
+    }
+
+    const storePath = targetPath
+        ? resolveUserPath(targetPath.trim(), cwd)
         : resolve(cwd, '.cortex');
 
-    const clientResult = ctx.cortex.getStore(storeName);
+    const resolved = await promptStoreInitOptions(
+        ctx,
+        { storeName, storePath },
+        { name: options.name, path: targetPath },
+        promptDeps,
+    );
+
+    const finalStoreName = resolved.storeName;
+    const finalStorePath = resolved.storePath;
+
+    if (!finalStoreName) {
+        throwCliError({
+            code: 'INVALID_STORE_NAME',
+            message: 'Store name is required. Use --name to specify one.',
+        });
+    }
+
+    const clientResult = ctx.cortex.getStore(finalStoreName);
     if (!clientResult.ok()) {
         throwCliError(clientResult.error);
     }
@@ -103,7 +166,7 @@ export async function handleInit(
         categoryMode: (options.categoryMode as CategoryMode) ?? 'free',
         categories: [],
         properties: {
-            path: storePath,
+            path: finalStorePath,
         },
         description: options.description,
     };
@@ -114,8 +177,7 @@ export async function handleInit(
         throwCliError(createResult.error);
     }
 
-    // 4. Output result
-    const output: OutputStoreInit = { path: storePath, name: storeName };
+    const output: OutputStoreInit = { path: finalStorePath, name: finalStoreName };
     const format: OutputFormat = (options.format as OutputFormat) ?? 'yaml';
     writeOutput(output, format, stdout);
 }
