@@ -84,21 +84,64 @@ export const initCommand = new Command('init')
  * @param promptDeps - Injectable prompt functions for testability
  * @returns Finalized store name and path (either from prompts or from `resolved`)
  */
+
+/**
+ * Resolve a user-supplied path:
+ * - expands a leading '~' to the user's home directory
+ * - resolves relative paths to an absolute path
+ */
+function resolveUserPath(userPath: string): string {
+    if (!userPath) return userPath;
+
+    let expanded = userPath;
+    if (userPath.startsWith('~')) {
+        expanded = resolve(homedir(), userPath.slice(1));
+    }
+
+    return resolve(expanded);
+}
+
+function normalizeStoreName(input: string, fallback: string): string {
+    const trimmed = input.trim();
+    if (!trimmed) return fallback;
+
+    const slug = trimmed
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]+/gi, '-')
+        .replace(/^-+|-+$/g, '');
+
+    return slug || fallback;
+}
+
+function normalizeStorePath(input: string, fallback: string): string {
+    const trimmed = input.trim();
+    const base = trimmed || fallback;
+    return resolveUserPath(base);
+}
+
 async function promptInitOptions(
     ctx: CortexContext,
     resolved: { storeName: string; storePath: string },
     promptDeps: PromptDeps,
 ): Promise<{ storeName: string; storePath: string }> {
-    if (!isTTY(ctx.stdin)) return resolved;
+    if (!isTTY(ctx.stdin)) {
+        return {
+            storeName: normalizeStoreName(resolved.storeName, resolved.storeName),
+            storePath: normalizeStorePath(resolved.storePath, resolved.storePath),
+        };
+    }
 
-    const storePath = await promptDeps.input({
+    const storePathInput = await promptDeps.input({
         message: 'Global store path:',
         default: resolved.storePath,
     });
-    const storeName = await promptDeps.input({
+    const storeNameInput = await promptDeps.input({
         message: 'Global store name:',
         default: resolved.storeName,
     });
+
+    const storeName = normalizeStoreName(storeNameInput, resolved.storeName);
+    const storePath = normalizeStorePath(storePathInput, resolved.storePath);
     return { storePath, storeName };
 }
 
