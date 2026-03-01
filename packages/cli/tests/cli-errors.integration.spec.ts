@@ -1,4 +1,4 @@
-import { afterEach, describe, it } from 'bun:test';
+import { afterEach, describe, expect, it } from 'bun:test';
 import {
     bootstrapDefaultStoreWithProjectCategory,
     createIntegrationSandbox,
@@ -17,6 +17,19 @@ afterEach(async () => {
 });
 
 describe('CLI integration: error handling', () => {
+    it('should fail with a single missing-content error message', async () => {
+        sandbox = await createIntegrationSandbox();
+        await bootstrapDefaultStoreWithProjectCategory(sandbox);
+
+        const result = runCli(['memory', 'add', 'project/needs-content'], {
+            env: sandbox.env,
+            cwd: sandbox.projectDir,
+        });
+
+        expectFailure(result, 'Memory content is required via --content, --file, or stdin.');
+        expect(result.stderr).not.toContain('error="Memory content is required via --content, --file, or stdin."');
+    });
+
     it('should fail on invalid expires-at value', async () => {
         sandbox = await createIntegrationSandbox();
         await bootstrapDefaultStoreWithProjectCategory(sandbox);

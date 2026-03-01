@@ -65,7 +65,7 @@ export const runProgram = async (): Promise<void> => {
         // This catch handles any unexpected errors that slip through.
         const logger = createCliLogger();
         if (error instanceof Error) {
-            logger.error(`Error: ${error.message}`, error);
+            logger.error(error.message);
         }
         else {
             logger.error('An unexpected error occurred');
