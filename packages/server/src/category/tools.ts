@@ -235,6 +235,7 @@ export const createCategoryHandler = async (
         ctx.logger?.debug('cortex_create_category invoked', { store: input.store, path: input.path });
         // Validate input path: empty string should be considered invalid
         if (typeof input.path !== 'string' || input.path.trim() === '') {
+            ctx.logger?.debug('cortex_create_category failed', { store: input.store, path: input.path, error_code: 'INVALID_PATH' });
             throw new McpError(ErrorCode.InvalidParams, 'Category path is required');
         }
         const storeResult = ctx.cortex.getStore(input.store);
@@ -245,6 +246,7 @@ export const createCategoryHandler = async (
 
         const categoryResult = storeResult.value.getCategory(input.path);
         if (!categoryResult.ok()) {
+            ctx.logger?.debug('cortex_create_category failed', { store: input.store, path: input.path, error_code: categoryResult.error.code });
             throw new McpError(ErrorCode.InvalidParams, categoryResult.error.message);
         }
 
@@ -252,14 +254,17 @@ export const createCategoryHandler = async (
 
         if (!result.ok()) {
             if (result.error.code === 'INVALID_PATH') {
+                ctx.logger?.debug('cortex_create_category failed', { store: input.store, path: input.path, error_code: result.error.code });
                 throw new McpError(ErrorCode.InvalidParams, result.error.message);
             }
             if (
                 result.error.code === 'ROOT_CATEGORY_NOT_ALLOWED' ||
                 result.error.code === 'CATEGORY_PROTECTED'
             ) {
+                ctx.logger?.debug('cortex_create_category failed', { store: input.store, path: input.path, error_code: result.error.code });
                 throw new McpError(ErrorCode.InvalidParams, result.error.message);
             }
+            ctx.logger?.error('cortex_create_category failed', undefined, { store: input.store, path: input.path, error_code: result.error.code });
             throw new McpError(ErrorCode.InternalError, result.error.message);
         }
 
@@ -322,6 +327,7 @@ export const setCategoryDescriptionHandler = async (
 
         const categoryResult = storeResult.value.getCategory(input.path);
         if (!categoryResult.ok()) {
+            ctx.logger?.debug('cortex_set_category_description failed', { store: input.store, path: input.path, error_code: categoryResult.error.code });
             throw new McpError(ErrorCode.InvalidParams, categoryResult.error.message);
         }
 
@@ -334,8 +340,10 @@ export const setCategoryDescriptionHandler = async (
                 createResult.error.code === 'ROOT_CATEGORY_NOT_ALLOWED' ||
                 createResult.error.code === 'CATEGORY_PROTECTED'
             ) {
+                ctx.logger?.debug('cortex_set_category_description failed', { store: input.store, path: input.path, error_code: createResult.error.code });
                 throw new McpError(ErrorCode.InvalidParams, createResult.error.message);
             }
+            ctx.logger?.error('cortex_set_category_description failed', undefined, { store: input.store, path: input.path, error_code: createResult.error.code });
             throw new McpError(ErrorCode.InternalError, createResult.error.message);
         }
 
@@ -343,14 +351,18 @@ export const setCategoryDescriptionHandler = async (
 
         if (!result.ok()) {
             if (result.error.code === 'DESCRIPTION_TOO_LONG') {
+                ctx.logger?.debug('cortex_set_category_description failed', { store: input.store, path: input.path, error_code: result.error.code });
                 throw new McpError(ErrorCode.InvalidParams, result.error.message);
             }
             if (result.error.code === 'CATEGORY_NOT_FOUND') {
+                ctx.logger?.debug('cortex_set_category_description failed', { store: input.store, path: input.path, error_code: result.error.code });
                 throw new McpError(ErrorCode.InvalidParams, result.error.message);
             }
             if (result.error.code === 'CATEGORY_PROTECTED') {
+                ctx.logger?.debug('cortex_set_category_description failed', { store: input.store, path: input.path, error_code: result.error.code });
                 throw new McpError(ErrorCode.InvalidParams, result.error.message);
             }
+            ctx.logger?.error('cortex_set_category_description failed', undefined, { store: input.store, path: input.path, error_code: result.error.code });
             throw new McpError(ErrorCode.InternalError, result.error.message);
         }
 
@@ -406,6 +418,7 @@ export const deleteCategoryHandler = async (
 
         const categoryResult = storeResult.value.getCategory(input.path);
         if (!categoryResult.ok()) {
+            ctx.logger?.debug('cortex_delete_category failed', { store: input.store, path: input.path, error_code: categoryResult.error.code });
             throw new McpError(ErrorCode.InvalidParams, categoryResult.error.message);
         }
 
@@ -413,14 +426,18 @@ export const deleteCategoryHandler = async (
 
         if (!result.ok()) {
             if (result.error.code === 'ROOT_CATEGORY_REJECTED') {
+                ctx.logger?.debug('cortex_delete_category failed', { store: input.store, path: input.path, error_code: result.error.code });
                 throw new McpError(ErrorCode.InvalidParams, result.error.message);
             }
             if (result.error.code === 'CATEGORY_NOT_FOUND') {
+                ctx.logger?.debug('cortex_delete_category failed', { store: input.store, path: input.path, error_code: result.error.code });
                 throw new McpError(ErrorCode.InvalidParams, result.error.message);
             }
             if (result.error.code === 'CATEGORY_PROTECTED') {
+                ctx.logger?.debug('cortex_delete_category failed', { store: input.store, path: input.path, error_code: result.error.code });
                 throw new McpError(ErrorCode.InvalidParams, result.error.message);
             }
+            ctx.logger?.error('cortex_delete_category failed', undefined, { store: input.store, path: input.path, error_code: result.error.code });
             throw new McpError(ErrorCode.InternalError, result.error.message);
         }
 

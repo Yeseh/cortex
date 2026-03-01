@@ -76,6 +76,7 @@ export const getRecentMemoriesHandler = async (
         if (input.category) {
             const categoryResult = store.getCategory(input.category);
             if (!categoryResult.ok()) {
+                ctx.logger?.debug('cortex_get_recent_memories failed', { store: input.store, category: input.category, error_code: categoryResult.error.code });
                 throw new McpError(ErrorCode.InvalidParams, categoryResult.error.message);
             }
         }

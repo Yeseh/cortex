@@ -102,7 +102,7 @@ ctx.logger?.debug('cortex_prune_memories succeeded', { store: input.store, dry_r
 **reindex-store.ts**
 ```typescript
 ctx.logger?.debug('cortex_reindex_store invoked', { store: input.store });
-ctx.logger?.debug('cortex_reindex_store succeeded', { store: input.store, warnings: result.value.warnings.length });
+ctx.logger?.debug('cortex_reindex_store succeeded', { store: input.store, warning_count: result.value.warnings.length });
 ```
 
 **get-recent-memories.ts**

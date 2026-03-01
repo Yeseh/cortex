@@ -141,6 +141,7 @@ export const listMemoriesHandler = async (
         const store = storeResult.value;
         const rootResult = store.root();
         if (!rootResult.ok()) {
+            ctx.logger?.debug('cortex_list_memories failed', { store: input.store, error_code: rootResult.error.code });
             throw new McpError(ErrorCode.InvalidParams, rootResult.error.message);
         }
 
@@ -153,11 +154,11 @@ export const listMemoriesHandler = async (
         if (input.category) {
             const categoryResult = root.getCategory(input.category);
             if (!categoryResult.ok()) {
+                ctx.logger?.debug('cortex_list_memories failed', { store: input.store, category: input.category, error_code: categoryResult.error.code });
                 throw new McpError(ErrorCode.InvalidParams, categoryResult.error.message);
             }
             category = categoryResult.value;
-        }
-        else {
+        } else {
             category = root;
         }
 

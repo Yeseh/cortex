@@ -49,8 +49,21 @@ export const getMemoryHandler = async (
         });
 
         if (!result.ok()) {
-            ctx.logger?.debug('cortex_get_memory failed', { store: input.store, path: input.path, error_code: result.error.code });
-            throw translateMemoryError(result.error);
+            const translatedError = translateMemoryError(result.error);
+            if (translatedError.code === ErrorCode.InternalError) {
+                ctx.logger?.error('cortex_get_memory failed', undefined, {
+                    store: input.store,
+                    path: input.path,
+                    error_code: result.error.code,
+                });
+            } else {
+                ctx.logger?.debug('cortex_get_memory failed', {
+                    store: input.store,
+                    path: input.path,
+                    error_code: result.error.code,
+                });
+            }
+            throw translatedError;
         }
 
         const memory = result.value;
