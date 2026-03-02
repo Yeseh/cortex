@@ -1,5 +1,14 @@
 # @yeseh/cortex-cli
 
+## 0.6.10
+
+### Patch Changes
+
+- ac54168: Release version
+- Updated dependencies [ac54168]
+    - @yeseh/cortex-core@0.6.10
+    - @yeseh/cortex-storage-fs@0.6.10
+
 ## 0.6.9
 
 ### Patch Changes
