@@ -1,5 +1,12 @@
 # @yeseh/cortex-core
 
+## 0.6.9
+
+### Patch Changes
+
+- e5d6868: Build of shame
+- 3c52349: Another build of shame
+
 ## 0.6.8
 
 ### Patch Changes
