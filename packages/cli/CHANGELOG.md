@@ -1,5 +1,16 @@
 # @yeseh/cortex-cli
 
+## 0.6.9
+
+### Patch Changes
+
+- e5d6868: Build of shame
+- 3c52349: Another build of shame
+- Updated dependencies [e5d6868]
+- Updated dependencies [3c52349]
+    - @yeseh/cortex-core@0.6.9
+    - @yeseh/cortex-storage-fs@0.6.9
+
 ## 0.6.8
 
 ### Patch Changes
