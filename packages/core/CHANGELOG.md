@@ -1,5 +1,11 @@
 # @yeseh/cortex-core
 
+## 0.6.10
+
+### Patch Changes
+
+- ac54168: Release version
+
 ## 0.6.9
 
 ### Patch Changes
