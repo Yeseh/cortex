@@ -102,6 +102,9 @@ jobs:
             - name: Install dependencies
               run: bun install --frozen-lockfile
 
+            - name: Build packages
+              run: bun run build
+
             - name: Compile MCP server binary
               run: bun build --compile --minify --sourcemap --bytecode ./packages/server/src/index.ts --outfile ./bin/cortex-mcp
 
