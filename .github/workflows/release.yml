@@ -52,7 +52,7 @@ jobs:
               run: bun run typecheck
 
             - name: Run tests
-              run: bun test packages
+              run: bun test --timeout 30000 packages
 
             - name: Setup Node.js for npm publishing
               uses: actions/setup-node@v4

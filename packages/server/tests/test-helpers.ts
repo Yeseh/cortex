@@ -77,9 +77,7 @@ export const registerSandboxCleanup = (sandbox: ServerSandbox): void => {
 
 export const startServer = async (sandbox: ServerSandbox): Promise<StartedServer> => {
     const serverRoot = fileURLToPath(new URL('..', import.meta.url));
-    const child = spawn('bun', [
-        'run', 'src/index.ts',
-    ], {
+    const child = spawn('bun', ['run', 'src/index.ts'], {
         cwd: serverRoot,
         env: {
             ...process.env,
@@ -102,7 +100,7 @@ export const startServer = async (sandbox: ServerSandbox): Promise<StartedServer
         stdout += chunk.toString();
     });
 
-    await waitForHealth(sandbox.baseUrl, 8_000, child, () => stderr);
+    await waitForHealth(sandbox.baseUrl, 5_000, child, () => stderr);
 
     return {
         process: child,
@@ -116,6 +114,8 @@ export const stopServer = async (proc: StartedServer, timeoutMs = 4_000): Promis
     if (!proc?.process) {
         return;
     }
+
+    sessionIdsByBaseUrl.delete(proc.baseUrl);
 
     if (proc.process.exitCode !== null) {
         return;
@@ -142,7 +142,7 @@ export const waitForHealth = async (
     baseUrl: string,
     timeoutMs: number,
     child?: ChildProcessWithoutNullStreams,
-    getStderr?: () => string,
+    getStderr?: () => string
 ): Promise<void> => {
     const start = Date.now();
 
@@ -152,14 +152,13 @@ export const waitForHealth = async (
             if (response.status === 200) {
                 return;
             }
-        }
-        catch {
+        } catch {
             // polling until ready
         }
 
         if (child && child.exitCode !== null) {
             throw new Error(
-                `Server exited before becoming healthy (exit ${child.exitCode}).\n${getStderr?.() ?? ''}`,
+                `Server exited before becoming healthy (exit ${child.exitCode}).\n${getStderr?.() ?? ''}`
             );
         }
 
@@ -173,7 +172,7 @@ export const postMcp = async (
     baseUrl: string,
     method: string,
     params: Record<string, unknown> = {},
-    id: string | number = 1,
+    id: string | number = 1
 ): Promise<McpHttpResponse> => {
     const headers: Record<string, string> = {
         'content-type': 'application/json',
@@ -222,7 +221,7 @@ export const callTool = async (
     baseUrl: string,
     name: string,
     args: Record<string, unknown>,
-    id: string | number = 3,
+    id: string | number = 3
 ): Promise<McpHttpResponse> => {
     return postMcp(
         baseUrl,
@@ -231,7 +230,7 @@ export const callTool = async (
             name,
             arguments: args,
         },
-        id,
+        id
     );
 };
 
@@ -252,7 +251,7 @@ export const expectMcpSuccess = <T = unknown>(response: McpHttpResponse): JsonRp
 
 export const expectMcpError = (
     response: McpHttpResponse,
-    messageContains?: string,
+    messageContains?: string
 ): JsonRpcError => {
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty('jsonrpc', '2.0');
@@ -275,7 +274,7 @@ export const expectMcpError = (
 
 export const expectMcpToolError = (
     response: McpHttpResponse,
-    messageContains?: string,
+    messageContains?: string
 ): JsonRpcSuccess => {
     const body = expectMcpSuccess(response);
     const result = body.result as { isError?: boolean };
@@ -338,8 +337,7 @@ const parseMcpBody = (body: string): JsonRpcSuccess | JsonRpcError | Record<stri
 
     try {
         return JSON.parse(trimmed) as JsonRpcSuccess | JsonRpcError;
-    }
-    catch {
+    } catch {
         const dataLines = trimmed
             .split('\n')
             .map((line) => line.trim())
