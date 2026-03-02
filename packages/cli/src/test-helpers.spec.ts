@@ -19,7 +19,7 @@ import type {
     ConfigStores,
     CortexContext,
 } from '@yeseh/cortex-core';
-import { testContext } from '@yeseh/cortex-core';
+import { testContext } from '@yeseh/cortex-core/testing';
 
 // ============================================================================
 // 2.1 Result helpers

@@ -20,7 +20,7 @@ const result = await Bun.build({
     root: './src',
     target: 'node',
     format: 'esm',
-    splitting: true,
+    splitting: false,
     sourcemap: 'external',
     external: ['zod', '@toon-format/toon'],
 });
